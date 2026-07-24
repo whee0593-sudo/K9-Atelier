@@ -1,0 +1,224 @@
+{
+  "brand": {
+    "name": "K9 Atelier",
+    "tagline": "Award-winning grooming experience at your doorstep.",
+    "logo": "/logo.png",
+    "email": "penny@k9atelier.com",
+    "phone": null,
+    "social": {
+      "instagram": "K9 Atelier FL",
+      "facebook": "K9 Atelier"
+    }
+  },
+  "colors": {
+    "cream": "#FAF7F2",
+    "lavender": "#C8B8D8",
+    "lavenderLight": "#E8DFF0",
+    "gold": "#C4A882",
+    "goldDark": "#A68B5B",
+    "blue": "#A8C4D4",
+    "text": "#3D3A36",
+    "textMuted": "#6B6560"
+  },
+  "weightTiers": [
+    {
+      "id": "under15",
+      "label": "Under 15 lbs",
+      "labelZh": "15 lbs 以下"
+    },
+    {
+      "id": "15to30",
+      "label": "15 – 30 lbs",
+      "labelZh": "15 lbs – 30 lbs"
+    },
+    {
+      "id": "31to45",
+      "label": "31 – 45 lbs",
+      "labelZh": "31 lbs – 45 lbs"
+    }
+  ],
+  "serviceArea": {
+    "freeRadiusMiles": 10,
+    "travelFeePerMile": 6.5,
+    "travelFeeNote": "Charged per one-way mile beyond free radius, based on GPS driving distance from base",
+    "maxDistanceMiles": 20,
+    "homeAddress": null
+  },
+  "weightPolicy": {
+    "maxStandardWeightLbs": 45,
+    "over45AllowedServiceIds": ["hand-stripping", "end-of-life-care"],
+    "over45Note": "Dogs over 45 lbs: hand stripping (no bath) and end-of-life comfort care only.",
+    "over45NoteZh": "45 lbs 以上仅接不洗澡的手剥毛服务及临终关怀服务"
+  },
+  "booking": {
+    "requiresDeposit": true,
+    "depositType": "fixed",
+    "depositAmount": 50,
+    "availableDays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+    "hoursStart": "09:00",
+    "hoursEnd": "16:00",
+    "timezone": "America/New_York",
+    "cancellationPolicy": null
+  },
+  "fees": [
+    {
+      "id": "travel-fee",
+      "name": "Out-of-Service-Area Travel Fee",
+      "nameZh": "跨区域交通服务费",
+      "type": "travel",
+      "rate": 6.5,
+      "unit": "per_one_way_mile_beyond_free_radius",
+      "description": "Travel surcharge for clients located outside of our standard mobile grooming coverage area. Calculated at $6.50 per one-way mile (for miles beyond the 10-mile free radius) based on GPS driving distance from our base location to your address. This fee covers specialized grooming van fuel, vehicle wear & depreciation, and full round-trip travel transit time.",
+      "descriptionZh": "超出标准服务范围（10 英里免费圈）后，按 Google Maps 从基地到客户地址的单程 GPS 里程，每超出 1 英里收取 $6.50。此单价已折算往返油耗、Ford Transit 美容车折旧及往返工时成本。"
+    },
+    {
+      "id": "behavior-fee",
+      "name": "Behavior & Special Handling Fee",
+      "nameZh": "行为与特殊照顾费",
+      "type": "surcharge",
+      "rateMin": 25,
+      "rateMax": 50,
+      "unit": "flat_assessed_on_site",
+      "description": "Applied when a dog exhibits high stress, extreme anxiety, aggression, or resistance during grooming. Covers extra time, specialized safety handling techniques, extra patience, and safety measures required to maintain a secure environment for both your pet and the groomer.",
+      "descriptionZh": "专为在美容过程中表现出高度紧张、极度焦虑、攻击倾向或强抗拒行为的狗狗设置。根据现场抗拒/焦虑程度确定，$25–$50+。"
+    }
+  ],
+  "serviceCategories": [
+    {
+      "id": "bath-grooming",
+      "name": "Bath & Full Grooming",
+      "nameZh": "基础洗护与精剪",
+      "services": [
+        {
+          "id": "signature-bath-care",
+          "name": "Signature Bath & Care",
+          "nameZh": "奢华水疗洗护套餐",
+          "includesZh": "全套超微泡洗护、深度毛发滋养、顺毛吹干、全套梳理、修剪爪垫毛/腹部卫生毛、剪指甲磨甲、清耳、刷牙",
+          "description": "Comprehensive mobile bath and hygienic care tailored to your dog's specific coat and skin needs. Includes deep-cleansing wash, nourishing conditioning, gentle blow dry, thorough brush-out, sanitary trim, paw pad trimming, nail trimming & grinding, ear cleaning, and teeth brushing.",
+          "pricingType": "tiered",
+          "tiers": [
+            { "weightTier": "under15", "priceFrom": 80, "durationMin": 45, "durationMax": 60 },
+            { "weightTier": "15to30", "priceFrom": 100, "durationMin": 60, "durationMax": 75 },
+            { "weightTier": "31to45", "priceFrom": 120, "durationMin": 75, "durationMax": 90 }
+          ]
+        },
+        {
+          "id": "custom-full-haircut",
+          "name": "Custom Full Haircut & Styling",
+          "nameZh": "高端定制全套造型精剪",
+          "includesZh": "包含【奢华水疗洗护套餐】全部基础护理，加全身日系/韩系/赛级或主人定制全身造型修剪",
+          "description": "Full-service personalized grooming experience. Includes everything in the Signature Bath & Care, followed by a customized whole-body scissor or clipper haircut styled to your preferences (e.g., teddy bear head, custom length, or breed standard).",
+          "pricingType": "tiered",
+          "tiers": [
+            { "weightTier": "under15", "priceFrom": 120, "durationMin": 75, "durationMax": 90 },
+            { "weightTier": "15to30", "priceFrom": 150, "durationMin": 90, "durationMax": 105 },
+            { "weightTier": "31to45", "priceFrom": 180, "durationMin": 105, "durationMax": 120 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "specialty-care",
+      "name": "Specialty Care",
+      "nameZh": "专项特色护理",
+      "services": [
+        {
+          "id": "hand-stripping",
+          "name": "Hand Stripping Specialty",
+          "nameZh": "传统手剥毛护理",
+          "includesZh": "适用于梗犬类、雪纳瑞、猎犬等硬毛犬种。45 lbs 以上仅提供不洗澡的手剥毛服务",
+          "description": "Specialized coat preservation for wire-haired breeds. Preserves rich coat color, harsh texture, and natural skin protection by manually removing blown coat. Charged at an hourly rate due to intense precision and time required. For dogs over 45 lbs, hand stripping is available without bath services.",
+          "pricingType": "hourly",
+          "hourlyRate": 120,
+          "durationMin": 90,
+          "durationMax": 180,
+          "availableOver45Lbs": true,
+          "noBathOver45Lbs": true,
+          "noteZh": "视毛质及覆盖范围而定，预估 1.5–3 小时"
+        },
+        {
+          "id": "end-of-life-care",
+          "name": "End-of-Life Comfort Care",
+          "nameZh": "临终关怀服务",
+          "includesZh": "为生命末期的狗狗提供温和、低压力的舒适护理，优先安抚与尊严，不追求造型效果",
+          "description": "Compassionate, low-stress comfort grooming for dogs in their final stage of life. Focuses on gentle handling, dignity, and emotional comfort rather than cosmetic results. Available for dogs over 45 lbs when bath and full grooming services are not offered.",
+          "pricingType": "consultation",
+          "noteZh": "请提前预约沟通具体需求与报价",
+          "availableOver45Lbs": true
+        },
+        {
+          "id": "senior-comfort-care",
+          "name": "Senior & Gentle Comfort Care",
+          "nameZh": "高龄与特别关照护理",
+          "includesZh": "适用于 10 岁以上高龄犬、关节炎、心脏病、极度焦虑或行动不便的狗狗。频繁休息、防滑支撑垫、特快双人保定/柔和吹干",
+          "description": "Specialized, low-stress care designed for senior or medically sensitive dogs. Prioritizes pet comfort and safety over speed. Includes extra resting breaks, anti-slip support, adapted handling techniques, and gentle drying methods.",
+          "pricingType": "add_on",
+          "addOnMin": 30,
+          "addOnMax": 50,
+          "noteZh": "在基础洗护/精剪费用上额外 + $30–$50"
+        },
+        {
+          "id": "creative-accent-coloring",
+          "name": "Creative Accent Coloring",
+          "nameZh": "创意局部染色",
+          "includesZh": "100% 宠物安全纯植物半永久染膏",
+          "description": "Safe, trendy, and fun pop of color for your pet! Uses 100% non-toxic, pet-safe, semi-permanent color products designed specifically for animal coats.",
+          "pricingType": "options",
+          "options": [
+            { "name": "Ears or Tail Accent", "nameZh": "耳尖 / 尾巴尖染色", "priceFrom": 35 },
+            { "name": "Paws / Boots Accent", "nameZh": "四爪「小靴子」染色", "priceFrom": 50 },
+            { "name": "Custom Creative Design", "nameZh": "自定义创意设计", "priceFrom": 60, "noteZh": "需提前沟通设计" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "spa-wellness",
+      "name": "Spa & Wellness Treatments",
+      "nameZh": "水疗 SPA",
+      "note": "SPA treatments include a full bath and whole-body relaxation massage. To protect your dog's energy, we do not recommend combining SPA with a full haircut on the same day.",
+      "noteZh": "SPA 项目包含全套水疗洗护与全身放松按摩。不建议 SPA 与全套大剪合并在同一天进行。",
+      "services": [
+        {
+          "id": "dead-sea-mud-bath",
+          "name": "Dead Sea Mud Bath Treatment",
+          "nameZh": "死海泥浴矿物 Spa",
+          "includesZh": "矿物泥包裹 + 全身按摩 + 全套洗护护理",
+          "description": "Complete mobile bath combined with a mineral-rich Dead Sea mud wrap and whole-body massage. Deeply nourishes skin, exfoliates, releases muscle tension, and restores coat shine. Includes gentle blow dry, brush-out, nail trim, ear cleaning, and teeth brushing.",
+          "pricingType": "tiered",
+          "tiers": [
+            { "weightTier": "under15", "priceFrom": 100, "durationMin": 60, "durationMax": 60 },
+            { "weightTier": "15to30", "priceFrom": 120, "durationMin": 75, "durationMax": 75 },
+            { "weightTier": "31to45", "priceFrom": 140, "durationMin": 90, "durationMax": 90 }
+          ]
+        },
+        {
+          "id": "aromatherapy-oil-bath",
+          "name": "Aromatherapy Essential Oil Bath Soak",
+          "nameZh": "芳香精油浸泡 Spa",
+          "includesZh": "100% 宠物安全有机精油（薰衣草 & 洋甘菊）+ 关节舒缓按摩",
+          "description": "Relaxing mobile bath experience featuring a warm-water soak infused with 100% pet-safe organic essential oils (lavender & chamomile) paired with targeted joint-relief massage. Calms anxiety and leaves the coat smelling fresh. Includes full wash, blow dry, brush-out, nail care, ear cleaning, and teeth brushing.",
+          "pricingType": "tiered",
+          "tiers": [
+            { "weightTier": "under15", "priceFrom": 100, "durationMin": 60, "durationMax": 60 },
+            { "weightTier": "15to30", "priceFrom": 120, "durationMin": 75, "durationMax": 75 },
+            { "weightTier": "31to45", "priceFrom": 140, "durationMin": 90, "durationMax": 90 }
+          ]
+        },
+        {
+          "id": "sensitive-skin-treatment",
+          "name": "Sensitive Skin & Dander Soothing Treatment",
+          "nameZh": "皮屑与敏感肌舒缓护理",
+          "includesZh": "低敏植物洗护 + 燕麦/芦荟舒缓护理 + 温和理疗按摩",
+          "description": "Therapeutic bathing session tailored for dogs with sensitive skin, flaky dander, or seasonal allergies. Uses hypoallergenic botanical wash and soothing oatmeal/aloe skin treatments combined with gentle therapeutic massage. Includes blow dry, brush-out, nail trim, ear cleansing, and teeth brushing.",
+          "pricingType": "tiered",
+          "tiers": [
+            { "weightTier": "under15", "priceFrom": 100, "durationMin": 60, "durationMax": 60 },
+            { "weightTier": "15to30", "priceFrom": 120, "durationMin": 75, "durationMax": 75 },
+            { "weightTier": "31to45", "priceFrom": 140, "durationMin": 90, "durationMax": 90 }
+          ]
+        }
+      ]
+    }
+  ]
+}
