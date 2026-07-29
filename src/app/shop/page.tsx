@@ -13,7 +13,7 @@ export default function ShopPage() {
         Need grooming now? Book a mobile visit — we come to you.
       </p>
       <Link
-        href="/book"
+        href="/login?next=/book"
         className="mt-10 inline-block rounded-2xl bg-gold px-8 py-4 text-lg font-medium text-white transition hover:bg-gold-dark"
       >
         Book Mobile Grooming

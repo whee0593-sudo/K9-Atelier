@@ -16,7 +16,7 @@ export default function HomePage() {
 
       <div className="mt-12 flex w-full max-w-4xl items-stretch justify-between gap-6 px-2">
         <Link
-          href="/book"
+          href="/login?next=/book"
           className="flex min-h-[5rem] flex-1 items-center justify-center rounded-2xl bg-gold px-6 py-6 text-xl font-medium text-white shadow-sm transition hover:bg-gold-dark"
         >
           Book Service

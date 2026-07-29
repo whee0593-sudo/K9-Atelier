@@ -170,7 +170,7 @@ export default function ServicesPage() {
 
       <div className="mt-16 text-center">
         <Link
-          href="/book"
+          href="/login?next=/book"
           className="inline-block rounded-full bg-gold px-8 py-3 text-sm font-medium text-white transition hover:bg-gold-dark"
         >
           Book Now · Valid Payment Method Required
