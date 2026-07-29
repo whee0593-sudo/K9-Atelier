@@ -173,7 +173,7 @@ export default function ServicesPage() {
           href="/book"
           className="inline-block rounded-full bg-gold px-8 py-3 text-sm font-medium text-white transition hover:bg-gold-dark"
         >
-          Book Now · ${business.booking.depositAmount} Deposit
+          Book Now · Valid Payment Method Required
         </Link>
       </div>
     </div>

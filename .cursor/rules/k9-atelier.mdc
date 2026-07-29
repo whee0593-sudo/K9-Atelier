@@ -1,0 +1,35 @@
+---
+description: K9 Atelier project context — mobile grooming site, brand, and workflow
+alwaysApply: true
+---
+
+# K9 Atelier
+
+Mobile pet grooming business. Website at k9atelier.com.
+
+## Stack
+- Next.js 15 + TypeScript + Tailwind CSS v4
+- Content source: `content/business.json`
+- Deploy: GitHub `whee0593-sudo/K9-Atelier` → Vercel (auto on push to main)
+
+## Brand
+- Tagline: Award-winning grooming experience at your doorstep.
+- Colors: cream `#FAF7F2`, lavender `#C8B8D8`, gold `#C4A882`, blue `#A8C4D4`
+- Logo: `public/logo.png`
+- Email: penny@k9atelier.com
+
+## Business rules
+- Booking: valid payment method required; **no charge at booking** (card on file via Stripe Setup Intent when built)
+- Hours: Mon–Fri 9:00–16:00 (America/New_York)
+- Service area: 10 mi free, then $6.50/mile one-way beyond, max 20 mi
+- Over 45 lbs: hand stripping (no bath) + end-of-life care only
+
+## User context
+- Owner communicates in 中文 — explain technical terms in plain Chinese.
+- **All customer-facing website copy must be in English** (UI, buttons, pages, emails unless explicitly requested otherwise).
+
+## Conventions
+- Minimal, elegant, static-clean visual design
+- Minimize scope; match existing file patterns
+- Update `content/business.json` when business data changes
+- See `WORKBENCH.md` for links and workflow

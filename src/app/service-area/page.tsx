@@ -47,7 +47,7 @@ export default function ServiceAreaPage() {
           Monday – Friday, {booking.hoursStart} – {booking.hoursEnd}
         </p>
         <p className="mt-2 text-sm text-text-muted">
-          ${booking.depositAmount} deposit required to confirm your appointment.
+          {booking.paymentMethodNote}
         </p>
       </div>
     </div>

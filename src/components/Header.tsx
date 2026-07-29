@@ -1,13 +1,49 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { business } from "@/lib/business";
+import { ShareButton } from "@/components/ShareButton";
+
+function TopActions() {
+  return (
+    <div className="flex items-center gap-4">
+      <Link
+        href="/support"
+        className="text-xs font-medium text-text-muted transition hover:text-gold-dark"
+      >
+        Support
+      </Link>
+      <ShareButton />
+      <Link
+        href="/login"
+        className="text-sm font-medium text-gold-dark transition hover:text-gold"
+      >
+        Login
+      </Link>
+    </div>
+  );
+}
 
 export function Header() {
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+
+  if (isHome) {
+    return (
+      <header className="absolute top-0 left-0 right-0 z-10 flex items-start justify-between p-6">
+        <p className="text-lg font-medium text-gold-dark">Welcome!</p>
+        <TopActions />
+      </header>
+    );
+  }
+
   const nav = [
     { href: "/", label: "Home" },
     { href: "/services", label: "Services" },
-    { href: "/service-area", label: "Service Area" },
-    { href: "/book", label: "Book Now" },
+    { href: "/book", label: "Book" },
+    { href: "/shop", label: "Shop" },
   ];
 
   return (
@@ -36,12 +72,7 @@ export function Header() {
             </Link>
           ))}
         </nav>
-        <Link
-          href="/book"
-          className="rounded-full bg-gold px-4 py-2 text-sm font-medium text-white transition hover:bg-gold-dark"
-        >
-          Book
-        </Link>
+        <TopActions />
       </div>
     </header>
   );

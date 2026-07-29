@@ -1,7 +1,13 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { business } from "@/lib/business";
 
 export function Footer() {
+  const pathname = usePathname();
+  if (pathname === "/") return null;
+
   const { brand } = business;
 
   return (

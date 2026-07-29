@@ -1,0 +1,286 @@
+{
+  "overview": {
+    "title": "My Account",
+    "description": "Manage your contact details, pets, service addresses, and saved payment methods for faster booking."
+  },
+  "sections": [
+    {
+      "id": "profile",
+      "path": "/account/profile",
+      "title": "Personal Information",
+      "description": "Your name and how we reach you about appointments.",
+      "fields": [
+        {
+          "id": "firstName",
+          "label": "First Name",
+          "type": "text",
+          "required": true,
+          "placeholder": "Jane"
+        },
+        {
+          "id": "lastName",
+          "label": "Last Name",
+          "type": "text",
+          "required": true,
+          "placeholder": "Miller"
+        },
+        {
+          "id": "email",
+          "label": "Email",
+          "type": "email",
+          "required": true,
+          "placeholder": "you@example.com",
+          "note": "Used for booking confirmations and reminders."
+        },
+        {
+          "id": "phone",
+          "label": "Mobile Phone",
+          "type": "tel",
+          "required": true,
+          "placeholder": "(555) 123-4567",
+          "note": "We may call or text about your appointment day-of."
+        },
+        {
+          "id": "preferredContact",
+          "label": "Preferred Contact Method",
+          "type": "select",
+          "required": false,
+          "options": ["Email", "Phone", "Text Message"]
+        },
+        {
+          "id": "emergencyContactHeading",
+          "label": "Emergency Contact",
+          "type": "section-heading",
+          "required": false,
+          "note": "Optional — someone we can contact if we cannot reach you."
+        },
+        {
+          "id": "emergencyContactName",
+          "label": "Emergency Contact Name",
+          "type": "text",
+          "required": false,
+          "placeholder": "John Miller"
+        },
+        {
+          "id": "emergencyContactPhone",
+          "label": "Emergency Contact Phone",
+          "type": "tel",
+          "required": false,
+          "placeholder": "(555) 987-6543"
+        },
+        {
+          "id": "emergencyContactRelationship",
+          "label": "Relationship",
+          "type": "select",
+          "required": false,
+          "options": ["Spouse", "Partner", "Family", "Friend", "Neighbor", "Other"]
+        }
+      ]
+    },
+    {
+      "id": "addresses",
+      "path": "/account/addresses",
+      "title": "Service Addresses",
+      "description": "Where our mobile grooming van should come. Used to calculate travel fees.",
+      "fields": [
+        {
+          "id": "label",
+          "label": "Address Label",
+          "type": "text",
+          "required": false,
+          "placeholder": "Home",
+          "note": "e.g. Home, Office, Parent's house"
+        },
+        {
+          "id": "street",
+          "label": "Street Address",
+          "type": "text",
+          "required": true,
+          "placeholder": "123 Palm Avenue"
+        },
+        {
+          "id": "unit",
+          "label": "Apt / Unit (optional)",
+          "type": "text",
+          "required": false,
+          "placeholder": "Unit 4B"
+        },
+        {
+          "id": "city",
+          "label": "City",
+          "type": "text",
+          "required": true,
+          "placeholder": "Orlando"
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "type": "text",
+          "required": true,
+          "placeholder": "FL"
+        },
+        {
+          "id": "zip",
+          "label": "ZIP Code",
+          "type": "text",
+          "required": true,
+          "placeholder": "32801"
+        },
+        {
+          "id": "parkingNotes",
+          "label": "Parking / Access Notes",
+          "type": "textarea",
+          "required": false,
+          "placeholder": "Driveway on left, gate code 1234",
+          "note": "Helps us find you and set up safely."
+        },
+        {
+          "id": "isDefault",
+          "label": "Default service address",
+          "type": "checkbox",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "pets",
+      "path": "/account/pets",
+      "title": "My Pets",
+      "allowMultiple": true,
+      "description": "Save a profile for each pet. When booking, select which pet the appointment is for.",
+      "fields": [
+        {
+          "id": "name",
+          "label": "Pet Name",
+          "type": "text",
+          "required": true,
+          "placeholder": "Bella"
+        },
+        {
+          "id": "breed",
+          "label": "Breed",
+          "type": "text",
+          "required": true,
+          "placeholder": "Shih Tzu"
+        },
+        {
+          "id": "weightLbs",
+          "label": "Weight (lbs)",
+          "type": "number",
+          "required": true,
+          "placeholder": "12",
+          "note": "Used for service pricing and eligibility (over 45 lbs has limited services)."
+        },
+        {
+          "id": "age",
+          "label": "Age",
+          "type": "text",
+          "required": false,
+          "placeholder": "8 years"
+        },
+        {
+          "id": "sex",
+          "label": "Sex",
+          "type": "select",
+          "required": false,
+          "options": [
+            "Male",
+            "Female",
+            "Male, Neutered",
+            "Female, Spayed"
+          ]
+        },
+        {
+          "id": "temperament",
+          "label": "Temperament & Handling Notes",
+          "type": "textarea",
+          "required": false,
+          "placeholder": "Nervous with dryers; prefers gentle handling",
+          "note": "Helps us prepare for a calm, safe visit."
+        },
+        {
+          "id": "medicalNotes",
+          "label": "Medical / Special Care Notes",
+          "type": "textarea",
+          "required": false,
+          "placeholder": "Senior dog, arthritis; no hot dryer on legs",
+          "note": "Include allergies, anxiety, joint issues, or vet restrictions."
+        },
+        {
+          "id": "groomingPreferences",
+          "label": "Grooming Preferences",
+          "type": "textarea",
+          "required": false,
+          "placeholder": "Teddy bear face, 1 inch body length",
+          "note": "Style requests, length, or reference from last visit."
+        },
+        {
+          "id": "adminServiceNotes",
+          "label": "Service & Product Notes (Admin Only)",
+          "type": "textarea",
+          "required": false,
+          "adminOnly": true,
+          "placeholder": "2026-07-15: Signature Bath, oatmeal shampoo, nail grind…",
+          "note": "Internal use only — record products and services used each visit. Not visible to customers."
+        },
+        {
+          "id": "vaccineHeading",
+          "label": "Vaccination Records",
+          "type": "section-heading",
+          "required": false,
+          "note": "Required for each pet before booking."
+        },
+        {
+          "id": "vaccineExpiration",
+          "label": "Vaccination Expiration Date",
+          "type": "date",
+          "required": false,
+          "note": "Optional — expiration date on the certificate, if shown."
+        },
+        {
+          "id": "vaccineRecord",
+          "label": "Upload Vaccination Record",
+          "type": "file",
+          "required": true,
+          "accept": ".pdf,.jpg,.jpeg,.png,.webp,.heic",
+          "note": "Required. Upload a current rabies or vaccination certificate. Accepted formats: PDF, JPG, PNG, WEBP, HEIC. Max 10 MB."
+        }
+      ]
+    },
+    {
+      "id": "payment",
+      "path": "/account/payment",
+      "title": "Payment Methods",
+      "description": "Save a valid card on file to confirm bookings. You are not charged when you book.",
+      "fields": [
+        {
+          "id": "savedCards",
+          "label": "Saved Cards",
+          "type": "payment-list",
+          "required": true,
+          "note": "Managed securely through Stripe. A valid card is required to confirm appointments."
+        }
+      ]
+    },
+    {
+      "id": "bookings",
+      "path": "/account/bookings",
+      "title": "Booking History",
+      "description": "Upcoming and past appointments.",
+      "fields": [
+        {
+          "id": "upcoming",
+          "label": "Upcoming Appointments",
+          "type": "booking-list",
+          "required": false
+        },
+        {
+          "id": "past",
+          "label": "Past Appointments",
+          "type": "booking-list",
+          "required": false
+        }
+      ]
+    }
+  ]
+}

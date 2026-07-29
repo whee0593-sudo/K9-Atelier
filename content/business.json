@@ -2,6 +2,7 @@
   "brand": {
     "name": "K9 Atelier",
     "tagline": "Award-winning grooming experience at your doorstep.",
+    "intro": "K9 Atelier is a luxury mobile pet grooming studio serving Florida with award-winning care at your doorstep. We bring the salon to you — from signature baths and custom styling to specialty spa and gentle senior care — with transparent pricing, a calm experience, and every visit tailored to your dog's comfort and coat.",
     "logo": "/logo.png",
     "email": "penny@k9atelier.com",
     "phone": null,
@@ -51,9 +52,9 @@
     "over45NoteZh": "45 lbs 以上仅接不洗澡的手剥毛服务及临终关怀服务"
   },
   "booking": {
-    "requiresDeposit": true,
-    "depositType": "fixed",
-    "depositAmount": 50,
+    "requiresPaymentMethod": true,
+    "chargeAtBooking": false,
+    "paymentMethodNote": "A valid payment method is required to confirm your booking. You will not be charged when you book.",
     "availableDays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
     "hoursStart": "09:00",
     "hoursEnd": "16:00",
