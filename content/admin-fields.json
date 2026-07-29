@@ -1,0 +1,37 @@
+{
+  "overview": {
+    "title": "Admin Profile",
+    "description": "K9 Atelier team account for managing customers, service notes, and sending messages or files."
+  },
+  "roles": ["Owner", "Groomer", "Support"],
+  "fields": [
+    {
+      "id": "displayName",
+      "label": "Display Name",
+      "type": "text",
+      "required": true,
+      "placeholder": "Penny"
+    },
+    {
+      "id": "email",
+      "label": "Work Email",
+      "type": "email",
+      "required": true,
+      "placeholder": "penny@k9atelier.com"
+    },
+    {
+      "id": "phone",
+      "label": "Work Phone",
+      "type": "tel",
+      "required": false,
+      "placeholder": "(555) 123-4567"
+    },
+    {
+      "id": "role",
+      "label": "Role",
+      "type": "select",
+      "required": true,
+      "options": ["Owner", "Groomer", "Support"]
+    }
+  ]
+}

@@ -44,6 +44,10 @@ export function AccountFieldPreview({ field }: { field: AccountField }) {
     );
   }
 
+  if (field.type === "message-inbox") {
+    return null;
+  }
+
   if (field.type === "payment-list") {
     return (
       <div className="rounded-xl border border-dashed border-lavender/50 bg-lavender-light/30 px-4 py-8 text-center text-sm text-text-muted">
@@ -149,7 +153,10 @@ export function AccountFieldsForm({
   );
 
   const orderedItems = visibleFields.filter(
-    (f) => f.type !== "payment-list" && f.type !== "booking-list",
+    (f) =>
+      f.type !== "payment-list" &&
+      f.type !== "booking-list" &&
+      f.type !== "message-inbox",
   );
 
   return (

@@ -263,6 +263,21 @@
       ]
     },
     {
+      "id": "messages",
+      "path": "/account/messages",
+      "title": "Messages from K9 Atelier",
+      "description": "Messages and files sent to you by our team about appointments, care, or your pets.",
+      "fields": [
+        {
+          "id": "inbox",
+          "label": "Inbox",
+          "type": "message-inbox",
+          "required": false,
+          "note": "Only you can see messages sent to your account."
+        }
+      ]
+    },
+    {
       "id": "bookings",
       "path": "/account/bookings",
       "title": "Booking History",

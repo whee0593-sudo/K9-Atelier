@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { CustomerInbox } from "@/components/account/CustomerInbox";
 import { AccountFieldsForm } from "@/components/account/AccountFieldsForm";
 import { PetProfilesManager } from "@/components/account/PetProfilesManager";
 import { getAccountSection } from "@/lib/account-fields";
@@ -10,6 +11,7 @@ const SECTION_IDS = [
   "addresses",
   "pets",
   "payment",
+  "messages",
   "bookings",
 ] as const;
 
@@ -30,6 +32,8 @@ export default async function AccountSectionPage({ params }: Props) {
       <div className="mt-8 rounded-2xl border border-lavender/30 bg-cream p-6 md:p-8">
         {slug === "pets" ? (
           <PetProfilesManager />
+        ) : slug === "messages" ? (
+          <CustomerInbox />
         ) : slug === "addresses" ? (
           <>
             <p className="mb-6 text-sm text-text-muted">
