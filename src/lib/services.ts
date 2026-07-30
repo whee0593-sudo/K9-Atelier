@@ -26,9 +26,13 @@ export type BookableService = {
   hourlyRate?: number;
   durationMin?: number;
   durationMax?: number;
+  durationNote?: string;
   addOnMin?: number;
   addOnMax?: number;
   options?: ServiceOption[];
+  includes?: string[];
+  bestFor?: string;
+  suitableFor?: string;
   availableOver45Lbs?: boolean;
   noBathOver45Lbs?: boolean;
   bookableAsPrimary: boolean;
@@ -70,9 +74,13 @@ export function allBookableServices(): BookableService[] {
       hourlyRate: "hourlyRate" in service ? service.hourlyRate : undefined,
       durationMin: "durationMin" in service ? service.durationMin : undefined,
       durationMax: "durationMax" in service ? service.durationMax : undefined,
+      durationNote: "durationNote" in service ? service.durationNote : undefined,
       addOnMin: "addOnMin" in service ? service.addOnMin : undefined,
       addOnMax: "addOnMax" in service ? service.addOnMax : undefined,
       options: "options" in service ? service.options : undefined,
+      includes: "includes" in service ? service.includes : undefined,
+      bestFor: "bestFor" in service ? service.bestFor : undefined,
+      suitableFor: "suitableFor" in service ? service.suitableFor : undefined,
       availableOver45Lbs:
         "availableOver45Lbs" in service ? service.availableOver45Lbs : undefined,
       noBathOver45Lbs:

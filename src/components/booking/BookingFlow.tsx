@@ -6,6 +6,7 @@ import type { PetProfile } from "@/lib/pets";
 import { formatPrice } from "@/lib/business";
 import {
   formatServicePrice,
+  getBookableCategories,
   seniorAddOnRange,
   supportsSeniorAddOn,
   type BookableService,
@@ -22,6 +23,7 @@ export function BookingFlow() {
   const [selectedService, setSelectedService] = useState<BookableService | null>(
     null,
   );
+  const [serviceConfirmed, setServiceConfirmed] = useState(false);
   const [colorOption, setColorOption] = useState<string | null>(null);
   const [selectedPet, setSelectedPet] = useState<PetProfile | null>(null);
   const [seniorAddOn, setSeniorAddOn] = useState(false);
@@ -44,15 +46,23 @@ export function BookingFlow() {
       : null;
 
   function handleCategorySelect(id: string) {
+    const category = getBookableCategories().find((c) => c.id === id);
+    const first = category?.services[0] ?? null;
     setCategoryId(id);
-    setSelectedService(null);
-    setColorOption(null);
+    setSelectedService(first);
+    setServiceConfirmed(false);
+    setColorOption(
+      first?.id === "creative-accent-coloring"
+        ? (first.options?.[0]?.name ?? null)
+        : null,
+    );
     setSelectedPet(null);
     setSeniorAddOn(false);
   }
 
   function handleServiceSelect(service: BookableService) {
     setSelectedService(service);
+    setServiceConfirmed(false);
     setSelectedPet(null);
     setSeniorAddOn(false);
     if (service.id === "creative-accent-coloring") {
@@ -65,32 +75,37 @@ export function BookingFlow() {
   function handleBackToCategories() {
     setCategoryId(null);
     setSelectedService(null);
+    setServiceConfirmed(false);
     setColorOption(null);
     setSelectedPet(null);
     setSeniorAddOn(false);
   }
 
   function handleBackToServices() {
-    setSelectedService(null);
-    setColorOption(null);
+    setServiceConfirmed(false);
     setSelectedPet(null);
     setSeniorAddOn(false);
   }
 
+  function handleBookService() {
+    if (!selectedService) return;
+    setServiceConfirmed(true);
+  }
+
   const seniorRange = seniorAddOnRange();
-  const step = !categoryId ? 1 : !selectedService ? 2 : !selectedPet ? 3 : 4;
+  const step = !categoryId
+    ? 1
+    : !serviceConfirmed
+      ? 2
+      : !selectedPet
+        ? 3
+        : 4;
 
   return (
     <div className="mt-10 space-y-10">
       {step === 1 && (
         <section>
-          <h2 className="text-center text-lg font-medium text-gold-dark">
-            Choose a Service Category
-          </h2>
-          <p className="mt-2 text-center text-sm text-text-muted">
-            Select the type of grooming you would like to book.
-          </p>
-          <div className="mx-auto mt-8 max-w-xl">
+          <div className="mx-auto mt-8 max-w-4xl">
             <ServiceCategoryPicker
               selectedCategoryId={categoryId}
               onSelect={handleCategorySelect}
@@ -101,17 +116,15 @@ export function BookingFlow() {
 
       {step === 2 && categoryId && (
         <section>
-          <p className="text-center text-sm text-text-muted">
-            Step 1 · Choose Service
-          </p>
-          <div className="mx-auto mt-4 max-w-xl">
-            <ServiceButtonPicker
-              categoryId={categoryId}
-              selectedServiceId={selectedService?.id ?? null}
-              onSelect={handleServiceSelect}
-              onBack={handleBackToCategories}
-            />
-          </div>
+          <ServiceButtonPicker
+            categoryId={categoryId}
+            selectedServiceId={selectedService?.id ?? null}
+            colorOption={colorOption}
+            onSelect={handleServiceSelect}
+            onColorOptionChange={setColorOption}
+            onBack={handleBackToCategories}
+            onBook={handleBookService}
+          />
         </section>
       )}
 
@@ -130,48 +143,14 @@ export function BookingFlow() {
             <p className="mt-1 font-medium text-gold-dark">
               {selectedService.name}
             </p>
-            {selectedService.note && (
-              <p className="mt-2 text-sm text-text-muted">{selectedService.note}</p>
+            {colorOption && (
+              <p className="mt-1 text-sm text-text-muted">{colorOption}</p>
             )}
           </div>
 
-          {selectedService.id === "creative-accent-coloring" &&
-            selectedService.options && (
-              <div className="mt-6">
-                <p className="text-sm font-medium text-text">
-                  Choose accent style
-                </p>
-                <div className="mt-3 space-y-3">
-                  {selectedService.options.map((opt, index) => (
-                    <button
-                      key={opt.name}
-                      type="button"
-                      onClick={() => setColorOption(opt.name)}
-                      className={`flex w-full min-h-[3.5rem] items-center justify-between rounded-2xl px-5 py-3 text-sm transition ${
-                        colorOption === opt.name
-                          ? "bg-gold text-white"
-                          : index === 0
-                            ? "border-2 border-gold bg-cream text-gold-dark hover:bg-lavender-light"
-                            : "border-2 border-gold/60 bg-cream text-text hover:bg-lavender-light"
-                      }`}
-                    >
-                      <span>{opt.name}</span>
-                      <span className="font-medium">
-                        {opt.consultationRequired
-                          ? "Consultation required"
-                          : opt.priceFrom != null
-                            ? `${formatPrice(opt.priceFrom)}+`
-                            : "—"}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
           <div className="mt-8">
             <h2 className="text-lg font-medium text-gold-dark">
-              Step 2 · Select Pet
+              Select Pet
             </h2>
             <p className="mt-2 text-sm text-text-muted">
               Pricing is based on your pet&apos;s weight and profile.
@@ -217,7 +196,7 @@ export function BookingFlow() {
 
           <div className="rounded-2xl border border-gold/30 bg-cream px-5 py-4">
             <h2 className="text-lg font-medium text-gold-dark">
-              Step 3 · Date &amp; Time
+              Date &amp; Time
             </h2>
             <p className="mt-2 text-sm text-text-muted">
               {selectedPet.name} · {bookingSelection.serviceName}
