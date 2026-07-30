@@ -139,9 +139,9 @@
           "description": "Full-service personalized grooming experience. Includes everything in the Signature Bath & Care, followed by a customized whole-body groom styled to your preferences (e.g., teddy bear head, custom length, or breed standard).",
           "pricingType": "tiered",
           "tiers": [
-            { "weightTier": "under15", "priceFrom": 130, "durationMin": 75, "durationMax": 90 },
-            { "weightTier": "15to30", "priceFrom": 170, "durationMin": 90, "durationMax": 105 },
-            { "weightTier": "31to45", "priceFrom": 230, "durationMin": 105, "durationMax": 120 }
+            { "weightTier": "under15", "priceFrom": 150, "durationMin": 75, "durationMax": 90 },
+            { "weightTier": "15to30", "priceFrom": 190, "durationMin": 90, "durationMax": 105 },
+            { "weightTier": "31to45", "priceFrom": 210, "durationMin": 105, "durationMax": 120 }
           ]
         }
       ]

@@ -9,8 +9,8 @@ export default function HomePage() {
       <Image
         src={business.brand.logo}
         alt={business.brand.name}
-        width={200}
-        height={200}
+        width={260}
+        height={260}
         className="rounded-full shadow-md ring-4 ring-lavender-light"
         priority
       />
