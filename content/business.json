@@ -198,6 +198,9 @@
           "name": "Creative Accent Coloring",
           "nameZh": "创意局部染色",
           "description": "Safe, trendy, and fun pop of color for your pet! Uses 100% non-toxic, pet-safe, semi-permanent color products designed specifically for animal coats.",
+          "note": "Must be booked together with Signature Bath & Care.",
+          "noteZh": "必须同时预约 Signature Bath & Care",
+          "requiresServiceId": "signature-bath-care",
           "pricingType": "options",
           "options": [
             { "name": "Ears or Tail Accent", "nameZh": "耳尖 / 尾巴尖染色", "priceFrom": 50 },

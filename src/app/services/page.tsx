@@ -46,8 +46,12 @@ export default function ServicesPage() {
     <div className="mx-auto max-w-5xl px-6 py-12">
       <h1 className="text-3xl font-semibold text-gold-dark">Services & Pricing</h1>
       <p className="mt-3 max-w-2xl text-text-muted">
-        Luxury mobile grooming tailored to your dog&apos;s coat, comfort, and
-        needs. Prices vary by weight (up to 45 lbs for bath & styling services).
+        Redefining pet care with premium, mobile grooming solutions brought
+        directly to your home. We specialize in coat-specific styling and
+        personalized, calm-centered care that puts your dog&apos;s wellbeing
+        first. No cages, no rush—just dedicated 1-on-1 pampering. Final pricing
+        varies based on your dog&apos;s temperament, coat condition, and severe
+        matting.
       </p>
 
       {business.weightPolicy && (

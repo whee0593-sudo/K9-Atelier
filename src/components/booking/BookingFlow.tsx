@@ -130,6 +130,9 @@ export function BookingFlow() {
             <p className="mt-1 font-medium text-gold-dark">
               {selectedService.name}
             </p>
+            {selectedService.note && (
+              <p className="mt-2 text-sm text-text-muted">{selectedService.note}</p>
+            )}
           </div>
 
           {selectedService.id === "creative-accent-coloring" &&

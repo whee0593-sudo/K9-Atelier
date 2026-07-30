@@ -33,6 +33,8 @@ export type BookableService = {
   noBathOver45Lbs?: boolean;
   bookableAsPrimary: boolean;
   categoryNote?: string;
+  note?: string;
+  requiresServiceId?: string;
 };
 
 export type SelectedService = {
@@ -77,6 +79,9 @@ export function allBookableServices(): BookableService[] {
         "noBathOver45Lbs" in service ? service.noBathOver45Lbs : undefined,
       bookableAsPrimary: service.id !== "senior-comfort-care",
       categoryNote: "note" in category ? category.note : undefined,
+      note: "note" in service ? service.note : undefined,
+      requiresServiceId:
+        "requiresServiceId" in service ? service.requiresServiceId : undefined,
     })),
   );
 }

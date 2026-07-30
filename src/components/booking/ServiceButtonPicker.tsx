@@ -118,6 +118,15 @@ export function ServiceButtonPicker({
               >
                 {formatServicePriceFrom(service)}
               </span>
+              {service.note && (
+                <span
+                  className={`mt-2 block text-xs ${
+                    selected || !isPrimary ? "text-text-muted" : "opacity-90"
+                  }`}
+                >
+                  {service.note}
+                </span>
+              )}
             </button>
           );
         })}
