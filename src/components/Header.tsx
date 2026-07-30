@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { business } from "@/lib/business";
 import { ShareButton } from "@/components/ShareButton";
+import { BookServiceLink } from "@/components/booking/BookServiceLink";
 
 function TopActions() {
   return (
@@ -62,7 +63,15 @@ export function Header() {
           </span>
         </Link>
         <nav className="hidden items-center gap-6 text-sm md:flex">
-          {nav.map((item) => (
+          {nav.map((item) =>
+          item.label === "Book" ? (
+            <BookServiceLink
+              key={item.href}
+              className="text-text-muted transition hover:text-gold-dark"
+            >
+              {item.label}
+            </BookServiceLink>
+          ) : (
             <Link
               key={item.href}
               href={item.href}
@@ -70,7 +79,8 @@ export function Header() {
             >
               {item.label}
             </Link>
-          ))}
+          ),
+        )}
         </nav>
         <TopActions />
       </div>

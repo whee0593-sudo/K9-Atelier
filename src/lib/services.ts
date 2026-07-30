@@ -3,8 +3,9 @@ import { business, formatDuration, formatPrice } from "./business";
 export type ServiceOption = {
   name: string;
   nameZh?: string;
-  priceFrom: number;
+  priceFrom?: number;
   noteZh?: string;
+  consultationRequired?: boolean;
 };
 
 export type ServiceTier = {
@@ -138,11 +139,19 @@ export function formatServicePrice(
   if (service.pricingType === "options" && service.options) {
     const option =
       service.options.find((o) => o.name === optionName) ?? service.options[0];
-    return option ? `${formatPrice(option.priceFrom)}+ · ${option.name}` : "From $35+";
+    if (option?.consultationRequired) return "Consultation required";
+    if (option?.priceFrom != null) {
+      return `${formatPrice(option.priceFrom)}+ · ${option.name}`;
+    }
+    return "From $50+";
   }
 
   if (service.pricingType === "consultation") {
     return "Contact us for pricing";
+  }
+
+  if (service.pricingType === "free") {
+    return "Complimentary · By appointment only";
   }
 
   return "";
@@ -164,6 +173,37 @@ export function seniorAddOnRange() {
     min: service?.addOnMin ?? 30,
     max: service?.addOnMax ?? 50,
   };
+}
+
+export function getBookableCategories() {
+  return groupServicesByCategory(
+    allBookableServices().filter((s) => s.bookableAsPrimary),
+  );
+}
+
+export function formatServicePriceFrom(service: BookableService) {
+  if (service.pricingType === "tiered" && service.tiers?.length) {
+    const min = Math.min(...service.tiers.map((t) => t.priceFrom));
+    return `From ${formatPrice(min)}+`;
+  }
+  if (service.pricingType === "hourly" && service.hourlyRate) {
+    return `${formatPrice(service.hourlyRate)}/hr`;
+  }
+  if (service.pricingType === "options" && service.options?.length) {
+    const priced = service.options.filter((o) => o.priceFrom != null);
+    if (priced.length) {
+      const min = Math.min(...priced.map((o) => o.priceFrom!));
+      return `From ${formatPrice(min)}+`;
+    }
+    return "Consultation required";
+  }
+  if (service.pricingType === "consultation") {
+    return "By consultation";
+  }
+  if (service.pricingType === "free") {
+    return "Complimentary";
+  }
+  return "";
 }
 
 export function groupServicesByCategory(services: BookableService[]) {

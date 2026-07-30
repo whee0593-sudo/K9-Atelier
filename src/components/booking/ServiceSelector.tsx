@@ -162,7 +162,11 @@ export function ServiceSelector({ pet, selected, onSelect }: Props) {
                                   {opt.name}
                                 </span>
                                 <span className="text-sm font-medium text-gold-dark">
-                                  {formatPrice(opt.priceFrom)}+
+                                  {opt.consultationRequired
+                                    ? "Consultation required"
+                                    : opt.priceFrom != null
+                                      ? `${formatPrice(opt.priceFrom)}+`
+                                      : "—"}
                                 </span>
                               </label>
                             </li>
