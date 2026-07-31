@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { PetProfile } from "@/lib/pets";
-import { formatPrice } from "@/lib/business";
+import { business, formatPrice } from "@/lib/business";
 import {
   formatServicePrice,
   getBookableCategories,
@@ -12,7 +12,14 @@ import {
   type BookableService,
   type SelectedService,
 } from "@/lib/services";
+import {
+  formatServiceAddress,
+  type ServiceAddress,
+  type TravelQuote,
+} from "@/lib/travel";
 import { PetSelector } from "@/components/booking/PetSelector";
+import { AddressStep } from "@/components/booking/AddressStep";
+import { DateTimeStep } from "@/components/booking/DateTimeStep";
 import {
   ServiceButtonPicker,
   ServiceCategoryPicker,
@@ -26,6 +33,10 @@ export function BookingFlow() {
   const [serviceConfirmed, setServiceConfirmed] = useState(false);
   const [colorOption, setColorOption] = useState<string | null>(null);
   const [selectedPet, setSelectedPet] = useState<PetProfile | null>(null);
+  const [address, setAddress] = useState<ServiceAddress | null>(null);
+  const [travelQuote, setTravelQuote] = useState<TravelQuote | null>(null);
+  const [appointmentDate, setAppointmentDate] = useState<string | null>(null);
+  const [appointmentTime, setAppointmentTime] = useState<string | null>(null);
   const [seniorAddOn, setSeniorAddOn] = useState(false);
 
   const bookingSelection: SelectedService | null =
@@ -45,6 +56,15 @@ export function BookingFlow() {
         }
       : null;
 
+  function resetFromService() {
+    setSelectedPet(null);
+    setAddress(null);
+    setTravelQuote(null);
+    setAppointmentDate(null);
+    setAppointmentTime(null);
+    setSeniorAddOn(false);
+  }
+
   function handleCategorySelect(id: string) {
     const category = getBookableCategories().find((c) => c.id === id);
     const first = category?.services[0] ?? null;
@@ -56,15 +76,13 @@ export function BookingFlow() {
         ? (first.options?.[0]?.name ?? null)
         : null,
     );
-    setSelectedPet(null);
-    setSeniorAddOn(false);
+    resetFromService();
   }
 
   function handleServiceSelect(service: BookableService) {
     setSelectedService(service);
     setServiceConfirmed(false);
-    setSelectedPet(null);
-    setSeniorAddOn(false);
+    resetFromService();
     if (service.id === "creative-accent-coloring") {
       setColorOption(service.options?.[0]?.name ?? null);
     } else {
@@ -77,14 +95,12 @@ export function BookingFlow() {
     setSelectedService(null);
     setServiceConfirmed(false);
     setColorOption(null);
-    setSelectedPet(null);
-    setSeniorAddOn(false);
+    resetFromService();
   }
 
   function handleBackToServices() {
     setServiceConfirmed(false);
-    setSelectedPet(null);
-    setSeniorAddOn(false);
+    resetFromService();
   }
 
   function handleBookService() {
@@ -93,13 +109,44 @@ export function BookingFlow() {
   }
 
   const seniorRange = seniorAddOnRange();
+
   const step = !categoryId
     ? 1
     : !serviceConfirmed
       ? 2
       : !selectedPet
         ? 3
-        : 4;
+        : !address || !travelQuote
+          ? 4
+          : !appointmentDate || !appointmentTime
+            ? 5
+            : 6;
+
+  const mailtoHref =
+    selectedPet && bookingSelection && address && travelQuote
+      ? `mailto:${business.brand.email}?subject=${encodeURIComponent(
+          `Booking Request - ${selectedPet.name}`,
+        )}&body=${encodeURIComponent(
+          [
+            `Pet: ${selectedPet.name} (${selectedPet.weightLbs} lbs)`,
+            `Service: ${bookingSelection.serviceName}${
+              bookingSelection.optionName
+                ? ` - ${bookingSelection.optionName}`
+                : ""
+            }`,
+            bookingSelection.seniorAddOn
+              ? "Add-on: Senior & Gentle Comfort Care"
+              : null,
+            `Address: ${formatServiceAddress(address)}`,
+            `Travel: ${travelQuote.distanceMiles} mi · Fee $${travelQuote.fee}`,
+            `Date: ${appointmentDate}`,
+            `Time: ${appointmentTime}`,
+            `Estimated service: ${bookingSelection.priceLabel}`,
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        )}`
+      : "#";
 
   return (
     <div className="mt-10 space-y-10">
@@ -128,7 +175,7 @@ export function BookingFlow() {
         </section>
       )}
 
-      {step >= 3 && selectedService && (
+      {step === 3 && selectedService && (
         <section className="mx-auto max-w-xl">
           <button
             type="button"
@@ -149,9 +196,7 @@ export function BookingFlow() {
           </div>
 
           <div className="mt-8">
-            <h2 className="text-lg font-medium text-gold-dark">
-              Select Pet
-            </h2>
+            <h2 className="text-lg font-medium text-gold-dark">Select Pet</h2>
             <p className="mt-2 text-sm text-text-muted">
               Pricing is based on your pet&apos;s weight and profile.
             </p>
@@ -171,55 +216,136 @@ export function BookingFlow() {
         </section>
       )}
 
-      {step === 4 && selectedPet && selectedService && bookingSelection && (
-        <section className="mx-auto max-w-xl space-y-6">
-          {supportsSeniorAddOn(selectedService.id) && (
-            <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-lavender/40 bg-cream px-5 py-4">
-              <input
-                type="checkbox"
-                checked={seniorAddOn}
-                onChange={(e) => setSeniorAddOn(e.target.checked)}
-                className="mt-1"
-              />
-              <span>
-                <span className="block text-sm font-medium text-text">
-                  Add Senior &amp; Gentle Comfort Care
-                </span>
-                <span className="mt-1 block text-sm text-text-muted">
-                  Extra resting breaks and gentle handling (+
-                  {formatPrice(seniorRange.min)}–{formatPrice(seniorRange.max)}
-                  ).
-                </span>
-              </span>
-            </label>
-          )}
+      {step === 4 && selectedPet && (
+        <AddressStep
+          initialAddress={address}
+          initialQuote={travelQuote}
+          onBack={() => {
+            setSelectedPet(null);
+            setAddress(null);
+            setTravelQuote(null);
+          }}
+          onConfirmed={(addr, quote) => {
+            setAddress(addr);
+            setTravelQuote(quote);
+            setAppointmentDate(null);
+            setAppointmentTime(null);
+          }}
+        />
+      )}
 
-          <div className="rounded-2xl border border-gold/30 bg-cream px-5 py-4">
+      {step === 5 && (
+        <DateTimeStep
+          initialDate={appointmentDate}
+          initialTime={appointmentTime}
+          onBack={() => {
+            setAppointmentDate(null);
+            setAppointmentTime(null);
+          }}
+          onConfirmed={(date, time) => {
+            setAppointmentDate(date);
+            setAppointmentTime(time);
+          }}
+        />
+      )}
+
+      {step === 6 &&
+        selectedPet &&
+        selectedService &&
+        bookingSelection &&
+        address &&
+        travelQuote &&
+        appointmentDate &&
+        appointmentTime && (
+          <section className="mx-auto max-w-xl space-y-6">
+            <button
+              type="button"
+              onClick={() => {
+                setAppointmentDate(null);
+                setAppointmentTime(null);
+              }}
+              className="text-sm text-gold-dark underline"
+            >
+              ← Change date &amp; time
+            </button>
+
             <h2 className="text-lg font-medium text-gold-dark">
-              Date &amp; Time
+              Review booking
             </h2>
-            <p className="mt-2 text-sm text-text-muted">
-              {selectedPet.name} · {bookingSelection.serviceName}
-              {bookingSelection.optionName
-                ? ` · ${bookingSelection.optionName}`
-                : ""}
+
+            <div className="space-y-3 rounded-2xl border border-lavender/30 bg-cream px-5 py-4 text-sm">
+              <p>
+                <span className="text-text-muted">Pet:</span>{" "}
+                <strong>
+                  {selectedPet.name} ({selectedPet.weightLbs} lbs)
+                </strong>
+              </p>
+              <p>
+                <span className="text-text-muted">Service:</span>{" "}
+                <strong>
+                  {bookingSelection.serviceName}
+                  {bookingSelection.optionName
+                    ? ` · ${bookingSelection.optionName}`
+                    : ""}
+                </strong>
+              </p>
+              <p>
+                <span className="text-text-muted">Address:</span>{" "}
+                <strong>{formatServiceAddress(address)}</strong>
+              </p>
+              <p>
+                <span className="text-text-muted">Travel:</span>{" "}
+                <strong>
+                  {travelQuote.distanceMiles} mi ·{" "}
+                  {formatPrice(travelQuote.fee)}
+                  {travelQuote.fee === 0 ? " (free)" : ""}
+                </strong>
+              </p>
+              <p>
+                <span className="text-text-muted">When:</span>{" "}
+                <strong>
+                  {appointmentDate} · {appointmentTime}
+                </strong>
+              </p>
+              <p>
+                <span className="text-text-muted">Service estimate:</span>{" "}
+                <strong>{bookingSelection.priceLabel}</strong>
+              </p>
+            </div>
+
+            {supportsSeniorAddOn(selectedService.id) && (
+              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-lavender/40 bg-cream px-5 py-4">
+                <input
+                  type="checkbox"
+                  checked={seniorAddOn}
+                  onChange={(e) => setSeniorAddOn(e.target.checked)}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-text">
+                    Add Senior &amp; Gentle Comfort Care
+                  </span>
+                  <span className="mt-1 block text-sm text-text-muted">
+                    Extra resting breaks and gentle handling (+
+                    {formatPrice(seniorRange.min)}–
+                    {formatPrice(seniorRange.max)}).
+                  </span>
+                </span>
+              </label>
+            )}
+
+            <p className="text-sm text-text-muted">
+              {business.booking.paymentMethodNote}
             </p>
-            <p className="mt-2 text-sm font-medium text-gold-dark">
-              Estimated: {bookingSelection.priceLabel}
-              {bookingSelection.seniorAddOn ? " + senior add-on" : ""}
-            </p>
-            <p className="mt-3 text-sm text-text-muted">
-              Calendar and payment method selection are coming soon.
-            </p>
+
             <a
-              href={`mailto:penny@k9atelier.com?subject=Booking%20Request%20-%20${encodeURIComponent(selectedPet.name)}&body=Pet%3A%20${encodeURIComponent(selectedPet.name)}%20(${selectedPet.weightLbs}%20lbs)%0AService%3A%20${encodeURIComponent(bookingSelection.serviceName)}${bookingSelection.optionName ? `%20-%20${encodeURIComponent(bookingSelection.optionName)}` : ""}${bookingSelection.seniorAddOn ? "%0AAdd-on%3A%20Senior%20%26%20Gentle%20Comfort%20Care" : ""}`}
-              className="mt-4 inline-block rounded-xl bg-gold px-6 py-2.5 text-sm font-medium text-white hover:bg-gold-dark"
+              href={mailtoHref}
+              className="inline-flex w-full items-center justify-center rounded-2xl bg-gold px-6 py-3 text-sm font-medium text-white hover:bg-gold-dark"
             >
               Email booking request
             </a>
-          </div>
-        </section>
-      )}
+          </section>
+        )}
     </div>
   );
 }

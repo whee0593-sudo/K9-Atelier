@@ -41,9 +41,16 @@
   "serviceArea": {
     "freeRadiusMiles": 10,
     "travelFeePerMile": 6.5,
-    "travelFeeNote": "Charged per one-way mile beyond free radius, based on GPS driving distance from base via Google Maps",
+    "travelFeeNote": "Charged per one-way mile beyond free radius, based on GPS driving distance from base",
     "maxDistanceMiles": 20,
-    "homeAddress": null
+    "homeAddress": {
+      "street": "1408 14th Lane",
+      "city": "Palm Beach Gardens",
+      "state": "FL",
+      "zip": "33418",
+      "formatted": "1408 14th Lane, Palm Beach Gardens, FL 33418",
+      "publicLabel": "Palm Beach Gardens, FL area"
+    }
   },
   "weightPolicy": {
     "maxStandardWeightLbs": 45,
@@ -143,6 +150,20 @@
             { "weightTier": "15to30", "priceFrom": 190, "durationMin": 90, "durationMax": 105 },
             { "weightTier": "31to45", "priceFrom": 210, "durationMin": 105, "durationMax": 120 }
           ]
+        },
+        {
+          "id": "hand-stripping",
+          "name": "Hand Stripping Specialty",
+          "nameZh": "传统手剥毛护理",
+          "description": "Specialized coat preservation for wire-haired breeds (such as Terriers and Schnauzers). Preserves rich coat color, harsh texture, and natural skin protection by manually removing blown coat. Charged at an hourly rate due to the intense precision and time required.",
+          "note": "If a bath is desired immediately after hand stripping, please add a Signature Bath & Care service to your booking.",
+          "pricingType": "hourly",
+          "hourlyRate": 150,
+          "durationMin": 60,
+          "durationMax": 90,
+          "durationNote": "1 – 1.5 hours (varies by coat texture & coverage)",
+          "availableOver45Lbs": true,
+          "noBathOver45Lbs": true
         }
       ]
     },
@@ -151,20 +172,6 @@
       "name": "Specialty Care",
       "nameZh": "专项特色护理",
       "services": [
-        {
-          "id": "hand-stripping",
-          "name": "Hand Stripping Specialty",
-          "nameZh": "传统手剥毛护理",
-          "description": "Specialized coat preservation for wire-haired breeds (such as Terriers and Schnauzers). Preserves rich coat color, harsh texture, and natural skin protection by manually removing blown coat. Charged at an hourly rate due to the intense precision and time required.",
-          "note": "If a bath is desired immediately after hand stripping, please add a Signature Bath & Care service to your booking.",
-          "pricingType": "hourly",
-          "hourlyRate": 120,
-          "durationMin": 90,
-          "durationMax": 180,
-          "durationNote": "1.5 – 3 hours (varies by coat texture & coverage)",
-          "availableOver45Lbs": true,
-          "noBathOver45Lbs": true
-        },
         {
           "id": "end-of-life-care",
           "name": "End-of-Life Comfort Care",
