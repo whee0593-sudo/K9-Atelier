@@ -22,7 +22,7 @@ export function ServiceCategoryPicker({
   const categories = getBookableCategories();
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
       {categories.map((category, index) => {
         const selected = selectedCategoryId === category.id;
         const isPrimary = index === 0;

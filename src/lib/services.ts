@@ -238,5 +238,12 @@ export function groupServicesByCategory(services: BookableService[]) {
     }
   }
 
-  return Array.from(groups.entries()).map(([id, group]) => ({ id, ...group }));
+  const categoryOrder = business.serviceCategories.map((c) => c.id);
+
+  return categoryOrder
+    .filter((id) => groups.has(id))
+    .map((id) => {
+      const group = groups.get(id)!;
+      return { id, ...group };
+    });
 }

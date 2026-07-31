@@ -9,9 +9,6 @@ export default function BookPage() {
       <h1 className="text-center text-3xl font-semibold text-gold-dark">
         Book Service
       </h1>
-      <p className="mt-4 text-center text-text-muted">
-        Choose your service, select your pet, then pick a time.
-      </p>
 
       <BookPageGate>
         <BookingFlow />

@@ -164,31 +164,6 @@
           "durationNote": "1 – 1.5 hours (varies by coat texture & coverage)",
           "availableOver45Lbs": true,
           "noBathOver45Lbs": true
-        }
-      ]
-    },
-    {
-      "id": "specialty-care",
-      "name": "Specialty Care",
-      "nameZh": "专项特色护理",
-      "services": [
-        {
-          "id": "end-of-life-care",
-          "name": "End-of-Life Comfort Care",
-          "nameZh": "临终关怀服务",
-          "description": "Compassionate, low-stress comfort grooming for dogs in their final stage of life. Focuses on gentle handling, dignity, and emotional comfort rather than cosmetic results. Available for dogs over 45 lbs when bath and full grooming services are not offered.",
-          "includes": [
-            "Gentle, low-stress handling focused on comfort and dignity",
-            "Emotional comfort rather than cosmetic results",
-            "Care tailored to your dog's physical and emotional needs"
-          ],
-          "includesZh": "为生命末期的狗狗提供温和、低压力的舒适护理，优先安抚与尊严，不追求造型效果",
-          "note": "By appointment only. This service is complimentary — there is no charge.",
-          "noteZh": "仅预约；完全免费",
-          "pricingType": "free",
-          "priceLabel": "Complimentary",
-          "appointmentOnly": true,
-          "availableOver45Lbs": true
         },
         {
           "id": "senior-comfort-care",
@@ -199,25 +174,6 @@
           "pricingType": "add_on",
           "addOnMin": 30,
           "addOnMax": 50
-        },
-        {
-          "id": "creative-accent-coloring",
-          "name": "Creative Accent Coloring",
-          "nameZh": "创意局部染色",
-          "description": "Safe, trendy, and fun pop of color for your pet! Uses 100% non-toxic, pet-safe, semi-permanent color products designed specifically for animal coats.",
-          "note": "Must be booked together with Signature Bath & Care.",
-          "noteZh": "必须同时预约 Signature Bath & Care",
-          "requiresServiceId": "signature-bath-care",
-          "pricingType": "options",
-          "options": [
-            { "name": "Ears or Tail Accent", "nameZh": "耳尖 / 尾巴尖染色", "priceFrom": 50 },
-            { "name": "Paws / Boots Accent", "nameZh": "四爪「小靴子」染色", "priceFrom": 150 },
-            {
-              "name": "Custom Creative Design",
-              "nameZh": "自定义创意设计",
-              "consultationRequired": true
-            }
-          ]
         }
       ]
     },
@@ -275,6 +231,55 @@
             { "weightTier": "15to30", "priceFrom": 150, "durationMin": 75 },
             { "weightTier": "31to45", "priceFrom": 200, "durationMin": 90 }
           ]
+        }
+      ]
+    },
+    {
+      "id": "creative-accent-coloring",
+      "name": "Creative Accent Coloring",
+      "nameZh": "创意局部染色",
+      "services": [
+        {
+          "id": "creative-accent-coloring",
+          "name": "Creative Accent Coloring",
+          "nameZh": "创意局部染色",
+          "description": "Safe, trendy, and fun pop of color for your pet! Uses 100% non-toxic, pet-safe, semi-permanent color products designed specifically for animal coats.",
+          "note": "Must be booked together with Signature Bath & Care.",
+          "noteZh": "必须同时预约 Signature Bath & Care",
+          "requiresServiceId": "signature-bath-care",
+          "pricingType": "options",
+          "options": [
+            { "name": "Ears or Tail Accent", "nameZh": "耳尖 / 尾巴尖染色", "priceFrom": 50 },
+            { "name": "Paws / Boots Accent", "nameZh": "四爪「小靴子」染色", "priceFrom": 150 },
+            {
+              "name": "Custom Creative Design",
+              "nameZh": "自定义创意设计",
+              "consultationRequired": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "end-of-life-care",
+      "name": "End-of-Life Comfort Care",
+      "nameZh": "临终关怀服务",
+      "services": [
+        {
+          "id": "end-of-life-care",
+          "name": "End-of-Life Comfort Care",
+          "nameZh": "临终关怀服务",
+          "description": "Compassionate, low-stress comfort grooming for dogs in their final stage of life. Focuses on gentle handling, dignity, and emotional comfort rather than cosmetic results. Available for dogs over 45 lbs when bath and full grooming services are not offered.",
+          "includes": [
+            "Gentle, low-stress handling focused on comfort and dignity",
+            "Emotional comfort rather than cosmetic results",
+            "Care tailored to your dog's physical and emotional needs"
+          ],
+          "includesZh": "为生命末期的狗狗提供温和、低压力的舒适护理，优先安抚与尊严，不追求造型效果",
+          "pricingType": "free",
+          "priceLabel": "Complimentary",
+          "appointmentOnly": true,
+          "availableOver45Lbs": true
         }
       ]
     }
