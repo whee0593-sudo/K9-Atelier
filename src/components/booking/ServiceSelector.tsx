@@ -14,6 +14,7 @@ import {
   type BookableService,
   type SelectedService,
 } from "@/lib/services";
+import { CreativeOptionDetail } from "@/components/booking/CreativeOptionDetail";
 
 type Props = {
   pet: PetProfile;
@@ -154,25 +155,16 @@ export function ServiceSelector({ pet, selected, onSelect }: Props) {
                         <ul className="mt-3 space-y-2">
                           {service.options.map((opt) => (
                             <li key={opt.name}>
-                              <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2 hover:bg-cream/80">
-                                <span className="flex items-center gap-2 text-sm">
-                                  <input
-                                    type="radio"
-                                    name="color-option"
-                                    checked={colorOption === opt.name}
-                                    onChange={() =>
-                                      handleColorOptionChange(service, opt.name)
-                                    }
-                                  />
-                                  {opt.name}
-                                </span>
-                                <span className="text-sm font-medium text-gold-dark">
-                                  {opt.consultationRequired
-                                    ? "Consultation required"
-                                    : opt.priceFrom != null
-                                      ? `${formatPrice(opt.priceFrom)}+`
-                                      : "—"}
-                                </span>
+                              <label className="flex cursor-pointer flex-col items-center gap-2 rounded-lg px-3 py-3 hover:bg-cream/80">
+                                <input
+                                  type="radio"
+                                  name="color-option"
+                                  checked={colorOption === opt.name}
+                                  onChange={() =>
+                                    handleColorOptionChange(service, opt.name)
+                                  }
+                                />
+                                <CreativeOptionDetail option={opt} />
                               </label>
                             </li>
                           ))}

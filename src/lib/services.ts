@@ -3,7 +3,9 @@ import { business, formatDuration, formatPrice } from "./business";
 export type ServiceOption = {
   name: string;
   nameZh?: string;
+  description?: string;
   priceFrom?: number;
+  note?: string;
   noteZh?: string;
   consultationRequired?: boolean;
 };
@@ -11,7 +13,7 @@ export type ServiceOption = {
 export type ServiceTier = {
   weightTier: string;
   priceFrom: number;
-  durationMin: number;
+  durationMin?: number;
   durationMax?: number;
 };
 
@@ -51,6 +53,13 @@ export type SelectedService = {
   priceLabel: string;
   durationLabel?: string;
 };
+
+export const CREATIVE_ACCENT_COLORING_ID = "creative-accent-coloring";
+
+export const CREATIVE_REQUIRED_BASE_IDS = [
+  "signature-bath-care",
+  "custom-full-haircut",
+] as const;
 
 const ADD_ON_ONLY_SERVICE_IDS = [
   "senior-comfort-care",
@@ -103,9 +112,11 @@ export function allBookableServices(): BookableService[] {
       categoryNote: "note" in category ? category.note : undefined,
       note: "note" in service ? service.note : undefined,
       requiresServiceId:
-        "requiresServiceId" in service ? service.requiresServiceId : undefined,
+        "requiresServiceId" in service
+          ? (service.requiresServiceId as string | undefined)
+          : undefined,
     })),
-  );
+  ) as BookableService[];
 }
 
 export function isServiceAvailableForPet(serviceId: string, weightLbs: number) {
@@ -151,7 +162,7 @@ export function formatServicePrice(
   if (service.pricingType === "tiered") {
     const tier = getTierForPet(service, weightLbs);
     if (!tier) return "Not available for this weight";
-    return `${formatPrice(tier.priceFrom)}+ · ${formatDuration(tier.durationMin, tier.durationMax)}`;
+    return `${formatPrice(tier.priceFrom)}+ · ${formatDuration(tier.durationMin ?? 0, tier.durationMax)}`;
   }
 
   if (service.pricingType === "hourly" && service.hourlyRate) {
@@ -159,6 +170,15 @@ export function formatServicePrice(
   }
 
   if (service.pricingType === "add_on") {
+    if (service.options?.length) {
+      const option =
+        service.options.find((o) => o.name === optionName) ?? service.options[0];
+      if (option?.consultationRequired) return "Consultation required add-on";
+      if (option?.priceFrom != null) {
+        return `+${formatPrice(option.priceFrom)}+ · ${option.name}`;
+      }
+      return "From $50+ add-on";
+    }
     if (service.tiers?.length) {
       const tier = getTierForPet(service, weightLbs);
       if (!tier) return "Not available for this weight";
@@ -194,6 +214,7 @@ export function formatServicePrice(
 }
 
 export function supportsSeniorAddOn(serviceId: string) {
+  if (serviceId === "hand-stripping") return false;
   return [
     "signature-bath-care",
     "custom-full-haircut",
@@ -201,6 +222,26 @@ export function supportsSeniorAddOn(serviceId: string) {
     "aromatherapy-oil-bath",
     "sensitive-skin-treatment",
   ].includes(serviceId);
+}
+
+export function supportsCreativeColoringAddOn(serviceId: string) {
+  return CREATIVE_REQUIRED_BASE_IDS.includes(
+    serviceId as (typeof CREATIVE_REQUIRED_BASE_IDS)[number],
+  );
+}
+
+export function getCreativeColoringService() {
+  return allBookableServices().find((s) => s.id === CREATIVE_ACCENT_COLORING_ID);
+}
+
+export function getRequiredBaseServicesForCreative() {
+  return CREATIVE_REQUIRED_BASE_IDS.map((id) =>
+    allBookableServices().find((s) => s.id === id),
+  ).filter((s): s is BookableService => s != null);
+}
+
+export function isCreativeColoringCategory(categoryId: string) {
+  return categoryId === CREATIVE_ACCENT_COLORING_ID;
 }
 
 export function seniorAddOnRange() {
@@ -235,8 +276,28 @@ export function getAvailableAddOns(
   categoryId: string,
   primaryServiceId: string,
 ) {
-  const categoryAddOns = getCategoryAddOnServices(categoryId);
-  if (categoryAddOns.length > 0) return categoryAddOns;
+  const categoryAddOns = getCategoryAddOnServices(categoryId).filter(
+    (addOn) => {
+      if (primaryServiceId === "hand-stripping") {
+        return addOn.id === "dematting-brush-out";
+      }
+      if (addOn.id === "senior-comfort-care") {
+        return supportsSeniorAddOn(primaryServiceId);
+      }
+      return true;
+    },
+  );
+
+  let addOns = categoryAddOns;
+
+  if (supportsCreativeColoringAddOn(primaryServiceId)) {
+    const creative = getCreativeColoringService();
+    if (creative && !addOns.some((a) => a.id === creative.id)) {
+      addOns = [...addOns, creative];
+    }
+  }
+
+  if (addOns.length > 0) return addOns;
 
   if (supportsSeniorAddOn(primaryServiceId)) {
     const senior = allBookableServices().find(
@@ -273,6 +334,14 @@ export function formatServicePriceFrom(service: BookableService) {
   }
   if (service.pricingType === "free") {
     return "Complimentary";
+  }
+  if (service.pricingType === "add_on" && service.options?.length) {
+    const priced = service.options.filter((o) => o.priceFrom != null);
+    if (priced.length) {
+      const min = Math.min(...priced.map((o) => o.priceFrom!));
+      return `From ${formatPrice(min)}+ (Add-on)`;
+    }
+    return "Consultation required (Add-on)";
   }
   if (service.pricingType === "add_on" && service.tiers?.length) {
     const min = Math.min(...service.tiers.map((t) => t.priceFrom));

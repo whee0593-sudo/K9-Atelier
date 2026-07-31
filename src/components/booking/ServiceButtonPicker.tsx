@@ -4,8 +4,11 @@ import { business, formatDuration, formatPrice } from "@/lib/business";
 import {
   formatServicePriceFrom,
   getBookableCategories,
+  CREATIVE_ACCENT_COLORING_ID,
+  isCreativeColoringCategory,
   type BookableService,
 } from "@/lib/services";
+import { CreativeOptionDetail } from "@/components/booking/CreativeOptionDetail";
 
 const buttonBase =
   "flex w-full flex-col items-center justify-center rounded-2xl px-4 py-5 text-center transition shadow-sm";
@@ -79,7 +82,7 @@ function PricingBlock({ service }: { service: BookableService }) {
               <tr key={tier.weightTier} className="border-t border-lavender/20">
                 <td className="px-4 py-2.5">{labels[tier.weightTier]}</td>
                 <td className="px-4 py-2.5">
-                  {formatDuration(tier.durationMin, tier.durationMax)}
+                  {formatDuration(tier.durationMin ?? 0, tier.durationMax)}
                 </td>
                 <td className="px-4 py-2.5 font-medium text-gold-dark">
                   {formatPrice(tier.priceFrom)}+
@@ -153,6 +156,23 @@ function PricingBlock({ service }: { service: BookableService }) {
   }
 
   if (service.pricingType === "options" && service.options) {
+    const isCreative = service.id === CREATIVE_ACCENT_COLORING_ID;
+
+    if (isCreative) {
+      return (
+        <ul className="mt-6 space-y-6 text-sm">
+          {service.options.map((opt) => (
+            <li
+              key={opt.name}
+              className="border-b border-lavender/20 pb-6 last:border-0"
+            >
+              <CreativeOptionDetail option={opt} />
+            </li>
+          ))}
+        </ul>
+      );
+    }
+
     return (
       <ul className="mt-6 space-y-2 text-sm">
         {service.options.map((opt) => (
@@ -160,7 +180,19 @@ function PricingBlock({ service }: { service: BookableService }) {
             key={opt.name}
             className="flex justify-between gap-4 border-b border-lavender/20 pb-2 last:border-0"
           >
-            <span>{opt.name}</span>
+            <span>
+              {opt.name}
+              {opt.description && (
+                <span className="mt-1 block text-xs leading-relaxed text-text-muted">
+                  {opt.description}
+                </span>
+              )}
+              {opt.note && (
+                <span className="mt-1 block text-xs text-gold-dark">
+                  {opt.note}
+                </span>
+              )}
+            </span>
             <span className="shrink-0 font-medium text-gold-dark">
               {opt.consultationRequired
                 ? "Consultation required"
@@ -196,9 +228,7 @@ function PricingBlock({ service }: { service: BookableService }) {
 type ServicePanelProps = {
   categoryId: string;
   selectedServiceId: string | null;
-  colorOption: string | null;
   onSelect: (service: BookableService) => void;
-  onColorOptionChange: (optionName: string) => void;
   onBack: () => void;
   onBook: () => void;
 };
@@ -206,9 +236,7 @@ type ServicePanelProps = {
 export function ServiceButtonPicker({
   categoryId,
   selectedServiceId,
-  colorOption,
   onSelect,
-  onColorOptionChange,
   onBack,
   onBook,
 }: ServicePanelProps) {
@@ -219,6 +247,8 @@ export function ServiceButtonPicker({
     category.services.find((s) => s.id === selectedServiceId) ??
     category.services[0] ??
     null;
+
+  const isCreative = isCreativeColoringCategory(categoryId);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -234,12 +264,13 @@ export function ServiceButtonPicker({
         {category.name}
       </h2>
 
-      {category.note && (
+      {category.note && !isCreative && (
         <p className="mx-auto mt-3 max-w-2xl text-center text-sm italic text-text-muted">
           {category.note}
         </p>
       )}
 
+      {!isCreative && (
       <div
         className={`mt-8 grid gap-4 ${
           category.services.length === 1
@@ -284,86 +315,62 @@ export function ServiceButtonPicker({
           );
         })}
       </div>
+      )}
 
       {selected && (
-        <div className="mt-10 text-center">
-          <h3 className="text-xl font-semibold text-text">{selected.name}</h3>
+        <div className={`mt-10 ${isCreative ? "mx-auto max-w-2xl" : "text-center"}`}>
+          {!isCreative && (
+            <>
+              <h3 className="text-xl font-semibold text-text">{selected.name}</h3>
 
-          {selected.bestFor && (
-            <p className="mt-2 text-sm font-medium text-gold-dark">
-              Best for: {selected.bestFor}
-            </p>
-          )}
+              {selected.bestFor && (
+                <p className="mt-2 text-sm font-medium text-gold-dark">
+                  Best for: {selected.bestFor}
+                </p>
+              )}
 
-          <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-text-muted">
-            {selected.description}
-          </p>
-
-          {selected.includes && selected.includes.length > 0 && (
-            <div className="mx-auto mt-6 max-w-xl text-left">
-              <p className="text-center text-sm font-medium text-text">
-                Includes:
+              <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-text-muted">
+                {selected.description}
               </p>
-              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-text-muted">
-                {selected.includes.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          )}
 
-          {selected.note && (
-            <p className="mx-auto mt-4 max-w-xl text-sm text-text-muted">
-              {selected.note}
-            </p>
-          )}
+              {selected.includes && selected.includes.length > 0 && (
+                <div className="mx-auto mt-6 max-w-xl text-left">
+                  <p className="text-center text-sm font-medium text-text">
+                    Includes:
+                  </p>
+                  <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-text-muted">
+                    {selected.includes.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-          {selected.suitableFor && (
-            <p className="mt-3 text-sm text-text-muted">
-              Suitable for: {selected.suitableFor}
-            </p>
+              {selected.note && (
+                <p className="mx-auto mt-4 max-w-xl text-sm text-text-muted">
+                  {selected.note}
+                </p>
+              )}
+
+              {selected.suitableFor && (
+                <p className="mt-3 text-sm text-text-muted">
+                  Suitable for: {selected.suitableFor}
+                </p>
+              )}
+            </>
           )}
 
           <PricingBlock service={selected} />
 
-          {selected.id === "creative-accent-coloring" && selected.options && (
-            <div className="mx-auto mt-6 max-w-md text-left">
-              <p className="mb-3 text-center text-sm font-medium text-text">
-                Choose accent style
-              </p>
-              <div className="space-y-2">
-                {selected.options.map((opt) => (
-                  <button
-                    key={opt.name}
-                    type="button"
-                    onClick={() => onColorOptionChange(opt.name)}
-                    className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm transition ${
-                      colorOption === opt.name
-                        ? "bg-gold text-white"
-                        : "border border-gold/50 bg-cream text-text hover:bg-lavender-light"
-                    }`}
-                  >
-                    <span>{opt.name}</span>
-                    <span className="font-medium">
-                      {opt.consultationRequired
-                        ? "Consultation required"
-                        : opt.priceFrom != null
-                          ? `${formatPrice(opt.priceFrom)}+`
-                          : "—"}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={onBook}
-            className="mt-10 inline-flex min-h-[3.25rem] items-center justify-center rounded-2xl bg-gold px-10 py-3 text-base font-medium text-white transition hover:bg-gold-dark"
-          >
-            Book This Service
-          </button>
+          <div className={`mt-10 ${isCreative ? "text-center" : ""}`}>
+            <button
+              type="button"
+              onClick={onBook}
+              className="inline-flex min-h-[3.25rem] items-center justify-center rounded-2xl bg-gold px-10 py-3 text-base font-medium text-white transition hover:bg-gold-dark"
+            >
+              Book This Service
+            </button>
+          </div>
         </div>
       )}
     </div>

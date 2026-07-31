@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminNav } from "@/components/admin/AdminNav";
+import { ExitPreviewButton } from "@/components/auth/ExitPreviewButton";
 
 export default function AdminLayout({
   children,
@@ -9,10 +10,12 @@ export default function AdminLayout({
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
       <div className="mb-6 rounded-xl border border-gold/40 bg-lavender-light/50 px-4 py-3 text-sm text-gold-dark">
-        Admin area — not linked on the public site. Sign in required when live.{" "}
+        Admin area — preview only.{" "}
         <Link href="/login/admin" className="underline">
-          Admin login
+          Team login
         </Link>
+        {" · "}
+        <ExitPreviewButton />
       </div>
 
       <div className="grid gap-10 md:grid-cols-[220px_1fr]">

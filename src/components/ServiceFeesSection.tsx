@@ -118,7 +118,7 @@ export function ServiceFeesSection({ className = "" }: { className?: string }) {
                           {formatPrice(f.rate as number)}
                         </td>
                         <td className={tdClass}>
-                          {f.durationMin} mins (Add-on)
+                          {f.durationMin as number} mins (Add-on)
                         </td>
                       </tr>
                     </tbody>

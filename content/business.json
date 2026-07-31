@@ -58,6 +58,14 @@
     "over45Note": "Dogs over 45 lbs: hand stripping (no bath) and end-of-life comfort care only.",
     "over45NoteZh": "45 lbs 以上仅接不洗澡的手剥毛服务及临终关怀服务"
   },
+  "site": {
+    "privacyMode": true,
+    "underConstruction": {
+      "title": "Website Under Construction",
+      "message": "K9 Atelier is getting ready for launch. Please check back soon — we look forward to welcoming you and your pup.",
+      "contactLabel": "Questions? Email us anytime."
+    }
+  },
   "booking": {
     "requiresPaymentMethod": true,
     "chargeAtBooking": false,
@@ -281,22 +289,36 @@
       "id": "creative-accent-coloring",
       "name": "Creative Accent Coloring",
       "nameZh": "创意局部染色",
+      "note": "Must be booked together with Signature Bath & Care or Custom Full Haircut & Styling.",
+      "noteZh": "必须同时预约 Signature Bath & Care 或 Custom Full Haircut & Styling",
       "services": [
         {
           "id": "creative-accent-coloring",
           "name": "Creative Accent Coloring",
           "nameZh": "创意局部染色",
           "description": "Safe, trendy, and fun pop of color for your pet! Uses 100% non-toxic, pet-safe, semi-permanent color products designed specifically for animal coats.",
-          "note": "Must be booked together with Signature Bath & Care.",
-          "noteZh": "必须同时预约 Signature Bath & Care",
-          "requiresServiceId": "signature-bath-care",
+          "note": "Must be booked together with Signature Bath & Care or Custom Full Haircut & Styling.",
+          "noteZh": "必须同时预约 Signature Bath & Care 或 Custom Full Haircut & Styling",
           "pricingType": "options",
           "options": [
-            { "name": "Ears or Tail Accent", "nameZh": "耳尖 / 尾巴尖染色", "priceFrom": 50 },
-            { "name": "Paws / Boots Accent", "nameZh": "四爪「小靴子」染色", "priceFrom": 150 },
+            {
+              "name": "Ears & Tail Accent",
+              "nameZh": "耳尖 / 尾巴尖染色",
+              "description": "A subtle, playful pop of color to showcase your dog's personality. Ideal for smaller areas like ears or tail.",
+              "priceFrom": 100,
+              "note": "$100 / section / per single color"
+            },
+            {
+              "name": "Paws & Boots Accent",
+              "nameZh": "四爪「小靴子」染色",
+              "description": "A cohesive and stylish look designed to make your dog shine! Covers four paws, ears, and tail with rich, vibrant single-color application.",
+              "priceFrom": 350,
+              "note": "$350 (single color)"
+            },
             {
               "name": "Custom Creative Design",
               "nameZh": "自定义创意设计",
+              "description": "The ultimate luxury color experience. Fully customized artistic designs, multi-color gradient blending, or specialized patterns tailored specifically to your vision and your dog's coat.",
               "consultationRequired": true
             }
           ]

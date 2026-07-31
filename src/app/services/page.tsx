@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CreativeOptionDetail } from "@/components/booking/CreativeOptionDetail";
 import { ServiceFeesSection } from "@/components/ServiceFeesSection";
 import { business, formatDuration, formatPrice } from "@/lib/business";
 
@@ -161,7 +162,7 @@ export default function ServicesPage() {
                       <div className="mt-4">
                         <p className="text-sm font-medium text-gold-dark">
                           {formatPrice(s.flatRate as number)} /{" "}
-                          {service.durationMin ?? 15} mins (Add-on)
+                          {(s.durationMin as number | undefined) ?? 15} mins (Add-on)
                         </p>
                       </div>
                     )}
@@ -209,12 +210,32 @@ export default function ServicesPage() {
 
                     {"options" in service && service.options && (
                       <ul className="mt-4 space-y-2 text-sm">
-                        {service.options.map((opt) => (
+                        {service.options.map((opt) =>
+                          service.id === "creative-accent-coloring" ? (
+                            <li
+                              key={opt.name}
+                              className="border-b border-lavender/20 pb-6 last:border-0"
+                            >
+                              <CreativeOptionDetail option={opt} />
+                            </li>
+                          ) : (
                           <li
                             key={opt.name}
                             className="flex justify-between gap-4 border-b border-lavender/20 pb-2 last:border-0"
                           >
-                            <span>{opt.name}</span>
+            <span>
+              {opt.name}
+              {"description" in opt && opt.description && (
+                <span className="mt-1 block text-xs leading-relaxed text-text-muted">
+                  {opt.description}
+                </span>
+              )}
+              {"note" in opt && opt.note && (
+                <span className="mt-1 block text-xs text-gold-dark">
+                  {opt.note}
+                </span>
+              )}
+            </span>
                             <span className="shrink-0 font-medium text-gold-dark">
                               {"consultationRequired" in opt &&
                               opt.consultationRequired
@@ -224,7 +245,8 @@ export default function ServicesPage() {
                                   : "—"}
                             </span>
                           </li>
-                        ))}
+                          ),
+                        )}
                       </ul>
                     )}
 

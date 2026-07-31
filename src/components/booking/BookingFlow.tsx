@@ -9,6 +9,9 @@ import {
   getAddOnService,
   getAvailableAddOns,
   getBookableCategories,
+  getCreativeColoringService,
+  getRequiredBaseServicesForCreative,
+  isCreativeColoringCategory,
   type BookableService,
   type SelectedService,
 } from "@/lib/services";
@@ -18,6 +21,7 @@ import {
   type TravelQuote,
 } from "@/lib/travel";
 import { AddOnPickerModal } from "@/components/booking/AddOnPickerModal";
+import { CreativePairingModal } from "@/components/booking/CreativePairingModal";
 import { PetSelector } from "@/components/booking/PetSelector";
 import { AddressStep } from "@/components/booking/AddressStep";
 import { DateTimeStep } from "@/components/booking/DateTimeStep";
@@ -33,8 +37,9 @@ export function BookingFlow() {
   );
   const [serviceConfirmed, setServiceConfirmed] = useState(false);
   const [showAddOnPicker, setShowAddOnPicker] = useState(false);
+  const [showCreativePairing, setShowCreativePairing] = useState(false);
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
-  const [colorOption, setColorOption] = useState<string | null>(null);
+  const [addOnOptions, setAddOnOptions] = useState<Record<string, string>>({});
   const [selectedPet, setSelectedPet] = useState<PetProfile | null>(null);
   const [address, setAddress] = useState<ServiceAddress | null>(null);
   const [travelQuote, setTravelQuote] = useState<TravelQuote | null>(null);
@@ -51,12 +56,10 @@ export function BookingFlow() {
       ? {
           serviceId: selectedService.id,
           serviceName: selectedService.name,
-          optionName: colorOption ?? undefined,
           addOnIds: selectedAddOnIds,
           priceLabel: formatServicePrice(
             selectedService,
             selectedPet.weightLbs,
-            colorOption ?? undefined,
           ),
         }
       : null;
@@ -68,7 +71,9 @@ export function BookingFlow() {
     setAppointmentDate(null);
     setAppointmentTime(null);
     setSelectedAddOnIds([]);
+    setAddOnOptions({});
     setShowAddOnPicker(false);
+    setShowCreativePairing(false);
   }
 
   function handleCategorySelect(id: string) {
@@ -78,11 +83,6 @@ export function BookingFlow() {
     setSelectedService(first);
     setServiceConfirmed(false);
     setShowAddOnPicker(false);
-    setColorOption(
-      first?.id === "creative-accent-coloring"
-        ? (first.options?.[0]?.name ?? null)
-        : null,
-    );
     resetFromService();
   }
 
@@ -91,11 +91,6 @@ export function BookingFlow() {
     setServiceConfirmed(false);
     setShowAddOnPicker(false);
     resetFromService();
-    if (service.id === "creative-accent-coloring") {
-      setColorOption(service.options?.[0]?.name ?? null);
-    } else {
-      setColorOption(null);
-    }
   }
 
   function handleBackToCategories() {
@@ -103,18 +98,28 @@ export function BookingFlow() {
     setSelectedService(null);
     setServiceConfirmed(false);
     setShowAddOnPicker(false);
-    setColorOption(null);
+    setShowCreativePairing(false);
     resetFromService();
   }
 
   function handleBackToServices() {
+    const wasCreativeFlow = isCreativeColoringCategory(categoryId ?? "");
     setServiceConfirmed(false);
     setShowAddOnPicker(false);
+    setShowCreativePairing(false);
     resetFromService();
+    if (wasCreativeFlow) {
+      setSelectedService(getCreativeColoringService() ?? null);
+    }
   }
 
   function handleBookService() {
     if (!selectedService || !categoryId) return;
+
+    if (isCreativeColoringCategory(categoryId)) {
+      setShowCreativePairing(true);
+      return;
+    }
 
     const addOns = getAvailableAddOns(categoryId, selectedService.id);
     if (addOns.length > 0) {
@@ -130,14 +135,73 @@ export function BookingFlow() {
   }
 
   function handleAddOnSkip() {
+    setSelectedAddOnIds([]);
+    setAddOnOptions({});
     setShowAddOnPicker(false);
     setServiceConfirmed(true);
   }
 
+  function handleAddOnNext() {
+    setShowAddOnPicker(false);
+    setServiceConfirmed(true);
+  }
+
+  function handleCreativePairingBack() {
+    setShowCreativePairing(false);
+  }
+
+  function handleCreativePairingComplete(
+    baseServiceId: string,
+    colorOption: string,
+  ) {
+    const baseService = getBookableCategories()
+      .flatMap((c) => c.services)
+      .find((s) => s.id === baseServiceId);
+
+    if (!baseService) return;
+
+    setSelectedService(baseService);
+    setSelectedAddOnIds(["creative-accent-coloring"]);
+    setAddOnOptions({ "creative-accent-coloring": colorOption });
+    setShowCreativePairing(false);
+    setServiceConfirmed(true);
+  }
+
   function toggleAddOn(id: string) {
-    setSelectedAddOnIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
+    if (selectedAddOnIds.includes(id)) {
+      setSelectedAddOnIds((prev) => prev.filter((x) => x !== id));
+      setAddOnOptions((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      return;
+    }
+
+    setSelectedAddOnIds((prev) => [...prev, id]);
+    const addOn = getAddOnService(id);
+    if (addOn?.options?.[0]) {
+      setAddOnOptions((prev) => ({
+        ...prev,
+        [id]: addOn.options![0].name,
+      }));
+    }
+  }
+
+  function handleAddOnOptionChange(addOnId: string, optionName: string) {
+    setAddOnOptions((prev) => ({ ...prev, [addOnId]: optionName }));
+    if (!selectedAddOnIds.includes(addOnId)) {
+      setSelectedAddOnIds((prev) => [...prev, addOnId]);
+    }
+  }
+
+  function formatAddOnLabel(id: string, weightLbs: number) {
+    const addOn = getAddOnService(id);
+    if (!addOn) return null;
+    const optionName = addOnOptions[id];
+    const price = formatServicePrice(addOn, weightLbs, optionName);
+    const label = optionName ? `${addOn.name} · ${optionName}` : addOn.name;
+    return price ? `${label} (${price})` : label;
   }
 
   const step = !categoryId
@@ -156,10 +220,8 @@ export function BookingFlow() {
     selectedPet && bookingSelection
       ? selectedAddOnIds
           .map((id) => {
-            const addOn = getAddOnService(id);
-            if (!addOn) return null;
-            const price = formatServicePrice(addOn, selectedPet.weightLbs);
-            return `Add-on: ${addOn.name}${price ? ` (${price})` : ""}`;
+            const label = formatAddOnLabel(id, selectedPet.weightLbs);
+            return label ? `Add-on: ${label}` : null;
           })
           .filter(Boolean)
       : [];
@@ -171,11 +233,7 @@ export function BookingFlow() {
         )}&body=${encodeURIComponent(
           [
             `Pet: ${selectedPet.name} (${selectedPet.weightLbs} lbs)`,
-            `Service: ${bookingSelection.serviceName}${
-              bookingSelection.optionName
-                ? ` - ${bookingSelection.optionName}`
-                : ""
-            }`,
+            `Service: ${bookingSelection.serviceName}`,
             ...addOnLines,
             `Address: ${formatServiceAddress(address)}`,
             `Travel: ${travelQuote.distanceMiles} mi · Fee $${travelQuote.fee}`,
@@ -206,22 +264,32 @@ export function BookingFlow() {
           <ServiceButtonPicker
             categoryId={categoryId}
             selectedServiceId={selectedService?.id ?? null}
-            colorOption={colorOption}
             onSelect={handleServiceSelect}
-            onColorOptionChange={setColorOption}
             onBack={handleBackToCategories}
             onBook={handleBookService}
           />
         </section>
       )}
 
+      {showCreativePairing && selectedService && (
+        <CreativePairingModal
+          creativeService={selectedService}
+          requiredBaseServices={getRequiredBaseServicesForCreative()}
+          onComplete={handleCreativePairingComplete}
+          onBack={handleCreativePairingBack}
+        />
+      )}
+
       {showAddOnPicker && availableAddOns.length > 0 && (
         <AddOnPickerModal
           addOns={availableAddOns}
           selectedIds={selectedAddOnIds}
+          addOnOptions={addOnOptions}
           onToggle={toggleAddOn}
+          onOptionChange={handleAddOnOptionChange}
           onBack={handleAddOnBack}
           onSkip={handleAddOnSkip}
+          onNext={handleAddOnNext}
         />
       )}
 
@@ -240,20 +308,20 @@ export function BookingFlow() {
             <p className="mt-1 font-medium text-gold-dark">
               {selectedService.name}
             </p>
-            {colorOption && (
-              <p className="mt-1 text-sm text-text-muted">{colorOption}</p>
-            )}
             {selectedAddOnIds.length > 0 && (
               <div className="mt-3 border-t border-lavender/30 pt-3 text-left text-sm">
                 <p className="text-text-muted">Add-ons:</p>
                 <ul className="mt-1 space-y-1">
                   {selectedAddOnIds.map((id) => {
                     const addOn = getAddOnService(id);
-                    return addOn ? (
+                    if (!addOn) return null;
+                    const optionName = addOnOptions[id];
+                    return (
                       <li key={id} className="text-text">
                         {addOn.name}
+                        {optionName ? ` · ${optionName}` : ""}
                       </li>
-                    ) : null;
+                    );
                   })}
                 </ul>
               </div>
@@ -347,30 +415,19 @@ export function BookingFlow() {
               </p>
               <p>
                 <span className="text-text-muted">Service:</span>{" "}
-                <strong>
-                  {bookingSelection.serviceName}
-                  {bookingSelection.optionName
-                    ? ` · ${bookingSelection.optionName}`
-                    : ""}
-                </strong>
+                <strong>{bookingSelection.serviceName}</strong>
               </p>
               {selectedAddOnIds.length > 0 && (
                 <div>
                   <p className="text-text-muted">Add-ons:</p>
                   <ul className="mt-1 space-y-1">
                     {selectedAddOnIds.map((id) => {
-                      const addOn = getAddOnService(id);
-                      if (!addOn) return null;
-                      return (
+                      const label = formatAddOnLabel(id, selectedPet.weightLbs);
+                      return label ? (
                         <li key={id}>
-                          <strong>{addOn.name}</strong>
-                          <span className="text-text-muted">
-                            {" "}
-                            ·{" "}
-                            {formatServicePrice(addOn, selectedPet.weightLbs)}
-                          </span>
+                          <strong>{label}</strong>
                         </li>
-                      );
+                      ) : null;
                     })}
                   </ul>
                 </div>
