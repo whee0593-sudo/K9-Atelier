@@ -70,14 +70,24 @@
   },
   "fees": [
     {
-      "id": "travel-fee",
-      "name": "Out-of-Service-Area Travel Fee",
-      "nameZh": "跨区域交通服务费",
-      "type": "travel",
-      "rate": 6.5,
-      "unit": "per_one_way_mile_beyond_free_radius",
-      "description": "Travel surcharge for clients located outside of our standard mobile grooming coverage area. Calculated at $6.50 per one-way mile based on GPS driving distance from our base location to your address via Google Maps. This single rate covers specialized grooming van fuel, vehicle wear and depreciation, and full round-trip travel time.",
-      "descriptionZh": "超出标准服务范围后，按 Google Maps 从基地到客户地址的单程 GPS 里程，每英里 $6.50（10 英里免费圈内不加收）。"
+      "id": "flea-tick-fee",
+      "name": "Flea & Tick Treatment Fee",
+      "nameZh": "跳蚤蜱虫处理费",
+      "type": "mandatory_surcharge",
+      "description": "Every appointment begins with a thorough health and skin check. If parasites (fleas or ticks) are discovered on your pet, we will notify you immediately and perform a mandatory specialized medicated bath to protect your pet and prevent contamination. This additional fee covers the medicated shampoo treatment and complete sanitation of the mobile vehicle.",
+      "descriptionZh": "每次预约开始前进行健康与皮肤检查。如发现跳蚤或蜱虫，将立即通知并强制进行药浴处理及车辆消毒。",
+      "lineItems": [
+        {
+          "name": "Medicated Flea & Tick Shampoo",
+          "rate": 20,
+          "note": "Mandatory surcharge applied automatically upon discovery of fleas or ticks during pre-groom inspection"
+        },
+        {
+          "name": "Vehicle Sanitation & Deep Clean",
+          "rate": 20,
+          "note": "Required for all parasite encounters to protect subsequent clients"
+        }
+      ]
     },
     {
       "id": "behavior-fee",
@@ -88,27 +98,30 @@
       "rateMax": 50,
       "unit": "flat_assessed_on_site",
       "description": "Applied when a dog exhibits high stress, extreme anxiety, aggression, or resistance during grooming. Covers extra time, specialized safety handling techniques, extra patience, and safety measures required to maintain a secure environment for both your pet and the groomer.",
-      "descriptionZh": "根据现场焦虑、抗拒或攻击程度评估，+$25–$50+。"
+      "descriptionZh": "根据现场焦虑、抗拒或攻击程度评估，+$25–$50+。",
+      "seniorCare": {
+        "name": "Senior & Gentle Comfort Care",
+        "nameZh": "高龄与特别关照护理",
+        "description": "Specialized, low-stress care for senior dogs who cannot tolerate a standard grooming routine due to paralysis, post-surgical recovery, or serious illness. Prioritizes comfort, safety, and dignity over speed. Includes extra resting breaks, anti-slip support, adapted handling techniques, and gentle drying methods tailored to limited mobility and medical needs.",
+        "descriptionZh": "专为因瘫痪、术后恢复或严重疾病而无法承受常规美容流程的老年犬提供的低压力特别护理。优先保障舒适、安全与尊严，而非速度。包括额外休息、防滑支撑、适配式操作手法及温和吹干。",
+        "suitableFor": "Senior dogs (10+ yrs) who are paralyzed, recovering from surgery, or living with serious illness that prevents a normal grooming flow",
+        "suitableForZh": "10岁以上、瘫痪、术后恢复中或因严重疾病无法完成常规美容流程的老年犬",
+        "tiers": [
+          { "weightTier": "under15", "priceFrom": 30 },
+          { "weightTier": "15to30", "priceFrom": 40 },
+          { "weightTier": "31to45", "priceFrom": 50 }
+        ]
+      }
     },
     {
-      "id": "flea-tick-fee",
-      "name": "Flea & Tick Treatment Fee",
-      "nameZh": "跳蚤蜱虫处理费",
-      "type": "mandatory_surcharge",
-      "description": "Every appointment begins with a thorough health and skin check. If parasites (fleas or ticks) are discovered on your pet, we will notify you immediately and perform a mandatory specialized medicated bath to protect your pet and prevent contamination. This additional fee covers the medicated shampoo treatment and complete sanitation of the mobile vehicle.",
-      "descriptionZh": "每次预约开始前进行健康与皮肤检查。如发现跳蚤或蜱虫，将立即通知并强制进行药浴处理及车辆消毒。",
-      "lineItems": [
-        {
-          "name": "Medicated Flea & Tick Shampoo",
-          "rate": 10,
-          "note": "Mandatory surcharge applied automatically upon discovery of fleas or ticks during pre-groom inspection"
-        },
-        {
-          "name": "Vehicle Sanitation & Deep Clean",
-          "rate": 20,
-          "note": "Required for all parasite encounters to protect subsequent clients"
-        }
-      ]
+      "id": "travel-fee",
+      "name": "Out-of-Service-Area Travel Fee",
+      "nameZh": "跨区域交通服务费",
+      "type": "travel",
+      "rate": 6.5,
+      "unit": "per_one_way_mile_beyond_free_radius",
+      "description": "Travel surcharge for clients located outside of our standard mobile grooming coverage area. Calculated at $6.50 per one-way mile based on GPS driving distance from our base location to your address via Google Maps. This single rate covers specialized grooming van fuel, vehicle wear and depreciation, and full round-trip travel time.",
+      "descriptionZh": "超出标准服务范围后，按 Google Maps 从基地到客户地址的单程 GPS 里程，每英里 $6.50（10 英里免费圈内不加收）。"
     }
   ],
   "serviceCategories": [
@@ -166,14 +179,44 @@
           "noBathOver45Lbs": true
         },
         {
+          "id": "dematting-brush-out",
+          "name": "DeMatting & Gentle Brush-Out",
+          "nameZh": "温和开结梳理",
+          "description": "Safe and patient mat removal for light to moderate tangles using specialized dematting sprays and tools. We prioritize your dog's comfort and skin safety at all times.",
+          "descriptionZh": "使用专用开结喷雾与工具，安全、耐心地处理轻度至中度打结，始终优先保障狗狗的舒适与皮肤安全。",
+          "policyNote": "To protect your pet's skin and ensure a stress-free experience, dematting is limited to a maximum of 15–30 minutes. If matting is severe or close to the skin, we will kindly recommend a smooth, safe shave-down for your pet's comfort and health.",
+          "policyNoteZh": "为保护皮肤并确保低压力体验，开结时间上限为 15–30 分钟。若打结严重或贴近皮肤，我们将建议进行平滑、安全的剃短处理。",
+          "pricingType": "add_on",
+          "flatRate": 30,
+          "durationMin": 15
+        },
+        {
+          "id": "deshedding-treatment",
+          "name": "DeShedding Treatment",
+          "nameZh": "深层祛毛护理",
+          "description": "A deep-penetrating, coat-restorative treatment designed to release trapped undercoat and drastically reduce shedding. Includes a specialized deshedding shampoo & conditioner soak, high-velocity blow-out, and thorough undercoat carding/brushing.",
+          "descriptionZh": "深层渗透、修复毛发的护理，帮助释放底层死毛并显著减少掉毛。包含专用祛毛洗护浸泡、高速吹干及彻底的底层毛发梳理。",
+          "pricingType": "add_on",
+          "tiers": [
+            { "weightTier": "under15", "priceFrom": 30 },
+            { "weightTier": "15to30", "priceFrom": 40 },
+            { "weightTier": "31to45", "priceFrom": 50 }
+          ]
+        },
+        {
           "id": "senior-comfort-care",
           "name": "Senior & Gentle Comfort Care",
           "nameZh": "高龄与特别关照护理",
-          "description": "Specialized, low-stress care designed for senior (10+ years) or medically sensitive dogs (arthritis, heart conditions, anxiety, or mobility issues). Prioritizes pet comfort and safety over speed. Includes extra resting breaks, anti-slip support, adapted handling techniques, and gentle drying methods.",
-          "suitableFor": "Senior dogs (10+ yrs), arthritis, heart conditions, anxiety, or limited mobility",
+          "description": "Specialized, low-stress care for senior dogs who cannot tolerate a standard grooming routine due to paralysis, post-surgical recovery, or serious illness. Prioritizes comfort, safety, and dignity over speed. Includes extra resting breaks, anti-slip support, adapted handling techniques, and gentle drying methods tailored to limited mobility and medical needs.",
+          "descriptionZh": "专为因瘫痪、术后恢复或严重疾病而无法承受常规美容流程的老年犬提供的低压力特别护理。优先保障舒适、安全与尊严，而非速度。包括额外休息、防滑支撑、适配式操作手法及温和吹干。",
+          "suitableFor": "Senior dogs (10+ yrs) who are paralyzed, recovering from surgery, or living with serious illness that prevents a normal grooming flow",
+          "suitableForZh": "10岁以上、瘫痪、术后恢复中或因严重疾病无法完成常规美容流程的老年犬",
           "pricingType": "add_on",
-          "addOnMin": 30,
-          "addOnMax": 50
+          "tiers": [
+            { "weightTier": "under15", "priceFrom": 30 },
+            { "weightTier": "15to30", "priceFrom": 40 },
+            { "weightTier": "31to45", "priceFrom": 50 }
+          ]
         }
       ]
     },

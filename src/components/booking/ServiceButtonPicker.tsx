@@ -107,6 +107,43 @@ function PricingBlock({ service }: { service: BookableService }) {
   }
 
   if (service.pricingType === "add_on") {
+    if (service.tiers?.length) {
+      const labels = Object.fromEntries(
+        business.weightTiers.map((t) => [t.id, t.label]),
+      );
+      return (
+        <div className="mt-6 overflow-hidden rounded-xl border border-lavender/30">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-lavender-light/60">
+              <tr>
+                <th className="px-4 py-2.5 font-medium">Weight</th>
+                <th className="px-4 py-2.5 font-medium">Additional Fee</th>
+              </tr>
+            </thead>
+            <tbody>
+              {service.tiers.map((tier) => (
+                <tr key={tier.weightTier} className="border-t border-lavender/20">
+                  <td className="px-4 py-2.5">
+                    {labels[tier.weightTier] ?? tier.weightTier}
+                  </td>
+                  <td className="px-4 py-2.5 font-medium text-gold-dark">
+                    +{formatPrice(tier.priceFrom)} on base service
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+    if (service.flatRate != null) {
+      return (
+        <p className="mt-6 text-center text-sm font-medium text-gold-dark">
+          {formatPrice(service.flatRate)} / {service.durationMin ?? 15} mins
+          (Add-on)
+        </p>
+      );
+    }
     return (
       <p className="mt-6 text-center text-sm font-medium text-text">
         Additional fee: +{formatPrice(service.addOnMin ?? 0)}–

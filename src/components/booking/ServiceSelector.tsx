@@ -37,13 +37,13 @@ export function ServiceSelector({ pet, selected, onSelect }: Props) {
   function buildSelection(
     service: BookableService,
     optionName?: string,
-    withSeniorAddOn = false,
+    addOnIds: string[] = [],
   ): SelectedService {
     return {
       serviceId: service.id,
       serviceName: service.name,
       optionName,
-      seniorAddOn: withSeniorAddOn,
+      addOnIds,
       priceLabel: formatServicePrice(service, pet.weightLbs, optionName),
       durationLabel:
         service.pricingType === "tiered"
@@ -58,24 +58,29 @@ export function ServiceSelector({ pet, selected, onSelect }: Props) {
     if (service.id === "creative-accent-coloring") {
       const defaultOption = service.options?.[0]?.name;
       setColorOption(defaultOption ?? null);
-      onSelect(buildSelection(service, defaultOption ?? undefined, seniorAddOn));
+      onSelect(buildSelection(service, defaultOption ?? undefined, seniorAddOn ? ["senior-comfort-care"] : []));
       return;
     }
 
     setColorOption(null);
-    const addOn = supportsSeniorAddOn(service.id) ? seniorAddOn : false;
-    onSelect(buildSelection(service, undefined, addOn));
+    const addOnIds = supportsSeniorAddOn(service.id) && seniorAddOn
+      ? ["senior-comfort-care"]
+      : [];
+    onSelect(buildSelection(service, undefined, addOnIds));
   }
 
   function handleColorOptionChange(service: BookableService, optionName: string) {
     setColorOption(optionName);
-    onSelect(buildSelection(service, optionName, false));
+    onSelect(buildSelection(service, optionName, []));
   }
 
   function handleSeniorToggle(checked: boolean) {
     setSeniorAddOn(checked);
     if (!selected || !supportsSeniorAddOn(selected.serviceId)) return;
-    onSelect({ ...selected, seniorAddOn: checked });
+    onSelect({
+      ...selected,
+      addOnIds: checked ? ["senior-comfort-care"] : [],
+    });
   }
 
   const over45 = pet.weightLbs > business.weightPolicy.maxStandardWeightLbs;
@@ -194,7 +199,8 @@ export function ServiceSelector({ pet, selected, onSelect }: Props) {
               Add Senior &amp; Gentle Comfort Care
             </span>
             <span className="mt-1 block text-sm text-text-muted">
-              Extra resting breaks, anti-slip support, and gentle handling (+
+              For senior dogs who cannot tolerate a standard groom due to
+              paralysis, post-surgery recovery, or serious illness (+
               {formatPrice(seniorRange.min)}–{formatPrice(seniorRange.max)}).
             </span>
           </span>
@@ -205,10 +211,14 @@ export function ServiceSelector({ pet, selected, onSelect }: Props) {
         <div className="rounded-xl bg-lavender-light/40 px-4 py-3 text-sm text-text">
           <strong>Selected service:</strong> {selected.serviceName}
           {selected.optionName ? ` · ${selected.optionName}` : ""}
-          {selected.seniorAddOn ? " · Senior Comfort Add-on" : ""}
+          {selected.addOnIds.includes("senior-comfort-care")
+            ? " · Senior Comfort Add-on"
+            : ""}
           <span className="mt-1 block text-text-muted">
             Estimated: {selected.priceLabel}
-            {selected.seniorAddOn ? " + senior add-on" : ""}
+            {selected.addOnIds.includes("senior-comfort-care")
+              ? " + senior add-on"
+              : ""}
           </span>
         </div>
       )}

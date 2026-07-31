@@ -1,15 +1,18 @@
 import Link from "next/link";
+import { ServiceFeesSection } from "@/components/ServiceFeesSection";
 import { business, formatDuration, formatPrice } from "@/lib/business";
 
 function TierTable({
   tiers,
+  priceOnly = false,
 }: {
   tiers: Array<{
     weightTier: string;
     priceFrom: number;
-    durationMin: number;
+    durationMin?: number;
     durationMax?: number;
   }>;
+  priceOnly?: boolean;
 }) {
   const labels = Object.fromEntries(
     business.weightTiers.map((t) => [t.id, t.label]),
@@ -22,17 +25,23 @@ function TierTable({
           <tr>
             <th className="px-4 py-2 font-medium">Weight</th>
             <th className="px-4 py-2 font-medium">Price</th>
-            <th className="px-4 py-2 font-medium">Duration</th>
+            {!priceOnly && <th className="px-4 py-2 font-medium">Duration</th>}
           </tr>
         </thead>
         <tbody>
           {tiers.map((tier) => (
             <tr key={tier.weightTier} className="border-t border-lavender/20">
               <td className="px-4 py-2">{labels[tier.weightTier]}</td>
-              <td className="px-4 py-2">{formatPrice(tier.priceFrom)}+</td>
               <td className="px-4 py-2">
-                {formatDuration(tier.durationMin, tier.durationMax)}
+                {priceOnly
+                  ? `+${formatPrice(tier.priceFrom)}`
+                  : `${formatPrice(tier.priceFrom)}+`}
               </td>
+              {!priceOnly && (
+                <td className="px-4 py-2">
+                  {formatDuration(tier.durationMin ?? 0, tier.durationMax)}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -118,7 +127,18 @@ export default function ServicesPage() {
                       <p className="mt-4 text-sm text-text-muted">{service.note}</p>
                     )}
 
-                    {"tiers" in service && service.tiers && (
+                    {"policyNote" in service && service.policyNote && (
+                      <p className="mt-4 text-sm text-text-muted">
+                        <span className="font-medium text-text">
+                          Policy Note:{" "}
+                        </span>
+                        {service.policyNote}
+                      </p>
+                    )}
+
+                    {"tiers" in service &&
+                      service.tiers &&
+                      service.pricingType === "tiered" && (
                       <TierTable tiers={service.tiers} />
                     )}
 
@@ -136,7 +156,39 @@ export default function ServicesPage() {
                       </div>
                     )}
 
-                    {typeof s.addOnMin === "number" && (
+                    {typeof s.flatRate === "number" &&
+                      service.pricingType === "add_on" && (
+                      <div className="mt-4">
+                        <p className="text-sm font-medium text-gold-dark">
+                          {formatPrice(s.flatRate as number)} /{" "}
+                          {service.durationMin ?? 15} mins (Add-on)
+                        </p>
+                      </div>
+                    )}
+
+                    {Array.isArray(s.tiers) && service.pricingType === "add_on" && (
+                      <div className="mt-4">
+                        <p className="text-sm font-medium text-gold-dark">
+                          Additional fee (added to base bath or grooming price):
+                        </p>
+                        <TierTable
+                          tiers={s.tiers as Array<{
+                            weightTier: string;
+                            priceFrom: number;
+                            durationMin?: number;
+                            durationMax?: number;
+                          }>}
+                          priceOnly
+                        />
+                        {"suitableFor" in service && service.suitableFor && (
+                          <p className="mt-2 text-sm text-text-muted">
+                            Suitable for: {service.suitableFor}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {typeof s.addOnMin === "number" && !Array.isArray(s.tiers) && (
                       <div className="mt-4 text-sm">
                         <p className="font-medium text-gold-dark">
                           Additional fee: +{formatPrice(s.addOnMin as number)}–
@@ -197,70 +249,7 @@ export default function ServicesPage() {
           </section>
         ))}
 
-        <section>
-          <h2 className="text-2xl font-semibold text-text">
-            Service Fees & Surcharges
-          </h2>
-          <div className="mt-8 space-y-6">
-            {business.fees.map((fee) => {
-              const f = fee as Record<string, unknown>;
-
-              return (
-                <article
-                  key={fee.id}
-                  className="rounded-2xl border border-lavender/30 bg-cream p-6"
-                >
-                  <h3 className="text-lg font-medium text-gold-dark">
-                    {fee.name}
-                  </h3>
-                  <p className="mt-3 text-sm leading-relaxed text-text-muted">
-                    {fee.description}
-                  </p>
-                  {"rate" in fee && fee.rate && (
-                    <p className="mt-3 text-sm font-medium">
-                      ${fee.rate}/mile beyond {business.serviceArea.freeRadiusMiles}{" "}
-                      miles (one-way, GPS via Google Maps)
-                    </p>
-                  )}
-                  {typeof f.rateMin === "number" && (
-                    <p className="mt-3 text-sm font-medium">
-                      {formatPrice(f.rateMin as number)}–
-                      {formatPrice(
-                        typeof f.rateMax === "number"
-                          ? (f.rateMax as number)
-                          : (f.rateMin as number),
-                      )}
-                      + · Based on level of anxiety, resistance, or aggression
-                      shown on-site
-                    </p>
-                  )}
-                  {Array.isArray(f.lineItems) && (
-                    <ul className="mt-4 space-y-3 text-sm">
-                      {(f.lineItems as Array<{ name: string; rate: number; note?: string }>).map(
-                        (item) => (
-                          <li
-                            key={item.name}
-                            className="rounded-xl border border-lavender/20 bg-lavender-light/20 px-4 py-3"
-                          >
-                            <div className="flex justify-between gap-4 font-medium text-text">
-                              <span>{item.name}</span>
-                              <span className="text-gold-dark">
-                                {formatPrice(item.rate)}
-                              </span>
-                            </div>
-                            {item.note && (
-                              <p className="mt-1 text-text-muted">{item.note}</p>
-                            )}
-                          </li>
-                        ),
-                      )}
-                    </ul>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        </section>
+        <ServiceFeesSection />
       </div>
 
       <div className="mt-16 text-center">

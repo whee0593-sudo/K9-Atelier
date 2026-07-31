@@ -6,9 +6,9 @@ import type { PetProfile } from "@/lib/pets";
 import { business, formatPrice } from "@/lib/business";
 import {
   formatServicePrice,
+  getAddOnService,
+  getAvailableAddOns,
   getBookableCategories,
-  seniorAddOnRange,
-  supportsSeniorAddOn,
   type BookableService,
   type SelectedService,
 } from "@/lib/services";
@@ -17,6 +17,7 @@ import {
   type ServiceAddress,
   type TravelQuote,
 } from "@/lib/travel";
+import { AddOnPickerModal } from "@/components/booking/AddOnPickerModal";
 import { PetSelector } from "@/components/booking/PetSelector";
 import { AddressStep } from "@/components/booking/AddressStep";
 import { DateTimeStep } from "@/components/booking/DateTimeStep";
@@ -31,13 +32,19 @@ export function BookingFlow() {
     null,
   );
   const [serviceConfirmed, setServiceConfirmed] = useState(false);
+  const [showAddOnPicker, setShowAddOnPicker] = useState(false);
+  const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
   const [colorOption, setColorOption] = useState<string | null>(null);
   const [selectedPet, setSelectedPet] = useState<PetProfile | null>(null);
   const [address, setAddress] = useState<ServiceAddress | null>(null);
   const [travelQuote, setTravelQuote] = useState<TravelQuote | null>(null);
   const [appointmentDate, setAppointmentDate] = useState<string | null>(null);
   const [appointmentTime, setAppointmentTime] = useState<string | null>(null);
-  const [seniorAddOn, setSeniorAddOn] = useState(false);
+
+  const availableAddOns =
+    categoryId && selectedService
+      ? getAvailableAddOns(categoryId, selectedService.id)
+      : [];
 
   const bookingSelection: SelectedService | null =
     selectedService && selectedPet
@@ -45,9 +52,7 @@ export function BookingFlow() {
           serviceId: selectedService.id,
           serviceName: selectedService.name,
           optionName: colorOption ?? undefined,
-          seniorAddOn: supportsSeniorAddOn(selectedService.id)
-            ? seniorAddOn
-            : false,
+          addOnIds: selectedAddOnIds,
           priceLabel: formatServicePrice(
             selectedService,
             selectedPet.weightLbs,
@@ -62,7 +67,8 @@ export function BookingFlow() {
     setTravelQuote(null);
     setAppointmentDate(null);
     setAppointmentTime(null);
-    setSeniorAddOn(false);
+    setSelectedAddOnIds([]);
+    setShowAddOnPicker(false);
   }
 
   function handleCategorySelect(id: string) {
@@ -71,6 +77,7 @@ export function BookingFlow() {
     setCategoryId(id);
     setSelectedService(first);
     setServiceConfirmed(false);
+    setShowAddOnPicker(false);
     setColorOption(
       first?.id === "creative-accent-coloring"
         ? (first.options?.[0]?.name ?? null)
@@ -82,6 +89,7 @@ export function BookingFlow() {
   function handleServiceSelect(service: BookableService) {
     setSelectedService(service);
     setServiceConfirmed(false);
+    setShowAddOnPicker(false);
     resetFromService();
     if (service.id === "creative-accent-coloring") {
       setColorOption(service.options?.[0]?.name ?? null);
@@ -94,21 +102,43 @@ export function BookingFlow() {
     setCategoryId(null);
     setSelectedService(null);
     setServiceConfirmed(false);
+    setShowAddOnPicker(false);
     setColorOption(null);
     resetFromService();
   }
 
   function handleBackToServices() {
     setServiceConfirmed(false);
+    setShowAddOnPicker(false);
     resetFromService();
   }
 
   function handleBookService() {
-    if (!selectedService) return;
+    if (!selectedService || !categoryId) return;
+
+    const addOns = getAvailableAddOns(categoryId, selectedService.id);
+    if (addOns.length > 0) {
+      setShowAddOnPicker(true);
+      return;
+    }
+
     setServiceConfirmed(true);
   }
 
-  const seniorRange = seniorAddOnRange();
+  function handleAddOnBack() {
+    setShowAddOnPicker(false);
+  }
+
+  function handleAddOnSkip() {
+    setShowAddOnPicker(false);
+    setServiceConfirmed(true);
+  }
+
+  function toggleAddOn(id: string) {
+    setSelectedAddOnIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
 
   const step = !categoryId
     ? 1
@@ -122,6 +152,18 @@ export function BookingFlow() {
             ? 5
             : 6;
 
+  const addOnLines =
+    selectedPet && bookingSelection
+      ? selectedAddOnIds
+          .map((id) => {
+            const addOn = getAddOnService(id);
+            if (!addOn) return null;
+            const price = formatServicePrice(addOn, selectedPet.weightLbs);
+            return `Add-on: ${addOn.name}${price ? ` (${price})` : ""}`;
+          })
+          .filter(Boolean)
+      : [];
+
   const mailtoHref =
     selectedPet && bookingSelection && address && travelQuote
       ? `mailto:${business.brand.email}?subject=${encodeURIComponent(
@@ -134,9 +176,7 @@ export function BookingFlow() {
                 ? ` - ${bookingSelection.optionName}`
                 : ""
             }`,
-            bookingSelection.seniorAddOn
-              ? "Add-on: Senior & Gentle Comfort Care"
-              : null,
+            ...addOnLines,
             `Address: ${formatServiceAddress(address)}`,
             `Travel: ${travelQuote.distanceMiles} mi · Fee $${travelQuote.fee}`,
             `Date: ${appointmentDate}`,
@@ -175,6 +215,16 @@ export function BookingFlow() {
         </section>
       )}
 
+      {showAddOnPicker && availableAddOns.length > 0 && (
+        <AddOnPickerModal
+          addOns={availableAddOns}
+          selectedIds={selectedAddOnIds}
+          onToggle={toggleAddOn}
+          onBack={handleAddOnBack}
+          onSkip={handleAddOnSkip}
+        />
+      )}
+
       {step === 3 && selectedService && (
         <section className="mx-auto max-w-xl">
           <button
@@ -192,6 +242,21 @@ export function BookingFlow() {
             </p>
             {colorOption && (
               <p className="mt-1 text-sm text-text-muted">{colorOption}</p>
+            )}
+            {selectedAddOnIds.length > 0 && (
+              <div className="mt-3 border-t border-lavender/30 pt-3 text-left text-sm">
+                <p className="text-text-muted">Add-ons:</p>
+                <ul className="mt-1 space-y-1">
+                  {selectedAddOnIds.map((id) => {
+                    const addOn = getAddOnService(id);
+                    return addOn ? (
+                      <li key={id} className="text-text">
+                        {addOn.name}
+                      </li>
+                    ) : null;
+                  })}
+                </ul>
+              </div>
             )}
           </div>
 
@@ -289,6 +354,27 @@ export function BookingFlow() {
                     : ""}
                 </strong>
               </p>
+              {selectedAddOnIds.length > 0 && (
+                <div>
+                  <p className="text-text-muted">Add-ons:</p>
+                  <ul className="mt-1 space-y-1">
+                    {selectedAddOnIds.map((id) => {
+                      const addOn = getAddOnService(id);
+                      if (!addOn) return null;
+                      return (
+                        <li key={id}>
+                          <strong>{addOn.name}</strong>
+                          <span className="text-text-muted">
+                            {" "}
+                            ·{" "}
+                            {formatServicePrice(addOn, selectedPet.weightLbs)}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
               <p>
                 <span className="text-text-muted">Address:</span>{" "}
                 <strong>{formatServiceAddress(address)}</strong>
@@ -312,27 +398,6 @@ export function BookingFlow() {
                 <strong>{bookingSelection.priceLabel}</strong>
               </p>
             </div>
-
-            {supportsSeniorAddOn(selectedService.id) && (
-              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-lavender/40 bg-cream px-5 py-4">
-                <input
-                  type="checkbox"
-                  checked={seniorAddOn}
-                  onChange={(e) => setSeniorAddOn(e.target.checked)}
-                  className="mt-1"
-                />
-                <span>
-                  <span className="block text-sm font-medium text-text">
-                    Add Senior &amp; Gentle Comfort Care
-                  </span>
-                  <span className="mt-1 block text-sm text-text-muted">
-                    Extra resting breaks and gentle handling (+
-                    {formatPrice(seniorRange.min)}–
-                    {formatPrice(seniorRange.max)}).
-                  </span>
-                </span>
-              </label>
-            )}
 
             <p className="text-sm text-text-muted">
               {business.booking.paymentMethodNote}

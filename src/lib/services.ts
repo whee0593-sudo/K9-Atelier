@@ -29,6 +29,8 @@ export type BookableService = {
   durationNote?: string;
   addOnMin?: number;
   addOnMax?: number;
+  flatRate?: number;
+  policyNote?: string;
   options?: ServiceOption[];
   includes?: string[];
   bestFor?: string;
@@ -45,10 +47,20 @@ export type SelectedService = {
   serviceId: string;
   serviceName: string;
   optionName?: string;
-  seniorAddOn?: boolean;
+  addOnIds: string[];
   priceLabel: string;
   durationLabel?: string;
 };
+
+const ADD_ON_ONLY_SERVICE_IDS = [
+  "senior-comfort-care",
+  "dematting-brush-out",
+  "deshedding-treatment",
+];
+
+function isAddOnOnlyService(serviceId: string) {
+  return ADD_ON_ONLY_SERVICE_IDS.includes(serviceId);
+}
 
 export function weightTierForPet(weightLbs: number) {
   if (weightLbs <= 15) return "under15";
@@ -77,6 +89,8 @@ export function allBookableServices(): BookableService[] {
       durationNote: "durationNote" in service ? service.durationNote : undefined,
       addOnMin: "addOnMin" in service ? service.addOnMin : undefined,
       addOnMax: "addOnMax" in service ? service.addOnMax : undefined,
+      flatRate: "flatRate" in service ? service.flatRate : undefined,
+      policyNote: "policyNote" in service ? service.policyNote : undefined,
       options: "options" in service ? service.options : undefined,
       includes: "includes" in service ? service.includes : undefined,
       bestFor: "bestFor" in service ? service.bestFor : undefined,
@@ -85,7 +99,7 @@ export function allBookableServices(): BookableService[] {
         "availableOver45Lbs" in service ? service.availableOver45Lbs : undefined,
       noBathOver45Lbs:
         "noBathOver45Lbs" in service ? service.noBathOver45Lbs : undefined,
-      bookableAsPrimary: service.id !== "senior-comfort-care",
+      bookableAsPrimary: !isAddOnOnlyService(service.id),
       categoryNote: "note" in category ? category.note : undefined,
       note: "note" in service ? service.note : undefined,
       requiresServiceId:
@@ -96,14 +110,14 @@ export function allBookableServices(): BookableService[] {
 
 export function isServiceAvailableForPet(serviceId: string, weightLbs: number) {
   if (weightLbs <= business.weightPolicy.maxStandardWeightLbs) {
-    return serviceId !== "senior-comfort-care";
+    return !isAddOnOnlyService(serviceId);
   }
   return business.weightPolicy.over45AllowedServiceIds.includes(serviceId);
 }
 
 export function unavailableReason(serviceId: string, weightLbs: number) {
   if (weightLbs <= business.weightPolicy.maxStandardWeightLbs) {
-    if (serviceId === "senior-comfort-care") {
+    if (isAddOnOnlyService(serviceId)) {
       return "Add-on only — select a bath or grooming service first.";
     }
     return null;
@@ -145,6 +159,15 @@ export function formatServicePrice(
   }
 
   if (service.pricingType === "add_on") {
+    if (service.tiers?.length) {
+      const tier = getTierForPet(service, weightLbs);
+      if (!tier) return "Not available for this weight";
+      return `+${formatPrice(tier.priceFrom)} add-on`;
+    }
+    if (service.flatRate != null) {
+      const mins = service.durationMin ?? 15;
+      return `+${formatPrice(service.flatRate)} / ${mins} mins add-on`;
+    }
     const max = service.addOnMax ?? service.addOnMin ?? 0;
     return `+${formatPrice(service.addOnMin ?? 0)}–${formatPrice(max)} add-on`;
   }
@@ -182,16 +205,51 @@ export function supportsSeniorAddOn(serviceId: string) {
 
 export function seniorAddOnRange() {
   const service = allBookableServices().find((s) => s.id === "senior-comfort-care");
+  const fees = service?.tiers?.map((t) => t.priceFrom) ?? [30, 40, 50];
   return {
-    min: service?.addOnMin ?? 30,
-    max: service?.addOnMax ?? 50,
+    min: Math.min(...fees),
+    max: Math.max(...fees),
   };
+}
+
+export function getSeniorAddOnFee(weightLbs: number) {
+  const service = allBookableServices().find((s) => s.id === "senior-comfort-care");
+  if (!service?.tiers) return null;
+  const tier = getTierForPet(service, weightLbs);
+  return tier?.priceFrom ?? null;
 }
 
 export function getBookableCategories() {
   return groupServicesByCategory(
     allBookableServices().filter((s) => s.bookableAsPrimary),
   );
+}
+
+export function getCategoryAddOnServices(categoryId: string) {
+  return allBookableServices().filter(
+    (s) => s.categoryId === categoryId && !s.bookableAsPrimary,
+  );
+}
+
+export function getAvailableAddOns(
+  categoryId: string,
+  primaryServiceId: string,
+) {
+  const categoryAddOns = getCategoryAddOnServices(categoryId);
+  if (categoryAddOns.length > 0) return categoryAddOns;
+
+  if (supportsSeniorAddOn(primaryServiceId)) {
+    const senior = allBookableServices().find(
+      (s) => s.id === "senior-comfort-care",
+    );
+    return senior ? [senior] : [];
+  }
+
+  return [];
+}
+
+export function getAddOnService(id: string) {
+  return allBookableServices().find((s) => s.id === id);
 }
 
 export function formatServicePriceFrom(service: BookableService) {
@@ -215,6 +273,17 @@ export function formatServicePriceFrom(service: BookableService) {
   }
   if (service.pricingType === "free") {
     return "Complimentary";
+  }
+  if (service.pricingType === "add_on" && service.tiers?.length) {
+    const min = Math.min(...service.tiers.map((t) => t.priceFrom));
+    const max = Math.max(...service.tiers.map((t) => t.priceFrom));
+    return min === max
+      ? `+${formatPrice(min)} (Add-on)`
+      : `${formatPrice(min)} – ${formatPrice(max)} (Add-on)`;
+  }
+  if (service.pricingType === "add_on" && service.flatRate != null) {
+    const mins = service.durationMin ?? 15;
+    return `${formatPrice(service.flatRate)} / ${mins} mins (Add-on)`;
   }
   return "";
 }
