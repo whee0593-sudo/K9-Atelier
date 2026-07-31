@@ -1,3 +1,5 @@
+import { business } from "./business";
+
 export const SITE_ACCESS_COOKIE = "k9-site-access";
 
 const ACCESS_MESSAGE = "k9-atelier-site-access-v1";
@@ -15,6 +17,19 @@ function timingSafeEqualString(a: string, b: string): boolean {
     result |= a.charCodeAt(i) ^ b.charCodeAt(i);
   }
   return result === 0;
+}
+
+/** Env var overrides business.json preview password when set. */
+export function getSiteAccessPassword() {
+  const fromEnv = process.env.SITE_ACCESS_PASSWORD?.trim();
+  if (fromEnv) return fromEnv;
+
+  const fromConfig =
+    "previewAccessPassword" in business.site &&
+    typeof business.site.previewAccessPassword === "string"
+      ? business.site.previewAccessPassword.trim()
+      : "";
+  return fromConfig || undefined;
 }
 
 export async function computeSiteAccessToken(password: string): Promise<string> {
@@ -37,7 +52,7 @@ export async function computeSiteAccessToken(password: string): Promise<string> 
 export async function isValidSiteAccessCookie(
   cookieValue: string | undefined,
 ): Promise<boolean> {
-  const password = process.env.SITE_ACCESS_PASSWORD;
+  const password = getSiteAccessPassword();
   if (!password || !cookieValue) return false;
   const expected = await computeSiteAccessToken(password);
   return timingSafeEqualString(cookieValue, expected);
@@ -52,8 +67,7 @@ export function isPrivacyModeEnabled() {
 export function isPrivacyGateActive(privacyModeInConfig: boolean) {
   if (!privacyModeInConfig || !isPrivacyModeEnabled()) return false;
 
-  const password = process.env.SITE_ACCESS_PASSWORD;
-  if (password) return true;
+  if (getSiteAccessPassword()) return true;
 
   // Local dev without a password: allow full-site preview for the team.
   if (process.env.NODE_ENV === "development") return false;

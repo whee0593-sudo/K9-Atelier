@@ -1,5 +1,15 @@
 import { business, formatDuration, formatPrice } from "./business";
 
+export type BookingPolicyItem = {
+  title: string;
+  body: string;
+};
+
+export type BookingPolicy = {
+  title: string;
+  items: BookingPolicyItem[];
+};
+
 export type ServiceOption = {
   name: string;
   nameZh?: string;
@@ -43,6 +53,7 @@ export type BookableService = {
   categoryNote?: string;
   note?: string;
   requiresServiceId?: string;
+  bookingPolicy?: BookingPolicy;
 };
 
 export type SelectedService = {
@@ -114,6 +125,10 @@ export function allBookableServices(): BookableService[] {
       requiresServiceId:
         "requiresServiceId" in service
           ? (service.requiresServiceId as string | undefined)
+          : undefined,
+      bookingPolicy:
+        "bookingPolicy" in service
+          ? (service.bookingPolicy as BookingPolicy)
           : undefined,
     })),
   ) as BookableService[];
@@ -232,6 +247,28 @@ export function supportsCreativeColoringAddOn(serviceId: string) {
 
 export function getCreativeColoringService() {
   return allBookableServices().find((s) => s.id === CREATIVE_ACCENT_COLORING_ID);
+}
+
+export function getCreativeBookingPolicy() {
+  return getCreativeColoringService()?.bookingPolicy;
+}
+
+export function formatCreativeBookingPolicyForEmail(policy: BookingPolicy) {
+  const lines = [
+    "",
+    policy.title,
+    "",
+    ...policy.items.flatMap((item, index) => [
+      `${index + 1}. ${item.title}`,
+      item.body,
+      "",
+    ]),
+  ];
+  return lines.join("\n").trimEnd();
+}
+
+export function bookingIncludesCreativeColoring(addOnIds: string[]) {
+  return addOnIds.includes(CREATIVE_ACCENT_COLORING_ID);
 }
 
 export function getRequiredBaseServicesForCreative() {

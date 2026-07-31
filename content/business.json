@@ -60,6 +60,7 @@
   },
   "site": {
     "privacyMode": true,
+    "previewAccessPassword": "Anakin",
     "underConstruction": {
       "title": "Website Under Construction",
       "message": "K9 Atelier is getting ready for launch. Please check back soon — we look forward to welcoming you and your pup.",
@@ -321,7 +322,24 @@
               "description": "The ultimate luxury color experience. Fully customized artistic designs, multi-color gradient blending, or specialized patterns tailored specifically to your vision and your dog's coat.",
               "consultationRequired": true
             }
-          ]
+          ],
+          "bookingPolicy": {
+            "title": "Important Notes & Booking Policy",
+            "items": [
+              {
+                "title": "Consultation & Pre-Approval Required",
+                "body": "All creative color services require an advance consultation and pre-approval prior to booking your appointment. Please share your color preferences and reference photos with us beforehand so we can custom-prepare specialized, non-toxic formulations tailored to your vision."
+              },
+              {
+                "title": "Pet Safety & Temperament First",
+                "body": "Your pup's well-being is always our top priority. We exclusively use 100% pet-safe, non-toxic, and washable or semi-permanent dye formulations. All color services are subject to your dog's skin condition and comfort during handling. Please let us know in advance if this is your pet's first coloring experience, or if they have any known allergies or skin sensitivities."
+              },
+              {
+                "title": "Coat Condition & Pricing Adjustments",
+                "body": "To ensure optimal, safe, and beautiful results, final pricing may adjust based on your pet's natural coat color, density, texture, and matting condition."
+              }
+            ]
+          }
         }
       ]
     },

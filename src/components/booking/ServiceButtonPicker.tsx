@@ -1,10 +1,12 @@
 "use client";
 
 import { business, formatDuration, formatPrice } from "@/lib/business";
+import { CreativeBookingPolicy } from "@/components/booking/CreativeBookingPolicy";
 import {
   formatServicePriceFrom,
   getBookableCategories,
   CREATIVE_ACCENT_COLORING_ID,
+  getCreativeBookingPolicy,
   isCreativeColoringCategory,
   type BookableService,
 } from "@/lib/services";
@@ -249,6 +251,7 @@ export function ServiceButtonPicker({
     null;
 
   const isCreative = isCreativeColoringCategory(categoryId);
+  const creativeBookingPolicy = isCreative ? getCreativeBookingPolicy() : undefined;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -361,6 +364,13 @@ export function ServiceButtonPicker({
           )}
 
           <PricingBlock service={selected} />
+
+          {creativeBookingPolicy && (
+            <CreativeBookingPolicy
+              policy={creativeBookingPolicy}
+              className="mt-8"
+            />
+          )}
 
           <div className={`mt-10 ${isCreative ? "text-center" : ""}`}>
             <button

@@ -10,7 +10,10 @@ import {
   getAvailableAddOns,
   getBookableCategories,
   getCreativeColoringService,
+  getCreativeBookingPolicy,
   getRequiredBaseServicesForCreative,
+  bookingIncludesCreativeColoring,
+  formatCreativeBookingPolicyForEmail,
   isCreativeColoringCategory,
   type BookableService,
   type SelectedService,
@@ -22,6 +25,7 @@ import {
 } from "@/lib/travel";
 import { AddOnPickerModal } from "@/components/booking/AddOnPickerModal";
 import { CreativePairingModal } from "@/components/booking/CreativePairingModal";
+import { CreativeBookingPolicy } from "@/components/booking/CreativeBookingPolicy";
 import { PetSelector } from "@/components/booking/PetSelector";
 import { AddressStep } from "@/components/booking/AddressStep";
 import { DateTimeStep } from "@/components/booking/DateTimeStep";
@@ -226,6 +230,10 @@ export function BookingFlow() {
           .filter(Boolean)
       : [];
 
+  const creativeBookingPolicy = bookingIncludesCreativeColoring(selectedAddOnIds)
+    ? getCreativeBookingPolicy()
+    : undefined;
+
   const mailtoHref =
     selectedPet && bookingSelection && address && travelQuote
       ? `mailto:${business.brand.email}?subject=${encodeURIComponent(
@@ -240,6 +248,9 @@ export function BookingFlow() {
             `Date: ${appointmentDate}`,
             `Time: ${appointmentTime}`,
             `Estimated service: ${bookingSelection.priceLabel}`,
+            creativeBookingPolicy
+              ? formatCreativeBookingPolicyForEmail(creativeBookingPolicy)
+              : null,
           ]
             .filter(Boolean)
             .join("\n"),
@@ -455,6 +466,10 @@ export function BookingFlow() {
                 <strong>{bookingSelection.priceLabel}</strong>
               </p>
             </div>
+
+            {creativeBookingPolicy && (
+              <CreativeBookingPolicy policy={creativeBookingPolicy} />
+            )}
 
             <p className="text-sm text-text-muted">
               {business.booking.paymentMethodNote}

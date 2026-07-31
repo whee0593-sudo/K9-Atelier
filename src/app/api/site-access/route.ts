@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import {
   computeSiteAccessToken,
+  getSiteAccessPassword,
   isValidSiteAccessCookie,
   SITE_ACCESS_COOKIE,
 } from "@/lib/site-access";
@@ -16,10 +18,13 @@ function cookieOptions() {
 }
 
 export async function POST(request: Request) {
-  const password = process.env.SITE_ACCESS_PASSWORD;
+  const password = getSiteAccessPassword();
   if (!password) {
     return NextResponse.json(
-      { error: "Site access is not configured." },
+      {
+        error:
+          "Site access is not configured. Add SITE_ACCESS_PASSWORD in this Vercel project's Environment Variables, then redeploy.",
+      },
       { status: 503 },
     );
   }
@@ -31,7 +36,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  if (!body.password || body.password !== password) {
+  const submitted = body.password?.trim();
+  if (!submitted || submitted !== password) {
     return NextResponse.json({ error: "Invalid password." }, { status: 401 });
   }
 
@@ -50,11 +56,20 @@ export async function DELETE() {
   return response;
 }
 
-export async function GET(request: Request) {
-  const cookie = request.headers.get("cookie")?.match(
-    new RegExp(`${SITE_ACCESS_COOKIE}=([^;]+)`),
-  )?.[1];
+export async function GET(request: NextRequest) {
+  const configured = Boolean(getSiteAccessPassword());
+  const cookie = request.cookies.get(SITE_ACCESS_COOKIE)?.value;
+  const authenticated = configured
+    ? await isValidSiteAccessCookie(cookie)
+    : false;
 
-  const ok = await isValidSiteAccessCookie(cookie);
-  return NextResponse.json({ ok });
+  return NextResponse.json({
+    configured,
+    authenticated,
+    message: !configured
+      ? "Add SITE_ACCESS_PASSWORD in this Vercel project's Environment Variables, then redeploy."
+      : authenticated
+        ? "Team access active."
+        : "Sign in at /login/admin to preview the site.",
+  });
 }

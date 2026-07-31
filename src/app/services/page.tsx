@@ -1,7 +1,11 @@
 import Link from "next/link";
+import { CreativeBookingPolicy } from "@/components/booking/CreativeBookingPolicy";
 import { CreativeOptionDetail } from "@/components/booking/CreativeOptionDetail";
 import { ServiceFeesSection } from "@/components/ServiceFeesSection";
 import { business, formatDuration, formatPrice } from "@/lib/business";
+import { getCreativeBookingPolicy } from "@/lib/services";
+
+const creativeBookingPolicy = getCreativeBookingPolicy();
 
 function TierTable({
   tiers,
@@ -263,6 +267,14 @@ export default function ServicesPage() {
                         <p className="mt-4 text-sm font-medium text-gold-dark">
                           Complimentary · By appointment only
                         </p>
+                      )}
+
+                    {service.id === "creative-accent-coloring" &&
+                      creativeBookingPolicy && (
+                        <CreativeBookingPolicy
+                          policy={creativeBookingPolicy}
+                          className="mt-6"
+                        />
                       )}
                   </article>
                 );
