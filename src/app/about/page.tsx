@@ -7,32 +7,6 @@ export const metadata = {
     "The story behind K9 Atelier — a cage-free, mobile grooming studio serving Palm Beach County, built on precision, patience, and purpose.",
 };
 
-/**
- * Placeholder for a photo the owner will supply later. Renders a tasteful
- * framed slot now; swap for a next/image <Image> once the asset is uploaded.
- */
-function PhotoPlaceholder({
-  label,
-  className,
-}: {
-  label: string;
-  className?: string;
-}) {
-  return (
-    <div
-      className={`flex items-center justify-center rounded-2xl border-2 border-dashed border-lavender/50 bg-lavender-light/20 text-center ${
-        className ?? ""
-      }`}
-      aria-hidden="true"
-    >
-      <div className="px-6 py-10">
-        <p className="text-sm font-medium text-gold-dark">Photo coming soon</p>
-        <p className="mt-1 text-xs text-text-muted">{label}</p>
-      </div>
-    </div>
-  );
-}
-
 export default function AboutPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-12 md:py-16">
@@ -44,11 +18,6 @@ export default function AboutPage() {
           About K9 Atelier
         </h1>
       </header>
-
-      <PhotoPlaceholder
-        label="Hero portrait — groomer with a dog (landscape, ~16:9)"
-        className="mt-10 aspect-[16/9] w-full"
-      />
 
       <div className="mt-12 space-y-6 text-base leading-relaxed text-text">
         <p>
@@ -64,34 +33,22 @@ export default function AboutPage() {
           the same discipline, precision, and pursuit of excellence you&apos;d
           expect from any true craft.
         </p>
-      </div>
-
-      <section className="mt-12 grid gap-8 md:grid-cols-5 md:items-center">
-        <PhotoPlaceholder
-          label="Competition / academy years (portrait, ~3:4)"
-          className="aspect-[3/4] w-full md:col-span-2"
-        />
-        <div className="space-y-6 text-base leading-relaxed text-text md:col-span-3">
-          <p>
-            My journey began in 2010. What started as a passion quickly became a
-            calling, and through relentless dedication &mdash; and perhaps a
-            touch of natural talent &mdash; I progressed quickly. By 2014, I was
-            teaching Asian-fusion style grooming and Show grooming at a
-            professional grooming academy in Shanghai, China, mentoring students
-            and leading them into the competition ring, where many went on to
-            earn top honors of their own.
-          </p>
-          <p>
-            During those years, I competed extensively myself &mdash; earning
-            individual awards for my work on Pomeranians, Poodles, and Shih
-            Tzus. Then in 2019, I reached the highest honor of my career: Best
-            in Show at a national grooming competition, the culmination of
-            nearly a decade of discipline and craft.
-          </p>
-        </div>
-      </section>
-
-      <div className="mt-12 space-y-6 text-base leading-relaxed text-text">
+        <p>
+          My journey began in 2010. What started as a passion quickly became a
+          calling, and through relentless dedication &mdash; and perhaps a touch
+          of natural talent &mdash; I progressed quickly. By 2014, I was teaching
+          Asian-fusion style grooming and Show grooming at a professional
+          grooming academy in Shanghai, China, mentoring students and leading
+          them into the competition ring, where many went on to earn top honors
+          of their own.
+        </p>
+        <p>
+          During those years, I competed extensively myself &mdash; earning
+          individual awards for my work on Pomeranians, Poodles, and Shih Tzus.
+          Then in 2019, I reached the highest honor of my career: Best in Show
+          at a national grooming competition, the culmination of nearly a decade
+          of discipline and craft.
+        </p>
         <p>
           In 2020, I left everything familiar behind and came to the United
           States with my son &mdash; not yet a year old &mdash; two suitcases,
