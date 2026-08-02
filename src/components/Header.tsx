@@ -46,6 +46,7 @@ export function Header() {
     { href: "/services", label: "Services" },
     { href: "/login?next=/book", label: "Book" },
     { href: "/shop", label: "Shop" },
+    { href: "/contact", label: "Contact" },
   ];
 
   return (
