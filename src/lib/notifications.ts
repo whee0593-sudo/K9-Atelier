@@ -8,6 +8,10 @@ import { business } from "@/lib/business";
 export const newClientDeposit = business.booking.newClientDeposit;
 export const newClientDepositNotice = business.booking.newClientDepositNotice;
 
+/** Disclaimer shown under the estimated total in booking confirmations. */
+export const estimateNote =
+  "Please note: the price listed above is an estimate based on your dog's typical size and coat. Final pricing may vary depending on your dog's condition on the day of service — including coat matting, temperament, and cooperation level — and will always be confirmed with you before we begin.";
+
 export type BookingConfirmationDetails = {
   customerName?: string;
   petName: string;
@@ -87,7 +91,9 @@ export function buildBookingConfirmationEmail(
       details.durationLabel
         ? `Estimated Duration: ${details.durationLabel}`
         : null,
-      details.priceLabel ? `Total: ${details.priceLabel}` : null,
+      details.priceLabel ? `Estimated Total: ${details.priceLabel}` : null,
+      details.priceLabel ? "" : null,
+      details.priceLabel ? estimateNote : null,
       "",
       "Need to reschedule? We kindly ask for at least 48 hours' notice for any changes. Reply to this email or contact us at " +
         `${contactMethod()}.`,
@@ -113,7 +119,9 @@ export function buildBookingConfirmationEmail(
     `Service: ${details.serviceName}`,
     `Location: ${details.addressLabel ?? ""}`,
     `Estimated Duration: ${details.durationLabel ?? ""}`,
-    `Total: ${details.priceLabel ?? ""}`,
+    `Estimated Total: ${details.priceLabel ?? ""}`,
+    "",
+    estimateNote,
     "",
     "New Client Deposit",
     `As a new client, a $${newClientDeposit} deposit has been charged to the payment method provided at booking. This deposit will be fully applied toward the total cost of your appointment ${dash} it simply confirms your reservation and secures your spot on our schedule.`,
@@ -174,7 +182,7 @@ export function buildBookingConfirmationEmailHtml(
     ["Service", details.serviceName],
     ["Location", details.addressLabel],
     ["Estimated Duration", details.durationLabel],
-    ["Total", details.priceLabel],
+    ["Estimated Total", details.priceLabel],
   ];
   const detailsHtml = detailRows
     .filter(([, value]) => Boolean(value))
@@ -230,6 +238,7 @@ export function buildBookingConfirmationEmailHtml(
           <p style="margin:0 0 8px;color:${c.text};font-size:14px;line-height:1.6;">Hi ${greetingName},</p>
           <p style="margin:0 0 20px;color:${c.text};font-size:14px;line-height:1.6;">${newClient ? "Welcome to K9 Atelier! " : ""}${welcomeLine}</p>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px;font-size:14px;">${detailsHtml}</table>
+          ${details.priceLabel ? `<p style="margin:8px 0 0;color:${c.textMuted};font-size:12px;line-height:1.6;font-style:italic;">${escapeHtml(estimateNote)}</p>` : ""}
           ${depositHtml}
           ${prepAndExpectHtml}
           <h3 style="margin:24px 0 8px;color:${c.goldDark};font-size:16px;">Need to Reschedule?</h3>
