@@ -42,6 +42,7 @@ export function Header() {
 
   const nav = [
     { href: "/", label: "Home" },
+    { href: "/about", label: "About" },
     { href: "/services", label: "Services" },
     { href: "/login?next=/book", label: "Book" },
     { href: "/shop", label: "Shop" },
