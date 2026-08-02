@@ -23,6 +23,7 @@ import {
   type ServiceAddress,
   type TravelQuote,
 } from "@/lib/travel";
+import { newClientDepositNotice } from "@/lib/notifications";
 import { AddOnPickerModal } from "@/components/booking/AddOnPickerModal";
 import { CreativePairingModal } from "@/components/booking/CreativePairingModal";
 import { CreativeBookingPolicy } from "@/components/booking/CreativeBookingPolicy";
@@ -251,6 +252,8 @@ export function BookingFlow() {
             creativeBookingPolicy
               ? formatCreativeBookingPolicyForEmail(creativeBookingPolicy)
               : null,
+            "",
+            newClientDepositNotice,
           ]
             .filter(Boolean)
             .join("\n"),
@@ -474,6 +477,10 @@ export function BookingFlow() {
             <p className="text-sm text-text-muted">
               {business.booking.paymentMethodNote}
             </p>
+
+            <div className="rounded-2xl border border-gold/40 bg-lavender-light/40 px-5 py-4 text-sm text-text">
+              {newClientDepositNotice}
+            </div>
 
             <a
               href={mailtoHref}
