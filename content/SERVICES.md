@@ -157,9 +157,8 @@ Applied when a dog exhibits high stress, extreme anxiety, aggression, or resista
 
 ## 预约须知
 
-- **可预约时间：** 周一至周五，9:00 AM – 4:00 PM（美东时间）
-- **付款：** 预约时需保存有效支付方式，预约当下不扣款；新客户首次预约收取 **$50 押金**，服务完成后抵扣当天美容总费用。
-- **取消 / 改期：** 请至少提前 **48 小时**通知。
+- **可预约时间：** 周一至周五，9:00 AM – 4:00 PM
+- **付款：** 预约时收取定金（比例待定）
 - **联系：** penny@k9atelier.com · Instagram: K9 Atelier FL · Facebook: K9 Atelier
 
 ---
