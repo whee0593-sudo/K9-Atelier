@@ -6,6 +6,7 @@
     "logo": "/logo.png",
     "email": "penny@k9atelier.com",
     "phone": null,
+    "website": "https://k9atelier.com",
     "social": {
       "instagram": "K9 Atelier FL",
       "facebook": "K9 Atelier"
@@ -70,6 +71,8 @@
   "booking": {
     "requiresPaymentMethod": true,
     "chargeAtBooking": false,
+    "newClientDeposit": 50,
+    "newClientDepositNotice": "As a new client, a $50 deposit is required to confirm your first appointment. Once your appointment is complete, this $50 is deducted from that day's grooming total.",
     "paymentMethodNote": "A valid payment method is required to confirm your booking. You will not be charged when you book.",
     "availableDays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
     "hoursStart": "09:00",
@@ -105,7 +108,7 @@
         },
         {
           "heading": "5. Deposits for New Clients",
-          "body": "New clients may be asked to place a small deposit to confirm their first appointment. This deposit will be applied toward the total cost of your service."
+          "body": "New clients are asked to place a $50 deposit to confirm their first appointment. This deposit is applied toward the total cost of your service."
         }
       ],
       "outro": "Thank you for understanding — these policies allow us to protect the time and care every dog on our schedule deserves, including yours."

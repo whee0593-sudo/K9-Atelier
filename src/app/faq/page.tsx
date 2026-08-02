@@ -115,7 +115,7 @@ export default function FaqPage() {
     },
     {
       q: "How does payment work? Will I be charged when I book?",
-      a: `${booking.paymentMethodNote} Your final service total is settled after the appointment.`,
+      a: `${booking.paymentMethodNote} New clients place a $${booking.newClientDeposit} deposit to confirm their first appointment, which is applied toward your service total. Your remaining balance is settled after the appointment.`,
     },
     {
       q: "What is your cancellation or rescheduling policy?",
