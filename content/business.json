@@ -75,7 +75,41 @@
     "hoursStart": "09:00",
     "hoursEnd": "16:00",
     "timezone": "America/New_York",
-    "cancellationPolicy": null
+    "cancellationPolicy": {
+      "title": "Cancellation & Rescheduling Policy",
+      "intro": "We know life happens — but as a mobile grooming service, each appointment is reserved exclusively for you, including the travel time and preparation that comes with it. The policies below help us continue offering the personalized, unrushed experience every dog deserves.",
+      "sections": [
+        {
+          "heading": "1. Rescheduling & Cancellations",
+          "body": "We kindly ask for at least 48 hours' notice for any cancellation or rescheduling request. This allows us to offer the time slot to another client on our waitlist.",
+          "table": {
+            "columns": ["Notice Given", "Policy"],
+            "rows": [
+              ["48+ hours before appointment", "No fee — reschedule or cancel freely"],
+              ["Less than 48 hours", "50% of the scheduled service price"],
+              ["Same-day cancellation", "100% of the scheduled service price"]
+            ]
+          }
+        },
+        {
+          "heading": "2. No-Shows",
+          "body": "If we arrive at your scheduled appointment and are unable to reach you or access your dog within 15 minutes of the scheduled time, this will be considered a no-show and charged at 100% of the scheduled service price."
+        },
+        {
+          "heading": "3. Late Arrivals",
+          "body": "We do our best to accommodate slight delays, but appointments are scheduled back-to-back to ensure every dog receives unrushed, individual attention. If you anticipate being more than 15 minutes late, please let us know as early as possible — we will do our best to adjust, though a shortened service or rescheduling may be necessary."
+        },
+        {
+          "heading": "4. Illness or Emergencies",
+          "body": "We understand that health emergencies — yours or your dog's — can arise without warning. Please reach out as soon as possible; these situations are handled with flexibility and are not subject to standard cancellation fees."
+        },
+        {
+          "heading": "5. Deposits for New Clients",
+          "body": "New clients may be asked to place a small deposit to confirm their first appointment. This deposit will be applied toward the total cost of your service."
+        }
+      ],
+      "outro": "Thank you for understanding — these policies allow us to protect the time and care every dog on our schedule deserves, including yours."
+    }
   },
   "fees": [
     {
