@@ -49,22 +49,20 @@ function contactFooter() {
 }
 
 /**
- * SMS body for a booking-success notification. New-client confirmations note
- * the $50 deposit. Kept short for text-message delivery.
+ * SMS body for a booking-success notification. New-client confirmations use the
+ * welcome wording and note the $50 deposit. Kept short for text-message delivery.
  */
 export function buildBookingConfirmationSms(
   details: BookingConfirmationDetails,
 ): string {
-  const parts = [
-    `K9 Atelier: ${details.petName}'s ${details.serviceName} is confirmed for ${details.dateLabel}, ${details.timeLabel}.`,
-  ];
+  const price = details.priceLabel ?? "TBD";
+
   if (isNewClient(details)) {
-    parts.push(
-      `A $${newClientDeposit} new-client deposit was charged and will be applied to your appointment total.`,
-    );
+    const name = details.customerName ?? "there";
+    return `Hi ${name}! Welcome to K9 Atelier. Your first appointment for ${details.petName} is confirmed for ${details.dateLabel} between ${details.timeLabel}. Est. Total: ${price}. A $${newClientDeposit} deposit has been applied and will go toward your total. We can't wait to meet ${details.petName}! Reply STOP to opt out.`;
   }
-  parts.push(`Questions? ${contactMethod()}`);
-  return parts.join(" ");
+
+  return `K9 Atelier: ${details.petName}'s ${details.serviceName} is confirmed for ${details.dateLabel}, ${details.timeLabel}. Est. Total: ${price}. Questions? ${contactMethod()} Reply STOP to opt out.`;
 }
 
 /**
