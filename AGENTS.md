@@ -17,4 +17,5 @@ Standard commands are in `package.json`: `npm run dev` (→ http://localhost:300
 - **The homepage (`/`) is a minimal portal** (logo + "Book Service" / "Online Shop" buttons), not a long marketing page. Rich content lives on `/services`, `/book`, `/service-area`, etc. There is no `/home` route.
 - **Booking requires "customer login" first** (`/book` shows a "Customer login required" gate). This is the `localStorage` stub above, not real auth.
 - **`npm run lint` is not usable out of the box.** No ESLint config is committed, so `next lint` drops into an interactive "How would you like to configure ESLint?" prompt and cannot run non-interactively. `next build` compiles and type-checks fine regardless.
+- **Do not run `npm run build` while `npm run dev` is running.** The production build overwrites the shared `.next` directory and breaks the running dev server with `MODULE_NOT_FOUND` / `Cannot find module './xxx.js'` 500s. To recover: stop dev, `rm -rf .next`, then `npm run dev` again.
 - Deployment target is Vercel (push to `main` auto-deploys). See `DEPLOY.md` / `VERCEL-404-FIX.md`.
