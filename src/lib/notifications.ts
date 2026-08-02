@@ -57,12 +57,13 @@ export function buildBookingConfirmationSms(
 ): string {
   const price = details.priceLabel ?? "TBD";
 
+  const name = details.customerName ?? "there";
+
   if (isNewClient(details)) {
-    const name = details.customerName ?? "there";
     return `Hi ${name}! Welcome to K9 Atelier. Your first appointment for ${details.petName} is confirmed for ${details.dateLabel} between ${details.timeLabel}. Est. Total: ${price}. A $${newClientDeposit} deposit has been applied and will go toward your total. We can't wait to meet ${details.petName}! Reply STOP to opt out.`;
   }
 
-  return `K9 Atelier: ${details.petName}'s ${details.serviceName} is confirmed for ${details.dateLabel}, ${details.timeLabel}. Est. Total: ${price}. Questions? ${contactMethod()} Reply STOP to opt out.`;
+  return `Hi ${name}! This confirms your K9 Atelier appointment for ${details.petName} on ${details.dateLabel} between ${details.timeLabel}. Service: ${details.serviceName} | Est. Total: ${price}. We'll text you when we're on the way. Need to reschedule? Please give us 48 hrs notice. Reply STOP to opt out.`;
 }
 
 /**
