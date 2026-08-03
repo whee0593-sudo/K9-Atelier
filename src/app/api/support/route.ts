@@ -56,7 +56,7 @@ export async function POST(request: Request) {
 
   const fromEmail =
     process.env.SUPPORT_FROM_EMAIL?.trim() ||
-    "K9 Atelier <onboarding@resend.dev>";
+    `K9 Atelier <${business.brand.email}>`;
   const toEmail = business.brand.email;
   const contactLabel = isValidEmail(contact) ? "Email" : "Phone";
   const subject = `K9 Atelier support message (${contactLabel}: ${contact})`;
@@ -90,6 +90,8 @@ export async function POST(request: Request) {
   });
 
   if (!res.ok) {
+    const resendError = await res.text();
+    console.error("Resend support email failed:", res.status, resendError);
     return NextResponse.json(
       {
         error:
