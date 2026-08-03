@@ -7,9 +7,25 @@ import { business } from "@/lib/business";
 import { ShareButton } from "@/components/ShareButton";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 
-function TopActions() {
+const quickLinks = [
+  { href: "/about", label: "About" },
+  { href: "/faq", label: "FAQ" },
+  { href: "/contact", label: "Contact" },
+] as const;
+
+function TopActions({ showQuickLinks = false }: { showQuickLinks?: boolean }) {
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex max-w-[min(100vw-3rem,42rem)] flex-wrap items-center justify-end gap-x-4 gap-y-2">
+      {showQuickLinks &&
+        quickLinks.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="text-xs font-medium uppercase tracking-wide text-text-muted transition hover:text-gold-dark"
+          >
+            {item.label}
+          </Link>
+        ))}
       <Link
         href="/support"
         className="text-xs font-medium text-text-muted transition hover:text-gold-dark"
@@ -35,7 +51,7 @@ export function Header() {
     return (
       <header className="absolute top-0 left-0 right-0 z-10 flex items-start justify-between p-6">
         <p className="text-lg font-medium text-gold-dark">Welcome!</p>
-        <TopActions />
+        <TopActions showQuickLinks />
       </header>
     );
   }

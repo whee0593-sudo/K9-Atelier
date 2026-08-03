@@ -6,7 +6,13 @@ import {
   isValidSiteAccessCookie,
 } from "@/lib/site-access";
 
-const PUBLIC_PATHS = ["/under-construction", "/login/admin", "/api/site-access"];
+const PUBLIC_PATHS = [
+  "/under-construction",
+  "/login/admin",
+  "/api/site-access",
+  "/support",
+  "/api/support",
+];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some(
