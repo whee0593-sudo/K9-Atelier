@@ -365,15 +365,23 @@
             "items": [
               {
                 "title": "Consultation & Pre-Approval Required",
-                "body": "All creative color services require an advance consultation and pre-approval prior to booking your appointment. Please share your color preferences and reference photos with us beforehand so we can custom-prepare specialized, non-toxic formulations tailored to your vision."
+                "body": "All creative color services begin with an advance consultation. Please share your color preferences and any reference photos beforehand, so we can custom-prepare a specialized, non-toxic formulation tailored to your vision."
               },
               {
-                "title": "Pet Safety & Temperament First",
-                "body": "Your pup's well-being is always our top priority. We exclusively use 100% pet-safe, non-toxic, and washable or semi-permanent dye formulations. All color services are subject to your dog's skin condition and comfort during handling. Please let us know in advance if this is your pet's first coloring experience, or if they have any known allergies or skin sensitivities."
+                "title": "Pet Safety & Temperament Come First",
+                "body": "Your dog's comfort and well-being always come first. We use exclusively 100% pet-safe, non-toxic, washable or semi-permanent dye formulations, and every service is guided by your dog's individual comfort and skin condition. Please let us know in advance if this will be your dog's first coloring experience, or if they have any known allergies or skin sensitivities."
               },
               {
                 "title": "Coat Condition & Pricing Adjustments",
-                "body": "To ensure optimal, safe, and beautiful results, final pricing may adjust based on your pet's natural coat color, density, texture, and matting condition."
+                "body": "To ensure the safest, most beautiful results, final pricing may be adjusted based on your dog's natural coat color, density, texture, and coat condition."
+              },
+              {
+                "title": "Duration & Fade Expectations",
+                "body": "Pricing reflects a single coloring application. Depending on the depth and intensity of the chosen color, the dye will typically fade completely within 1–3 baths."
+              },
+              {
+                "title": "Permanent Coloring Requests",
+                "body": "For permanent dye applications that will not wash out and can only be removed through coat trimming, please contact us in advance to discuss and schedule this service separately."
               }
             ]
           }
