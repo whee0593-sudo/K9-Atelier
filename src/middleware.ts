@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
   "/api/site-access",
   "/support",
   "/api/support",
+  "/api/notify",
 ];
 
 function isPublicPath(pathname: string) {
