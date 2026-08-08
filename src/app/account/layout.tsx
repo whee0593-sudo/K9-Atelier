@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { AccountNav } from "@/components/account/AccountNav";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { accountConfig } from "@/lib/account-fields";
@@ -11,14 +10,7 @@ export default function AccountLayout({
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="rounded-xl border border-gold/30 bg-lavender-light/40 px-4 py-3 text-sm text-text-muted">
-          Preview mode — account sign-in is coming soon. Below is the information
-          customers will manage in their profile.{" "}
-          <Link href="/login" className="font-medium text-gold-dark underline">
-            Login
-          </Link>
-        </div>
-        <BookServiceLink className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-gold px-6 py-3 text-sm font-medium text-white transition hover:bg-gold-dark">
+        <BookServiceLink className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-gold px-6 py-3 text-sm font-medium text-white transition hover:bg-gold-dark sm:ml-auto">
           Book Service
         </BookServiceLink>
       </div>

@@ -78,11 +78,6 @@ export function PetProfilesManager() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-text-muted">
-        Save a profile for each pet. When you book, you&apos;ll choose which pet
-        the appointment is for. Vaccination upload is required for every pet.
-      </p>
-
       {pets.map((pet) => (
         <PetCard
           key={pet.id}
@@ -127,10 +122,6 @@ export function PetProfilesManager() {
         </button>
       )}
 
-      <p className="text-xs text-text-muted">
-        Preview mode — profiles are not saved yet. After sign-in, each pet will
-        be stored in your account.
-      </p>
     </div>
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
+import { AccountFieldsForm } from "@/components/account/AccountFieldsForm";
+import { filterFieldsByAudience, getAccountSection } from "@/lib/account-fields";
 import {
   getCustomerPetProfiles,
   petReadyToBook,
@@ -14,6 +16,11 @@ import {
   bookingSecondaryBtnClass,
 } from "@/components/booking/booking-ui";
 
+const petFields = filterFieldsByAudience(
+  getAccountSection("pets")?.fields ?? [],
+  "customer",
+);
+
 export function PetSelector({
   selectedId,
   onSelect,
@@ -21,17 +28,35 @@ export function PetSelector({
   selectedId: string | null;
   onSelect: (pet: PetProfile) => void;
 }) {
-  const pets = getCustomerPetProfiles();
+  const [pets, setPets] = useState<PetProfile[]>(() => getCustomerPetProfiles());
+  const [showAddForm, setShowAddForm] = useState(false);
 
-  if (pets.length === 0) {
+  function saveNewPet() {
+    const newPet: PetProfile = {
+      id: `pet-${Date.now()}`,
+      name: "New Dog",
+      breed: "",
+      weightLbs: 0,
+      vaccineRecordUploaded: false,
+    };
+    setPets((prev) => [...prev, newPet]);
+    setShowAddForm(false);
+    onSelect(newPet);
+  }
+
+  if (pets.length === 0 && !showAddForm) {
     return (
       <div className={`${bookingNoticeClass} text-center`}>
         <p className="font-body text-sm text-taupe">
           No dogs in your profile yet.
         </p>
-        <Link href="/account/pets" className={`${bookingPrimaryBtnClass} mt-6`}>
+        <button
+          type="button"
+          onClick={() => setShowAddForm(true)}
+          className={`${bookingPrimaryBtnClass} mt-6`}
+        >
           Add a Dog
-        </Link>
+        </button>
       </div>
     );
   }
@@ -51,14 +76,15 @@ export function PetSelector({
                 </p>
                 <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
                   Before we can reserve {pet.name}&apos;s appointment, please
-                  update their current vaccination record.
+                  upload their current vaccination record below.
                 </p>
-                <Link
-                  href="/account/pets"
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(true)}
                   className={`${bookingSecondaryBtnClass} mt-5`}
                 >
-                  Update {pet.name}&apos;s Profile
-                </Link>
+                  Complete {pet.name}&apos;s Profile
+                </button>
               </div>
             </li>
           );
@@ -91,14 +117,40 @@ export function PetSelector({
         );
       })}
 
-      <li>
-        <Link
-          href="/account/pets"
-          className={`${bookingSecondaryBtnClass} flex w-full justify-center border-dashed`}
-        >
-          + Add a Dog
-        </Link>
-      </li>
+      {showAddForm ? (
+        <li className={`${bookingNoticeClass} space-y-4`}>
+          <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+            New Dog Profile
+          </p>
+          <AccountFieldsForm fields={petFields} />
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={saveNewPet}
+              className={bookingPrimaryBtnClass}
+            >
+              Save &amp; Continue
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAddForm(false)}
+              className={bookingSecondaryBtnClass}
+            >
+              Cancel
+            </button>
+          </div>
+        </li>
+      ) : (
+        <li>
+          <button
+            type="button"
+            onClick={() => setShowAddForm(true)}
+            className={`${bookingSecondaryBtnClass} flex w-full justify-center border-dashed`}
+          >
+            + Add a Dog
+          </button>
+        </li>
+      )}
     </ul>
   );
 }

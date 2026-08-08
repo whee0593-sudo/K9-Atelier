@@ -5,7 +5,7 @@ export type PetProfile = {
   name: string;
   breed: string;
   weightLbs: number;
-  age?: string;
+  ageYears?: number;
   sex?: string;
   temperament?: string;
   medicalNotes?: string;
@@ -22,7 +22,7 @@ export const demoPetProfiles: PetProfile[] = [
     name: "Bella",
     breed: "Shih Tzu",
     weightLbs: 12,
-    age: "8 years",
+    ageYears: 8,
     sex: "Female, Spayed",
     vaccineRecordUploaded: true,
     vaccineExpiration: "2026-11-01",
@@ -32,7 +32,7 @@ export const demoPetProfiles: PetProfile[] = [
     name: "Max",
     breed: "Miniature Poodle",
     weightLbs: 18,
-    age: "3 years",
+    ageYears: 3,
     sex: "Male, Neutered",
     adminServiceNotes: "Last visit: Signature Bath, lavender shampoo, nail grind.",
     vaccineRecordUploaded: false,
@@ -55,8 +55,7 @@ export function getCustomerPetProfiles(): PetProfile[] {
 }
 
 export function petMayBenefitFromGentleCare(pet: PetProfile) {
-  const ageMatch = pet.age?.match(/(\d+)/);
-  const age = ageMatch ? Number.parseInt(ageMatch[1] ?? "0", 10) : 0;
+  const age = pet.ageYears ?? 0;
   if (age >= 7) return true;
   const notes =
     `${pet.medicalNotes ?? ""} ${pet.temperament ?? ""}`.toLowerCase();

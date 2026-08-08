@@ -172,11 +172,12 @@
           "note": "Used for service pricing and eligibility (over 45 lbs has limited services)."
         },
         {
-          "id": "age",
-          "label": "Age",
-          "type": "text",
+          "id": "ageYears",
+          "label": "Age (years)",
+          "type": "number",
           "required": false,
-          "placeholder": "8 years"
+          "placeholder": "8",
+          "note": "Optional — helps us tailor gentle handling for senior dogs."
         },
         {
           "id": "sex",
@@ -200,7 +201,7 @@
         },
         {
           "id": "medicalNotes",
-          "label": "Medical / Special Care Notes",
+          "label": "Health & Comfort Notes",
           "type": "textarea",
           "required": false,
           "placeholder": "Senior dog, arthritis; no hot dryer on legs",
