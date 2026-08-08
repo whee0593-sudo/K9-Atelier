@@ -172,14 +172,6 @@
           "note": "Used for service pricing and eligibility (over 45 lbs has limited services)."
         },
         {
-          "id": "ageYears",
-          "label": "Age (years)",
-          "type": "number",
-          "required": false,
-          "placeholder": "8",
-          "note": "Optional — helps us tailor gentle handling for senior dogs."
-        },
-        {
           "id": "sex",
           "label": "Sex",
           "type": "select",

@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { AccountFieldsForm } from "@/components/account/AccountFieldsForm";
-import { filterFieldsByAudience, getAccountSection } from "@/lib/account-fields";
+import { PetProfileFieldsForm } from "@/components/account/PetProfileFieldsForm";
 import {
   getCustomerPetProfiles,
   petReadyToBook,
+  saveCustomerPetProfiles,
   type PetProfile,
 } from "@/lib/pets";
+import { formatPetAgeLabel, getPetAgeYears } from "@/lib/pet-age";
 import {
   bookingCardClass,
   bookingCardSelectedClass,
@@ -15,11 +16,6 @@ import {
   bookingPrimaryBtnClass,
   bookingSecondaryBtnClass,
 } from "@/components/booking/booking-ui";
-
-const petFields = filterFieldsByAudience(
-  getAccountSection("pets")?.fields ?? [],
-  "customer",
-);
 
 export function PetSelector({
   selectedId,
@@ -30,18 +26,31 @@ export function PetSelector({
 }) {
   const [pets, setPets] = useState<PetProfile[]>(() => getCustomerPetProfiles());
   const [showAddForm, setShowAddForm] = useState(false);
+  const [draftPet, setDraftPet] = useState<PetProfile>(() => ({
+    id: `pet-${Date.now()}`,
+    name: "New Dog",
+    breed: "",
+    weightLbs: 0,
+    vaccineRecordUploaded: false,
+  }));
+
+  function persistPets(next: PetProfile[]) {
+    setPets(next);
+    saveCustomerPetProfiles(next);
+  }
 
   function saveNewPet() {
-    const newPet: PetProfile = {
+    const next = [...pets, draftPet];
+    persistPets(next);
+    setShowAddForm(false);
+    onSelect(draftPet);
+    setDraftPet({
       id: `pet-${Date.now()}`,
       name: "New Dog",
       breed: "",
       weightLbs: 0,
       vaccineRecordUploaded: false,
-    };
-    setPets((prev) => [...prev, newPet]);
-    setShowAddForm(false);
-    onSelect(newPet);
+    });
   }
 
   if (pets.length === 0 && !showAddForm) {
@@ -104,7 +113,12 @@ export function PetSelector({
               </p>
               <p className="font-display mt-2 text-2xl text-ink">{pet.breed}</p>
               <p className="font-body mt-2 text-sm text-taupe">
-                {pet.weightLbs} lbs
+                {(() => {
+                  const age = getPetAgeYears(pet);
+                  return age != null
+                    ? `${pet.weightLbs} lbs · ${formatPetAgeLabel(age)}`
+                    : `${pet.weightLbs} lbs`;
+                })()}
               </p>
               <p className="font-body mt-4 text-[10px] font-medium uppercase tracking-[0.14em] text-champagne">
                 Profile Complete
@@ -122,7 +136,13 @@ export function PetSelector({
           <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
             New Dog Profile
           </p>
-          <AccountFieldsForm fields={petFields} />
+          <PetProfileFieldsForm
+            pet={draftPet}
+            onPetChange={(updates) =>
+              setDraftPet((current) => ({ ...current, ...updates }))
+            }
+            variant="booking"
+          />
           <div className="flex flex-wrap gap-3">
             <button
               type="button"

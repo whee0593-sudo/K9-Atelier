@@ -1,27 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { AccountFieldsForm } from "@/components/account/AccountFieldsForm";
-import { filterFieldsByAudience, getAccountSection } from "@/lib/account-fields";
+import { PetProfileAgeSummary } from "@/components/account/PetBirthdayFields";
+import { PetProfileFieldsForm } from "@/components/account/PetProfileFieldsForm";
 import {
   getCustomerPetProfiles,
-  formatPetSummary,
+  saveCustomerPetProfiles,
   type PetProfile,
 } from "@/lib/pets";
-
-const petFields = filterFieldsByAudience(
-  getAccountSection("pets")?.fields ?? [],
-  "customer",
-);
 
 function PetCard({
   pet,
   expanded,
   onToggle,
+  onPetChange,
 }: {
   pet: PetProfile;
   expanded: boolean;
   onToggle: () => void;
+  onPetChange: (updates: Partial<PetProfile>) => void;
 }) {
   return (
     <article className="rounded-2xl border border-lavender/40 bg-cream">
@@ -32,7 +29,7 @@ function PetCard({
       >
         <div>
           <p className="font-medium text-text">{pet.name}</p>
-          <p className="mt-1 text-sm text-text-muted">{formatPetSummary(pet)}</p>
+          <PetProfileAgeSummary pet={pet} />
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <span
@@ -49,7 +46,7 @@ function PetCard({
       </button>
       {expanded && (
         <div className="border-t border-lavender/30 px-5 py-6">
-          <AccountFieldsForm fields={petFields} />
+          <PetProfileFieldsForm pet={pet} onPetChange={onPetChange} />
         </div>
       )}
     </article>
@@ -62,18 +59,36 @@ export function PetProfilesManager() {
     () => getCustomerPetProfiles()[0]?.id ?? null,
   );
   const [showNewForm, setShowNewForm] = useState(false);
+  const [draftPet, setDraftPet] = useState<PetProfile>(() => ({
+    id: `pet-${Date.now()}`,
+    name: "New Pet",
+    breed: "",
+    weightLbs: 0,
+    vaccineRecordUploaded: false,
+  }));
+
+  function persistPets(next: PetProfile[]) {
+    setPets(next);
+    saveCustomerPetProfiles(next);
+  }
+
+  function updatePet(id: string, updates: Partial<PetProfile>) {
+    persistPets(
+      pets.map((pet) => (pet.id === id ? { ...pet, ...updates } : pet)),
+    );
+  }
 
   function addPet() {
-    const newPet: PetProfile = {
+    persistPets([...pets, draftPet]);
+    setExpandedId(draftPet.id);
+    setShowNewForm(false);
+    setDraftPet({
       id: `pet-${Date.now()}`,
       name: "New Pet",
       breed: "",
       weightLbs: 0,
       vaccineRecordUploaded: false,
-    };
-    setPets((prev) => [...prev, newPet]);
-    setExpandedId(newPet.id);
-    setShowNewForm(false);
+    });
   }
 
   return (
@@ -86,6 +101,7 @@ export function PetProfilesManager() {
           onToggle={() =>
             setExpandedId((id) => (id === pet.id ? null : pet.id))
           }
+          onPetChange={(updates) => updatePet(pet.id, updates)}
         />
       ))}
 
@@ -93,7 +109,12 @@ export function PetProfilesManager() {
         <div className="rounded-2xl border border-dashed border-gold/50 bg-lavender-light/20 p-6">
           <h3 className="font-medium text-gold-dark">New Pet Profile</h3>
           <div className="mt-4">
-            <AccountFieldsForm fields={petFields} />
+            <PetProfileFieldsForm
+              pet={draftPet}
+              onPetChange={(updates) =>
+                setDraftPet((current) => ({ ...current, ...updates }))
+              }
+            />
           </div>
           <div className="mt-4 flex gap-3">
             <button
@@ -121,7 +142,6 @@ export function PetProfilesManager() {
           + Add Another Pet
         </button>
       )}
-
     </div>
   );
 }

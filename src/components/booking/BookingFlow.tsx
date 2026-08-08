@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { PetProfile } from "@/lib/pets";
 import {
   getAddOnService,
@@ -45,6 +45,7 @@ export function BookingFlow() {
   const [appointmentTime, setAppointmentTime] = useState<string | null>(null);
   const [reserved, setReserved] = useState(false);
   const [policiesOpen, setPoliciesOpen] = useState(false);
+  const policiesTriggerRef = useRef<HTMLButtonElement>(null);
 
   const bookingSelection: SelectedService | null =
     selectedService && selectedPet
@@ -281,6 +282,7 @@ export function BookingFlow() {
             Additional care or travel fees may apply where necessary.
           </p>
           <button
+            ref={policiesTriggerRef}
             type="button"
             onClick={() => setPoliciesOpen(true)}
             className={`${bookingBackLinkClass} mt-3`}
@@ -299,6 +301,7 @@ export function BookingFlow() {
       <BookingPoliciesModal
         open={policiesOpen}
         onClose={() => setPoliciesOpen(false)}
+        returnFocusRef={policiesTriggerRef}
       />
     </div>
   );
