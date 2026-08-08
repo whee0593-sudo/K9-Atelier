@@ -10,6 +10,7 @@ const PUBLIC_PATHS = [
   "/under-construction",
   "/login/admin",
   "/api/site-access",
+  "/preview",
   "/support",
   "/api/support",
   "/api/notify",

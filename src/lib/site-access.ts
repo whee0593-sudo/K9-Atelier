@@ -32,6 +32,46 @@ export function getSiteAccessPassword() {
   return fromConfig || undefined;
 }
 
+/** Secret token for password-free preview share links. */
+export function getPreviewShareToken() {
+  const fromEnv = process.env.SITE_PREVIEW_SHARE_TOKEN?.trim();
+  if (fromEnv) return fromEnv;
+
+  const fromConfig =
+    "previewShareToken" in business.site &&
+    typeof business.site.previewShareToken === "string"
+      ? business.site.previewShareToken.trim()
+      : "";
+  return fromConfig || undefined;
+}
+
+export function isValidPreviewShareToken(token: string | undefined) {
+  const expected = getPreviewShareToken();
+  if (!expected || !token) return false;
+  return timingSafeEqualString(token.trim(), expected);
+}
+
+export function buildPreviewSharePath(token = getPreviewShareToken()) {
+  if (!token) return null;
+  return `/preview/${encodeURIComponent(token)}`;
+}
+
+export function siteAccessCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+  };
+}
+
+export async function grantSiteAccessCookie() {
+  const password = getSiteAccessPassword();
+  if (!password) return null;
+  return computeSiteAccessToken(password);
+}
+
 export async function computeSiteAccessToken(password: string): Promise<string> {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(

@@ -36,17 +36,47 @@ export function isBookableWeekday(date: Date) {
   return business.booking.availableDays.includes(key);
 }
 
+/** Local calendar date as YYYY-MM-DD (avoids UTC shift from toISOString). */
+export function toDateValue(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+export function parseDateValue(value: string) {
+  const [y, m, d] = value.split("-").map(Number);
+  return new Date(y, m - 1, d, 12, 0, 0, 0);
+}
+
+/** Bookable if weekday, not today, and not in the past. */
+export function isDateBookable(date: Date) {
+  const cursor = new Date(date);
+  cursor.setHours(12, 0, 0, 0);
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const earliest = new Date(today);
+  earliest.setDate(earliest.getDate() + 1);
+  if (cursor < earliest) return false;
+  return isBookableWeekday(cursor);
+}
+
+/** Open time slots for a date. Replace with calendar API when live. */
+export function getAvailableTimeSlotsForDate(date: Date) {
+  if (!isDateBookable(date)) return [];
+  return getTimeSlots();
+}
+
 /** Next N bookable calendar dates (local date, Mon–Fri) */
 export function getUpcomingBookableDates(count = 20) {
   const dates: { value: string; label: string }[] = [];
   const cursor = new Date();
   cursor.setHours(12, 0, 0, 0);
-  // Start from tomorrow so same-day buffer is simple for preview
   cursor.setDate(cursor.getDate() + 1);
 
   while (dates.length < count) {
-    if (isBookableWeekday(cursor)) {
-      const value = cursor.toISOString().slice(0, 10);
+    if (isDateBookable(cursor)) {
+      const value = toDateValue(cursor);
       const label = cursor.toLocaleDateString("en-US", {
         weekday: "short",
         month: "short",

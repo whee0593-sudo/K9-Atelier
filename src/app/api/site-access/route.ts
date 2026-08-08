@@ -5,16 +5,11 @@ import {
   getSiteAccessPassword,
   isValidSiteAccessCookie,
   SITE_ACCESS_COOKIE,
+  siteAccessCookieOptions,
 } from "@/lib/site-access";
 
 function cookieOptions() {
-  return {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  };
+  return siteAccessCookieOptions();
 }
 
 export async function POST(request: Request) {
