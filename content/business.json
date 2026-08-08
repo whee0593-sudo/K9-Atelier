@@ -44,6 +44,7 @@
     "travelFeePerMile": 6.5,
     "travelFeeNote": "Charged per one-way mile beyond free radius, based on GPS driving distance from base",
     "maxDistanceMiles": 20,
+    "communitiesServed": "West Palm Beach · Palm Beach Gardens · Jupiter",
     "homeAddress": {
       "street": "1408 14th Lane",
       "city": "Palm Beach Gardens",

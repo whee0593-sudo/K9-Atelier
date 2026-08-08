@@ -1,7 +1,7 @@
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { LuxuryButton } from "@/components/luxury/LuxuryButton";
 import { PageShell } from "@/components/luxury/PageShell";
-import { business } from "@/lib/business";
+import { business, getPaymentFaqParagraphs, getServiceAreaFaqParagraphs } from "@/lib/business";
 
 export const metadata = {
   title: "FAQ · K9 Atelier",
@@ -38,7 +38,7 @@ const faqGroups = [
 ] as const;
 
 export default function FaqPage() {
-  const { booking, serviceArea, weightPolicy } = business;
+  const { booking, weightPolicy } = business;
 
   const days = booking.availableDays;
   const daysLabel =
@@ -108,7 +108,13 @@ export default function FaqPage() {
     },
     {
       q: "What area do you serve? Is there a travel fee?",
-      a: `Serving Palm Beach Gardens and surrounding Palm Beach communities. Standard travel is complimentary within ${serviceArea.freeRadiusMiles} miles. Extended service up to approximately ${serviceArea.maxDistanceMiles} miles may be accepted. Outside the standard radius: $${serviceArea.travelFeePerMile} per one-way mile based on GPS driving distance.`,
+      a: (
+        <div className="space-y-4">
+          {getServiceAreaFaqParagraphs().map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </div>
+      ),
     },
     {
       q: "What are your hours, and how do I book?",
@@ -124,7 +130,13 @@ export default function FaqPage() {
     },
     {
       q: "How does payment work?",
-      a: `${booking.paymentMethodNote} New clients: $${booking.newClientDeposit} deposit applied toward first appointment. Remaining balance settled after appointment.`,
+      a: (
+        <div className="space-y-4">
+          {getPaymentFaqParagraphs().map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </div>
+      ),
     },
     {
       q: "What is your cancellation policy?",

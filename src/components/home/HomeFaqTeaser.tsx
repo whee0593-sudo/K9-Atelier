@@ -1,10 +1,18 @@
 import Link from "next/link";
 import { Container } from "@/components/luxury/Container";
+import { getServiceAreaFaqParagraphs } from "@/lib/business";
 
-const faqPreview = [
+const faqPreview: Array<{
+  q: string;
+  a: string | readonly string[];
+}> = [
   {
     q: "How does mobile grooming work?",
     a: "We bring a fully equipped, self-contained grooming salon directly to your home — one dog, one groomer, cage-free.",
+  },
+  {
+    q: "What area do you serve? Is there a travel fee?",
+    a: getServiceAreaFaqParagraphs(),
   },
   {
     q: "Do you groom dogs over 45 lbs?",
@@ -40,9 +48,11 @@ export function HomeFaqTeaser() {
                   </span>
                 </span>
               </summary>
-              <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
-                {item.a}
-              </p>
+              <div className="font-body mt-4 space-y-4 text-sm leading-relaxed text-taupe">
+                {(Array.isArray(item.a) ? item.a : [item.a]).map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </div>
             </details>
           ))}
         </div>
