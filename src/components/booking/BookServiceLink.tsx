@@ -7,9 +7,10 @@ import { isCustomerLoggedIn } from "@/lib/customer-session";
 type Props = {
   className?: string;
   children: React.ReactNode;
+  onClick?: () => void;
 };
 
-export function BookServiceLink({ className, children }: Props) {
+export function BookServiceLink({ className, children, onClick }: Props) {
   const [href, setHref] = useState("/login?next=/book");
 
   useEffect(() => {
@@ -17,7 +18,7 @@ export function BookServiceLink({ className, children }: Props) {
   }, []);
 
   return (
-    <Link href={href} className={className}>
+    <Link href={href} className={className} onClick={onClick}>
       {children}
     </Link>
   );

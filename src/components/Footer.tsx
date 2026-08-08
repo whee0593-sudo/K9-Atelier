@@ -1,46 +1,90 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { business } from "@/lib/business";
+import { Container } from "@/components/luxury/Container";
+
+const footerLinks = [
+  { href: "/#experience", label: "The Atelier" },
+  { href: "/services", label: "Services" },
+  { href: "/#mobile-salon", label: "Experience" },
+  { href: "/about", label: "About" },
+  { href: "/faq", label: "FAQ" },
+  { href: "/contact", label: "Contact" },
+  { href: "/login", label: "Client Login" },
+] as const;
 
 export function Footer() {
-  const pathname = usePathname();
-  if (pathname === "/") return null;
-
-  const { brand } = business;
+  const { brand, site } = business;
+  const instagram =
+    site.underConstruction?.instagramUrl ?? "https://instagram.com/k9atelierfl";
+  const instagramHandle =
+    site.underConstruction?.instagramHandle ?? "k9atelierfl";
 
   return (
-    <footer className="mt-20 border-t border-lavender-light bg-lavender-light/40">
-      <div className="mx-auto max-w-5xl px-6 py-12">
-        <div className="grid gap-8 md:grid-cols-3">
+    <footer className="border-t border-gray-line bg-dusty-lavender/35">
+      <Container className="py-16 md:py-20">
+        <div className="grid gap-12 md:grid-cols-[1.2fr_1fr_1fr]">
           <div>
-            <p className="text-lg font-semibold text-gold-dark">{brand.name}</p>
-            <p className="mt-2 text-sm text-text-muted">{brand.tagline}</p>
+            <p className="font-body text-[11px] font-semibold uppercase tracking-[0.22em] text-ink">
+              {brand.name}
+            </p>
+            <p className="font-body mt-3 text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
+              Private Pet Grooming Salon
+            </p>
+            <p className="font-body mt-1 text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
+              Palm Beach
+            </p>
+            <p className="font-display mt-6 text-2xl leading-snug text-ink md:text-[1.75rem]">
+              Private care, beautifully delivered.
+            </p>
           </div>
+
           <div>
-            <p className="text-sm font-medium text-text">Contact</p>
+            <p className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
+              Explore
+            </p>
+            <ul className="mt-4 space-y-3">
+              {footerLinks.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="font-body text-sm text-ink transition hover:text-deep-lavender"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <p className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
+              Contact
+            </p>
             <a
               href={`mailto:${brand.email}`}
-              className="mt-2 block text-sm text-text-muted hover:text-gold-dark"
+              className="font-body mt-4 block text-sm text-ink transition hover:text-deep-lavender"
             >
               {brand.email}
             </a>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-text">Follow</p>
-            <p className="mt-2 text-sm text-text-muted">
-              Instagram: {brand.social.instagram}
-            </p>
-            <p className="text-sm text-text-muted">
-              Facebook: {brand.social.facebook}
-            </p>
+            <a
+              href={instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-body mt-3 block text-sm text-ink transition hover:text-deep-lavender"
+            >
+              @{instagramHandle}
+            </a>
           </div>
         </div>
-        <p className="mt-10 text-center text-xs text-text-muted">
-          © {new Date().getFullYear()} {brand.name}. All rights reserved.
-        </p>
-      </div>
+
+        <div className="mt-14 border-t border-gray-line/80 pt-8">
+          <p className="font-body text-center text-xs text-taupe">
+            © {new Date().getFullYear()} {brand.name}. All rights reserved.
+          </p>
+        </div>
+      </Container>
     </footer>
   );
 }

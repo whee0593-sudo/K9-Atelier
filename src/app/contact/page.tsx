@@ -1,18 +1,18 @@
-import Link from "next/link";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
+import { LuxuryButton } from "@/components/luxury/LuxuryButton";
+import { PageShell } from "@/components/luxury/PageShell";
 import { business } from "@/lib/business";
 
 export const metadata = {
-  title: "Contact K9 Atelier",
+  title: "Contact · K9 Atelier",
   description:
-    "Get in touch with K9 Atelier — email, social, service area, and booking hours for luxury mobile dog grooming in Palm Beach County.",
+    "Contact K9 Atelier for private mobile dog grooming in Palm Beach — email, Instagram, service area and booking hours.",
 };
 
 function capitalize(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-/** "09:00" -> "9:00 AM", "16:00" -> "4:00 PM" */
 function formatTime(value: string) {
   const [hStr, mStr] = value.split(":");
   const hour = Number(hStr);
@@ -23,7 +23,7 @@ function formatTime(value: string) {
 }
 
 export default function ContactPage() {
-  const { brand, booking, serviceArea } = business;
+  const { brand, booking, serviceArea, site } = business;
 
   const days = booking.availableDays;
   const daysLabel =
@@ -33,103 +33,87 @@ export default function ContactPage() {
   const hoursLabel = `${formatTime(booking.hoursStart)} – ${formatTime(
     booking.hoursEnd,
   )}`;
+  const instagramUrl =
+    site.underConstruction?.instagramUrl ?? "https://instagram.com/k9atelierfl";
+  const instagramHandle =
+    site.underConstruction?.instagramHandle ?? "k9atelierfl";
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-12 md:py-16">
-      <header className="text-center">
-        <p className="text-xs font-medium uppercase tracking-[0.25em] text-gold">
-          We&apos;d love to hear from you.
-        </p>
-        <h1 className="mt-4 text-4xl font-semibold text-gold-dark">
-          Contact K9 Atelier
-        </h1>
-        <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-text-muted">
-          Questions about our services, your dog&apos;s grooming needs, or
-          scheduling a mobile appointment? Reach out anytime — we&apos;re happy
-          to help.
-        </p>
-      </header>
-
-      <div className="mt-12 space-y-4">
-        <section className="rounded-2xl border border-lavender/30 bg-cream p-6">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-text-muted">
+    <PageShell
+      eyebrow="Get in Touch"
+      title={
+        <>
+          A Private Appointment
+          <br />
+          Starts With a Conversation.
+        </>
+      }
+      intro="Questions about your dog's grooming needs or the K9 Atelier experience? We would be happy to help."
+    >
+      <div className="mx-auto grid max-w-3xl gap-4">
+        <section className="border border-gray-line/80 bg-ivory p-6 md:p-8">
+          <h2 className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
             Email
           </h2>
           <a
             href={`mailto:${brand.email}`}
-            className="mt-2 inline-block text-lg font-medium text-gold-dark transition hover:text-gold"
+            className="font-body mt-3 inline-block text-lg text-ink transition hover:text-deep-lavender"
           >
             {brand.email}
           </a>
         </section>
 
-        {brand.phone && (
-          <section className="rounded-2xl border border-lavender/30 bg-cream p-6">
-            <h2 className="text-sm font-medium uppercase tracking-wide text-text-muted">
-              Phone
-            </h2>
-            <a
-              href={`tel:${brand.phone}`}
-              className="mt-2 inline-block text-lg font-medium text-gold-dark transition hover:text-gold"
-            >
-              {brand.phone}
-            </a>
-          </section>
-        )}
-
-        <section className="rounded-2xl border border-lavender/30 bg-cream p-6">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-text-muted">
-            Follow Us
+        <section className="border border-gray-line/80 bg-ivory p-6 md:p-8">
+          <h2 className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
+            Instagram
           </h2>
-          <div className="mt-2 space-y-1 text-lg text-text">
-            <p>
-              <span className="font-medium text-gold-dark">Instagram:</span>{" "}
-              {brand.social.instagram}
-            </p>
-            <p>
-              <span className="font-medium text-gold-dark">Facebook:</span>{" "}
-              {brand.social.facebook}
-            </p>
-          </div>
+          <a
+            href={instagramUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-body mt-3 inline-block text-lg text-ink transition hover:text-deep-lavender"
+          >
+            @{instagramHandle}
+          </a>
         </section>
 
-        <section className="rounded-2xl border border-lavender/30 bg-cream p-6">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-text-muted">
+        <section className="border border-gray-line/80 bg-ivory p-6 md:p-8">
+          <h2 className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
             Service Area
           </h2>
-          <p className="mt-2 text-lg text-text">
-            {serviceArea.homeAddress.publicLabel}
+          <p className="font-body mt-3 text-base text-ink">
+            Serving Palm Beach Gardens and surrounding Palm Beach communities.
           </p>
-          <p className="mt-1 text-sm text-text-muted">
-            Mobile grooming brought directly to your doorstep.
+          <p className="font-body mt-2 text-sm text-taupe">
+            Complimentary standard travel within {serviceArea.freeRadiusMiles}{" "}
+            miles. Extended service up to approximately{" "}
+            {serviceArea.maxDistanceMiles} miles. $
+            {serviceArea.travelFeePerMile} / one-way mile outside standard
+            radius.
           </p>
         </section>
 
-        <section className="rounded-2xl border border-lavender/30 bg-cream p-6">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-text-muted">
-            Booking Hours
+        <section className="border border-gray-line/80 bg-ivory p-6 md:p-8">
+          <h2 className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
+            Hours
           </h2>
-          <p className="mt-2 text-lg text-text">
-            {daysLabel}
-            <span className="text-text-muted"> · {hoursLabel} (Eastern Time)</span>
+          <p className="font-body mt-3 text-base text-ink">
+            {daysLabel} · {hoursLabel} Eastern
           </p>
-          <p className="mt-1 text-sm text-text-muted">
-            By appointment only. Weekends reserved on request.
+          <p className="font-body mt-2 text-sm text-taupe">
+            By appointment only. Weekend appointments by request.
           </p>
         </section>
       </div>
 
       <div className="mt-14 flex flex-col items-center justify-center gap-4 sm:flex-row">
-        <BookServiceLink className="inline-block rounded-full bg-gold px-8 py-3 text-sm font-medium text-white transition hover:bg-gold-dark">
-          Book an Appointment
+        <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[10px] font-medium uppercase tracking-[0.16em] text-ivory transition hover:bg-ink">
+          Request an Appointment
         </BookServiceLink>
-        <Link
-          href="/services"
-          className="inline-block rounded-full border border-gold px-8 py-3 text-sm font-medium text-gold-dark transition hover:bg-gold hover:text-white"
-        >
-          View Services
-        </Link>
+        <LuxuryButton href={`mailto:${brand.email}`} variant="secondary">
+          Email the Atelier
+        </LuxuryButton>
       </div>
-    </div>
+    </PageShell>
   );
 }

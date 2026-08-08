@@ -3,106 +3,133 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { business } from "@/lib/business";
-import { ShareButton } from "@/components/ShareButton";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
+import { Container } from "@/components/luxury/Container";
 
-const quickLinks = [
+const navItems = [
+  { href: "/#experience", label: "The Atelier" },
+  { href: "/services", label: "Services" },
+  { href: "/#mobile-salon", label: "Experience" },
   { href: "/about", label: "About" },
   { href: "/faq", label: "FAQ" },
-  { href: "/contact", label: "Contact" },
 ] as const;
 
-function TopActions({ showQuickLinks = false }: { showQuickLinks?: boolean }) {
+function NavLink({
+  href,
+  label,
+  onNavigate,
+}: {
+  href: string;
+  label: string;
+  onNavigate?: () => void;
+}) {
   return (
-    <div className="flex max-w-[min(100vw-3rem,42rem)] flex-wrap items-center justify-end gap-x-4 gap-y-2">
-      {showQuickLinks &&
-        quickLinks.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="text-xs font-medium uppercase tracking-wide text-text-muted transition hover:text-gold-dark"
-          >
-            {item.label}
-          </Link>
-        ))}
-      <Link
-        href="/support"
-        className="text-xs font-medium text-text-muted transition hover:text-gold-dark"
-      >
-        Support
-      </Link>
-      <ShareButton />
-      <Link
-        href="/login"
-        className="text-sm font-medium text-gold-dark transition hover:text-gold"
-      >
-        Login
-      </Link>
-    </div>
+    <Link
+      href={href}
+      onClick={onNavigate}
+      className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe transition duration-500 hover:text-ink"
+    >
+      {label}
+    </Link>
   );
 }
 
 export function Header() {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
   const isHome = pathname === "/";
 
-  if (isHome) {
-    return (
-      <header className="absolute top-0 left-0 right-0 z-10 flex items-start justify-between p-6">
-        <p className="text-lg font-medium text-gold-dark">Welcome!</p>
-        <TopActions showQuickLinks />
-      </header>
-    );
-  }
-
-  const nav = [
-    { href: "/", label: "Home" },
-    { href: "/about", label: "About" },
-    { href: "/services", label: "Services" },
-    { href: "/login?next=/book", label: "Book" },
-    { href: "/shop", label: "Shop" },
-    { href: "/faq", label: "FAQ" },
-    { href: "/contact", label: "Contact" },
-  ];
+  const closeMenu = () => setOpen(false);
 
   return (
-    <header className="border-b border-lavender-light/60 bg-cream/95 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-4">
-        <Link href="/" className="flex items-center gap-3">
+    <header
+      className={`sticky top-0 z-50 border-b border-gray-line/70 bg-ivory/95 backdrop-blur-sm ${
+        isHome ? "" : ""
+      }`}
+    >
+      <Container className="flex items-center justify-between gap-6 py-4 md:py-5">
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-3"
+          onClick={closeMenu}
+        >
           <Image
             src={business.brand.logo}
             alt={business.brand.name}
-            width={48}
-            height={48}
+            width={44}
+            height={44}
             className="rounded-full"
+            priority
           />
-          <span className="text-lg font-semibold tracking-wide text-gold-dark">
+          <span className="hidden font-body text-[11px] font-semibold uppercase tracking-[0.2em] text-ink sm:inline">
             {business.brand.name}
           </span>
         </Link>
-        <nav className="hidden items-center gap-6 text-sm md:flex">
-          {nav.map((item) =>
-          item.label === "Book" ? (
-            <BookServiceLink
-              key={item.href}
-              className="text-text-muted transition hover:text-gold-dark"
-            >
-              {item.label}
-            </BookServiceLink>
-          ) : (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="text-text-muted transition hover:text-gold-dark"
-            >
-              {item.label}
-            </Link>
-          ),
-        )}
+
+        <nav className="hidden items-center gap-8 lg:flex" aria-label="Primary">
+          {navItems.map((item) => (
+            <NavLink key={item.href} href={item.href} label={item.label} />
+          ))}
         </nav>
-        <TopActions />
-      </div>
+
+        <div className="hidden items-center gap-6 lg:flex">
+          <Link
+            href="/login"
+            className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe transition hover:text-ink"
+          >
+            Client Login
+          </Link>
+          <BookServiceLink className="inline-flex min-h-[50px] items-center justify-center rounded-sm bg-deep-lavender px-6 text-[10px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink">
+            Book an Appointment
+          </BookServiceLink>
+        </div>
+
+        <button
+          type="button"
+          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm border border-gray-line lg:hidden"
+          aria-expanded={open}
+          aria-controls="mobile-nav"
+          aria-label={open ? "Close menu" : "Open menu"}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <span className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-ink">
+            {open ? "Close" : "Menu"}
+          </span>
+        </button>
+      </Container>
+
+      {open && (
+        <div
+          id="mobile-nav"
+          className="border-t border-gray-line bg-ivory lg:hidden"
+        >
+          <Container className="flex flex-col gap-5 py-6">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                onNavigate={closeMenu}
+              />
+            ))}
+            <Link
+              href="/login"
+              onClick={closeMenu}
+              className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe"
+            >
+              Client Login
+            </Link>
+            <BookServiceLink
+              onClick={closeMenu}
+              className="inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-deep-lavender text-[10px] font-medium uppercase tracking-[0.16em] text-ivory"
+            >
+              Book an Appointment
+            </BookServiceLink>
+          </Container>
+        </div>
+      )}
     </header>
   );
 }

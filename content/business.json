@@ -13,14 +13,14 @@
     }
   },
   "colors": {
-    "cream": "#FAF7F2",
-    "lavender": "#C8B8D8",
-    "lavenderLight": "#E8DFF0",
-    "gold": "#C4A882",
-    "goldDark": "#A68B5B",
+    "cream": "#FBF7EF",
+    "lavender": "#D8D0DD",
+    "lavenderLight": "#EFEAF6",
+    "gold": "#B99762",
+    "goldDark": "#9B7648",
     "blue": "#A8C4D4",
-    "text": "#3D3A36",
-    "textMuted": "#6B6560"
+    "text": "#4D4348",
+    "textMuted": "#7A6A71"
   },
   "weightTiers": [
     {

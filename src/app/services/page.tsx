@@ -1,9 +1,30 @@
-import Link from "next/link";
 import { CreativeBookingPolicy } from "@/components/booking/CreativeBookingPolicy";
 import { CreativeOptionDetail } from "@/components/booking/CreativeOptionDetail";
+import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { ServiceFeesSection } from "@/components/ServiceFeesSection";
+import { Container } from "@/components/luxury/Container";
+import { Eyebrow } from "@/components/luxury/Eyebrow";
+import { PageShell } from "@/components/luxury/PageShell";
 import { business, formatDuration, formatPrice } from "@/lib/business";
 import { getCreativeBookingPolicy } from "@/lib/services";
+
+export const metadata = {
+  title: "Services · K9 Atelier",
+  description:
+    "Signature grooming, spa rituals, specialty care and gentle comfort services — private mobile dog grooming in Palm Beach.",
+};
+
+const categoryAnchors: Record<string, string> = {
+  "signature-grooming": "signature-grooming",
+  "spa-wellness": "spa-wellness",
+  "specialty-care": "specialty-care",
+  "gentle-care": "gentle-care",
+};
+
+const serviceAnchors: Record<string, string> = {
+  "signature-bath-care": "signature-bath",
+  "custom-full-haircut": "atelier-full-groom",
+};
 
 const creativeBookingPolicy = getCreativeBookingPolicy();
 
@@ -24,23 +45,31 @@ function TierTable({
   );
 
   return (
-    <div className="mt-4 overflow-hidden rounded-xl border border-lavender/30">
+    <div className="mt-4 overflow-hidden border border-gray-line/80">
       <table className="w-full text-left text-sm">
-        <thead className="bg-lavender-light/60">
+        <thead className="bg-dusty-lavender/35">
           <tr>
-            <th className="px-4 py-2 font-medium">Weight</th>
-            <th className="px-4 py-2 font-medium">Price</th>
-            {!priceOnly && <th className="px-4 py-2 font-medium">Duration</th>}
+            <th className="px-4 py-3 font-body text-[11px] font-medium uppercase tracking-[0.12em] text-taupe">
+              Weight
+            </th>
+            <th className="px-4 py-3 font-body text-[11px] font-medium uppercase tracking-[0.12em] text-taupe">
+              Price
+            </th>
+            {!priceOnly && (
+              <th className="px-4 py-3 font-body text-[11px] font-medium uppercase tracking-[0.12em] text-taupe">
+                Duration
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
           {tiers.map((tier) => (
-            <tr key={tier.weightTier} className="border-t border-lavender/20">
-              <td className="px-4 py-2">{labels[tier.weightTier]}</td>
-              <td className="px-4 py-2">
+            <tr key={tier.weightTier} className="border-t border-gray-line/60">
+              <td className="px-4 py-3 text-ink">{labels[tier.weightTier]}</td>
+              <td className="px-4 py-3 text-ink">
                 {priceOnly
                   ? `+${formatPrice(tier.priceFrom)}`
-                  : `${formatPrice(tier.priceFrom)}+`}
+                  : `From ${formatPrice(tier.priceFrom)}`}
               </td>
               {!priceOnly && (
                 <td className="px-4 py-2">
@@ -57,27 +86,40 @@ function TierTable({
 
 export default function ServicesPage() {
   return (
-    <div className="mx-auto max-w-5xl px-6 py-12">
-      <h1 className="text-3xl font-semibold text-gold-dark">Services & Pricing</h1>
-      <p className="mt-3 max-w-2xl text-text-muted">
-        Redefining pet care with premium, mobile grooming solutions brought
-        directly to your home. We specialize in coat-specific styling and
-        personalized, calm-centered care that puts your dog&apos;s wellbeing
-        first. No cages, no rush—just dedicated 1-on-1 pampering. Final pricing
-        varies based on your dog&apos;s temperament, coat condition, and severe
-        matting.
-      </p>
-
+    <PageShell
+      eyebrow="Signature Services"
+      title="Grooming, Considered Down to Every Detail."
+      intro={
+        <>
+          <p>
+            Redefining pet care with premium, mobile grooming solutions brought
+            directly to your home — coat-specific styling and calm, one-on-one
+            care.
+          </p>
+          <p className="mt-4 text-sm">
+            Starting prices reflect a typical appointment within each weight
+            range. Final pricing may vary based on coat condition, grooming
+            requirements, temperament and the time required to complete the
+            service comfortably.
+          </p>
+        </>
+      }
+    >
       {business.weightPolicy && (
-        <div className="mt-6 rounded-xl border border-blue/40 bg-blue/10 p-4 text-sm text-text">
+        <div className="mb-12 border border-gray-line/80 bg-dusty-lavender/20 p-6 text-sm leading-relaxed text-ink">
           {business.weightPolicy.over45Note}
         </div>
       )}
 
-      <div className="mt-12 space-y-16">
+      <div className="space-y-20">
         {business.serviceCategories.map((category) => (
-          <section key={category.id}>
-            <h2 className="text-2xl font-semibold text-text">
+          <section
+            key={category.id}
+            id={categoryAnchors[category.id] ?? category.id}
+            className="scroll-mt-28"
+          >
+            <Eyebrow>{category.name}</Eyebrow>
+            <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
               {category.name}
             </h2>
             {"note" in category && category.note && (
@@ -86,34 +128,45 @@ export default function ServicesPage() {
               </p>
             )}
             {"includesAll" in category && category.includesAll && (
-              <div className="mt-4 rounded-xl border border-lavender/30 bg-lavender-light/20 p-4 text-sm">
-                <p className="font-medium text-text">All spa treatments include:</p>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-text-muted">
+              <div className="mt-6 border border-gray-line/80 bg-ivory p-6 text-sm">
+                <p className="font-body text-[11px] font-medium uppercase tracking-[0.14em] text-taupe">
+                  All spa treatments include
+                </p>
+                <ul className="mt-3 grid gap-2 sm:grid-cols-2">
                   {category.includesAll.map((item) => (
-                    <li key={item}>{item}</li>
+                    <li key={item} className="text-ink">
+                      {item}
+                    </li>
                   ))}
                 </ul>
               </div>
             )}
 
-            <div className="mt-8 space-y-8">
+            <div className="mt-10 space-y-8">
               {category.services.map((service) => {
                 const s = service as Record<string, unknown>;
+                const anchorId = serviceAnchors[service.id];
 
                 return (
                   <article
                     key={service.id}
-                    className="rounded-2xl border border-lavender/30 bg-cream p-6"
+                    id={anchorId}
+                    className={`border border-gray-line/80 bg-ivory p-6 md:p-8 ${
+                      anchorId ? "scroll-mt-28" : ""
+                    }`}
                   >
-                    <h3 className="text-xl font-medium text-gold-dark">
+                    <h3 className="font-display text-2xl text-ink md:text-3xl">
                       {service.name}
                     </h3>
                     {"bestFor" in service && service.bestFor && (
-                      <p className="mt-2 text-sm font-medium text-gold-dark">
-                        Best for: {service.bestFor}
+                      <p className="font-body mt-3 text-sm text-taupe">
+                        <span className="font-medium uppercase tracking-[0.1em] text-ink">
+                          Best for:
+                        </span>{" "}
+                        {service.bestFor}
                       </p>
                     )}
-                    <p className="mt-3 text-sm leading-relaxed text-text-muted">
+                    <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
                       {service.description}
                     </p>
 
@@ -287,13 +340,10 @@ export default function ServicesPage() {
       </div>
 
       <div className="mt-16 text-center">
-        <Link
-          href="/login?next=/book"
-          className="inline-block rounded-full bg-gold px-8 py-3 text-sm font-medium text-white transition hover:bg-gold-dark"
-        >
-          Book Now · Valid Payment Method Required
-        </Link>
+        <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[10px] font-medium uppercase tracking-[0.16em] text-ivory transition hover:bg-ink">
+          Book an Appointment
+        </BookServiceLink>
       </div>
-    </div>
+    </PageShell>
   );
 }
