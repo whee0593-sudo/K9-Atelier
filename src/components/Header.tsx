@@ -39,9 +39,42 @@ function NavLink({
 export function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const isHome = pathname === "/";
+  const isBooking = pathname === "/book";
 
   const closeMenu = () => setOpen(false);
+
+  if (isBooking) {
+    return (
+      <header className="sticky top-0 z-50 border-b border-gray-line/70 bg-ivory/95 backdrop-blur-sm">
+        <Container className="flex items-center justify-between gap-6 py-4 md:py-5">
+          <Link href="/" className="flex shrink-0 items-center gap-3">
+            <Image
+              src={business.brand.logo}
+              alt={business.brand.name}
+              width={44}
+              height={44}
+              className="rounded-full"
+              priority
+            />
+            <span className="hidden font-body text-[11px] font-semibold uppercase tracking-[0.2em] text-ink sm:inline">
+              {business.brand.name}
+            </span>
+          </Link>
+          <p className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe">
+            Booking
+          </p>
+          <Link
+            href="/contact"
+            className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe transition hover:text-ink"
+          >
+            Need Help?
+          </Link>
+        </Container>
+      </header>
+    );
+  }
+
+  const isHome = pathname === "/";
 
   return (
     <header

@@ -394,6 +394,64 @@ export function formatServicePriceFrom(service: BookableService) {
   return "";
 }
 
+export function getServicePriceEstimate(
+  service: BookableService,
+  weightLbs: number,
+  optionName?: string,
+) {
+  if (service.pricingType === "tiered") {
+    const tier = getTierForPet(service, weightLbs);
+    if (!tier) return null;
+    return {
+      from: tier.priceFrom,
+      durationLabel: formatDuration(tier.durationMin ?? 0, tier.durationMax),
+    };
+  }
+  if (service.pricingType === "hourly" && service.hourlyRate) {
+    return {
+      from: service.hourlyRate,
+      durationLabel: formatDuration(
+        service.durationMin ?? 90,
+        service.durationMax,
+      ),
+    };
+  }
+  if (service.pricingType === "add_on") {
+    if (service.tiers?.length) {
+      const tier = getTierForPet(service, weightLbs);
+      if (!tier) return null;
+      return { from: tier.priceFrom, durationLabel: undefined };
+    }
+    if (service.flatRate != null) {
+      return {
+        from: service.flatRate,
+        durationLabel: `${service.durationMin ?? 15} min`,
+      };
+    }
+    if (service.options?.length) {
+      const option =
+        service.options.find((o) => o.name === optionName) ?? service.options[0];
+      if (option?.priceFrom != null) {
+        return { from: option.priceFrom, durationLabel: undefined };
+      }
+    }
+    return service.addOnMin != null
+      ? { from: service.addOnMin, durationLabel: undefined }
+      : null;
+  }
+  if (service.pricingType === "free") {
+    return { from: 0, durationLabel: undefined };
+  }
+  return null;
+}
+
+export function getBookableServicesForPet(weightLbs: number) {
+  return allBookableServices().filter(
+    (service) =>
+      service.bookableAsPrimary && isServiceAvailableForPet(service.id, weightLbs),
+  );
+}
+
 export function groupServicesByCategory(services: BookableService[]) {
   const groups = new Map<
     string,

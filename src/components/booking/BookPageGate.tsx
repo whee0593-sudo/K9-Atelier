@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { isCustomerLoggedIn } from "@/lib/customer-session";
+import { bookingPrimaryBtnClass } from "@/components/booking/booking-ui";
 
 export function BookPageGate({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
@@ -15,34 +16,28 @@ export function BookPageGate({ children }: { children: React.ReactNode }) {
 
   if (!ready) {
     return (
-      <div className="mt-12 text-center text-sm text-text-muted">
-        Loading…
+      <div className="mt-12 text-center text-sm text-taupe">
+        Preparing your appointment…
       </div>
     );
   }
 
   if (!loggedIn) {
     return (
-      <div className="mt-12 rounded-2xl border border-lavender/40 bg-lavender-light/30 px-6 py-10 text-center">
-        <h2 className="text-xl font-medium text-gold-dark">
-          Customer login required
+      <div className="mt-12 border border-gray-line/80 bg-dusty-lavender/20 px-6 py-10 text-center md:px-10">
+        <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+          Private Appointments
+        </p>
+        <h2 className="font-display mt-4 text-3xl text-ink">
+          Welcome to K9 Atelier
         </h2>
-        <p className="mt-3 text-sm text-text-muted">
-          Please sign in to your account to book an appointment, select your
-          pet, and choose a service.
+        <p className="font-body mx-auto mt-4 max-w-md text-sm leading-relaxed text-taupe">
+          Sign in to reserve or manage your dog&apos;s private grooming
+          appointment.
         </p>
-        <Link
-          href="/login?next=/book"
-          className="mt-6 inline-block rounded-2xl bg-gold px-8 py-3 text-sm font-medium text-white transition hover:bg-gold-dark"
-        >
-          Customer Login
+        <Link href="/login?next=/book" className={`${bookingPrimaryBtnClass} mt-8`}>
+          Continue to Your Account
         </Link>
-        <p className="mt-6 text-sm text-text-muted">
-          New to K9 Atelier?{" "}
-          <Link href="/login?next=/book" className="text-gold-dark underline">
-            Create an account when sign-up opens
-          </Link>
-        </p>
       </div>
     );
   }

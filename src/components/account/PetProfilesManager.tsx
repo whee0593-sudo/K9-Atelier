@@ -3,8 +3,11 @@
 import { useState } from "react";
 import { AccountFieldsForm } from "@/components/account/AccountFieldsForm";
 import { filterFieldsByAudience, getAccountSection } from "@/lib/account-fields";
-import type { PetProfile } from "@/lib/pets";
-import { demoPetProfiles, formatPetSummary } from "@/lib/pets";
+import {
+  getCustomerPetProfiles,
+  formatPetSummary,
+  type PetProfile,
+} from "@/lib/pets";
 
 const petFields = filterFieldsByAudience(
   getAccountSection("pets")?.fields ?? [],
@@ -54,8 +57,10 @@ function PetCard({
 }
 
 export function PetProfilesManager() {
-  const [pets, setPets] = useState<PetProfile[]>(demoPetProfiles);
-  const [expandedId, setExpandedId] = useState<string | null>(demoPetProfiles[0]?.id ?? null);
+  const [pets, setPets] = useState<PetProfile[]>(() => getCustomerPetProfiles());
+  const [expandedId, setExpandedId] = useState<string | null>(
+    () => getCustomerPetProfiles()[0]?.id ?? null,
+  );
   const [showNewForm, setShowNewForm] = useState(false);
 
   function addPet() {

@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { setCustomerLoggedIn } from "@/lib/customer-session";
+import { bookingPrimaryBtnClass } from "@/components/booking/booking-ui";
 
 type Props = {
   next?: string;
@@ -20,26 +20,22 @@ export function CustomerLoginActions({ next, bookingFlow }: Props) {
   }
 
   return (
-    <div className="mt-10 space-y-4">
+    <div className="mt-10">
       <button
         type="button"
         onClick={handleCustomerLogin}
-        className="flex min-h-[4rem] w-full flex-col items-center justify-center rounded-2xl bg-gold px-8 py-4 text-lg font-medium text-white transition hover:bg-gold-dark"
+        className={bookingPrimaryBtnClass}
       >
-        Customer Login
-        <span className="mt-1 text-sm font-normal opacity-90">
-          {bookingFlow ? "Continue to booking" : "Preview my account"}
-        </span>
+        Continue to Your Account
       </button>
-      <Link
-        href="/login/admin"
-        className="flex min-h-[4rem] flex-col items-center justify-center rounded-2xl border-2 border-gold bg-cream px-8 py-4 text-lg font-medium text-gold-dark transition hover:bg-lavender-light"
-      >
-        Admin Login
-        <span className="mt-1 text-sm font-normal text-text-muted">
-          K9 Atelier team only
-        </span>
-      </Link>
+      {!bookingFlow && (
+        <p className="font-body mt-4 text-xs text-taupe">
+          Booking a private appointment?{" "}
+          <a href="/login?next=/book" className="text-ink underline">
+            Continue to booking
+          </a>
+        </p>
+      )}
     </div>
   );
 }

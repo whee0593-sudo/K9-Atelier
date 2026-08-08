@@ -1,3 +1,5 @@
+import { business } from "@/lib/business";
+
 export type PetProfile = {
   id: string;
   name: string;
@@ -43,4 +45,22 @@ export function formatPetSummary(pet: PetProfile) {
 
 export function petReadyToBook(pet: PetProfile) {
   return pet.vaccineRecordUploaded;
+}
+
+/** Demo pets only in development or when explicitly enabled in business.json */
+export function getCustomerPetProfiles(): PetProfile[] {
+  if (business.site.useDemoPets === true) return demoPetProfiles;
+  if (process.env.NODE_ENV === "development") return demoPetProfiles;
+  return [];
+}
+
+export function petMayBenefitFromGentleCare(pet: PetProfile) {
+  const ageMatch = pet.age?.match(/(\d+)/);
+  const age = ageMatch ? Number.parseInt(ageMatch[1] ?? "0", 10) : 0;
+  if (age >= 7) return true;
+  const notes =
+    `${pet.medicalNotes ?? ""} ${pet.temperament ?? ""}`.toLowerCase();
+  return /senior|mobility|arthritis|surgery|recovery|limited|anxiety/.test(
+    notes,
+  );
 }

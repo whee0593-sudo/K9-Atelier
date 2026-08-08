@@ -62,6 +62,7 @@
   },
   "site": {
     "privacyMode": false,
+    "useDemoPets": false,
     "previewAccessPassword": "Anakin",
     "previewShareToken": "k9atelier-preview-8f2a1c",
     "underConstruction": {
