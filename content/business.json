@@ -60,8 +60,9 @@
     "over45NoteZh": "45 lbs 以上仅接不洗澡的手剥毛服务及临终关怀服务"
   },
   "site": {
-    "privacyMode": true,
+    "privacyMode": false,
     "previewAccessPassword": "Anakin",
+    "previewShareToken": "k9atelier-preview-8f2a1c",
     "underConstruction": {
       "wordmark": "K9 ATELIER",
       "subline": "Precision and devotion — in every appointment",
