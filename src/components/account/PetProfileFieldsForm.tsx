@@ -1,10 +1,9 @@
 "use client";
 
-import { AccountFieldsForm } from "@/components/account/AccountFieldsForm";
 import { PetBirthdayFields } from "@/components/account/PetBirthdayFields";
+import { PetScalarFields } from "@/components/account/PetScalarFields";
 import { filterFieldsByAudience, getAccountSection } from "@/lib/account-fields";
 import type { PetProfile } from "@/lib/pets";
-import { bookingFieldClass } from "@/components/booking/booking-ui";
 
 const petSectionFields = filterFieldsByAudience(
   getAccountSection("pets")?.fields ?? [],
@@ -34,25 +33,33 @@ export function PetProfileFieldsForm({
 
   return (
     <div className="space-y-5">
-      <AccountFieldsForm fields={fieldsBeforeBirthday} />
+      <PetScalarFields
+        fields={fieldsBeforeBirthday}
+        pet={pet}
+        onPetChange={onPetChange}
+        variant={variant}
+      />
       <PetBirthdayFields
         pet={pet}
         onChange={onPetChange}
         inputClassName={
           variant === "booking"
-            ? bookingFieldClass
-            : "mt-1.5 w-full rounded-xl border border-lavender/40 bg-cream px-4 py-2.5 text-sm text-text placeholder:text-text-muted/50 outline-none transition focus:border-gold/60 focus:ring-1 focus:ring-gold/30"
+            ? "mt-1.5 w-full rounded-xl border border-champagne/30 bg-cream px-4 py-3 text-sm text-ink outline-none transition focus:border-champagne focus:ring-1 focus:ring-champagne/30"
+            : undefined
         }
         labelClassName={
           variant === "booking"
             ? bookingLabels
-            : "block text-sm font-medium text-text"
+            : undefined
         }
-        noteClassName={
-          variant === "booking" ? bookingNotes : "mt-1.5 text-xs text-text-muted"
-        }
+        noteClassName={variant === "booking" ? bookingNotes : undefined}
       />
-      <AccountFieldsForm fields={fieldsAfterBirthday} />
+      <PetScalarFields
+        fields={fieldsAfterBirthday}
+        pet={pet}
+        onPetChange={onPetChange}
+        variant={variant}
+      />
     </div>
   );
 }

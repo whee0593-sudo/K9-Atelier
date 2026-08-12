@@ -1,4 +1,3 @@
-import { business } from "@/lib/business";
 import { formatPetAgeLabel, getPetAgeYears } from "@/lib/pet-age";
 
 export type PetProfile = {
@@ -10,7 +9,7 @@ export type PetProfile = {
   dateOfBirth?: string | null;
   /** ISO date YYYY-MM-DD — when exact date is unknown */
   approximateDateOfBirth?: string | null;
-  /** @deprecated Legacy fallback — use approximateDateOfBirth when possible */
+  /** Numeric fallback when exact DOB is unknown (Option A). */
   approximateAgeYears?: number | null;
   /** @deprecated Legacy field — mapped to approximateAgeYears when loading */
   ageYears?: number;
@@ -23,9 +22,6 @@ export type PetProfile = {
   vaccineRecordUploaded: boolean;
 };
 
-const CUSTOMER_PETS_STORAGE_KEY = "k9-atelier-customer-pets";
-
-/** Demo profiles for preview until customer login is live */
 export const demoPetProfiles: PetProfile[] = [
   {
     id: "pet-1",
@@ -75,26 +71,13 @@ export function normalizePetProfile(pet: PetProfile): PetProfile {
   return normalized;
 }
 
-function readStoredPetProfiles(): PetProfile[] | null {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const raw = window.localStorage.getItem(CUSTOMER_PETS_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as PetProfile[];
-    if (!Array.isArray(parsed)) return null;
-    return parsed.map(normalizePetProfile);
-  } catch {
-    return null;
-  }
+export function saveCustomerPetProfiles(_pets: PetProfile[]) {
+  // no-op — customer pets persist in Supabase
 }
 
-export function saveCustomerPetProfiles(pets: PetProfile[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    CUSTOMER_PETS_STORAGE_KEY,
-    JSON.stringify(pets.map(normalizePetProfile)),
-  );
+/** @deprecated Phase 3+ uses fetchCustomerPets(). Returns empty for legacy callers. */
+export function getCustomerPetProfiles(): PetProfile[] {
+  return [];
 }
 
 export function formatPetSummary(pet: PetProfile) {
@@ -110,19 +93,6 @@ export function formatPetBookingCardLine(pet: PetProfile) {
 
 export function petReadyToBook(pet: PetProfile) {
   return pet.vaccineRecordUploaded;
-}
-
-function getBasePetProfiles(): PetProfile[] {
-  if (business.site.useDemoPets === true) return demoPetProfiles;
-  if (process.env.NODE_ENV === "development") return demoPetProfiles;
-  return [];
-}
-
-/** Demo pets in development, with optional browser persistence after edits. */
-export function getCustomerPetProfiles(): PetProfile[] {
-  const stored = readStoredPetProfiles();
-  if (stored) return stored;
-  return getBasePetProfiles().map(normalizePetProfile);
 }
 
 export function petMayBenefitFromGentleCare(pet: PetProfile) {

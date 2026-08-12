@@ -3,11 +3,10 @@
 import { useState } from "react";
 import { PetProfileFieldsForm } from "@/components/account/PetProfileFieldsForm";
 import {
-  getCustomerPetProfiles,
   petReadyToBook,
-  saveCustomerPetProfiles,
   type PetProfile,
 } from "@/lib/pets";
+import { useCustomerPets } from "@/lib/pets/use-customer-pets";
 import { formatPetAgeLabel, getPetAgeYears } from "@/lib/pet-age";
 import {
   bookingCardClass,
@@ -17,6 +16,16 @@ import {
   bookingSecondaryBtnClass,
 } from "@/components/booking/booking-ui";
 
+function createDraftPet(name = "New Dog"): PetProfile {
+  return {
+    id: `draft-${Date.now()}`,
+    name,
+    breed: "",
+    weightLbs: 0,
+    vaccineRecordUploaded: false,
+  };
+}
+
 export function PetSelector({
   selectedId,
   onSelect,
@@ -24,38 +33,41 @@ export function PetSelector({
   selectedId: string | null;
   onSelect: (pet: PetProfile) => void;
 }) {
-  const [pets, setPets] = useState<PetProfile[]>(() => getCustomerPetProfiles());
+  const { pets, loading, error, createPet } = useCustomerPets();
   const [showAddForm, setShowAddForm] = useState(false);
-  const [draftPet, setDraftPet] = useState<PetProfile>(() => ({
-    id: `pet-${Date.now()}`,
-    name: "New Dog",
-    breed: "",
-    weightLbs: 0,
-    vaccineRecordUploaded: false,
-  }));
+  const [draftPet, setDraftPet] = useState<PetProfile>(() => createDraftPet());
+  const [submittingDraft, setSubmittingDraft] = useState(false);
 
-  function persistPets(next: PetProfile[]) {
-    setPets(next);
-    saveCustomerPetProfiles(next);
+  async function saveNewPet() {
+    setSubmittingDraft(true);
+    try {
+      const created = await createPet(draftPet);
+      setShowAddForm(false);
+      onSelect(created);
+      setDraftPet(createDraftPet());
+    } catch {
+      // error surfaced via hook
+    } finally {
+      setSubmittingDraft(false);
+    }
   }
 
-  function saveNewPet() {
-    const next = [...pets, draftPet];
-    persistPets(next);
-    setShowAddForm(false);
-    onSelect(draftPet);
-    setDraftPet({
-      id: `pet-${Date.now()}`,
-      name: "New Dog",
-      breed: "",
-      weightLbs: 0,
-      vaccineRecordUploaded: false,
-    });
+  if (loading) {
+    return (
+      <div className={`${bookingNoticeClass} text-center`}>
+        <p className="font-body text-sm text-taupe">Loading your dogs…</p>
+      </div>
+    );
   }
 
   if (pets.length === 0 && !showAddForm) {
     return (
       <div className={`${bookingNoticeClass} text-center`}>
+        {error && (
+          <p className="font-body mb-4 text-sm text-red-700" role="alert">
+            {error}
+          </p>
+        )}
         <p className="font-body text-sm text-taupe">
           No dogs in your profile yet.
         </p>
@@ -72,6 +84,14 @@ export function PetSelector({
 
   return (
     <ul className="space-y-4">
+      {error && (
+        <li>
+          <p className="font-body rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+            {error}
+          </p>
+        </li>
+      )}
+
       {pets.map((pet) => {
         const ready = petReadyToBook(pet);
         const selected = selectedId === pet.id;
@@ -85,15 +105,14 @@ export function PetSelector({
                 </p>
                 <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
                   Before we can reserve {pet.name}&apos;s appointment, please
-                  upload their current vaccination record below.
+                  upload their current vaccination record in your account.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setShowAddForm(true)}
-                  className={`${bookingSecondaryBtnClass} mt-5`}
+                <a
+                  href="/account/pets"
+                  className={`${bookingSecondaryBtnClass} mt-5 inline-flex`}
                 >
                   Complete {pet.name}&apos;s Profile
-                </button>
+                </a>
               </div>
             </li>
           );
@@ -146,10 +165,11 @@ export function PetSelector({
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={saveNewPet}
+              onClick={() => void saveNewPet()}
+              disabled={submittingDraft}
               className={bookingPrimaryBtnClass}
             >
-              Save &amp; Continue
+              {submittingDraft ? "Saving…" : "Save & Continue"}
             </button>
             <button
               type="button"

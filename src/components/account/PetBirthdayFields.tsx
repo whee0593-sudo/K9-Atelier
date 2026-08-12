@@ -9,7 +9,6 @@ import {
   getPetBirthDateHeading,
   getPetBirthDateLabel,
   usesApproximateBirthDate,
-  validateApproximateDateOfBirth,
   validateDateOfBirth,
 } from "@/lib/pet-age";
 
@@ -50,9 +49,6 @@ export function PetBirthdayFields({
   );
 
   const calculatedAge = getPetAgeYears(pet);
-  const activeBirthDate = unknownDob
-    ? pet.approximateDateOfBirth
-    : pet.dateOfBirth;
 
   function handleUnknownToggle(checked: boolean) {
     setUnknownDob(checked);
@@ -62,8 +58,8 @@ export function PetBirthdayFields({
     if (checked) {
       onChange({
         dateOfBirth: null,
-        approximateDateOfBirth: pet.approximateDateOfBirth ?? null,
-        approximateAgeYears: null,
+        approximateDateOfBirth: null,
+        approximateAgeYears: pet.approximateAgeYears ?? null,
         ageYears: undefined,
       });
       return;
@@ -95,21 +91,24 @@ export function PetBirthdayFields({
     });
   }
 
-  function handleApproximateDateChange(value: string) {
-    if (!value) {
+  function handleApproximateAgeChange(value: string) {
+    if (!value.trim()) {
       setApproxError(null);
-      onChange({ approximateDateOfBirth: null });
+      onChange({ approximateAgeYears: null, approximateDateOfBirth: null });
       return;
     }
 
-    const error = validateApproximateDateOfBirth(value);
-    setApproxError(error);
-    if (error) return;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 30) {
+      setApproxError("Approximate age must be between 0.1 and 30 years.");
+      return;
+    }
 
+    setApproxError(null);
     onChange({
       dateOfBirth: null,
-      approximateDateOfBirth: value,
-      approximateAgeYears: null,
+      approximateDateOfBirth: null,
+      approximateAgeYears: Math.round(parsed * 10) / 10,
       ageYears: undefined,
     });
   }
@@ -158,22 +157,21 @@ export function PetBirthdayFields({
       {unknownDob && (
         <div>
           <label htmlFor={approximateInputId} className={labelClassName}>
-            Approximate Date
+            Approximate Age (years)
           </label>
           <input
             id={approximateInputId}
-            type="date"
-            value={pet.approximateDateOfBirth ?? ""}
-            max={new Date().toISOString().slice(0, 10)}
-            onChange={(event) =>
-              handleApproximateDateChange(event.target.value)
-            }
+            type="number"
+            min={0.1}
+            max={30}
+            step={0.1}
+            value={pet.approximateAgeYears ?? ""}
+            onChange={(event) => handleApproximateAgeChange(event.target.value)}
             className={inputClassName}
             aria-describedby={`${approximateInputId}-note`}
           />
           <p id={`${approximateInputId}-note`} className={noteClassName}>
-            An estimate is perfectly fine — choose the closest date you
-            remember from the calendar.
+            An estimate is perfectly fine — enter your best guess in years.
           </p>
           {approxError && (
             <p className="mt-1.5 text-xs text-red-700" role="alert">
@@ -183,7 +181,7 @@ export function PetBirthdayFields({
         </div>
       )}
 
-      {showCalculatedAge && calculatedAge != null && !dobError && !approxError && (
+      {showCalculatedAge && calculatedAge != null && !dobError && !approxError && !unknownDob && (
         <div className="border-t border-lavender/20 pt-4">
           <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-text-muted">
             Age
@@ -191,10 +189,9 @@ export function PetBirthdayFields({
           <p className="mt-1 text-sm text-text">
             {formatPetAgeLabel(calculatedAge)}
           </p>
-          {activeBirthDate && (
+          {pet.dateOfBirth && (
             <p className="mt-1 text-xs text-text-muted">
-              Based on {formatDateOfBirthDisplay(activeBirthDate)}
-              {unknownDob ? " (approximate)" : ""}
+              Based on {formatDateOfBirthDisplay(pet.dateOfBirth)}
             </p>
           )}
         </div>

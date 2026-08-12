@@ -5,10 +5,17 @@ import {
   isPrivacyGateActive,
   isValidSiteAccessCookie,
 } from "@/lib/site-access";
+import {
+  copySupabaseCookies,
+  refreshSupabaseSession,
+} from "@/lib/supabase/middleware";
+import { hasSupabaseConfig } from "@/lib/supabase/env";
 
 const PUBLIC_PATHS = [
   "/under-construction",
+  "/login",
   "/login/admin",
+  "/auth/callback",
   "/api/site-access",
   "/preview",
   "/support",
@@ -16,13 +23,60 @@ const PUBLIC_PATHS = [
   "/api/notify",
 ];
 
+const CUSTOMER_PROTECTED_PREFIXES = ["/account", "/book"];
+
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`),
   );
 }
 
+function isCustomerProtectedPath(pathname: string) {
+  return CUSTOMER_PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (hasSupabaseConfig()) {
+    const { response: sessionResponse, user } =
+      await refreshSupabaseSession(request);
+
+    if (isCustomerProtectedPath(pathname) && !user) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/login";
+      loginUrl.searchParams.set("next", pathname);
+      loginUrl.searchParams.delete("error");
+      const redirectResponse = NextResponse.redirect(loginUrl);
+      return copySupabaseCookies(sessionResponse, redirectResponse);
+    }
+
+    const privacyMode = isPrivacyGateActive(
+      business.site?.privacyMode === true,
+    );
+
+    if (!privacyMode) {
+      return sessionResponse;
+    }
+
+    const accessCookie = request.cookies.get("k9-site-access")?.value;
+    if (await isValidSiteAccessCookie(accessCookie)) {
+      return sessionResponse;
+    }
+
+    if (isPublicPath(pathname)) {
+      return sessionResponse;
+    }
+
+    const url = request.nextUrl.clone();
+    url.pathname = "/under-construction";
+    url.search = "";
+    const redirectResponse = NextResponse.redirect(url);
+    return copySupabaseCookies(sessionResponse, redirectResponse);
+  }
+
   const privacyMode = isPrivacyGateActive(business.site?.privacyMode === true);
 
   if (!privacyMode) {
@@ -34,7 +88,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const { pathname } = request.nextUrl;
   if (isPublicPath(pathname)) {
     return NextResponse.next();
   }

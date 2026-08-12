@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { isCustomerLoggedIn } from "@/lib/customer-session";
+import { createClient } from "@/lib/supabase/client";
 import { bookingPrimaryBtnClass } from "@/components/booking/booking-ui";
 
 export function BookPageGate({ children }: { children: React.ReactNode }) {
@@ -10,8 +10,12 @@ export function BookPageGate({ children }: { children: React.ReactNode }) {
   const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
-    setLoggedIn(isCustomerLoggedIn());
-    setReady(true);
+    const supabase = createClient();
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setLoggedIn(Boolean(user));
+      setReady(true);
+    });
   }, []);
 
   if (!ready) {

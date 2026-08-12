@@ -3,11 +3,11 @@ import { CustomerLoginActions } from "@/components/auth/CustomerLoginActions";
 import { Container } from "@/components/luxury/Container";
 
 type Props = {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; error?: string }>;
 };
 
 export default async function LoginPage({ searchParams }: Props) {
-  const { next } = await searchParams;
+  const { next, error } = await searchParams;
   const bookingFlow = next === "/book";
 
   return (
@@ -24,6 +24,16 @@ export default async function LoginPage({ searchParams }: Props) {
             ? "Sign in to reserve or manage your dog's private grooming appointment."
             : "Sign in to manage your profile, pets, and appointments."}
         </p>
+
+        {error === "auth" && (
+          <p
+            className="font-body mx-auto mt-6 max-w-md text-sm text-red-700"
+            role="alert"
+          >
+            We could not complete sign-in. Please request a new link and try
+            again.
+          </p>
+        )}
 
         <CustomerLoginActions next={next} bookingFlow={bookingFlow} />
 

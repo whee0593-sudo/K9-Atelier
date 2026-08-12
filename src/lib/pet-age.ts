@@ -141,11 +141,15 @@ export function getPetBirthDateLabel(pet: PetProfile): string | null {
   if (pet.approximateDateOfBirth) {
     return formatDateOfBirthDisplay(pet.approximateDateOfBirth);
   }
+  if (typeof pet.approximateAgeYears === "number") {
+    return formatPetAgeLabel(pet.approximateAgeYears);
+  }
   return null;
 }
 
 export function getPetBirthDateHeading(pet: PetProfile): string | null {
   if (pet.dateOfBirth) return "Birthday";
   if (pet.approximateDateOfBirth) return "Approximate Birthday";
+  if (typeof pet.approximateAgeYears === "number") return "Approximate Age";
   return null;
 }

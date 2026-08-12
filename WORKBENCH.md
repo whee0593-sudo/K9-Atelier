@@ -93,5 +93,6 @@ C:\Users\Mark\Projects\k9-atelier
 - [ROADMAP.md](./workspace/ROADMAP.md) — 分阶段路线图
 - [content/SERVICES.md](./content/SERVICES.md) — 服务菜单终稿
 - [DEPLOY.md](./DEPLOY.md) — 部署与 DNS
+- [supabase/AUTH_SETUP.md](./supabase/AUTH_SETUP.md) — Supabase 登录邮件 + Redirect URLs
 
 *工作台版本：2026-07-29*

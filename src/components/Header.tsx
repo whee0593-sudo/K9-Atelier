@@ -7,6 +7,7 @@ import { useState } from "react";
 import { business } from "@/lib/business";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { Container } from "@/components/luxury/Container";
+import { CustomerAuthLink } from "@/components/auth/CustomerAuthLink";
 
 const navItems = [
   { href: "/#experience", label: "The Atelier" },
@@ -108,12 +109,9 @@ export function Header() {
         </nav>
 
         <div className="hidden items-center gap-6 lg:flex">
-          <Link
-            href="/login"
+          <CustomerAuthLink
             className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe transition hover:text-ink"
-          >
-            Client Login
-          </Link>
+          />
           <BookServiceLink className="inline-flex min-h-[50px] items-center justify-center rounded-sm bg-deep-lavender px-6 text-[10px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink">
             Book an Appointment
           </BookServiceLink>
@@ -147,13 +145,10 @@ export function Header() {
                 onNavigate={closeMenu}
               />
             ))}
-            <Link
-              href="/login"
-              onClick={closeMenu}
+            <CustomerAuthLink
+              onNavigate={closeMenu}
               className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe"
-            >
-              Client Login
-            </Link>
+            />
             <BookServiceLink
               onClick={closeMenu}
               className="inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-deep-lavender text-[10px] font-medium uppercase tracking-[0.16em] text-ivory"
