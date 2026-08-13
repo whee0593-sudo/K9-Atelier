@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { CustomerBookingsList } from "@/components/account/CustomerBookingsList";
 import { CustomerInbox } from "@/components/account/CustomerInbox";
 import { AccountFieldsForm } from "@/components/account/AccountFieldsForm";
 import { PetProfilesManager } from "@/components/account/PetProfilesManager";
@@ -34,6 +35,8 @@ export default async function AccountSectionPage({ params }: Props) {
           <PetProfilesManager />
         ) : slug === "messages" ? (
           <CustomerInbox />
+        ) : slug === "bookings" ? (
+          <CustomerBookingsList />
         ) : slug === "addresses" ? (
           <>
             <p className="mb-6 text-sm text-text-muted">

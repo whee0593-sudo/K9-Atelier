@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { PetProfile } from "@/lib/pets";
+import type { AppointmentRecord } from "@/lib/appointments/types";
 import {
   getAddOnService,
   getCreativeColoringService,
@@ -44,6 +45,8 @@ export function BookingFlow() {
   const [appointmentDate, setAppointmentDate] = useState<string | null>(null);
   const [appointmentTime, setAppointmentTime] = useState<string | null>(null);
   const [reserved, setReserved] = useState(false);
+  const [createdAppointment, setCreatedAppointment] =
+    useState<AppointmentRecord | null>(null);
   const [policiesOpen, setPoliciesOpen] = useState(false);
   const policiesTriggerRef = useRef<HTMLButtonElement>(null);
 
@@ -172,6 +175,7 @@ export function BookingFlow() {
         appointmentDate={appointmentDate}
         appointmentTime={appointmentTime}
         address={address}
+        appointmentStatus={createdAppointment?.status}
       />
     );
   }
@@ -277,7 +281,10 @@ export function BookingFlow() {
               setAppointmentDate(null);
               setAppointmentTime(null);
             }}
-            onReserved={() => setReserved(true)}
+            onReserved={(appointment) => {
+              setCreatedAppointment(appointment);
+              setReserved(true);
+            }}
           />
         )}
 

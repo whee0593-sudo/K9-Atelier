@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { business, formatPrice } from "@/lib/business";
 import {
   bookingIncludesCreativeColoring,
@@ -14,8 +15,9 @@ import {
 import { getServiceDisplayName } from "@/lib/service-display";
 import { formatServiceAddress, type ServiceAddress, type TravelQuote } from "@/lib/travel";
 import type { PetProfile } from "@/lib/pets";
+import type { AppointmentRecord } from "@/lib/appointments/types";
+import { createCustomerAppointment } from "@/lib/appointments/client";
 import { vaccinationBookingNeedsAdminConfirmation } from "@/lib/vaccinations/booking";
-import { newClientDepositNotice } from "@/lib/notifications";
 import { CreativeBookingPolicy } from "@/components/booking/CreativeBookingPolicy";
 import {
   bookingBackLinkClass,
@@ -35,7 +37,7 @@ type Props = {
   appointmentDate: string;
   appointmentTime: string;
   onMakeChange: () => void;
-  onReserved: () => void;
+  onReserved: (appointment: AppointmentRecord) => void;
 };
 
 function estimateAddOnTotal(
@@ -68,6 +70,8 @@ export function BookingReviewStep({
   onMakeChange,
   onReserved,
 }: Props) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const serviceEstimate = getServicePriceEstimate(service, pet.weightLbs);
   const addOnTotal = estimateAddOnTotal(addOnIds, addOnOptions, pet.weightLbs);
   const serviceFrom = serviceEstimate?.from ?? 0;
@@ -85,34 +89,36 @@ export function BookingReviewStep({
     bookingSelection.serviceName,
   );
 
-  const mailtoHref = `mailto:${business.brand.email}?subject=${encodeURIComponent(
-    pendingVaccinationReview
-      ? `Appointment Request (Pending Vaccination Review) - ${pet.name}`
-      : `Appointment Request - ${pet.name}`,
-  )}&body=${encodeURIComponent(
-    [
-      `Pet: ${pet.name} (${pet.weightLbs} lbs)`,
-      pendingVaccinationReview
-        ? "Status: Pending vaccination review — appointment requires admin confirmation before it is confirmed."
-        : null,
-      `Service: ${displayServiceName}`,
-      ...addOnIds.map((id) => {
-        const addOn = getAddOnService(id);
-        if (!addOn) return null;
-        const option = addOnOptions[id];
-        return `Care option: ${getServiceDisplayName(addOn.id, addOn.name)}${option ? ` · ${option}` : ""}`;
-      }),
-      `Address: ${formatServiceAddress(address)}`,
-      `Travel: ${travelQuote.distanceMiles} mi · Fee $${travelQuote.fee}`,
-      `Date: ${appointmentDate}`,
-      `Time: ${appointmentTime}`,
-      `Estimated service: From ${formatPrice(estimatedTotal)}`,
-      "",
-      newClientDepositNotice,
-    ]
-      .filter(Boolean)
-      .join("\n"),
-  )}`;
+  async function handleReserve() {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const appointment = await createCustomerAppointment({
+        petId: pet.id,
+        serviceId: service.id,
+        serviceName: displayServiceName,
+        addOnIds,
+        addOnOptions,
+        address,
+        travelDistanceMiles: travelQuote.distanceMiles,
+        travelFee: travelQuote.fee,
+        appointmentDate,
+        appointmentTime,
+        estimatedTotal,
+        newClientDeposit: deposit,
+      });
+      onReserved(appointment);
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Could not save your appointment. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <section>
@@ -219,15 +225,27 @@ export function BookingReviewStep({
         </p>
       )}
 
-      <a
-        href={mailtoHref}
-        onClick={onReserved}
+      {error ? (
+        <p
+          className="font-body mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+          role="alert"
+        >
+          {error}
+        </p>
+      ) : null}
+
+      <button
+        type="button"
+        disabled={loading}
+        onClick={() => void handleReserve()}
         className={`${bookingPrimaryBtnClass} mt-8`}
       >
-        {pendingVaccinationReview
-          ? "Submit Appointment Request"
-          : "Reserve Appointment"}
-      </a>
+        {loading
+          ? "Saving…"
+          : pendingVaccinationReview
+            ? "Submit Appointment Request"
+            : "Reserve Appointment"}
+      </button>
 
       <button
         type="button"
@@ -246,26 +264,29 @@ export function BookingConfirmationView({
   appointmentDate,
   appointmentTime,
   address,
+  appointmentStatus,
 }: {
   pet: PetProfile;
   serviceName: string;
   appointmentDate: string;
   appointmentTime: string;
   address: ServiceAddress;
+  appointmentStatus?: AppointmentRecord["status"];
 }) {
-  const pendingVaccinationReview = vaccinationBookingNeedsAdminConfirmation(
-    pet.vaccinationBookingStatus,
-  );
+  const pendingConfirmation =
+    appointmentStatus === "pending_confirmation" ||
+    (appointmentStatus == null &&
+      vaccinationBookingNeedsAdminConfirmation(pet.vaccinationBookingStatus));
 
   return (
     <section className="text-center">
       <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
-        {pendingVaccinationReview
+        {pendingConfirmation
           ? "Request Received"
           : "Your Appointment Is Reserved"}
       </p>
       <h2 className="font-display mt-5 text-4xl text-ink md:text-5xl">
-        {pendingVaccinationReview ? (
+        {pendingConfirmation ? (
           <>
             We&apos;re Reviewing
             <br />
@@ -288,11 +309,11 @@ export function BookingConfirmationView({
         <p className="mt-2 text-sm text-taupe">
           {formatServiceAddress(address)}
         </p>
-        {pendingVaccinationReview ? (
+        {pendingConfirmation ? (
           <p className="mt-6 text-sm leading-relaxed text-red-800">
             Your appointment request has been received. It will remain pending
-            until our team approves {pet.name}&apos;s vaccination record. We
-            will contact you once your appointment is confirmed.
+            until our team confirms the appointment. We will contact you once
+            your appointment is confirmed.
           </p>
         ) : (
           <p className="mt-6 text-xs text-taupe">
