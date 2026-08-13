@@ -14,8 +14,12 @@ export function sanitizeAuthRedirect(
     return fallback;
   }
 
-  if (next.includes("?") || next.includes("#")) {
+  if (next.includes("?") || next.includes("#") || next.includes("..")) {
     return fallback;
+  }
+
+  if (next === "/admin" || next.startsWith("/admin/")) {
+    return next;
   }
 
   return ALLOWED_REDIRECT_PATHS.has(next) ? next : fallback;

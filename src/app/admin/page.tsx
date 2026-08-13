@@ -11,6 +11,16 @@ export default function AdminDashboardPage() {
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         <Link
+          href="/admin/vaccinations"
+          className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
+        >
+          <h3 className="font-medium text-gold-dark">Vaccination Review</h3>
+          <p className="mt-2 text-sm text-text-muted">
+            Approve or reject customer vaccination uploads before confirming
+            pending appointments.
+          </p>
+        </Link>
+        <Link
           href="/admin/messages"
           className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
         >

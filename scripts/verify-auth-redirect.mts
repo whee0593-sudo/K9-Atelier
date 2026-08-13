@@ -13,6 +13,10 @@ const cases: Array<[string | null | undefined, string]> = [
   ["/book/extra", "/account"],
   ["/login", "/account"],
   ["/account/pets?x=1", "/account"],
+  ["/admin", "/admin"],
+  ["/admin/vaccinations", "/admin/vaccinations"],
+  ["/admin/evil", "/admin/evil"],
+  ["/administrator", "/account"],
 ];
 
 for (const [input, expected] of cases) {

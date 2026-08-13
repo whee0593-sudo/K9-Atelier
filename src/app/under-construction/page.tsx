@@ -48,7 +48,7 @@ export default function UnderConstructionPage() {
   const signupConfirm =
     copy?.signupConfirm ??
     "Thank you — you'll be the first to know when booking opens.";
-  const instagramHandle = copy?.instagramHandle ?? "k9atelierfl";
+  const instagramHandle = copy?.instagramHandle ?? "k9AtelierFL";
   const instagramUrl =
     copy?.instagramUrl ?? "https://instagram.com/k9atelierfl";
 

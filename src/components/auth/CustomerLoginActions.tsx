@@ -12,6 +12,7 @@ import {
 type Props = {
   next?: string;
   bookingFlow?: boolean;
+  adminFlow?: boolean;
 };
 
 type Step = "email" | "sent";
@@ -20,7 +21,11 @@ type Step = "email" | "sent";
 const OTP_MIN_LENGTH = 6;
 const OTP_MAX_LENGTH = 10;
 
-export function CustomerLoginActions({ next, bookingFlow }: Props) {
+export function CustomerLoginActions({
+  next,
+  bookingFlow,
+  adminFlow,
+}: Props) {
   const destination = sanitizeAuthRedirect(next);
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
@@ -180,14 +185,26 @@ export function CustomerLoginActions({ next, bookingFlow }: Props) {
         {loading ? "Sending…" : "Email Me a Sign-In Link"}
       </button>
 
-      {!bookingFlow && (
+      {adminFlow ? (
+        <p className="font-body text-xs text-taupe">
+          Customer account?{" "}
+          <a href="/login?next=/account" className="text-ink underline">
+            Customer sign in
+          </a>
+        </p>
+      ) : !bookingFlow ? (
         <p className="font-body text-xs text-taupe">
           Booking a private appointment?{" "}
           <a href="/login?next=/book" className="text-ink underline">
             Continue to booking
           </a>
+          {" · "}
+          K9 Atelier team?{" "}
+          <a href="/login?next=/admin" className="text-ink underline">
+            Staff sign in
+          </a>
         </p>
-      )}
+      ) : null}
     </form>
   );
 }

@@ -36,7 +36,7 @@ export default function ContactPage() {
   const instagramUrl =
     site.underConstruction?.instagramUrl ?? "https://instagram.com/k9atelierfl";
   const instagramHandle =
-    site.underConstruction?.instagramHandle ?? "k9atelierfl";
+    site.underConstruction?.instagramHandle ?? "k9AtelierFL";
 
   return (
     <PageShell

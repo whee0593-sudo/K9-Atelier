@@ -19,7 +19,7 @@ export function Footer() {
   const instagram =
     site.underConstruction?.instagramUrl ?? "https://instagram.com/k9atelierfl";
   const instagramHandle =
-    site.underConstruction?.instagramHandle ?? "k9atelierfl";
+    site.underConstruction?.instagramHandle ?? "k9AtelierFL";
 
   return (
     <footer className="border-t border-gray-line bg-dusty-lavender/35">
@@ -72,9 +72,10 @@ export function Footer() {
               href={instagram}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label={`Instagram @${instagramHandle}`}
               className="font-body mt-3 block text-sm text-ink transition hover:text-deep-lavender"
             >
-              @{instagramHandle}
+              <span className="text-taupe">Instagram · </span>@{instagramHandle}
             </a>
           </div>
         </div>
