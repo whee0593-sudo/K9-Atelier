@@ -70,3 +70,23 @@ export async function archiveCustomerPet(petId: string): Promise<void> {
   });
   await readPetResponse<{ ok: boolean }>(response);
 }
+
+export async function uploadPetVaccinationRecord(
+  petId: string,
+  file: File,
+  expirationDate?: string,
+): Promise<PetProfile> {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (expirationDate) {
+    formData.append("expirationDate", expirationDate);
+  }
+
+  const response = await fetch(`/api/pets/${petId}/vaccinations`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+  const body = await readPetResponse<{ pet: PetRecord }>(response);
+  return mapPetRecordToUiProfile(body.pet);
+}

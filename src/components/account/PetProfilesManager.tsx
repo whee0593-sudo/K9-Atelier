@@ -4,6 +4,7 @@ import { useState } from "react";
 import { PetProfileAgeSummary } from "@/components/account/PetBirthdayFields";
 import { PetProfileFieldsForm } from "@/components/account/PetProfileFieldsForm";
 import type { PetProfile } from "@/lib/pets";
+import { petProfileVaccinationLabel } from "@/lib/vaccinations/booking";
 import { useCustomerPets } from "@/lib/pets/use-customer-pets";
 
 function createDraftPet(name = "New Pet"): PetProfile {
@@ -13,23 +14,42 @@ function createDraftPet(name = "New Pet"): PetProfile {
     breed: "",
     weightLbs: 0,
     vaccineRecordUploaded: false,
+    vaccinationBookingStatus: "missing",
   };
+}
+
+function vaccinationBadgeClass(pet: PetProfile) {
+  switch (pet.vaccinationBookingStatus) {
+    case "current":
+    case "expiring_soon":
+      return "bg-lavender-light text-gold-dark";
+    case "needs_review":
+      return "bg-amber-100 text-amber-900";
+    default:
+      return "bg-red-100 text-red-800";
+  }
 }
 
 function PetCard({
   pet,
   expanded,
   saving,
+  uploading,
+  petPersisted,
   onToggle,
   onPetChange,
   onArchive,
+  onVaccinationUpload,
 }: {
   pet: PetProfile;
   expanded: boolean;
   saving: boolean;
+  uploading: boolean;
+  petPersisted: boolean;
   onToggle: () => void;
   onPetChange: (updates: Partial<PetProfile>) => void;
   onArchive: () => void;
+  onVaccinationUpload: (file: File) => Promise<void>;
 }) {
   return (
     <article className="rounded-2xl border border-lavender/40 bg-cream">
@@ -46,21 +66,26 @@ function PetCard({
           {saving && (
             <span className="text-xs text-text-muted">Saving…</span>
           )}
+          {uploading && (
+            <span className="text-xs text-text-muted">Uploading…</span>
+          )}
           <span
-            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-              pet.vaccineRecordUploaded
-                ? "bg-lavender-light text-gold-dark"
-                : "bg-red-100 text-red-800"
-            }`}
+            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${vaccinationBadgeClass(pet)}`}
           >
-            {pet.vaccineRecordUploaded ? "Vaccines on file" : "Vaccines required"}
+            {petProfileVaccinationLabel(pet)}
           </span>
           <span className="text-sm text-gold-dark">{expanded ? "−" : "+"}</span>
         </div>
       </button>
       {expanded && (
         <div className="border-t border-lavender/30 px-5 py-6">
-          <PetProfileFieldsForm pet={pet} onPetChange={onPetChange} />
+          <PetProfileFieldsForm
+            pet={pet}
+            onPetChange={onPetChange}
+            petPersisted={petPersisted}
+            vaccinationUploading={uploading}
+            onVaccinationUpload={onVaccinationUpload}
+          />
           <button
             type="button"
             onClick={onArchive}
@@ -80,9 +105,12 @@ export function PetProfilesManager() {
     loading,
     error,
     savingIds,
+    uploadingIds,
     updatePetLocal,
     createPet,
     archivePet,
+    uploadVaccination,
+    isPersistedPetId,
   } = useCustomerPets();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
@@ -133,11 +161,16 @@ export function PetProfilesManager() {
           pet={pet}
           expanded={expandedId === pet.id}
           saving={savingIds.has(pet.id)}
+          uploading={uploadingIds.has(pet.id)}
+          petPersisted={isPersistedPetId(pet.id)}
           onToggle={() =>
             setExpandedId((id) => (id === pet.id ? null : pet.id))
           }
           onPetChange={(updates) => updatePetLocal(pet.id, updates)}
           onArchive={() => void handleArchive(pet.id)}
+          onVaccinationUpload={async (file) => {
+            await uploadVaccination(pet.id, file, pet.vaccineExpiration);
+          }}
         />
       ))}
 
@@ -150,6 +183,7 @@ export function PetProfilesManager() {
               onPetChange={(updates) =>
                 setDraftPet((current) => ({ ...current, ...updates }))
               }
+              petPersisted={false}
             />
           </div>
           <div className="mt-4 flex gap-3">

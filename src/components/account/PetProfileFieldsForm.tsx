@@ -20,12 +20,18 @@ type Props = {
   pet: PetProfile;
   onPetChange: (updates: Partial<PetProfile>) => void;
   variant?: "account" | "booking";
+  petPersisted?: boolean;
+  vaccinationUploading?: boolean;
+  onVaccinationUpload?: (file: File) => Promise<void>;
 };
 
 export function PetProfileFieldsForm({
   pet,
   onPetChange,
   variant = "account",
+  petPersisted,
+  vaccinationUploading,
+  onVaccinationUpload,
 }: Props) {
   const bookingLabels =
     "font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe";
@@ -59,6 +65,9 @@ export function PetProfileFieldsForm({
         pet={pet}
         onPetChange={onPetChange}
         variant={variant}
+        petPersisted={petPersisted}
+        vaccinationUploading={vaccinationUploading}
+        onVaccinationUpload={onVaccinationUpload}
       />
     </div>
   );

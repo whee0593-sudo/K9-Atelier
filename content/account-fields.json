@@ -236,7 +236,7 @@
           "type": "file",
           "required": true,
           "accept": ".pdf,.jpg,.jpeg,.png,.webp,.heic",
-          "note": "Required. Upload a current rabies or vaccination certificate. Accepted formats: PDF, JPG, PNG, WEBP, HEIC. Max 10 MB."
+          "note": "Required. Upload a current rabies or vaccination certificate. Accepted formats: PDF, JPG, PNG, WEBP, HEIC. Max 4 MB."
         }
       ]
     },

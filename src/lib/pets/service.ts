@@ -9,6 +9,7 @@ import {
   requireAuthenticatedUser,
 } from "@/lib/pets/auth";
 import { PetValidationError } from "@/lib/pets/validation";
+import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
 
 const PET_SELECT =
   "id, customer_id, name, breed, weight_lbs, date_of_birth, approximate_age_years, sex, temperament_notes, health_comfort_notes, grooming_preferences, archived_at, created_at, updated_at";
@@ -32,8 +33,9 @@ export async function listPets(): Promise<
     return { error: "server" };
   }
 
+  const pets = (data as PetRow[]).map(mapPetRowToRecord);
   return {
-    pets: (data as PetRow[]).map(mapPetRowToRecord),
+    pets: await attachVaccinationSummaries(pets),
   };
 }
 
@@ -62,7 +64,7 @@ export async function createPet(
     return { error: "server" };
   }
 
-  return { pet: mapPetRowToRecord(data as PetRow) };
+  return { pet: (await attachVaccinationSummaries([mapPetRowToRecord(data as PetRow)]))[0] };
 }
 
 export async function updatePet(
@@ -110,7 +112,7 @@ export async function updatePet(
 
   if (!data) return { error: "not_found" };
 
-  return { pet: mapPetRowToRecord(data as PetRow) };
+  return { pet: (await attachVaccinationSummaries([mapPetRowToRecord(data as PetRow)]))[0] };
 }
 
 export async function archivePet(

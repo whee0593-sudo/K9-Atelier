@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import type { AccountField } from "@/lib/account-fields";
 import type { PetProfile } from "@/lib/pets";
 import { bookingFieldClass } from "@/components/booking/booking-ui";
@@ -9,6 +10,9 @@ type Props = {
   pet: PetProfile;
   onPetChange: (updates: Partial<PetProfile>) => void;
   variant?: "account" | "booking";
+  petPersisted?: boolean;
+  vaccinationUploading?: boolean;
+  onVaccinationUpload?: (file: File) => Promise<void>;
 };
 
 function fieldInputClass(variant: "account" | "booking") {
@@ -73,6 +77,8 @@ function applyPetFieldUpdate(
       return { medicalNotes: value || undefined };
     case "groomingPreferences":
       return { groomingPreferences: value || undefined };
+    case "vaccineExpiration":
+      return { vaccineExpiration: value || undefined };
     default:
       return {};
   }
@@ -83,10 +89,30 @@ export function PetScalarFields({
   pet,
   onPetChange,
   variant = "account",
+  petPersisted = true,
+  vaccinationUploading = false,
+  onVaccinationUpload,
 }: Props) {
   const inputClass = fieldInputClass(variant);
   const labelClass = fieldLabelClass(variant);
   const noteClass = fieldNoteClass(variant);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  async function handleVaccinationFileChange(file: File | null) {
+    if (!file || !onVaccinationUpload) return;
+    setUploadError(null);
+    try {
+      await onVaccinationUpload(file);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (err) {
+      setUploadError(
+        err instanceof Error
+          ? err.message
+          : "Could not upload this vaccination record.",
+      );
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -105,6 +131,7 @@ export function PetScalarFields({
         }
 
         if (field.type === "file") {
+          const uploaded = pet.vaccineRecordUploaded;
           return (
             <div key={field.id}>
               <label className={labelClass}>
@@ -112,11 +139,52 @@ export function PetScalarFields({
                 {field.required && <span className="text-gold"> *</span>}
               </label>
               <div className="mt-1.5 rounded-xl border border-dashed border-lavender/60 bg-lavender-light/20 px-4 py-6 text-center">
-                <p className="text-sm text-text-muted">
-                  Upload coming soon — save your pet profile first.
-                </p>
-                <input type="file" disabled className="mt-3 text-xs text-text-muted" />
+                {uploaded ? (
+                  <p
+                    className={`text-sm ${
+                      pet.vaccinationBookingStatus === "needs_review"
+                        ? "font-medium text-red-700"
+                        : "text-text"
+                    }`}
+                  >
+                    Vaccination record on file
+                    {pet.vaccinationBookingStatus === "needs_review" &&
+                      " — pending staff review"}
+                    {pet.vaccinationBookingStatus === "needs_attention" &&
+                      " — please upload a new record"}
+                    .
+                  </p>
+                ) : !petPersisted ? (
+                  <p className="text-sm text-text-muted">
+                    Save this pet profile before uploading a vaccination record.
+                  </p>
+                ) : (
+                  <p className="text-sm text-text-muted">
+                    Upload a current rabies or vaccination certificate.
+                  </p>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={field.accept ?? ".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif"}
+                  disabled={
+                    !petPersisted || vaccinationUploading || !onVaccinationUpload
+                  }
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    void handleVaccinationFileChange(file);
+                  }}
+                  className="mt-3 w-full text-xs text-text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-gold file:px-3 file:py-2 file:text-xs file:font-medium file:text-white disabled:opacity-60"
+                />
+                {vaccinationUploading && (
+                  <p className="mt-2 text-xs text-text-muted">Uploading…</p>
+                )}
               </div>
+              {uploadError && (
+                <p className={`${noteClass} text-red-700`} role="alert">
+                  {uploadError}
+                </p>
+              )}
               {field.note && <p className={noteClass}>{field.note}</p>}
             </div>
           );
@@ -178,8 +246,10 @@ export function PetScalarFields({
               </label>
               <input
                 type="date"
-                readOnly
                 value={getPetFieldValue(pet, field.id)}
+                onChange={(event) =>
+                  onPetChange(applyPetFieldUpdate(field.id, event.target.value))
+                }
                 className={inputClass}
               />
               {field.note && <p className={noteClass}>{field.note}</p>}

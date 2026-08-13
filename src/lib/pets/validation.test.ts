@@ -221,6 +221,9 @@ describe("mapPetRecordToUiProfile", () => {
       temperamentNotes: "Calm",
       healthComfortNotes: "None",
       groomingPreferences: null,
+      vaccinationBookingStatus: "needs_review",
+      vaccinationExpirationDate: "2026-11-01",
+      vaccinationHasUpload: true,
       createdAt: "2026-01-01T00:00:00.000Z",
       updatedAt: "2026-01-01T00:00:00.000Z",
     });
@@ -228,7 +231,29 @@ describe("mapPetRecordToUiProfile", () => {
     assert.equal(profile.approximateAgeYears, 4);
     assert.equal(profile.temperament, "Calm");
     assert.equal(profile.medicalNotes, "None");
+    assert.equal(profile.vaccineRecordUploaded, true);
+    assert.equal(profile.vaccinationBookingStatus, "needs_review");
+    assert.equal(profile.vaccineExpiration, "2026-11-01");
+  });
+
+  it("defaults vaccination fields when absent", () => {
+    const profile = mapPetRecordToUiProfile({
+      id: "11111111-1111-4111-8111-111111111111",
+      name: "Bella",
+      breed: "Shih Tzu",
+      weightLbs: 12,
+      dateOfBirth: null,
+      approximateAgeYears: 4,
+      sex: null,
+      temperamentNotes: null,
+      healthComfortNotes: null,
+      groomingPreferences: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    });
+
     assert.equal(profile.vaccineRecordUploaded, false);
+    assert.equal(profile.vaccinationBookingStatus, "missing");
   });
 });
 

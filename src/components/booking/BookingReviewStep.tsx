@@ -14,6 +14,7 @@ import {
 import { getServiceDisplayName } from "@/lib/service-display";
 import { formatServiceAddress, type ServiceAddress, type TravelQuote } from "@/lib/travel";
 import type { PetProfile } from "@/lib/pets";
+import { vaccinationBookingNeedsAdminConfirmation } from "@/lib/vaccinations/booking";
 import { newClientDepositNotice } from "@/lib/notifications";
 import { CreativeBookingPolicy } from "@/components/booking/CreativeBookingPolicy";
 import {
@@ -75,6 +76,9 @@ export function BookingReviewStep({
   const creativePolicy = bookingIncludesCreativeColoring(addOnIds)
     ? getCreativeBookingPolicy()
     : undefined;
+  const pendingVaccinationReview = vaccinationBookingNeedsAdminConfirmation(
+    pet.vaccinationBookingStatus,
+  );
 
   const displayServiceName = getServiceDisplayName(
     service.id,
@@ -82,10 +86,15 @@ export function BookingReviewStep({
   );
 
   const mailtoHref = `mailto:${business.brand.email}?subject=${encodeURIComponent(
-    `Appointment Request - ${pet.name}`,
+    pendingVaccinationReview
+      ? `Appointment Request (Pending Vaccination Review) - ${pet.name}`
+      : `Appointment Request - ${pet.name}`,
   )}&body=${encodeURIComponent(
     [
       `Pet: ${pet.name} (${pet.weightLbs} lbs)`,
+      pendingVaccinationReview
+        ? "Status: Pending vaccination review — appointment requires admin confirmation before it is confirmed."
+        : null,
       `Service: ${displayServiceName}`,
       ...addOnIds.map((id) => {
         const addOn = getAddOnService(id);
@@ -199,12 +208,25 @@ export function BookingReviewStep({
         <CreativeBookingPolicy policy={creativePolicy} className="mt-6" />
       )}
 
+      {pendingVaccinationReview && (
+        <p
+          className="font-body mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-relaxed text-red-800"
+          role="status"
+        >
+          {pet.name}&apos;s vaccination record is pending staff review. You may
+          submit this appointment request now, but it will not be confirmed until
+          our team approves the vaccination record.
+        </p>
+      )}
+
       <a
         href={mailtoHref}
         onClick={onReserved}
         className={`${bookingPrimaryBtnClass} mt-8`}
       >
-        Reserve Appointment
+        {pendingVaccinationReview
+          ? "Submit Appointment Request"
+          : "Reserve Appointment"}
       </a>
 
       <button
@@ -231,15 +253,31 @@ export function BookingConfirmationView({
   appointmentTime: string;
   address: ServiceAddress;
 }) {
+  const pendingVaccinationReview = vaccinationBookingNeedsAdminConfirmation(
+    pet.vaccinationBookingStatus,
+  );
+
   return (
     <section className="text-center">
       <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
-        Your Appointment Is Reserved
+        {pendingVaccinationReview
+          ? "Request Received"
+          : "Your Appointment Is Reserved"}
       </p>
       <h2 className="font-display mt-5 text-4xl text-ink md:text-5xl">
-        We Look Forward
-        <br />
-        to Welcoming {pet.name}.
+        {pendingVaccinationReview ? (
+          <>
+            We&apos;re Reviewing
+            <br />
+            {pet.name}&apos;s Request.
+          </>
+        ) : (
+          <>
+            We Look Forward
+            <br />
+            to Welcoming {pet.name}.
+          </>
+        )}
       </h2>
 
       <div className={`${bookingNoticeClass} mx-auto mt-10 max-w-lg text-left`}>
@@ -250,9 +288,17 @@ export function BookingConfirmationView({
         <p className="mt-2 text-sm text-taupe">
           {formatServiceAddress(address)}
         </p>
-        <p className="mt-6 text-xs text-taupe">
-          Your appointment has been reserved exclusively for {pet.name}.
-        </p>
+        {pendingVaccinationReview ? (
+          <p className="mt-6 text-sm leading-relaxed text-red-800">
+            Your appointment request has been received. It will remain pending
+            until our team approves {pet.name}&apos;s vaccination record. We
+            will contact you once your appointment is confirmed.
+          </p>
+        ) : (
+          <p className="mt-6 text-xs text-taupe">
+            Your appointment has been reserved exclusively for {pet.name}.
+          </p>
+        )}
       </div>
 
       <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">

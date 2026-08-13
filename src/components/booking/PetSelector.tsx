@@ -6,6 +6,7 @@ import {
   petReadyToBook,
   type PetProfile,
 } from "@/lib/pets";
+import { vaccinationBookingNeedsAdminConfirmation } from "@/lib/vaccinations/booking";
 import { useCustomerPets } from "@/lib/pets/use-customer-pets";
 import { formatPetAgeLabel, getPetAgeYears } from "@/lib/pet-age";
 import {
@@ -23,6 +24,7 @@ function createDraftPet(name = "New Dog"): PetProfile {
     breed: "",
     weightLbs: 0,
     vaccineRecordUploaded: false,
+    vaccinationBookingStatus: "missing",
   };
 }
 
@@ -94,6 +96,9 @@ export function PetSelector({
 
       {pets.map((pet) => {
         const ready = petReadyToBook(pet);
+        const pendingReview = vaccinationBookingNeedsAdminConfirmation(
+          pet.vaccinationBookingStatus,
+        );
         const selected = selectedId === pet.id;
 
         if (!ready) {
@@ -139,9 +144,15 @@ export function PetSelector({
                     : `${pet.weightLbs} lbs`;
                 })()}
               </p>
-              <p className="font-body mt-4 text-[10px] font-medium uppercase tracking-[0.14em] text-champagne">
-                Profile Complete
-              </p>
+              {pendingReview ? (
+                <p className="font-body mt-4 text-[10px] font-medium uppercase tracking-[0.14em] text-red-700">
+                  Vaccination pending review — appointment awaits confirmation
+                </p>
+              ) : (
+                <p className="font-body mt-4 text-[10px] font-medium uppercase tracking-[0.14em] text-champagne">
+                  Profile Complete
+                </p>
+              )}
               <span className={`${bookingPrimaryBtnClass} mt-6`}>
                 Select {pet.name}
               </span>

@@ -94,9 +94,14 @@ export function BookingFlow() {
     resetFromService();
   }
 
-  function handleExperienceContinue() {
-    if (!selectedService) return;
-    if (isCreativeServiceSelection(selectedService)) {
+  function handleExperienceContinue(service?: BookableService) {
+    const nextService = service ?? selectedService;
+    if (!nextService) return;
+    if (service) {
+      setSelectedService(service);
+      resetFromService();
+    }
+    if (isCreativeServiceSelection(nextService)) {
       setShowCreativePairing(true);
       return;
     }

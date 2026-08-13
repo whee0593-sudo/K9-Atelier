@@ -28,6 +28,10 @@ export type PetRecord = {
   temperamentNotes: string | null;
   healthComfortNotes: string | null;
   groomingPreferences: string | null;
+  vaccinationBookingStatus?:
+    import("@/lib/vaccinations/types").VaccinationBookingStatus;
+  vaccinationExpirationDate?: string | null;
+  vaccinationHasUpload?: boolean;
   createdAt: string;
   updatedAt: string;
 };

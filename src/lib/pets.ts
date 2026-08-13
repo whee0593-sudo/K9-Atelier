@@ -1,4 +1,6 @@
 import { formatPetAgeLabel, getPetAgeYears } from "@/lib/pet-age";
+import type { VaccinationBookingStatus } from "@/lib/vaccinations/types";
+import { petProfileReadyToBook } from "@/lib/vaccinations/booking";
 
 export type PetProfile = {
   id: string;
@@ -19,6 +21,7 @@ export type PetProfile = {
   groomingPreferences?: string;
   adminServiceNotes?: string;
   vaccineExpiration?: string;
+  vaccinationBookingStatus?: VaccinationBookingStatus;
   vaccineRecordUploaded: boolean;
 };
 
@@ -31,6 +34,7 @@ export const demoPetProfiles: PetProfile[] = [
     dateOfBirth: "2017-05-18",
     sex: "Female, Spayed",
     vaccineRecordUploaded: true,
+    vaccinationBookingStatus: "current",
     vaccineExpiration: "2026-11-01",
   },
   {
@@ -92,7 +96,7 @@ export function formatPetBookingCardLine(pet: PetProfile) {
 }
 
 export function petReadyToBook(pet: PetProfile) {
-  return pet.vaccineRecordUploaded;
+  return petProfileReadyToBook(pet);
 }
 
 export function petMayBenefitFromGentleCare(pet: PetProfile) {

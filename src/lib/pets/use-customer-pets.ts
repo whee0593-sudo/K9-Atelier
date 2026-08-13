@@ -7,6 +7,7 @@ import {
   fetchCustomerPets,
   PetClientError,
   updateCustomerPet,
+  uploadPetVaccinationRecord,
 } from "@/lib/pets/client";
 import { mapPetProfileToWriteInput } from "@/lib/pets/map";
 import { validatePetId } from "@/lib/pets/validation";
@@ -28,6 +29,7 @@ export function useCustomerPets() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingIds, setSavingIds] = useState<Set<string>>(() => new Set());
+  const [uploadingIds, setUploadingIds] = useState<Set<string>>(() => new Set());
   const saveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
     new Map(),
   );
@@ -122,7 +124,10 @@ export function useCustomerPets() {
           pet.id === id ? normalizePetProfile({ ...pet, ...updates }) : pet,
         );
         const updated = next.find((pet) => pet.id === id);
-        if (updated && isPersistedPetId(id)) {
+        const vaccinationOnlyUpdate = Object.keys(updates).every(
+          (key) => key === "vaccineExpiration",
+        );
+        if (updated && isPersistedPetId(id) && !vaccinationOnlyUpdate) {
           scheduleSave(updated);
         }
         return next;
@@ -173,15 +178,58 @@ export function useCustomerPets() {
     }
   }, [markSaving]);
 
+  const markUploading = useCallback((id: string, uploading: boolean) => {
+    setUploadingIds((current) => {
+      const next = new Set(current);
+      if (uploading) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const uploadVaccination = useCallback(
+    async (petId: string, file: File, expirationDate?: string) => {
+      if (!isPersistedPetId(petId)) {
+        throw new PetClientError("Save this pet profile before uploading.", 400);
+      }
+
+      setError(null);
+      markUploading(petId, true);
+      try {
+        const updated = await uploadPetVaccinationRecord(
+          petId,
+          file,
+          expirationDate,
+        );
+        setPets((current) =>
+          current.map((pet) => (pet.id === petId ? updated : pet)),
+        );
+        return updated;
+      } catch (err) {
+        const message =
+          err instanceof PetClientError
+            ? err.message
+            : "Could not upload this vaccination record.";
+        setError(message);
+        throw err;
+      } finally {
+        markUploading(petId, false);
+      }
+    },
+    [markUploading],
+  );
+
   return {
     pets,
     loading,
     error,
     savingIds,
+    uploadingIds,
     reload,
     updatePetLocal,
     createPet,
     archivePet,
+    uploadVaccination,
     isPersistedPetId,
   };
 }

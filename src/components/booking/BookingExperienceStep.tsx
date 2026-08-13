@@ -24,7 +24,7 @@ type Props = {
   pet: PetProfile;
   selectedServiceId: string | null;
   onSelect: (service: BookableService) => void;
-  onContinue: () => void;
+  onContinue: (service?: BookableService) => void;
   onBack: () => void;
 };
 
@@ -96,10 +96,13 @@ export function BookingExperienceStep({
               )}
               <button
                 type="button"
-                onClick={() => onSelect(service)}
+                onClick={() => {
+                  onSelect(service);
+                  onContinue(service);
+                }}
                 className={`${bookingPrimaryBtnClass} mt-6`}
               >
-                {isSpa ? "Explore" : "Select"}
+                {selected ? "Selected" : isSpa ? "Explore" : "Select"}
               </button>
             </article>
           );

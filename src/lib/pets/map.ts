@@ -1,6 +1,9 @@
 import type { PetRecord, PetRow, PetWriteInput } from "@/lib/pets/types";
 import type { PetProfile } from "@/lib/pets";
 import { getPetAgeYears } from "@/lib/pet-age";
+import {
+  vaccinationHasUpload,
+} from "@/lib/vaccinations/booking";
 
 export function mapPetRowToRecord(row: PetRow): PetRecord {
   return {
@@ -36,7 +39,9 @@ export function mapPetRecordToUiProfile(record: PetRecord): PetProfile {
     temperament: record.temperamentNotes ?? undefined,
     medicalNotes: record.healthComfortNotes ?? undefined,
     groomingPreferences: record.groomingPreferences ?? undefined,
-    vaccineRecordUploaded: false,
+    vaccineExpiration: record.vaccinationExpirationDate ?? undefined,
+    vaccinationBookingStatus: record.vaccinationBookingStatus ?? "missing",
+    vaccineRecordUploaded: vaccinationHasUpload(record),
   };
 }
 
