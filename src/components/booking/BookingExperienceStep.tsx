@@ -112,7 +112,7 @@ export function BookingExperienceStep({
       {selectedServiceId && (
         <button
           type="button"
-          onClick={onContinue}
+          onClick={() => onContinue()}
           className={`${bookingPrimaryBtnClass} mt-8`}
         >
           Continue

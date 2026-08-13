@@ -54,6 +54,7 @@ export async function uploadPetVaccination(
         | "unauthenticated"
         | "not_found"
         | "invalid_file"
+        | "invalid_key"
         | "server"
         | "misconfigured";
     }
