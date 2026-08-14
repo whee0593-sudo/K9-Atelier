@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { fetchVaccinationNotificationContext } from "@/lib/email/vaccination-context";
+import { sendVaccinationReviewEmails } from "@/lib/email/vaccination-mails";
 import { VACCINATION_BUCKET } from "@/lib/vaccinations/types";
 
 export type PendingVaccinationRecord = {
@@ -109,6 +111,8 @@ export async function setVaccinationVerificationStatus(
   const session = await getStaffSession();
   if ("error" in session) return { error: session.error };
 
+  const mailContext = await fetchVaccinationNotificationContext(recordId);
+
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("staff_set_vaccination_verification", {
     p_record_id: recordId,
@@ -127,6 +131,15 @@ export async function setVaccinationVerificationStatus(
   }
 
   if (!data) return { error: "not_found" };
+
+  if (mailContext) {
+    try {
+      await sendVaccinationReviewEmails(mailContext, status);
+    } catch (emailError) {
+      console.error("setVaccinationVerificationStatus email failed:", emailError);
+    }
+  }
+
   return { ok: true };
 }
 

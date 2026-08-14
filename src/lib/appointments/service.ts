@@ -20,6 +20,15 @@ import {
   vaccinationBookingNeedsAdminConfirmation,
   vaccinationReadyToBook,
 } from "@/lib/vaccinations/booking";
+import {
+  contactFromAdminAppointment,
+  fetchAppointmentAdminRecord,
+  fetchCustomerContact,
+} from "@/lib/email/appointment-context";
+import {
+  sendAppointmentCreatedEmails,
+  sendAppointmentStatusEmails,
+} from "@/lib/email/appointment-mails";
 
 const APPOINTMENT_SELECT = `
   id,
@@ -129,9 +138,20 @@ export async function createAppointment(
     return { error: "server" };
   }
 
-  return {
-    appointment: mapAppointmentRowToRecord(data as AppointmentRow),
-  };
+  const appointment = mapAppointmentRowToRecord(data as AppointmentRow);
+
+  try {
+    const contact =
+      (await fetchCustomerContact(user.id)) ??
+      (user.email ? { email: user.email, name: null } : null);
+    if (contact) {
+      await sendAppointmentCreatedEmails(appointment, contact);
+    }
+  } catch (emailError) {
+    console.error("createAppointment email failed:", emailError);
+  }
+
+  return { appointment };
 }
 
 export async function listCustomerAppointments(): Promise<
@@ -204,6 +224,8 @@ export async function setAppointmentStatus(
   const session = await getStaffSession();
   if ("error" in session) return { error: session.error };
 
+  const appointmentBeforeUpdate = await fetchAppointmentAdminRecord(appointmentId);
+
   const supabase = await createAuthenticatedSupabaseClient();
   const { data, error } = await supabase.rpc("staff_set_appointment_status", {
     p_appointment_id: appointmentId,
@@ -218,5 +240,21 @@ export async function setAppointmentStatus(
   }
 
   if (!data) return { error: "not_found" };
+
+  if (appointmentBeforeUpdate) {
+    const contact = contactFromAdminAppointment(appointmentBeforeUpdate);
+    if (contact) {
+      try {
+        await sendAppointmentStatusEmails(
+          { ...appointmentBeforeUpdate, status },
+          contact,
+          status,
+        );
+      } catch (emailError) {
+        console.error("setAppointmentStatus email failed:", emailError);
+      }
+    }
+  }
+
   return { ok: true };
 }

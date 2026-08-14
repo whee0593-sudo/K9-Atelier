@@ -3,10 +3,22 @@ import { SiteShell } from "@/components/SiteShell";
 import { bodyFont, displayFont } from "@/lib/fonts";
 import "./globals.css";
 
+const siteTitle =
+  "K9 Atelier | Best in Show Grooming — Jupiter, Palm Beach Gardens, West Palm Beach";
+const siteDescription =
+  "Cage-free mobile grooming for dogs under 45 lbs, led by a Best in Show-honored groomer. Serving Jupiter, Palm Beach Gardens & West Palm Beach.";
+
 export const metadata: Metadata = {
-  title: "K9 Atelier | Private Mobile Dog Grooming in Palm Beach",
-  description:
-    "Award-winning private mobile dog grooming serving Palm Beach Gardens and surrounding communities. One-on-one, cage-free grooming, bespoke styling and luxury Spa rituals by K9 Atelier.",
+  title: siteTitle,
+  description: siteDescription,
+  openGraph: {
+    title: siteTitle,
+    description: siteDescription,
+  },
+  twitter: {
+    title: siteTitle,
+    description: siteDescription,
+  },
 };
 
 export default function RootLayout({
