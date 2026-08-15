@@ -143,3 +143,335 @@ export function buildBrandedEmail(content: BrandedEmailContent, plainText: strin
     html: buildBrandedEmailHtml(content),
   };
 }
+
+const STAFF_EMAIL = {
+  cream: "#FAF6EF",
+  border: "#E8E0D3",
+  gold: "#B08D57",
+  ink: "#3A3226",
+  muted: "#8A8073",
+} as const;
+
+export type CustomerLetterDetailRow = {
+  label: string;
+  value: string;
+};
+
+export type CustomerLetterEmailContent = {
+  subject: string;
+  greetingName: string;
+  introParagraph: string;
+  detailRows: CustomerLetterDetailRow[];
+  estimateNote: string;
+  closingParagraph: string;
+  cta: { href: string; label: string };
+};
+
+function customerLetterDetailRow(label: string, value: string) {
+  return `<tr>
+    <td style="padding:5px 0;color:${STAFF_EMAIL.muted};">${escapeHtml(label)}</td>
+    <td style="padding:5px 0;text-align:right;color:${STAFF_EMAIL.ink};">${escapeHtml(value)}</td>
+  </tr>`;
+}
+
+export function buildCustomerLetterEmailHtml(content: CustomerLetterEmailContent) {
+  const { logoUrl } = getEmailBrand();
+  const detailsHtml = content.detailRows
+    .map(({ label, value }) => customerLetterDetailRow(label, value))
+    .join("");
+  const footerLine = `${business.brand.name} · ${business.brand.email} · k9atelier.com`;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>${escapeHtml(content.subject)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:${STAFF_EMAIL.cream};">
+  <div style="background-color:${STAFF_EMAIL.cream}; padding:40px 20px; font-family: Georgia, 'Times New Roman', serif;">
+    <div style="max-width:480px; margin:0 auto; background-color:#ffffff; border:1px solid ${STAFF_EMAIL.border};">
+      <div style="background-color:${STAFF_EMAIL.cream}; padding:32px 32px 20px; text-align:center; border-bottom:1px solid ${STAFF_EMAIL.gold};">
+        <img src="${logoUrl}" width="64" height="64" style="border-radius:50%; display:block; margin:0 auto 12px;" alt="${escapeHtml(business.brand.name)}" />
+        <div style="font-size:20px; letter-spacing:4px; color:${STAFF_EMAIL.ink}; font-family:Georgia,'Times New Roman',serif;">K9 ATELIER</div>
+      </div>
+      <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:14px; line-height:1.8; background:#ffffff;">
+        <p style="margin:0 0 14px;">Dear ${escapeHtml(content.greetingName)},</p>
+        <p style="margin:0 0 14px;">${escapeHtml(content.introParagraph)}</p>
+        <div style="padding:14px 0; font-size:13px; margin:18px 0; border-top:1px solid ${STAFF_EMAIL.border}; border-bottom:1px solid ${STAFF_EMAIL.border};">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; font-size:13px;">
+            ${detailsHtml}
+          </table>
+        </div>
+        <p style="margin:0 0 14px; font-size:12px; color:${STAFF_EMAIL.muted};">${escapeHtml(content.estimateNote)}</p>
+        <p style="margin:0 0 22px;">${escapeHtml(content.closingParagraph)}</p>
+        <div style="text-align:center;">
+          <a href="${escapeHtml(content.cta.href)}" style="display:inline-block; border:1px solid ${STAFF_EMAIL.gold}; color:${STAFF_EMAIL.gold}; padding:10px 28px; text-decoration:none; font-size:11px; letter-spacing:2px;">${escapeHtml(content.cta.label)}</a>
+        </div>
+      </div>
+      <div style="background-color:${STAFF_EMAIL.cream}; padding:22px 32px; text-align:center; font-size:11px; color:${STAFF_EMAIL.muted}; letter-spacing:0.5px; font-family:Georgia,'Times New Roman',serif;">
+        ${escapeHtml(footerLine)}
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+export function buildCustomerLetterEmail(
+  content: CustomerLetterEmailContent,
+  plainText: string,
+) {
+  return {
+    subject: content.subject,
+    text: plainText,
+    html: buildCustomerLetterEmailHtml(content),
+  };
+}
+
+export type CustomerSimpleLetterEmailContent = {
+  subject: string;
+  greetingName: string;
+  bodyParagraphs: string[];
+  cta: { href: string; label: string };
+};
+
+export function buildCustomerSimpleLetterEmailHtml(
+  content: CustomerSimpleLetterEmailContent,
+) {
+  const bodyParagraphsHtml = content.bodyParagraphs
+    .map((paragraph, index) => {
+      const marginBottom =
+        index === content.bodyParagraphs.length - 1 ? "22px" : "14px";
+      return `<p style="margin:0 0 ${marginBottom};">${escapeHtml(paragraph)}</p>`;
+    })
+    .join("");
+
+  return `${customerLetterHeader(content.subject)}
+      <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:14px; line-height:1.8; background:#ffffff;">
+        <p style="margin:0 0 14px;">Dear ${escapeHtml(content.greetingName)},</p>
+        ${bodyParagraphsHtml}
+        <div style="text-align:center;">
+          <a href="${escapeHtml(content.cta.href)}" style="display:inline-block; border:1px solid ${STAFF_EMAIL.gold}; color:${STAFF_EMAIL.gold}; padding:10px 28px; text-decoration:none; font-size:11px; letter-spacing:2px;">${escapeHtml(content.cta.label)}</a>
+        </div>
+      </div>
+      ${customerLetterFooter()}`;
+}
+
+export function buildCustomerSimpleLetterEmail(
+  content: CustomerSimpleLetterEmailContent,
+  plainText: string,
+) {
+  return {
+    subject: content.subject,
+    text: plainText,
+    html: buildCustomerSimpleLetterEmailHtml(content),
+  };
+}
+
+export type CustomerVaccinationApprovedEmailContent = {
+  subject: string;
+  greetingName: string;
+  petName: string;
+  expirationLabel: string;
+  closingParagraph: string;
+  bookUrl: string;
+  accountUrl: string;
+};
+
+export function buildCustomerVaccinationApprovedEmailHtml(
+  content: CustomerVaccinationApprovedEmailContent,
+) {
+  const petName = escapeHtml(content.petName);
+
+  return `${customerLetterHeader(content.subject)}
+      <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:14px; line-height:1.8; background:#ffffff;">
+        <p style="margin:0 0 4px; font-size:15px; letter-spacing:0.5px; color:${STAFF_EMAIL.gold};">Vaccination approved</p>
+        <p style="margin:0 0 14px;">Dear ${escapeHtml(content.greetingName)}, ${petName}&apos;s vaccination record has been reviewed and approved.</p>
+        <div style="padding:14px 0; font-size:13px; margin:18px 0; border-top:1px solid ${STAFF_EMAIL.border}; border-bottom:1px solid ${STAFF_EMAIL.border};">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; font-size:13px;">
+            ${customerLetterDetailRow("Expiration on file", content.expirationLabel)}
+          </table>
+        </div>
+        <p style="margin:0 0 22px;">${escapeHtml(content.closingParagraph)}</p>
+        <div style="text-align:center;">
+          <a href="${escapeHtml(content.bookUrl)}" style="display:inline-block; border:1px solid ${STAFF_EMAIL.gold}; color:${STAFF_EMAIL.gold}; padding:10px 28px; text-decoration:none; font-size:11px; letter-spacing:2px;">BOOK AN APPOINTMENT</a>
+        </div>
+        <p style="margin:18px 0 0; text-align:center; font-size:12px;"><a href="${escapeHtml(content.accountUrl)}" style="color:${STAFF_EMAIL.muted};">View your account</a></p>
+      </div>
+      ${customerLetterFooter()}`;
+}
+
+export function buildCustomerVaccinationApprovedEmail(
+  content: CustomerVaccinationApprovedEmailContent,
+  plainText: string,
+) {
+  return {
+    subject: content.subject,
+    text: plainText,
+    html: buildCustomerVaccinationApprovedEmailHtml(content),
+  };
+}
+
+export type CustomerConfirmedEmailContent = {
+  subject: string;
+  greetingName: string;
+  petName: string;
+  detailRows: CustomerLetterDetailRow[];
+  estimateNote: string;
+  depositAmount: string | null;
+};
+
+function customerLetterHeader(subject: string) {
+  const { logoUrl } = getEmailBrand();
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:${STAFF_EMAIL.cream};">
+  <div style="background-color:${STAFF_EMAIL.cream}; padding:40px 20px; font-family: Georgia, 'Times New Roman', serif;">
+    <div style="max-width:480px; margin:0 auto; background-color:#ffffff; border:1px solid ${STAFF_EMAIL.border};">
+      <div style="background-color:${STAFF_EMAIL.cream}; padding:32px 32px 20px; text-align:center; border-bottom:1px solid ${STAFF_EMAIL.gold};">
+        <img src="${logoUrl}" width="64" height="64" style="border-radius:50%; display:block; margin:0 auto 12px;" alt="${escapeHtml(business.brand.name)}" />
+        <div style="font-size:20px; letter-spacing:4px; color:${STAFF_EMAIL.ink}; font-family:Georgia,'Times New Roman',serif;">K9 ATELIER</div>
+      </div>`;
+}
+
+function customerLetterFooter() {
+  const footerLine = `${business.brand.name} · ${business.brand.email} · k9atelier.com`;
+  return `<div style="background-color:${STAFF_EMAIL.cream}; padding:22px 32px; text-align:center; font-size:11px; color:${STAFF_EMAIL.muted}; letter-spacing:0.5px; font-family:Georgia,'Times New Roman',serif;">
+        ${escapeHtml(footerLine)}
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+function customerConfirmedSection(title: string, bodyHtml: string) {
+  return `<div style="margin:18px 0; padding-top:16px; border-top:1px solid ${STAFF_EMAIL.border};">
+        <p style="margin:0 0 4px; color:${STAFF_EMAIL.ink}; font-size:13px; letter-spacing:0.5px;">${escapeHtml(title)}</p>
+        ${bodyHtml}
+      </div>`;
+}
+
+export function buildCustomerConfirmedEmailHtml(content: CustomerConfirmedEmailContent) {
+  const detailsHtml = content.detailRows
+    .map(({ label, value }) => customerLetterDetailRow(label, value))
+    .join("");
+  const petName = escapeHtml(content.petName);
+  const depositSection =
+    content.depositAmount != null
+      ? customerConfirmedSection(
+          "New client deposit",
+          `<p style="margin:0; font-size:13px; color:#5A5347;">A ${escapeHtml(content.depositAmount)} deposit has been placed on the payment method provided, applied in full toward the appointment total. This simply secures your spot on our schedule.</p>`,
+        )
+      : "";
+
+  return `${customerLetterHeader(content.subject)}
+      <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:14px; line-height:1.8; background:#ffffff;">
+        <p style="margin:0 0 4px; font-size:15px; letter-spacing:0.5px; color:${STAFF_EMAIL.gold};">Appointment confirmed</p>
+        <p style="margin:0 0 14px;">Dear ${escapeHtml(content.greetingName)}, we look forward to caring for ${petName}.</p>
+        <div style="padding:14px 0; font-size:13px; margin:18px 0; border-top:1px solid ${STAFF_EMAIL.border}; border-bottom:1px solid ${STAFF_EMAIL.border};">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; font-size:13px;">
+            ${detailsHtml}
+          </table>
+        </div>
+        <p style="margin:0 0 18px; font-size:12px; color:${STAFF_EMAIL.muted};">${escapeHtml(content.estimateNote)}</p>
+        ${depositSection}
+        ${customerConfirmedSection(
+          "What to expect",
+          `<p style="margin:0; font-size:13px; color:#5A5347;">Our mobile grooming studio will arrive within your scheduled window. A brief health and coat check takes place before we begin, and we will keep you informed throughout.</p>`,
+        )}
+        ${customerConfirmedSection(
+          "In preparation",
+          `<ul style="margin:0; padding-left:18px; font-size:13px; color:#5A5347;">
+          <li style="margin-bottom:6px;">A bathroom break for ${petName} shortly before our arrival is appreciated</li>
+          <li style="margin-bottom:6px;">A nearby parking spot for our grooming van is greatly appreciated</li>
+          <li>Please let us know in advance of any allergies, sensitivities, or behavioral notes</li>
+        </ul>`,
+        )}
+        ${customerConfirmedSection(
+          "Need to reschedule?",
+          `<p style="margin:0; font-size:13px; color:#5A5347;">We kindly ask for at least 48 hours&apos; notice for any changes. Please reply to this email or reach us at ${escapeHtml(business.brand.email)}.</p>`,
+        )}
+        <p style="margin:22px 0 0;">Warmly,</p>
+        <p style="margin:2px 0 0;">${escapeHtml(business.brand.name)}</p>
+      </div>
+      ${customerLetterFooter()}`;
+}
+
+export function buildCustomerConfirmedEmail(
+  content: CustomerConfirmedEmailContent,
+  plainText: string,
+) {
+  return {
+    subject: content.subject,
+    text: plainText,
+    html: buildCustomerConfirmedEmailHtml(content),
+  };
+}
+
+export type StaffNotificationRow = {
+  label: string;
+  value: string;
+  valueColor?: string;
+};
+
+export type StaffNotificationEmailContent = {
+  subject: string;
+  introHtml: string;
+  rows: StaffNotificationRow[];
+  cta: { href: string; label: string };
+};
+
+export function buildStaffNotificationEmailHtml(content: StaffNotificationEmailContent) {
+  const rowsHtml = content.rows
+    .map(
+      ({ label, value, valueColor }) =>
+        `<tr><td style="padding:6px 0; color:${STAFF_EMAIL.muted}; width:140px;">${escapeHtml(label)}</td><td style="padding:6px 0;${valueColor ? ` color:${valueColor};` : ""}">${escapeHtml(value)}</td></tr>`,
+    )
+    .join("");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>${escapeHtml(content.subject)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:${STAFF_EMAIL.cream};">
+  <div style="background-color:${STAFF_EMAIL.cream}; padding:32px 20px; font-family: Georgia, 'Times New Roman', serif;">
+    <div style="max-width:520px; margin:0 auto; background-color:#ffffff; border:1px solid ${STAFF_EMAIL.border};">
+      <div style="background-color:${STAFF_EMAIL.cream}; padding:20px 32px; border-bottom:2px solid ${STAFF_EMAIL.gold};">
+        <span style="font-size:18px; letter-spacing:2px; color:${STAFF_EMAIL.ink};">K9 ATELIER</span>
+        <span style="float:right; font-size:12px; color:${STAFF_EMAIL.muted}; padding-top:4px;">Staff Notification</span>
+      </div>
+      <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:14px; line-height:1.7;">
+        ${content.introHtml}
+        <table style="width:100%; border-collapse:collapse; font-size:14px;">
+          ${rowsHtml}
+        </table>
+        <div style="text-align:center; margin-top:24px;">
+          <a href="${escapeHtml(content.cta.href)}" style="display:inline-block; background-color:${STAFF_EMAIL.gold}; color:#ffffff; padding:12px 26px; text-decoration:none; font-size:13px; letter-spacing:1px;">${escapeHtml(content.cta.label)}</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+export function buildStaffNotificationEmail(
+  content: StaffNotificationEmailContent,
+  plainText: string,
+) {
+  return {
+    subject: content.subject,
+    text: plainText,
+    html: buildStaffNotificationEmailHtml(content),
+  };
+}

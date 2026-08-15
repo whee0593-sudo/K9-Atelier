@@ -51,8 +51,12 @@ const customer = {
 
 const previews = [
   {
-    title: "Penny — New appointment request",
+    title: "Penny — Appointment request (vaccination pending)",
     ...buildStaffNewAppointmentEmail(sampleAppointment, customer),
+  },
+  {
+    title: "Penny — Auto-confirmed appointment",
+    ...buildStaffNewAppointmentEmail(confirmedAppointment, customer),
   },
   {
     title: "Customer — Request received (pending)",
