@@ -11,6 +11,7 @@ const siteDescription =
 export const metadata: Metadata = {
   title: siteTitle,
   description: siteDescription,
+  manifest: "/site.webmanifest",
   openGraph: {
     title: siteTitle,
     description: siteDescription,
