@@ -50,7 +50,7 @@ export function HomeExperience() {
               key={item.title}
               className="border border-gray-line/80 bg-ivory px-6 py-8"
             >
-              <h3 className="font-body text-[11px] font-semibold uppercase tracking-[0.18em] text-deep-lavender">
+              <h3 className="font-body text-[12px] font-semibold uppercase tracking-[0.18em] text-deep-lavender">
                 {item.title}
               </h3>
               <p className="font-body mt-4 text-sm leading-relaxed text-taupe">

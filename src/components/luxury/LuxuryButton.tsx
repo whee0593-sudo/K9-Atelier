@@ -14,7 +14,7 @@ export function LuxuryButton({
   className = "",
 }: Props) {
   const base =
-    "inline-flex min-h-[52px] items-center justify-center px-8 text-[11px] font-medium uppercase tracking-[0.16em] transition duration-500 ease-out";
+    "inline-flex min-h-[52px] items-center justify-center px-8 text-[12px] font-medium uppercase tracking-[0.16em] transition duration-500 ease-out";
   const styles =
     variant === "primary"
       ? "bg-deep-lavender text-ivory hover:bg-ink"

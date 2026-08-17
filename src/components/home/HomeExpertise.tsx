@@ -47,7 +47,7 @@ export function HomeExpertise() {
               key={item.label}
               className="border-t border-champagne/60 pt-6 text-center"
             >
-              <p className="font-body text-[10px] font-medium uppercase tracking-[0.2em] text-taupe">
+              <p className="font-body text-[11px] font-medium uppercase tracking-[0.2em] text-taupe">
                 {item.label}
               </p>
               <p className="font-display mt-3 text-3xl text-ink md:text-4xl">

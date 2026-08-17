@@ -23,14 +23,14 @@ export function HomeHero() {
             calm, private, one-on-one salon experience.
           </p>
           <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
-            <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[10px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink">
+            <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[11px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink">
               Book an Appointment
             </BookServiceLink>
             <LuxuryButton href="/#experience" variant="secondary">
               Discover the Experience
             </LuxuryButton>
           </div>
-          <p className="font-body mt-8 max-w-xl text-[11px] font-medium uppercase leading-relaxed tracking-[0.14em] text-taupe sm:tracking-[0.16em]">
+          <p className="font-body mt-8 max-w-xl text-[12px] font-medium uppercase leading-relaxed tracking-[0.14em] text-taupe sm:tracking-[0.16em]">
             {communities}
             <span className="mt-2 block sm:mt-0 sm:inline">
               <span className="hidden sm:inline"> · </span>

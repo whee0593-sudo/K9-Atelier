@@ -63,7 +63,7 @@ export function HomeSpaWellness() {
                 </span>{" "}
                 {service.bestFor}
               </p>
-              <p className="font-body mt-6 text-[11px] font-medium uppercase tracking-[0.14em] text-taupe">
+              <p className="font-body mt-6 text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
                 From $120 · 60–90 min
               </p>
             </article>
@@ -71,7 +71,7 @@ export function HomeSpaWellness() {
         </div>
 
         <div className="mt-12 border border-gray-line/80 bg-dusty-lavender/20 p-8 md:p-10">
-          <p className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-taupe">
             All spa treatments include
           </p>
           <ul className="mt-4 grid gap-2 sm:grid-cols-2 md:grid-cols-4">
@@ -87,7 +87,7 @@ export function HomeSpaWellness() {
           </p>
           <Link
             href="/services#spa-wellness"
-            className="font-body mt-6 inline-flex min-h-[48px] items-center text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink"
+            className="font-body mt-6 inline-flex min-h-[48px] items-center text-[11px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink"
           >
             View Spa Pricing & Details
           </Link>

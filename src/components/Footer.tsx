@@ -26,13 +26,13 @@ export function Footer() {
       <Container className="py-16 md:py-20">
         <div className="grid gap-12 md:grid-cols-[1.2fr_1fr_1fr]">
           <div>
-            <p className="font-body text-[11px] font-semibold uppercase tracking-[0.22em] text-ink">
+            <p className="font-body text-[12px] font-semibold uppercase tracking-[0.22em] text-ink">
               {brand.name}
             </p>
-            <p className="font-body mt-3 text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
+            <p className="font-body mt-3 text-[12px] font-medium uppercase tracking-[0.16em] text-taupe">
               Private Pet Grooming Salon
             </p>
-            <p className="font-body mt-1 text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
+            <p className="font-body mt-1 text-[12px] font-medium uppercase tracking-[0.16em] text-taupe">
               Palm Beach
             </p>
             <p className="font-display mt-6 text-2xl leading-snug text-ink md:text-[1.75rem]">
@@ -41,7 +41,7 @@ export function Footer() {
           </div>
 
           <div>
-            <p className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
+            <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-taupe">
               Explore
             </p>
             <ul className="mt-4 space-y-3">
@@ -59,7 +59,7 @@ export function Footer() {
           </div>
 
           <div>
-            <p className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
+            <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-taupe">
               Contact
             </p>
             <a

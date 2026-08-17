@@ -29,7 +29,7 @@ export function HomeFaqTeaser() {
     <section className="py-16 md:py-24">
       <Container>
         <div className="mx-auto max-w-3xl text-center">
-          <p className="font-body text-[11px] font-medium uppercase tracking-[0.18em] text-taupe">
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
             FAQ
           </p>
           <h2 className="font-display mt-5 text-[2.5rem] leading-[1.08] text-ink md:text-4xl">
@@ -60,7 +60,7 @@ export function HomeFaqTeaser() {
         <div className="mt-10 text-center">
           <Link
             href="/faq"
-            className="font-body inline-flex min-h-[48px] items-center text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink"
+            className="font-body inline-flex min-h-[48px] items-center text-[11px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink"
           >
             View All FAQ
           </Link>

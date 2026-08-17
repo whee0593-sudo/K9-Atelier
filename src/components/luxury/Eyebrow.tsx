@@ -6,7 +6,7 @@ type Props = {
 export function Eyebrow({ children, className = "" }: Props) {
   return (
     <p
-      className={`font-body text-[11px] font-medium uppercase tracking-[0.18em] text-taupe md:text-xs ${className}`}
+      className={`font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe md:text-xs ${className}`}
     >
       {children}
     </p>

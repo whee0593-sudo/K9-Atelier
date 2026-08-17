@@ -12,7 +12,7 @@ export function HomeAboutTeaser() {
           label="Portrait photography — forthcoming"
         />
         <div>
-          <p className="font-body text-[11px] font-medium uppercase tracking-[0.18em] text-taupe">
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
             About Penny
           </p>
           <h2 className="font-display mt-5 text-[2.5rem] leading-[1.1] text-ink md:text-5xl">

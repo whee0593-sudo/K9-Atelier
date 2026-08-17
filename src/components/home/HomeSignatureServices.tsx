@@ -51,12 +51,12 @@ export function HomeSignatureServices() {
               <p className="font-body mt-4 flex-1 text-sm leading-relaxed text-taupe">
                 {service.body}
               </p>
-              <p className="font-body mt-6 text-[11px] font-medium uppercase tracking-[0.14em] text-taupe">
+              <p className="font-body mt-6 text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
                 {service.price}
               </p>
               <Link
                 href={service.href}
-                className="font-body mt-6 inline-flex min-h-[48px] items-center text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink"
+                className="font-body mt-6 inline-flex min-h-[48px] items-center text-[11px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink"
               >
                 {service.cta}
               </Link>
@@ -67,7 +67,7 @@ export function HomeSignatureServices() {
         <div className="mt-12 text-center">
           <Link
             href="/services"
-            className="font-body inline-flex min-h-[52px] items-center justify-center border border-champagne px-8 text-[10px] font-medium uppercase tracking-[0.16em] text-ink transition hover:border-ink"
+            className="font-body inline-flex min-h-[52px] items-center justify-center border border-champagne px-8 text-[11px] font-medium uppercase tracking-[0.16em] text-ink transition hover:border-ink"
           >
             View All Services
           </Link>

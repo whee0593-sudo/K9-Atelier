@@ -39,7 +39,7 @@ export function HomeGentleCare() {
             anti-slip support, gentler drying and a slower grooming pace.
           </p>
           <div className="mt-8 border-t border-gray-line/80 pt-8">
-            <h4 className="font-body text-[11px] font-semibold uppercase tracking-[0.16em] text-deep-lavender">
+            <h4 className="font-body text-[12px] font-semibold uppercase tracking-[0.16em] text-deep-lavender">
               End-of-Life Comfort Care
             </h4>
             <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
@@ -51,7 +51,7 @@ export function HomeGentleCare() {
           </div>
           <Link
             href="/services#gentle-care"
-            className="font-body mt-8 inline-flex min-h-[48px] items-center text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink"
+            className="font-body mt-8 inline-flex min-h-[48px] items-center text-[11px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink"
           >
             View Gentle Care Details
           </Link>

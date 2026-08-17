@@ -30,7 +30,7 @@ function NavLink({
     <Link
       href={href}
       onClick={onNavigate}
-      className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe transition duration-500 hover:text-ink"
+      className="font-body text-[13px] font-medium uppercase tracking-[0.16em] text-taupe transition duration-500 hover:text-ink"
     >
       {label}
     </Link>
@@ -52,21 +52,21 @@ export function Header() {
             <Image
               src={business.brand.logo}
               alt={business.brand.name}
-              width={44}
-              height={44}
+              width={52}
+              height={52}
               className="rounded-full"
               priority
             />
-            <span className="hidden font-body text-[11px] font-semibold uppercase tracking-[0.2em] text-ink sm:inline">
+            <span className="inline whitespace-nowrap font-body text-[14px] font-semibold uppercase tracking-[0.14em] text-[#3A3236] sm:tracking-[0.2em]">
               {business.brand.name}
             </span>
           </Link>
-          <p className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe">
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
             Booking
           </p>
           <Link
             href="/contact"
-            className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe transition hover:text-ink"
+            className="font-body text-[12px] font-medium uppercase tracking-[0.14em] text-taupe transition hover:text-ink"
           >
             Need Help?
           </Link>
@@ -92,12 +92,12 @@ export function Header() {
           <Image
             src={business.brand.logo}
             alt={business.brand.name}
-            width={44}
-            height={44}
+            width={52}
+            height={52}
             className="rounded-full"
             priority
           />
-          <span className="hidden font-body text-[11px] font-semibold uppercase tracking-[0.2em] text-ink sm:inline">
+          <span className="inline whitespace-nowrap font-body text-[14px] font-semibold uppercase tracking-[0.14em] text-[#3A3236] sm:tracking-[0.2em]">
             {business.brand.name}
           </span>
         </Link>
@@ -110,9 +110,9 @@ export function Header() {
 
         <div className="hidden items-center gap-6 lg:flex">
           <CustomerAuthLink
-            className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe transition hover:text-ink"
+            className="font-body text-[12px] font-medium uppercase tracking-[0.14em] text-taupe transition hover:text-ink"
           />
-          <BookServiceLink className="inline-flex min-h-[50px] items-center justify-center rounded-sm bg-deep-lavender px-6 text-[10px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink">
+          <BookServiceLink className="inline-flex min-h-[50px] items-center justify-center rounded-sm bg-deep-lavender px-6 text-[12px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink">
             Book an Appointment
           </BookServiceLink>
         </div>
@@ -125,7 +125,7 @@ export function Header() {
           aria-label={open ? "Close menu" : "Open menu"}
           onClick={() => setOpen((value) => !value)}
         >
-          <span className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-ink">
+          <span className="font-body text-[12px] font-medium uppercase tracking-[0.14em] text-ink">
             {open ? "Close" : "Menu"}
           </span>
         </button>
@@ -147,11 +147,11 @@ export function Header() {
             ))}
             <CustomerAuthLink
               onNavigate={closeMenu}
-              className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe"
+              className="font-body text-[12px] font-medium uppercase tracking-[0.14em] text-taupe"
             />
             <BookServiceLink
               onClick={closeMenu}
-              className="inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-deep-lavender text-[10px] font-medium uppercase tracking-[0.16em] text-ivory"
+              className="inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-deep-lavender text-[12px] font-medium uppercase tracking-[0.16em] text-ivory"
             >
               Book an Appointment
             </BookServiceLink>

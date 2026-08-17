@@ -53,7 +53,7 @@ export function HomeMobileSalon() {
             {features.map((item) => (
               <li
                 key={item}
-                className="border-l border-champagne pl-4 font-body text-[11px] font-medium uppercase tracking-[0.14em] text-ink"
+                className="border-l border-champagne pl-4 font-body text-[12px] font-medium uppercase tracking-[0.14em] text-ink"
               >
                 {item}
               </li>
