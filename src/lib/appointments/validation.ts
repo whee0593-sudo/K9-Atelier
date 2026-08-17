@@ -1,5 +1,6 @@
 import { business } from "@/lib/business";
 import type { AppointmentWriteInput } from "@/lib/appointments/types";
+import { normalizePhoneToE164 } from "@/lib/sms/phone";
 
 export class AppointmentValidationError extends Error {
   readonly field?: string;
@@ -125,6 +126,21 @@ export function validateCreateAppointmentInput(
   );
   const travelFee = readNumber(record, "travelFee", "Travel fee");
   const estimatedTotal = readNumber(record, "estimatedTotal", "Estimated total");
+  const customerPhone = normalizePhoneToE164(
+    readString(record, "customerPhone", "Mobile phone", 32),
+  );
+  if (!customerPhone) {
+    throw new AppointmentValidationError(
+      "Please enter a valid US mobile number so we can text appointment updates.",
+      "customerPhone",
+    );
+  }
+  if (record.smsConsent !== true) {
+    throw new AppointmentValidationError(
+      "Please confirm you agree to receive appointment text messages.",
+      "smsConsent",
+    );
+  }
   const newClientDeposit =
     typeof record.newClientDeposit === "number" &&
     Number.isFinite(record.newClientDeposit)
@@ -156,5 +172,6 @@ export function validateCreateAppointmentInput(
     appointmentTime,
     estimatedTotal,
     newClientDeposit,
+    customerPhone,
   };
 }

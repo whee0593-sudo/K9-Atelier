@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "npx --yes tsx --test src/lib/pets/validation.test.ts src/lib/vaccinations/magic-bytes.test.ts src/lib/vaccinations/booking.test.ts",
+    "test": "npx --yes tsx --test src/lib/pets/validation.test.ts src/lib/vaccinations/magic-bytes.test.ts src/lib/vaccinations/booking.test.ts src/lib/sms/phone.test.ts src/lib/sms/notifications.test.ts",
     "verify:supabase": "npx --yes tsx scripts/verify-supabase-schema.mts"
   },
   "dependencies": {

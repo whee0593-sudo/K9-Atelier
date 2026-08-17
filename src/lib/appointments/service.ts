@@ -58,7 +58,13 @@ const APPOINTMENT_SELECT = `
 
 const ADMIN_APPOINTMENT_SELECT = `
   ${APPOINTMENT_SELECT.trim()},
-  profiles ( email, first_name, last_name )
+  profiles ( email, first_name, last_name, phone )
+`;
+
+const ADMIN_TODAY_APPOINTMENT_SELECT = `
+  ${ADMIN_APPOINTMENT_SELECT.trim()},
+  reminder_sms_sent_at,
+  en_route_sms_sent_at
 `;
 
 export async function createAppointment(
@@ -100,6 +106,16 @@ export async function createAppointment(
 
   if (!vaccinationReadyToBook(vaccinationStatus)) {
     return { error: "conflict" };
+  }
+
+  const { error: phoneError } = await supabase
+    .from("profiles")
+    .update({ phone: input.customerPhone })
+    .eq("id", user.id);
+
+  if (phoneError) {
+    console.error("createAppointment phone save failed:", phoneError.message);
+    return { error: "server" };
   }
 
   const status = vaccinationBookingNeedsAdminConfirmation(vaccinationStatus)
@@ -145,7 +161,10 @@ export async function createAppointment(
       (await fetchCustomerContact(user.id)) ??
       (user.email ? { email: user.email, name: null } : null);
     if (contact) {
-      await sendAppointmentCreatedEmails(appointment, contact);
+      await sendAppointmentCreatedEmails(appointment, {
+        ...contact,
+        phone: contact.phone ?? input.customerPhone,
+      });
     }
   } catch (emailError) {
     console.error("createAppointment email failed:", emailError);
@@ -254,6 +273,109 @@ export async function setAppointmentStatus(
         console.error("setAppointmentStatus email failed:", emailError);
       }
     }
+  }
+
+  return { ok: true };
+}
+
+export async function listTodayConfirmedAdminAppointments(): Promise<
+  | { appointments: AdminAppointmentRecord[] }
+  | { error: "unauthenticated" | "forbidden" | "server" }
+> {
+  const { getStaffSession } = await import("@/lib/staff/auth");
+  const session = await getStaffSession();
+  if ("error" in session) return { error: session.error };
+
+  const { todayInBusinessTimezone } = await import("@/lib/sms/schedule");
+  const supabase = await createAuthenticatedSupabaseClient();
+  const { data, error } = await supabase
+    .from("appointments")
+    .select(ADMIN_TODAY_APPOINTMENT_SELECT)
+    .eq("status", "confirmed")
+    .eq("appointment_date", todayInBusinessTimezone())
+    .order("appointment_time", { ascending: true });
+
+  if (error) {
+    console.error(
+      "listTodayConfirmedAdminAppointments failed:",
+      error.code,
+      error.message,
+    );
+    return { error: "server" };
+  }
+
+  return {
+    appointments: ((data ?? []) as unknown as AppointmentRow[]).map(
+      mapAppointmentRowToAdminRecord,
+    ),
+  };
+}
+
+export async function sendAppointmentEnRouteNotification(
+  appointmentId: string,
+): Promise<
+  | { ok: true }
+  | {
+      error:
+        | "unauthenticated"
+        | "forbidden"
+        | "not_found"
+        | "conflict"
+        | "misconfigured"
+        | "server";
+    }
+> {
+  const { getStaffSession } = await import("@/lib/staff/auth");
+  const session = await getStaffSession();
+  if ("error" in session) return { error: session.error };
+
+  const { isSmsConfigured } = await import("@/lib/sms/twilio");
+  if (!isSmsConfigured()) return { error: "misconfigured" };
+
+  const appointment = await fetchAppointmentAdminRecord(appointmentId);
+  if (!appointment || appointment.status !== "confirmed") {
+    return { error: "not_found" };
+  }
+
+  const contact = contactFromAdminAppointment(appointment);
+  if (!contact?.phone) return { error: "conflict" };
+
+  const { hasSupabaseAdminConfig } = await import("@/lib/supabase/env");
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  if (!hasSupabaseAdminConfig()) return { error: "misconfigured" };
+
+  const admin = createAdminClient();
+  const { data: smsRow, error: smsLookupError } = await admin
+    .from("appointments")
+    .select("en_route_sms_sent_at")
+    .eq("id", appointmentId)
+    .maybeSingle();
+
+  if (smsLookupError) {
+    console.error(
+      "sendAppointmentEnRouteNotification lookup failed:",
+      smsLookupError.message,
+    );
+    return { error: "server" };
+  }
+  if (smsRow?.en_route_sms_sent_at) return { error: "conflict" };
+
+  const { sendAppointmentEnRouteSms } = await import(
+    "@/lib/sms/appointment-sms"
+  );
+  const sent = await sendAppointmentEnRouteSms(appointment, contact);
+  if (!sent) return { error: "server" };
+
+  const { error: markError } = await admin
+    .from("appointments")
+    .update({ en_route_sms_sent_at: new Date().toISOString() })
+    .eq("id", appointmentId);
+
+  if (markError) {
+    console.error(
+      "sendAppointmentEnRouteNotification mark failed:",
+      markError.message,
+    );
   }
 
   return { ok: true };

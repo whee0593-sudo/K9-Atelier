@@ -8,11 +8,12 @@ import {
   buildStaffNewAppointmentEmail,
 } from "@/lib/email/html-templates";
 import { sendEmail } from "@/lib/email/resend";
-
-type CustomerContact = {
-  email: string;
-  name?: string | null;
-};
+import type { CustomerContact } from "@/lib/email/appointment-context";
+import {
+  sendAppointmentConfirmedSms,
+  sendAppointmentDeclinedSms,
+  sendAppointmentSubmittedSms,
+} from "@/lib/sms/appointment-sms";
 
 export async function notifyStaffNewAppointment(
   appointment: AppointmentRecord,
@@ -44,6 +45,7 @@ export async function notifyCustomerAppointmentSubmitted(
     text: email.text,
     html: email.html,
   });
+  await sendAppointmentSubmittedSms(appointment, customer);
 }
 
 export async function notifyCustomerAppointmentConfirmed(
@@ -58,6 +60,7 @@ export async function notifyCustomerAppointmentConfirmed(
     text: email.text,
     html: email.html,
   });
+  await sendAppointmentConfirmedSms(appointment, customer);
 }
 
 export async function notifyCustomerAppointmentDeclined(
@@ -72,6 +75,7 @@ export async function notifyCustomerAppointmentDeclined(
     text: email.text,
     html: email.html,
   });
+  await sendAppointmentDeclinedSms(appointment, customer);
 }
 
 export async function sendAppointmentCreatedEmails(

@@ -26,7 +26,7 @@ const ADMIN_APPOINTMENT_SELECT = `
   confirmed_at,
   created_at,
   pets ( name, breed ),
-  profiles ( email, first_name, last_name )
+  profiles ( email, first_name, last_name, phone )
 `;
 
 export async function fetchAppointmentAdminRecord(
@@ -51,6 +51,8 @@ export async function fetchAppointmentAdminRecord(
 export type CustomerContact = {
   email: string;
   name: string | null;
+  firstName?: string | null;
+  phone?: string | null;
 };
 
 export function contactFromAdminAppointment(
@@ -60,6 +62,8 @@ export function contactFromAdminAppointment(
   return {
     email: appointment.customerEmail,
     name: appointment.customerName,
+    firstName: appointment.customerFirstName,
+    phone: appointment.customerPhone,
   };
 }
 
@@ -69,7 +73,7 @@ export async function fetchCustomerContact(
   const supabase = await createAuthenticatedSupabaseClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("email, first_name, last_name")
+    .select("email, first_name, last_name, phone")
     .eq("id", customerId)
     .maybeSingle();
 
@@ -83,5 +87,7 @@ export async function fetchCustomerContact(
   return {
     email: data.email,
     name: nameParts.length > 0 ? nameParts.join(" ") : null,
+    firstName: data.first_name,
+    phone: data.phone,
   };
 }

@@ -23,6 +23,7 @@ export type AppointmentWriteInput = {
   appointmentTime: string;
   estimatedTotal: number;
   newClientDeposit: number;
+  customerPhone: string;
 };
 
 export type AppointmentRecord = {
@@ -55,6 +56,10 @@ export type AppointmentRecord = {
 export type AdminAppointmentRecord = AppointmentRecord & {
   customerEmail: string;
   customerName: string | null;
+  customerFirstName: string | null;
+  customerPhone: string | null;
+  reminderSmsSentAt: string | null;
+  enRouteSmsSentAt: string | null;
 };
 
 export type AppointmentRow = {
@@ -80,14 +85,18 @@ export type AppointmentRow = {
   status: AppointmentStatus;
   confirmed_at: string | null;
   created_at: string;
+  reminder_sms_sent_at?: string | null;
+  en_route_sms_sent_at?: string | null;
   pets?: { name: string; breed: string } | { name: string; breed: string }[] | null;
   profiles?: {
     email: string;
     first_name: string | null;
     last_name: string | null;
+    phone: string | null;
   } | {
     email: string;
     first_name: string | null;
     last_name: string | null;
+    phone: string | null;
   }[] | null;
 };

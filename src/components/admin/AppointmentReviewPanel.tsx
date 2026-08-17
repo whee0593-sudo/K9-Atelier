@@ -20,12 +20,15 @@ export function AppointmentReviewPanel() {
   const [appointments, setAppointments] = useState<AdminAppointmentRecord[]>(
     [],
   );
+  const [todayAppointments, setTodayAppointments] = useState<
+    AdminAppointmentRecord[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const loadAppointments = useCallback(async () => {
-    setLoading(true);
+  const loadAppointments = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setLoading(true);
     setError(null);
 
     try {
@@ -35,6 +38,7 @@ export function AppointmentReviewPanel() {
       const body = (await response.json()) as {
         error?: string;
         appointments?: AdminAppointmentRecord[];
+        today?: AdminAppointmentRecord[];
       };
 
       if (response.status === 401) {
@@ -53,6 +57,7 @@ export function AppointmentReviewPanel() {
       }
 
       setAppointments(body.appointments ?? []);
+      setTodayAppointments(body.today ?? []);
     } catch {
       setError("Could not load appointments.");
     } finally {
@@ -85,11 +90,42 @@ export function AppointmentReviewPanel() {
         return;
       }
 
-      setAppointments((current) =>
-        current.filter((appointment) => appointment.id !== appointmentId),
-      );
+      await loadAppointments({ silent: true });
     } catch {
       setError("Could not update appointment.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function sendEnRoute(appointmentId: string) {
+    setBusyId(appointmentId);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `/api/admin/appointments/${appointmentId}/en-route`,
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      );
+      const body = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setError(body.error ?? "Could not send on-the-way text.");
+        return;
+      }
+
+      setTodayAppointments((current) =>
+        current.map((appointment) =>
+          appointment.id === appointmentId
+            ? { ...appointment, enRouteSmsSentAt: new Date().toISOString() }
+            : appointment,
+        ),
+      );
+    } catch {
+      setError("Could not send on-the-way text.");
     } finally {
       setBusyId(null);
     }
@@ -101,7 +137,7 @@ export function AppointmentReviewPanel() {
     );
   }
 
-  if (error && appointments.length === 0) {
+  if (error && appointments.length === 0 && todayAppointments.length === 0) {
     return (
       <div className="mt-8 rounded-2xl border border-lavender/30 bg-cream p-6">
         <p className="text-sm text-text">{error}</p>
@@ -171,6 +207,11 @@ export function AppointmentReviewPanel() {
                         ? ` (${appointment.customerEmail})`
                         : null}
                     </p>
+                    {appointment.customerPhone ? (
+                      <p className="mt-1 text-sm text-text-muted">
+                        {appointment.customerPhone}
+                      </p>
+                    ) : null}
                   </div>
                   <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
                     Pending confirmation
@@ -257,15 +298,93 @@ export function AppointmentReviewPanel() {
         </ul>
       )}
 
-      {appointments.length > 0 ? (
-        <button
-          type="button"
-          onClick={() => void loadAppointments()}
-          className="text-sm text-text-muted underline hover:text-text"
-        >
-          Refresh list
-        </button>
-      ) : null}
+      <section>
+        <h3 className="text-lg font-medium text-gold-dark">Today</h3>
+        <p className="mt-1 text-sm text-text-muted">
+          Confirmed visits for today. Send an on-the-way text when you leave.
+        </p>
+        {todayAppointments.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-lavender/30 bg-cream p-8 text-center">
+            <p className="text-sm text-text-muted">
+              No confirmed appointments on today&apos;s calendar.
+            </p>
+          </div>
+        ) : (
+          <ul className="mt-4 space-y-4">
+            {todayAppointments.map((appointment) => {
+              const busy = busyId === appointment.id;
+              const customerLabel =
+                appointment.customerName ??
+                appointment.customerEmail ??
+                "Unknown customer";
+              const alreadySent = Boolean(appointment.enRouteSmsSentAt);
+
+              return (
+                <li
+                  key={appointment.id}
+                  className="rounded-2xl border border-lavender/30 bg-cream p-6"
+                >
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="font-medium text-gold-dark">
+                        {appointment.petName}
+                        {appointment.petBreed ? (
+                          <span className="font-normal text-text-muted">
+                            {" "}
+                            · {appointment.petBreed}
+                          </span>
+                        ) : null}
+                      </h3>
+                      <p className="mt-1 text-sm text-text-muted">
+                        {customerLabel}
+                        {appointment.customerPhone
+                          ? ` · ${appointment.customerPhone}`
+                          : ""}
+                      </p>
+                    </div>
+                    <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
+                      {appointment.appointmentTime}
+                    </span>
+                  </div>
+                  <p className="mt-4 text-sm text-text">
+                    {appointment.serviceName}
+                  </p>
+                  <p className="mt-1 text-sm text-text-muted">
+                    {formatServiceAddress({
+                      street: appointment.addressStreet,
+                      city: appointment.addressCity,
+                      state: appointment.addressState,
+                      zip: appointment.addressZip,
+                    })}
+                  </p>
+                  <div className="mt-6">
+                    <button
+                      type="button"
+                      disabled={busy || alreadySent || !appointment.customerPhone}
+                      onClick={() => void sendEnRoute(appointment.id)}
+                      className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-cream transition hover:bg-gold-dark disabled:opacity-50"
+                    >
+                      {alreadySent
+                        ? "On-the-way text sent"
+                        : appointment.customerPhone
+                          ? "Text: on the way"
+                          : "No mobile number"}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <button
+        type="button"
+        onClick={() => void loadAppointments()}
+        className="text-sm text-text-muted underline hover:text-text"
+      >
+        Refresh list
+      </button>
     </div>
   );
 }

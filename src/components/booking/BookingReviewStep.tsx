@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { business, formatPrice } from "@/lib/business";
 import {
   bookingIncludesCreativeColoring,
@@ -17,6 +17,9 @@ import { formatServiceAddress, type ServiceAddress, type TravelQuote } from "@/l
 import type { PetProfile } from "@/lib/pets";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 import { createCustomerAppointment } from "@/lib/appointments/client";
+import { createClient } from "@/lib/supabase/client";
+import { isValidSmsPhone } from "@/lib/sms/phone";
+import { smsConsentCopy } from "@/lib/notifications";
 import { vaccinationBookingNeedsAdminConfirmation } from "@/lib/vaccinations/booking";
 import { CreativeBookingPolicy } from "@/components/booking/CreativeBookingPolicy";
 import {
@@ -24,6 +27,8 @@ import {
   bookingNoticeClass,
   bookingPrimaryBtnClass,
   bookingSecondaryBtnClass,
+  bookingFieldClass,
+  bookingLabelClass,
 } from "@/components/booking/booking-ui";
 
 type Props = {
@@ -72,6 +77,8 @@ export function BookingReviewStep({
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [phone, setPhone] = useState("");
+  const [smsConsent, setSmsConsent] = useState(false);
   const serviceEstimate = getServicePriceEstimate(service, pet.weightLbs);
   const addOnTotal = estimateAddOnTotal(addOnIds, addOnOptions, pet.weightLbs);
   const serviceFrom = serviceEstimate?.from ?? 0;
@@ -84,12 +91,50 @@ export function BookingReviewStep({
     pet.vaccinationBookingStatus,
   );
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSavedPhone() {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("profiles")
+          .select("phone")
+          .maybeSingle();
+        if (!cancelled && data?.phone) {
+          setPhone(data.phone);
+        }
+      } catch {
+        // Profile phone is optional until the customer enters it below.
+      }
+    }
+
+    void loadSavedPhone();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const displayServiceName = getServiceDisplayName(
     service.id,
     bookingSelection.serviceName,
   );
 
   async function handleReserve() {
+    if (!isValidSmsPhone(phone)) {
+      setError(
+        "Please enter a valid US mobile number so we can text appointment updates.",
+      );
+      return;
+    }
+
+    if (!smsConsent) {
+      setError(
+        "Please confirm you agree to receive appointment text messages.",
+      );
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -107,6 +152,8 @@ export function BookingReviewStep({
         appointmentTime,
         estimatedTotal,
         newClientDeposit: deposit,
+        customerPhone: phone,
+        smsConsent: true,
       });
       onReserved(appointment);
     } catch (submitError) {
@@ -225,6 +272,33 @@ export function BookingReviewStep({
         </p>
       )}
 
+      <div className="mt-8">
+        <label className="block">
+          <span className={bookingLabelClass}>Mobile phone for appointment texts</span>
+          <input
+            type="tel"
+            autoComplete="tel"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+            placeholder="(561) 555-0123"
+            className={bookingFieldClass}
+          />
+        </label>
+        <label className="mt-3 flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={smsConsent}
+            onChange={(event) => setSmsConsent(event.target.checked)}
+            required
+            aria-required="true"
+            className="mt-0.5 size-4 shrink-0 accent-deep-lavender"
+          />
+          <span className="font-body text-xs leading-relaxed text-taupe">
+            {smsConsentCopy}
+          </span>
+        </label>
+      </div>
+
       {error ? (
         <p
           className="font-body mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
@@ -317,7 +391,8 @@ export function BookingConfirmationView({
           </p>
         ) : (
           <p className="mt-6 text-xs text-taupe">
-            Your appointment has been reserved exclusively for {pet.name}.
+            Your appointment has been reserved exclusively for {pet.name}. We
+            will email and text updates to this reservation.
           </p>
         )}
       </div>

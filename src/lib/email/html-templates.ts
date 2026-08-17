@@ -133,7 +133,7 @@ export function bookingDetailsFromAppointment(
         ? formatPrice(appointment.estimatedTotal)
         : undefined,
     durationLabel: appointmentDurationLabel(appointment),
-    isNewClient: true,
+    isNewClient: (appointment.newClientDeposit ?? 0) > 0,
   };
 }
 

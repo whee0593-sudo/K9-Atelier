@@ -33,8 +33,8 @@ export default async function AdminAppointmentsPage() {
     <div>
       <h2 className="text-2xl font-semibold text-gold-dark">Appointments</h2>
       <p className="mt-2 text-sm text-text-muted">
-        Confirm or decline appointment requests that are waiting on staff
-        approval.
+        Confirm or decline appointment requests, and text today&apos;s clients
+        when you are on the way.
       </p>
       <AppointmentReviewPanel />
     </div>

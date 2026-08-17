@@ -1,13 +1,22 @@
 import { NextResponse } from "next/server";
 import { mapStaffServiceError } from "@/lib/staff/api-errors";
-import { listPendingAdminAppointments } from "@/lib/appointments/service";
+import {
+  listPendingAdminAppointments,
+  listTodayConfirmedAdminAppointments,
+} from "@/lib/appointments/service";
 
 export async function GET() {
-  const result = await listPendingAdminAppointments();
+  const pending = await listPendingAdminAppointments();
 
-  if ("error" in result) {
-    return mapStaffServiceError(result.error);
+  if ("error" in pending) {
+    return mapStaffServiceError(pending.error);
   }
 
-  return NextResponse.json({ appointments: result.appointments });
+  const today = await listTodayConfirmedAdminAppointments();
+  const todayAppointments = "error" in today ? [] : today.appointments;
+
+  return NextResponse.json({
+    appointments: pending.appointments,
+    today: todayAppointments,
+  });
 }

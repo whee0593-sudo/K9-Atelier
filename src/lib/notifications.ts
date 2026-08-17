@@ -48,6 +48,15 @@ function contactFooter() {
   return parts.join(" | ");
 }
 
+export const smsConsentCopy =
+  "By providing your mobile number, you agree to receive appointment confirmations, reminders, and service-related messages from K9 Atelier. Message and data rates may apply. Reply STOP to opt out.";
+
+const SMS_OPT_OUT = "Reply STOP to opt out.";
+
+function smsGreetingName(details: BookingConfirmationDetails) {
+  return details.customerName?.trim() || "there";
+}
+
 /**
  * SMS body for a booking-success notification. New-client confirmations use the
  * welcome wording and note the $50 deposit. Kept short for text-message delivery.
@@ -56,14 +65,41 @@ export function buildBookingConfirmationSms(
   details: BookingConfirmationDetails,
 ): string {
   const price = details.priceLabel ?? "TBD";
-
-  const name = details.customerName ?? "there";
+  const name = smsGreetingName(details);
 
   if (isNewClient(details)) {
-    return `Hi ${name}! Welcome to K9 Atelier. Your first appointment for ${details.petName} is confirmed for ${details.dateLabel} between ${details.timeLabel}. Est. Total: ${price}. A $${newClientDeposit} deposit has been applied and will go toward your total. We can't wait to meet ${details.petName}! Reply STOP to opt out.`;
+    return `Hi ${name}! Welcome to K9 Atelier. Your first appointment for ${details.petName} is confirmed for ${details.dateLabel} between ${details.timeLabel}. Est. Total: ${price}. A $${newClientDeposit} deposit has been applied and will go toward your total. We can't wait to meet ${details.petName}! ${SMS_OPT_OUT}`;
   }
 
-  return `Hi ${name}! This confirms your K9 Atelier appointment for ${details.petName} on ${details.dateLabel} between ${details.timeLabel}. Service: ${details.serviceName} | Est. Total: ${price}. We'll text you when we're on the way. Need to reschedule? Please give us 48 hrs notice. Reply STOP to opt out.`;
+  return `Hi ${name}! This confirms your K9 Atelier appointment for ${details.petName} on ${details.dateLabel} between ${details.timeLabel}. Service: ${details.serviceName} | Est. Total: ${price}. We'll text you when we're on the way. Need to reschedule? Please give us 48 hrs notice. ${SMS_OPT_OUT}`;
+}
+
+export function buildAppointmentSubmittedSms(
+  details: BookingConfirmationDetails,
+): string {
+  const name = smsGreetingName(details);
+  return `Hi ${name}! We received your K9 Atelier request for ${details.petName} on ${details.dateLabel} between ${details.timeLabel}. We'll confirm shortly. ${SMS_OPT_OUT}`;
+}
+
+export function buildAppointmentDeclinedSms(
+  details: BookingConfirmationDetails,
+): string {
+  const name = smsGreetingName(details);
+  return `Hi ${name}, we weren't able to confirm ${details.petName}'s K9 Atelier appointment for ${details.dateLabel} at ${details.timeLabel}. Please reply to our email to choose another time. ${SMS_OPT_OUT}`;
+}
+
+export function buildAppointmentReminderSms(
+  details: BookingConfirmationDetails,
+): string {
+  const name = smsGreetingName(details);
+  return `Hi ${name}! Reminder: ${details.petName}'s K9 Atelier appointment is today between ${details.timeLabel}. We'll text when we're on the way. ${SMS_OPT_OUT}`;
+}
+
+export function buildAppointmentEnRouteSms(
+  details: BookingConfirmationDetails,
+): string {
+  const name = smsGreetingName(details);
+  return `Hi ${name}! We're on the way for ${details.petName}'s K9 Atelier appointment. See you soon, between ${details.timeLabel}. ${SMS_OPT_OUT}`;
 }
 
 /**
