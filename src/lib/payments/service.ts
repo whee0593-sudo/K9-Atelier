@@ -131,7 +131,7 @@ export async function createSetupIntent(): Promise<
     const setupIntent = await stripe.setupIntents.create({
       customer: customerId,
       usage: "off_session",
-      automatic_payment_methods: { enabled: true },
+      automatic_payment_methods: { enabled: true, allow_redirects: "never" },
     });
 
     if (!setupIntent.client_secret) return { error: "server" };

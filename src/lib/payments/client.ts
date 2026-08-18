@@ -36,11 +36,33 @@ async function readPaymentResponse<T>(response: Response): Promise<T> {
   return body as T;
 }
 
+async function paymentFetch(input: RequestInfo, init?: RequestInit) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25000);
+  try {
+    return await fetch(input, {
+      ...init,
+      credentials: "include",
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new PaymentClientError(
+        "Saving this card timed out. Please try again.",
+        408,
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function fetchCustomerPaymentMethods(): Promise<{
   methods: PaymentMethodRecord[];
   configured: boolean;
 }> {
-  const response = await fetch("/api/payment-methods", { credentials: "include" });
+  const response = await paymentFetch("/api/payment-methods");
   return readPaymentResponse(response);
 }
 
@@ -48,9 +70,8 @@ export async function createPaymentSetupIntent(): Promise<{
   clientSecret: string;
   publishableKey: string;
 }> {
-  const response = await fetch("/api/payment-methods/setup-intent", {
+  const response = await paymentFetch("/api/payment-methods/setup-intent", {
     method: "POST",
-    credentials: "include",
   });
   return readPaymentResponse(response);
 }
@@ -58,9 +79,8 @@ export async function createPaymentSetupIntent(): Promise<{
 export async function savePaymentSetupIntent(
   setupIntentId: string,
 ): Promise<PaymentMethodRecord> {
-  const response = await fetch("/api/payment-methods", {
+  const response = await paymentFetch("/api/payment-methods", {
     method: "POST",
-    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ setupIntentId }),
   });
@@ -71,9 +91,8 @@ export async function savePaymentSetupIntent(
 export async function deleteCustomerPaymentMethod(
   paymentMethodId: string,
 ): Promise<void> {
-  const response = await fetch(`/api/payment-methods/${paymentMethodId}`, {
+  const response = await paymentFetch(`/api/payment-methods/${paymentMethodId}`, {
     method: "DELETE",
-    credentials: "include",
   });
   await readPaymentResponse<{ ok: boolean }>(response);
 }

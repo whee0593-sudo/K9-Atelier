@@ -24,15 +24,17 @@ const stripePromiseCache = new Map<string, Promise<Stripe | null>>();
 function stripePromiseFor(publishableKey: string) {
   const existing = stripePromiseCache.get(publishableKey);
   if (existing) return existing;
-  const promise = loadStripe(publishableKey);
+  const promise = loadStripe(publishableKey, { locale: "en" });
   stripePromiseCache.set(publishableKey, promise);
   return promise;
 }
 
 function AddCardForm({
+  clientSecret,
   onSaved,
   onCancel,
 }: {
+  clientSecret: string;
   onSaved: (method: PaymentMethodRecord) => void;
   onCancel: () => void;
 }) {
@@ -46,18 +48,38 @@ function AddCardForm({
     setSubmitting(true);
     setError(null);
     try {
-      const { error: confirmError, setupIntent } = await stripe.confirmSetup({
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        setError(submitError.message ?? "Please complete the card details.");
+        return;
+      }
+
+      const confirmation = stripe.confirmSetup({
         elements,
+        clientSecret,
         redirect: "if_required",
         confirmParams: {
           return_url: `${window.location.origin}/account/payment`,
         },
       });
+      const timeout = new Promise<never>((_, reject) => {
+        window.setTimeout(() => {
+          reject(
+            new Error(
+              "Card verification is taking too long. Please cancel and try again.",
+            ),
+          );
+        }, 40000);
+      });
+      const { error: confirmError, setupIntent } = await Promise.race([
+        confirmation,
+        timeout,
+      ]);
       if (confirmError) {
         setError(confirmError.message ?? "This card could not be verified.");
         return;
       }
-      if (!setupIntent?.id) {
+      if (!setupIntent?.id || setupIntent.status !== "succeeded") {
         setError("This card could not be verified. Please try again.");
         return;
       }
@@ -76,7 +98,15 @@ function AddCardForm({
 
   return (
     <div className="space-y-4">
-      <PaymentElement />
+      <PaymentElement
+        options={{
+          wallets: {
+            applePay: "never",
+            googlePay: "never",
+            link: "never",
+          },
+        }}
+      />
       {error && (
         <p className="text-sm text-red-800" role="alert">
           {error}
@@ -227,10 +257,12 @@ export function PaymentMethodsManager() {
             stripe={stripePromise}
             options={{
               clientSecret: setup.clientSecret,
+              locale: "en",
               appearance: { theme: "stripe" },
             }}
           >
             <AddCardForm
+              clientSecret={setup.clientSecret}
               onSaved={(method) => {
                 setMethods((current) => {
                   if (current.some((item) => item.id === method.id)) {
