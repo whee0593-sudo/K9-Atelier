@@ -12,7 +12,7 @@ const details = {
   petName: "Bella",
   serviceName: "Signature Bath & Care",
   dateLabel: "Tuesday, August 18, 2026",
-  timeLabel: "10:00 AM – 10:30 AM",
+  timeLabel: "10–11 AM",
   priceLabel: "$95",
 };
 

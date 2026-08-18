@@ -216,7 +216,7 @@ export function DateTimeStep({
 
         <div className={styles.rule} />
 
-        <p className={styles.sectionLabel}>Available Times</p>
+        <p className={styles.sectionLabel}>Available Time Windows</p>
 
         {!selectedDate ? (
           <p className={styles.noTimes}>

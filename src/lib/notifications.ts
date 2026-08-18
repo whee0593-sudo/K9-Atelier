@@ -10,7 +10,7 @@ export type BookingConfirmationDetails = {
   serviceName: string;
   /** Appointment date, already formatted for display. */
   dateLabel: string;
-  /** Arrival window, e.g. "10:00 AM – 10:30 AM". */
+  /** Arrival window, e.g. "10–11 AM". */
   timeLabel: string;
   addressLabel?: string;
   durationLabel?: string;

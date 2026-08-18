@@ -10,7 +10,23 @@ const DAY_KEYS = [
   "saturday",
 ] as const;
 
-/** Half-hour slots from hoursStart up to (but not including) hoursEnd */
+function formatClock(totalMinutes: number) {
+  const hour24 = Math.floor(totalMinutes / 60);
+  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+  const ampm = hour24 < 12 ? "AM" : "PM";
+  return { hour12, ampm };
+}
+
+function formatHourWindow(startMinutes: number, endMinutes: number) {
+  const start = formatClock(startMinutes);
+  const end = formatClock(endMinutes);
+  if (start.ampm === end.ampm) {
+    return `${start.hour12}–${end.hour12} ${start.ampm}`;
+  }
+  return `${start.hour12} ${start.ampm} – ${end.hour12} ${end.ampm}`;
+}
+
+/** One-hour arrival windows from hoursStart up to hoursEnd (e.g. 9–10 AM). */
 export function getTimeSlots() {
   const [startH, startM] = business.booking.hoursStart.split(":").map(Number);
   const [endH, endM] = business.booking.hoursEnd.split(":").map(Number);
@@ -18,14 +34,8 @@ export function getTimeSlots() {
   const end = endH * 60 + endM;
   const slots: string[] = [];
 
-  for (let m = start; m < end; m += 30) {
-    const h = Math.floor(m / 60);
-    const min = m % 60;
-    const hour12 = h % 12 === 0 ? 12 : h % 12;
-    const ampm = h < 12 ? "AM" : "PM";
-    slots.push(
-      `${hour12}:${min.toString().padStart(2, "0")} ${ampm}`,
-    );
+  for (let m = start; m + 60 <= end; m += 60) {
+    slots.push(formatHourWindow(m, m + 60));
   }
 
   return slots;
