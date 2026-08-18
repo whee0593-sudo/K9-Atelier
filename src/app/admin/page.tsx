@@ -5,8 +5,7 @@ export default function AdminDashboardPage() {
     <div>
       <h2 className="text-2xl font-semibold text-gold-dark">Dashboard</h2>
       <p className="mt-2 text-sm text-text-muted">
-        Manage customer profiles, send messages and files, and record service
-        notes.
+        Manage customer profiles, pet records, appointments, and messages.
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -42,9 +41,9 @@ export default function AdminDashboardPage() {
           href="/admin/pets"
           className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
         >
-          <h3 className="font-medium text-gold-dark">Pet Service Notes</h3>
+          <h3 className="font-medium text-gold-dark">Customers & Pets</h3>
           <p className="mt-2 text-sm text-text-muted">
-            Internal notes on products and services used per pet.
+            Edit owner profiles, pet records, and internal service notes.
           </p>
         </Link>
         <Link

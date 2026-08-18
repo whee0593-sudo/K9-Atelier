@@ -141,11 +141,18 @@ export function validateCreateAppointmentInput(
       "smsConsent",
     );
   }
-  const newClientDeposit =
-    typeof record.newClientDeposit === "number" &&
-    Number.isFinite(record.newClientDeposit)
-      ? record.newClientDeposit
-      : business.booking.newClientDeposit;
+  const paymentMethodId = readString(
+    record,
+    "paymentMethodId",
+    "Payment method",
+    80,
+  );
+  if (!UUID_PATTERN.test(paymentMethodId)) {
+    throw new AppointmentValidationError(
+      "Please select a saved payment method for this appointment.",
+      "paymentMethodId",
+    );
+  }
 
   if (travelDistanceMiles > business.serviceArea.maxDistanceMiles) {
     throw new AppointmentValidationError(
@@ -171,7 +178,7 @@ export function validateCreateAppointmentInput(
     appointmentDate,
     appointmentTime,
     estimatedTotal,
-    newClientDeposit,
+    paymentMethodId,
     customerPhone,
   };
 }

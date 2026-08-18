@@ -319,7 +319,7 @@ export type CustomerConfirmedEmailContent = {
   petName: string;
   detailRows: CustomerLetterDetailRow[];
   estimateNote: string;
-  depositAmount: string | null;
+  paymentNote?: string | null;
 };
 
 function customerLetterHeader(subject: string) {
@@ -363,13 +363,12 @@ export function buildCustomerConfirmedEmailHtml(content: CustomerConfirmedEmailC
     .map(({ label, value }) => customerLetterDetailRow(label, value))
     .join("");
   const petName = escapeHtml(content.petName);
-  const depositSection =
-    content.depositAmount != null
-      ? customerConfirmedSection(
-          "New client deposit",
-          `<p style="margin:0; font-size:13px; color:#5A5347;">A ${escapeHtml(content.depositAmount)} deposit has been placed on the payment method provided, applied in full toward the appointment total. This simply secures your spot on our schedule.</p>`,
-        )
-      : "";
+  const paymentSection = content.paymentNote
+    ? customerConfirmedSection(
+        "Payment",
+        `<p style="margin:0; font-size:13px; color:#5A5347;">${escapeHtml(content.paymentNote)}</p>`,
+      )
+    : "";
 
   return `${customerLetterHeader(content.subject)}
       <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:14px; line-height:1.8; background:#ffffff;">
@@ -381,7 +380,7 @@ export function buildCustomerConfirmedEmailHtml(content: CustomerConfirmedEmailC
           </table>
         </div>
         <p style="margin:0 0 18px; font-size:12px; color:${STAFF_EMAIL.muted};">${escapeHtml(content.estimateNote)}</p>
-        ${depositSection}
+        ${paymentSection}
         ${customerConfirmedSection(
           "What to expect",
           `<p style="margin:0; font-size:13px; color:#5A5347;">Our mobile grooming studio will arrive within your scheduled window. A brief health and coat check takes place before we begin, and we will keep you informed throughout.</p>`,

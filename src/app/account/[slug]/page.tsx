@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { CustomerBookingsList } from "@/components/account/CustomerBookingsList";
 import { CustomerInbox } from "@/components/account/CustomerInbox";
 import { AccountFieldsForm } from "@/components/account/AccountFieldsForm";
+import { CustomerProfileSection } from "@/components/account/CustomerProfileForm";
+import { PaymentMethodsManager } from "@/components/account/PaymentMethodsManager";
 import { PetProfilesManager } from "@/components/account/PetProfilesManager";
 import { getAccountSection } from "@/lib/account-fields";
 
@@ -37,6 +39,10 @@ export default async function AccountSectionPage({ params }: Props) {
           <CustomerInbox />
         ) : slug === "bookings" ? (
           <CustomerBookingsList />
+        ) : slug === "payment" ? (
+          <PaymentMethodsManager />
+        ) : slug === "profile" ? (
+          <CustomerProfileSection />
         ) : slug === "addresses" ? (
           <>
             <p className="mb-6 text-sm text-text-muted">

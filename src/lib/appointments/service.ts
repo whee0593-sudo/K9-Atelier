@@ -29,6 +29,7 @@ import {
   sendAppointmentCreatedEmails,
   sendAppointmentStatusEmails,
 } from "@/lib/email/appointment-mails";
+import { getCustomerPaymentMethod } from "@/lib/payments/service";
 
 const APPOINTMENT_SELECT = `
   id,
@@ -76,6 +77,7 @@ export async function createAppointment(
         | "unauthenticated"
         | "not_found"
         | "conflict"
+        | "payment_required"
         | "server";
     }
 > {
@@ -107,6 +109,12 @@ export async function createAppointment(
   if (!vaccinationReadyToBook(vaccinationStatus)) {
     return { error: "conflict" };
   }
+
+  const paymentMethod = await getCustomerPaymentMethod(
+    user.id,
+    input.paymentMethodId,
+  );
+  if (!paymentMethod) return { error: "payment_required" };
 
   const { error: phoneError } = await supabase
     .from("profiles")
@@ -141,7 +149,8 @@ export async function createAppointment(
       appointment_time: input.appointmentTime,
       timezone: business.booking.timezone,
       estimated_total: input.estimatedTotal,
-      new_client_deposit: input.newClientDeposit,
+      new_client_deposit: 0,
+      payment_method_id: input.paymentMethodId,
       vaccination_status_at_booking: vaccinationStatus,
       status,
       confirmed_at: status === "confirmed" ? new Date().toISOString() : null,

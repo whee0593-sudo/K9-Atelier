@@ -1,13 +1,5 @@
 import { business } from "@/lib/business";
 
-/**
- * Single source of truth for the new-client deposit amount and short notice.
- * Edit the wording/amount in `content/business.json` →
- * `booking.newClientDeposit` / `booking.newClientDepositNotice`.
- */
-export const newClientDeposit = business.booking.newClientDeposit;
-export const newClientDepositNotice = business.booking.newClientDepositNotice;
-
 /** Disclaimer shown under the estimated total in booking confirmations. */
 export const estimateNote =
   "Please note: the price listed above is an estimate based on your dog's typical size and coat. Final pricing may vary depending on your dog's condition on the day of service — including coat matting, temperament, and cooperation level — and will always be confirmed with you before we begin.";
@@ -24,8 +16,8 @@ export type BookingConfirmationDetails = {
   durationLabel?: string;
   priceLabel?: string;
   /**
-   * Defaults to `true` so the deposit messaging is always included in a
-   * new-client confirmation. Pass `false` for returning clients.
+   * Defaults to `true` so first-visit confirmations use welcome wording.
+   * Pass `false` for returning clients.
    */
   isNewClient?: boolean;
   /** Signature name for the email closing (e.g. the groomer's name). */
@@ -58,8 +50,8 @@ function smsGreetingName(details: BookingConfirmationDetails) {
 }
 
 /**
- * SMS body for a booking-success notification. New-client confirmations use the
- * welcome wording and note the $50 deposit. Kept short for text-message delivery.
+ * SMS body for a booking-success notification. First-visit confirmations use
+ * welcome wording. Kept short for text-message delivery.
  */
 export function buildBookingConfirmationSms(
   details: BookingConfirmationDetails,
@@ -68,7 +60,7 @@ export function buildBookingConfirmationSms(
   const name = smsGreetingName(details);
 
   if (isNewClient(details)) {
-    return `Hi ${name}! Welcome to K9 Atelier. Your first appointment for ${details.petName} is confirmed for ${details.dateLabel} between ${details.timeLabel}. Est. Total: ${price}. A $${newClientDeposit} deposit has been applied and will go toward your total. We can't wait to meet ${details.petName}! ${SMS_OPT_OUT}`;
+    return `Hi ${name}! Welcome to K9 Atelier. Your first appointment for ${details.petName} is confirmed for ${details.dateLabel} between ${details.timeLabel}. Est. Total: ${price}. Payment is settled after your visit. We can't wait to meet ${details.petName}! ${SMS_OPT_OUT}`;
   }
 
   return `Hi ${name}! This confirms your K9 Atelier appointment for ${details.petName} on ${details.dateLabel} between ${details.timeLabel}. Service: ${details.serviceName} | Est. Total: ${price}. We'll text you when we're on the way. Need to reschedule? Please give us 48 hrs notice. ${SMS_OPT_OUT}`;
@@ -103,8 +95,8 @@ export function buildAppointmentEnRouteSms(
 }
 
 /**
- * Email subject + body for a booking-success notification. New-client
- * confirmations use the full welcome email, including the $50 deposit section.
+ * Email subject + body for a booking-success notification. First-visit
+ * confirmations use the welcome email.
  */
 export function buildBookingConfirmationEmail(
   details: BookingConfirmationDetails,
@@ -158,8 +150,8 @@ export function buildBookingConfirmationEmail(
     "",
     estimateNote,
     "",
-    "New Client Deposit",
-    `As a new client, a $${newClientDeposit} deposit will be collected to confirm your first appointment and applied toward your service total.`,
+    "Payment",
+    "You are not charged when you book. Payment is settled after your appointment. Late cancellations and no-shows may be charged to the card you selected, according to our cancellation policy.",
     "",
     "What to Expect",
     "Our mobile grooming studio will arrive within your scheduled window. A quick health and coat check will take place before we begin, and we'll keep you updated throughout the appointment.",

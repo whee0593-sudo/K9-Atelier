@@ -83,9 +83,7 @@
   "booking": {
     "requiresPaymentMethod": true,
     "chargeAtBooking": false,
-    "newClientDeposit": 50,
-    "newClientDepositNotice": "New clients: a $50 deposit is collected to confirm your first appointment and is applied toward that day's grooming total — not an extra charge on top of your service.",
-    "paymentMethodNote": "A valid payment method is required to confirm every booking. Returning clients are not charged when you book — payment is settled after your appointment.",
+    "paymentMethodNote": "A valid payment method must be on file before a pet profile can be saved. You choose which saved card to use for each appointment and are not charged when you book — payment is settled after your appointment. Late cancellations and no-shows may be charged to that card per our policy.",
     "availableDays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
     "hoursStart": "09:00",
     "hoursEnd": "16:00",
@@ -119,8 +117,8 @@
           "body": "We understand that health emergencies — yours or your dog's — can arise without warning. Please reach out as soon as possible; these situations are handled with flexibility and are not subject to standard cancellation fees."
         },
         {
-          "heading": "5. Deposits for New Clients",
-          "body": "New clients are asked to place a $50 deposit to confirm their first appointment. This deposit is applied toward the total cost of your service."
+          "heading": "5. Payment Method on File",
+          "body": "A valid payment method is required on your account before a pet profile can be saved. After you choose your appointment date and time, you will select which saved card to use for that visit. You are not charged when you book. Payment is settled after your appointment. Late cancellations and no-shows may be charged to the selected card according to the policy above."
         }
       ],
       "outro": "Thank you for understanding — these policies allow us to protect the time and care every dog on our schedule deserves, including yours."

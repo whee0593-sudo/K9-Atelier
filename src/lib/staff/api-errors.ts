@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export function staffJsonError(
   message: string,
-  status: 400 | 401 | 403 | 404 | 409 | 500,
+  status: 400 | 401 | 403 | 404 | 409 | 500 | 503,
 ) {
   return NextResponse.json({ error: message }, { status });
 }

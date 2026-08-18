@@ -68,7 +68,7 @@
 | 3. 展示页面（含 Services 页） | ✅ 完成 |
 | 4. GitHub + Vercel + k9atelier.com 上线 | ✅ 完成 |
 | 5. 预约 + 路费计算 | ⏳ 下一步 |
-| 6. Stripe 定金 | 待开始 |
+| 6. Stripe 存卡（预约不扣款） | 代码已接，待配置密钥 |
 | 7. 确认邮件 | 待开始 |
 
 **专属工作台：** 见 [WORKBENCH.md](./WORKBENCH.md) · 路线图见 [workspace/ROADMAP.md](./workspace/ROADMAP.md)

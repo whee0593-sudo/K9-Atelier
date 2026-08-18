@@ -38,10 +38,9 @@ export function getServiceAreaFaqParagraphs() {
 }
 
 export function getPaymentFaqParagraphs() {
-  const { newClientDeposit } = business.booking;
   return [
-    "A valid payment method is required to secure every booking.",
-    "Returning clients are not charged at the time of booking — payment is settled after your appointment.",
-    `New clients are asked to place a $${newClientDeposit} deposit at booking to confirm their first appointment. This deposit is applied directly toward the total cost of your service, and the remaining balance is settled afterward.`,
+    "A valid payment method must be on file before a pet profile can be saved.",
+    "After you choose your appointment date and time, you will select which saved card to use for that visit.",
+    "You are not charged when you book. Payment is settled after your appointment. Late cancellations and no-shows may be charged to the selected card according to our cancellation policy.",
   ] as const;
 }

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PetProfileAgeSummary } from "@/components/account/PetBirthdayFields";
 import { PetProfileFieldsForm } from "@/components/account/PetProfileFieldsForm";
 import type { PetProfile } from "@/lib/pets";
 import { petProfileVaccinationLabel } from "@/lib/vaccinations/booking";
 import { useCustomerPets } from "@/lib/pets/use-customer-pets";
+import { fetchCustomerPaymentMethods } from "@/lib/payments/client";
+import { PaymentRequiredNotice } from "@/components/account/PaymentMethodsManager";
 
 function createDraftPet(name = "New Pet"): PetProfile {
   return {
@@ -116,6 +118,23 @@ export function PetProfilesManager() {
   const [showNewForm, setShowNewForm] = useState(false);
   const [draftPet, setDraftPet] = useState<PetProfile>(() => createDraftPet());
   const [submittingDraft, setSubmittingDraft] = useState(false);
+  const [hasPaymentMethod, setHasPaymentMethod] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCards() {
+      try {
+        const result = await fetchCustomerPaymentMethods();
+        if (!cancelled) setHasPaymentMethod(result.methods.length > 0);
+      } catch {
+        if (!cancelled) setHasPaymentMethod(false);
+      }
+    }
+    void loadCards();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleAddPet() {
     setSubmittingDraft(true);
@@ -174,7 +193,9 @@ export function PetProfilesManager() {
         />
       ))}
 
-      {showNewForm ? (
+      {hasPaymentMethod === false && <PaymentRequiredNotice />}
+
+      {showNewForm && hasPaymentMethod ? (
         <div className="rounded-2xl border border-dashed border-gold/50 bg-lavender-light/20 p-6">
           <h3 className="font-medium text-gold-dark">New Pet Profile</h3>
           <div className="mt-4">
@@ -207,8 +228,12 @@ export function PetProfilesManager() {
       ) : (
         <button
           type="button"
-          onClick={() => setShowNewForm(true)}
-          className="w-full rounded-2xl border border-dashed border-gold/50 py-4 text-sm font-medium text-gold-dark transition hover:bg-lavender-light/40"
+          onClick={() => {
+            if (!hasPaymentMethod) return;
+            setShowNewForm(true);
+          }}
+          disabled={!hasPaymentMethod}
+          className="w-full rounded-2xl border border-dashed border-gold/50 py-4 text-sm font-medium text-gold-dark transition hover:bg-lavender-light/40 disabled:cursor-not-allowed disabled:opacity-50"
         >
           + Add Another Pet
         </button>

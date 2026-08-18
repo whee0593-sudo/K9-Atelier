@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PetProfileFieldsForm } from "@/components/account/PetProfileFieldsForm";
 import {
   petReadyToBook,
@@ -8,6 +8,7 @@ import {
 } from "@/lib/pets";
 import { vaccinationBookingNeedsAdminConfirmation } from "@/lib/vaccinations/booking";
 import { useCustomerPets } from "@/lib/pets/use-customer-pets";
+import { fetchCustomerPaymentMethods } from "@/lib/payments/client";
 import { formatPetAgeLabel, getPetAgeYears } from "@/lib/pet-age";
 import {
   bookingCardClass,
@@ -39,6 +40,23 @@ export function PetSelector({
   const [showAddForm, setShowAddForm] = useState(false);
   const [draftPet, setDraftPet] = useState<PetProfile>(() => createDraftPet());
   const [submittingDraft, setSubmittingDraft] = useState(false);
+  const [hasPaymentMethod, setHasPaymentMethod] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCards() {
+      try {
+        const result = await fetchCustomerPaymentMethods();
+        if (!cancelled) setHasPaymentMethod(result.methods.length > 0);
+      } catch {
+        if (!cancelled) setHasPaymentMethod(false);
+      }
+    }
+    void loadCards();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function saveNewPet() {
     setSubmittingDraft(true);
@@ -73,13 +91,27 @@ export function PetSelector({
         <p className="font-body text-sm text-taupe">
           No dogs in your profile yet.
         </p>
-        <button
-          type="button"
-          onClick={() => setShowAddForm(true)}
-          className={`${bookingPrimaryBtnClass} mt-6`}
-        >
-          Add a Dog
-        </button>
+        {hasPaymentMethod == null ? (
+          <p className="font-body mt-6 text-sm text-taupe">Checking payment method…</p>
+        ) : hasPaymentMethod === false ? (
+          <div className="mt-6 text-left">
+            <p className="font-body text-sm leading-relaxed text-taupe">
+              A valid payment method must be on file before you can save a pet
+              profile. You will not be charged when you add a card.
+            </p>
+            <a href="/account/payment" className={`${bookingPrimaryBtnClass} mt-6`}>
+              Add a payment method
+            </a>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowAddForm(true)}
+            className={`${bookingPrimaryBtnClass} mt-6`}
+          >
+            Add a Dog
+          </button>
+        )}
       </div>
     );
   }
@@ -161,7 +193,18 @@ export function PetSelector({
         );
       })}
 
-      {showAddForm ? (
+      {hasPaymentMethod === false && pets.length > 0 && (
+        <li>
+          <p className="font-body rounded-xl border border-champagne/40 bg-cream px-4 py-3 text-sm text-taupe">
+            Add a valid card on file before creating another pet profile.{" "}
+            <a href="/account/payment" className="text-ink underline">
+              Add a payment method
+            </a>
+          </p>
+        </li>
+      )}
+
+      {showAddForm && hasPaymentMethod ? (
         <li className={`${bookingNoticeClass} space-y-4`}>
           <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
             New Dog Profile
@@ -195,8 +238,12 @@ export function PetSelector({
         <li>
           <button
             type="button"
-            onClick={() => setShowAddForm(true)}
-            className={`${bookingSecondaryBtnClass} flex w-full justify-center border-dashed`}
+            onClick={() => {
+              if (!hasPaymentMethod) return;
+              setShowAddForm(true);
+            }}
+            disabled={!hasPaymentMethod}
+            className={`${bookingSecondaryBtnClass} flex w-full justify-center border-dashed disabled:cursor-not-allowed disabled:opacity-50`}
           >
             + Add a Dog
           </button>

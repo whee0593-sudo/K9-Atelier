@@ -17,10 +17,11 @@ const details = {
 };
 
 describe("appointment SMS copy", () => {
-  it("includes deposit wording for new clients", () => {
+  it("uses welcome wording for first-visit clients", () => {
     const body = buildBookingConfirmationSms({ ...details, isNewClient: true });
     assert.match(body, /Welcome to K9 Atelier/);
-    assert.match(body, /\$50 deposit/);
+    assert.match(body, /Payment is settled after your visit/);
+    assert.equal(body.includes("deposit"), false);
     assert.match(body, /Reply STOP to opt out/);
   });
 

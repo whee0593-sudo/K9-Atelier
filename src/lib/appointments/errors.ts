@@ -22,7 +22,7 @@ export function handleAppointmentRouteError(error: unknown) {
 }
 
 export function mapAppointmentServiceError(
-  error: "unauthenticated" | "not_found" | "conflict" | "server",
+  error: "unauthenticated" | "not_found" | "conflict" | "payment_required" | "server",
 ) {
   switch (error) {
     case "unauthenticated":
@@ -32,6 +32,11 @@ export function mapAppointmentServiceError(
     case "conflict":
       return appointmentJsonError(
         "This pet is not ready to book yet. Please update vaccination records first.",
+        409,
+      );
+    case "payment_required":
+      return appointmentJsonError(
+        "Please select a saved payment method for this appointment.",
         409,
       );
     default:

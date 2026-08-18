@@ -22,7 +22,7 @@ export type AppointmentWriteInput = {
   appointmentDate: string;
   appointmentTime: string;
   estimatedTotal: number;
-  newClientDeposit: number;
+  paymentMethodId: string;
   customerPhone: string;
 };
 

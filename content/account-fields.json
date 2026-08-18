@@ -147,7 +147,7 @@
       "path": "/account/pets",
       "title": "My Pets",
       "allowMultiple": true,
-      "description": "Save a profile for each pet. When booking, select which pet the appointment is for.",
+      "description": "Save a profile for each pet after a valid payment method is on file. When booking, select which pet the appointment is for.",
       "fields": [
         {
           "id": "name",
@@ -244,14 +244,14 @@
       "id": "payment",
       "path": "/account/payment",
       "title": "Payment Methods",
-      "description": "Save a valid card on file to confirm bookings. You are not charged when you book.",
+      "description": "A valid card on file is required before you can save a pet profile. You choose which card to use for each appointment and are not charged when you book.",
       "fields": [
         {
           "id": "savedCards",
           "label": "Saved Cards",
           "type": "payment-list",
           "required": true,
-          "note": "Managed securely through Stripe. A valid card is required to confirm appointments."
+          "note": "Managed securely through Stripe. A valid card is required on file before adding a pet profile, and you will select a card for each appointment."
         }
       ]
     },

@@ -36,7 +36,7 @@ C:\Users\Mark\Projects\k9-atelier
 | **1C** | GitHub + Vercel + k9atelier.com 上线 | ✅ 完成 |
 | **2A** | 关于我们、FAQ、联系页 | ⏳ 待做 |
 | **2B** | 在线预约表单 + 距离/路费计算 | ⏳ 待做 |
-| **2C** | Stripe 收 $50 定金 | ⏳ 待做 |
+| **2C** | Stripe 存卡（预约不扣款） | ⏳ 待配置密钥 |
 | **2D** | 确认邮件（您和客户都收到） | ⏳ 待做 |
 | **3** | 管理后台 / 预约列表（可选 Amelia） | 以后 |
 
@@ -44,7 +44,7 @@ C:\Users\Mark\Projects\k9-atelier
 
 ## 待您决定（阻塞后续开发）
 
-- [ ] **取消规则**（例如：提前 24 小时取消可退定金）
+- [ ] **取消规则**（FAQ 已有 48 小时政策；是否还要改）
 - [ ] **你家地址**（仅后台算距离，不公开完整地址）
 - [ ] **对外电话**（有了可加进网站）
 
@@ -54,7 +54,7 @@ C:\Users\Mark\Projects\k9-atelier
 
 | 要改什么 | 改哪个文件 |
 |----------|------------|
-| 服务、价格、路费、定金 | `content/business.json` |
+| 服务、价格、路费、付款规则 | `content/business.json` |
 | 服务页长文案 | `content/SERVICES.md` |
 | 配色、品牌 | `content/BRAND.md` |
 | 首页 | `src/app/page.tsx` |
@@ -81,7 +81,7 @@ C:\Users\Mark\Projects\k9-atelier
 
 1. **补全展示页** — About、FAQ、Contact（提升专业度）
 2. **在线预约** — 选服务、宠物信息、地址、算路费、选时间
-3. **Stripe 定金** — 预约时收 $50
+3. **Stripe 存卡** — 预约时验证并保存卡，不扣款
 4. **确认邮件** — 自动通知您和客户
 5. **Hostinger MX** — 若邮箱还有问题，在 WordPress.com DNS 补 MX
 

@@ -8,7 +8,7 @@ export type ApiErrorBody = {
 
 export function jsonError(
   message: string,
-  status: 400 | 401 | 404 | 409 | 500 | 502 | 503,
+  status: 400 | 401 | 403 | 404 | 409 | 500 | 502 | 503,
   field?: string,
 ) {
   const body: ApiErrorBody = field ? { error: message, field } : { error: message };

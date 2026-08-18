@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { business, formatPrice } from "@/lib/business";
+import { formatPrice } from "@/lib/business";
 import {
   bookingIncludesCreativeColoring,
   formatServicePrice,
@@ -17,6 +17,11 @@ import { formatServiceAddress, type ServiceAddress, type TravelQuote } from "@/l
 import type { PetProfile } from "@/lib/pets";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 import { createCustomerAppointment } from "@/lib/appointments/client";
+import { fetchCustomerPaymentMethods } from "@/lib/payments/client";
+import {
+  formatPaymentMethodLabel,
+  type PaymentMethodRecord,
+} from "@/lib/payments/types";
 import { createClient } from "@/lib/supabase/client";
 import { isValidSmsPhone } from "@/lib/sms/phone";
 import { smsConsentCopy } from "@/lib/notifications";
@@ -79,11 +84,14 @@ export function BookingReviewStep({
   const [error, setError] = useState<string | null>(null);
   const [phone, setPhone] = useState("");
   const [smsConsent, setSmsConsent] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodRecord[]>([]);
+  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<string | null>(
+    null,
+  );
   const serviceEstimate = getServicePriceEstimate(service, pet.weightLbs);
   const addOnTotal = estimateAddOnTotal(addOnIds, addOnOptions, pet.weightLbs);
   const serviceFrom = serviceEstimate?.from ?? 0;
   const estimatedTotal = serviceFrom + addOnTotal + travelQuote.fee;
-  const deposit = business.booking.newClientDeposit;
   const creativePolicy = bookingIncludesCreativeColoring(addOnIds)
     ? getCreativeBookingPolicy()
     : undefined;
@@ -94,22 +102,27 @@ export function BookingReviewStep({
   useEffect(() => {
     let cancelled = false;
 
-    async function loadSavedPhone() {
+    async function loadSavedDetails() {
       try {
-        const supabase = createClient();
-        const { data } = await supabase
-          .from("profiles")
-          .select("phone")
-          .maybeSingle();
-        if (!cancelled && data?.phone) {
-          setPhone(data.phone);
+        const [phoneResult, paymentResult] = await Promise.all([
+          createClient().from("profiles").select("phone").maybeSingle(),
+          fetchCustomerPaymentMethods(),
+        ]);
+        if (cancelled) return;
+        if (phoneResult.data?.phone) {
+          setPhone(phoneResult.data.phone);
         }
+        setPaymentMethods(paymentResult.methods);
+        const defaultMethod =
+          paymentResult.methods.find((method) => method.isDefault) ??
+          paymentResult.methods[0];
+        if (defaultMethod) setSelectedPaymentMethodId(defaultMethod.id);
       } catch {
-        // Profile phone is optional until the customer enters it below.
+        // Profile phone and cards are confirmed before reserve.
       }
     }
 
-    void loadSavedPhone();
+    void loadSavedDetails();
     return () => {
       cancelled = true;
     };
@@ -135,6 +148,11 @@ export function BookingReviewStep({
       return;
     }
 
+    if (!selectedPaymentMethodId) {
+      setError("Please select a saved payment method for this appointment.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -151,7 +169,7 @@ export function BookingReviewStep({
         appointmentDate,
         appointmentTime,
         estimatedTotal,
-        newClientDeposit: deposit,
+        paymentMethodId: selectedPaymentMethodId,
         customerPhone: phone,
         smsConsent: true,
       });
@@ -246,15 +264,51 @@ export function BookingReviewStep({
               From {formatPrice(estimatedTotal)}
             </span>
           </div>
-          <div className="mt-4 flex justify-between gap-4 text-sm">
-            <span className="text-taupe">New Client Deposit Today</span>
-            <span className="text-ink">{formatPrice(deposit)}</span>
-          </div>
           <p className="font-body mt-4 text-xs leading-relaxed text-taupe">
-            A ${deposit} deposit reserves your first K9 Atelier appointment and
-            will be applied toward your final service total.
+            You will not be charged when you book. Payment is settled after your
+            appointment. Late cancellations and no-shows may be charged to the
+            card you select below.
           </p>
         </div>
+      </div>
+
+      <div className={`${bookingNoticeClass} mt-6 space-y-4`}>
+        <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+          Payment Method for This Appointment
+        </p>
+        {paymentMethods.length === 0 ? (
+          <div>
+            <p className="font-body text-sm leading-relaxed text-taupe">
+              A valid card must be on file before you can reserve. Add a card to
+              your account, then return to this step.
+            </p>
+            <Link href="/account/payment" className={`${bookingSecondaryBtnClass} mt-4 inline-flex`}>
+              Add a payment method
+            </Link>
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {paymentMethods.map((method) => {
+              const checked = selectedPaymentMethodId === method.id;
+              return (
+                <li key={method.id}>
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => setSelectedPaymentMethodId(method.id)}
+                      className="mt-0.5 size-4 shrink-0 accent-deep-lavender"
+                    />
+                    <span className="font-body text-sm text-ink">
+                      {formatPaymentMethodLabel(method)}
+                      {method.isDefault ? " · Default" : ""}
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
 
       {creativePolicy && (
@@ -310,7 +364,7 @@ export function BookingReviewStep({
 
       <button
         type="button"
-        disabled={loading}
+        disabled={loading || !selectedPaymentMethodId}
         onClick={() => void handleReserve()}
         className={`${bookingPrimaryBtnClass} mt-8`}
       >

@@ -4,9 +4,11 @@
 
 ## Policy (updated)
 
-- **At booking:** Customer must save a **valid payment method** (credit/debit card).
+- **Pet profile:** A **valid payment method** must be on file before a pet profile can be saved.
+- **At booking:** After date and time are chosen, the customer selects which saved card to use for that appointment.
 - **At booking:** **No charge** â€” card is on file only.
-- **Later charges** (optional): service total after appointment, cancellation/no-show fee per policy.
+- **After service:** Charge the selected card for the appointment total.
+- **Later charges:** cancellation / no-show fees per the published policy.
 
 ---
 
@@ -29,14 +31,11 @@ This is **much better** than only checking "16 digits look right" on your own â€
 
 ---
 
-## Implementation plan (when we build booking)
+## Implementation
 
-| Step | Tool | Purpose |
-|------|------|---------|
-| 1 | **Stripe account** | Business account for K9 Atelier |
-| 2 | **Stripe Checkout `mode: setup`** or **Setup Intents** | Collect & validate card without charging |
-| 3 | **Stripe Customer** | One record per client; payment method attached |
-| 4 | **Later: PaymentIntent** | Charge after service or for cancellation fee |
+See `content/STRIPE.md` for Stripe keys and the SQL to run. The site uses **Setup Intents** so cards are validated and stored without charging at booking.
+
+Charging after the appointment (and for cancellation / no-show) is a later Stripe PaymentIntent step.
 
 ### Test mode (before going live)
 

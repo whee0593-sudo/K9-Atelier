@@ -38,6 +38,12 @@ export async function POST(request: Request) {
       if (result.error === "conflict") {
         return jsonError("Could not save this pet profile.", 409);
       }
+      if (result.error === "payment_required") {
+        return jsonError(
+          "A valid payment method is required on file before you can save a pet profile.",
+          403,
+        );
+      }
       return jsonError("Something went wrong. Please try again.", 500);
     }
 

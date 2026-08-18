@@ -224,37 +224,25 @@ export function BookingPoliciesModal({
         <div className="mt-8 border-t border-champagne/20">
           <AccordionPanel
             id="payment"
-            title="Payment & Deposits"
+            title="Payment"
             open={openSection === "payment"}
             onToggle={() => toggleSection("payment")}
           >
             <div className="space-y-4">
               <p>
-                A valid payment method is required to secure every booking.
+                A valid payment method must be on file before a pet profile can
+                be saved.
               </p>
-              <div>
-                <p className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-ink">
-                  Returning Clients
-                </p>
-                <p className="mt-2">
-                  Payment is settled after your appointment. Returning clients
-                  are not charged at the time of booking unless otherwise noted.
-                </p>
-              </div>
-              <div>
-                <p className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-ink">
-                  New Clients
-                </p>
-                <p className="mt-2">
-                  A $50 reservation deposit is required to confirm your first
-                  appointment.
-                </p>
-                <p className="mt-2">
-                  The deposit is applied in full toward your final service
-                  total, with the remaining balance settled after your
-                  appointment.
-                </p>
-              </div>
+              <p>
+                After you choose your appointment date and time, you will
+                select which saved card to use for that visit.
+              </p>
+              <p>
+                You are not charged when you book. Payment is settled after
+                your appointment. Late cancellations and no-shows may be
+                charged to the selected card according to our cancellation
+                policy.
+              </p>
             </div>
           </AccordionPanel>
 

@@ -11,7 +11,6 @@ import {
 } from "@/lib/email/layout";
 import {
   buildBookingConfirmationEmail,
-  newClientDeposit,
   type BookingConfirmationDetails,
 } from "@/lib/notifications";
 import { siteUrl } from "@/lib/email/resend";
@@ -133,7 +132,7 @@ export function bookingDetailsFromAppointment(
         ? formatPrice(appointment.estimatedTotal)
         : undefined,
     durationLabel: appointmentDurationLabel(appointment),
-    isNewClient: (appointment.newClientDeposit ?? 0) > 0,
+    isNewClient: false,
   };
 }
 
@@ -343,10 +342,6 @@ export function buildCustomerAppointmentConfirmedEmail(
   const greetingName = customer.name ?? "Client";
   const estimateDisclaimer =
     "This estimate is based on your dog's typical size and coat. Final pricing may vary depending on coat condition, matting, and temperament, and will always be confirmed with you before we begin.";
-  const depositAmount =
-    details.isNewClient !== false
-      ? formatPrice(appointment.newClientDeposit ?? newClientDeposit)
-      : null;
 
   return buildCustomerConfirmedEmail(
     {
@@ -355,7 +350,8 @@ export function buildCustomerAppointmentConfirmedEmail(
       petName: appointment.petName,
       detailRows: confirmedAppointmentDetailRows(appointment),
       estimateNote: estimateDisclaimer,
-      depositAmount,
+      paymentNote:
+        "You are not charged when you book. Payment is settled after your appointment. Late cancellations and no-shows may be charged to the card you selected, according to our cancellation policy.",
     },
     text,
   );

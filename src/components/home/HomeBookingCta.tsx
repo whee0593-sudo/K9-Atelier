@@ -13,9 +13,9 @@ export function HomeBookingCta() {
           A Private Appointment Starts With a Conversation.
         </h2>
         <p className="font-body mx-auto mt-5 max-w-2xl text-base leading-relaxed text-taupe">
-          Reserve a calm, one-on-one grooming experience for your dog. A valid
-          payment method is required to confirm — you will not be charged when
-          you book.
+          Reserve a calm, one-on-one grooming experience for your dog. Save a
+          valid card on file before adding a pet profile — you will not be
+          charged when you book.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[11px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink">
