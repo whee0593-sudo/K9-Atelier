@@ -24,7 +24,10 @@ import {
 } from "@/lib/payments/types";
 import { createClient } from "@/lib/supabase/client";
 import { isValidSmsPhone } from "@/lib/sms/phone";
-import { smsConsentCopy } from "@/lib/notifications";
+import {
+  photoMarketingConsentCopy,
+  smsConsentCopy,
+} from "@/lib/notifications";
 import { vaccinationBookingNeedsAdminConfirmation } from "@/lib/vaccinations/booking";
 import { CreativeBookingPolicy } from "@/components/booking/CreativeBookingPolicy";
 import {
@@ -84,6 +87,7 @@ export function BookingReviewStep({
   const [error, setError] = useState<string | null>(null);
   const [phone, setPhone] = useState("");
   const [smsConsent, setSmsConsent] = useState(false);
+  const [photoMarketingConsent, setPhotoMarketingConsent] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodRecord[]>([]);
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<string | null>(
     null,
@@ -148,6 +152,13 @@ export function BookingReviewStep({
       return;
     }
 
+    if (!photoMarketingConsent) {
+      setError(
+        "Please confirm you consent to photographing and filming your pet for marketing.",
+      );
+      return;
+    }
+
     if (!selectedPaymentMethodId) {
       setError("Please select a saved payment method for this appointment.");
       return;
@@ -172,6 +183,7 @@ export function BookingReviewStep({
         paymentMethodId: selectedPaymentMethodId,
         customerPhone: phone,
         smsConsent: true,
+        photoMarketingConsent: true,
       });
       onReserved(appointment);
     } catch (submitError) {
@@ -349,6 +361,21 @@ export function BookingReviewStep({
           />
           <span className="font-body text-xs leading-relaxed text-taupe">
             {smsConsentCopy}
+          </span>
+        </label>
+        <label className="mt-3 flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={photoMarketingConsent}
+            onChange={(event) =>
+              setPhotoMarketingConsent(event.target.checked)
+            }
+            required
+            aria-required="true"
+            className="mt-0.5 size-4 shrink-0 accent-deep-lavender"
+          />
+          <span className="font-body text-xs leading-relaxed text-taupe">
+            {photoMarketingConsentCopy}
           </span>
         </label>
       </div>

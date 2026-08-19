@@ -141,6 +141,12 @@ export function validateCreateAppointmentInput(
       "smsConsent",
     );
   }
+  if (record.photoMarketingConsent !== true) {
+    throw new AppointmentValidationError(
+      "Please confirm you consent to photographing and filming your pet for marketing.",
+      "photoMarketingConsent",
+    );
+  }
   const paymentMethodId = readString(
     record,
     "paymentMethodId",

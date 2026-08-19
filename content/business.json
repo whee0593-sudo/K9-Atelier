@@ -88,6 +88,7 @@
     "hoursStart": "09:00",
     "hoursEnd": "16:00",
     "timezone": "America/New_York",
+    "photoMarketingConsent": "I consent to K9 Atelier photographing/filming my pet during service for use in marketing (website, social media, ads). K9 Atelier retains ownership of all images. I understand I can opt out anytime by contacting K9 Atelier.",
     "cancellationPolicy": {
       "title": "Cancellation & Rescheduling Policy",
       "intro": "We know life happens — but as a mobile grooming service, each appointment is reserved exclusively for you, including the travel time and preparation that comes with it. The policies below help us continue offering the personalized, unrushed experience every dog deserves.",

@@ -43,6 +43,9 @@ function contactFooter() {
 export const smsConsentCopy =
   "By providing your mobile number, you agree to receive appointment confirmations, reminders, and service-related messages from K9 Atelier. Message and data rates may apply. Reply STOP to opt out.";
 
+export const photoMarketingConsentCopy =
+  business.booking.photoMarketingConsent;
+
 const SMS_OPT_OUT = "Reply STOP to opt out.";
 
 function smsGreetingName(details: BookingConfirmationDetails) {
