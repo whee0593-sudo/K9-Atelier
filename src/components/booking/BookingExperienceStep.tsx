@@ -5,6 +5,7 @@ import {
   getBookableServicesForPet,
   getServicePriceEstimate,
   isCreativeColoringCategory,
+  isSpaService,
   type BookableService,
 } from "@/lib/services";
 import {
@@ -59,7 +60,7 @@ export function BookingExperienceStep({
             service.id,
             service.description,
           );
-          const isSpa = service.categoryId === "spa-wellness";
+          const isSpa = isSpaService(service.id);
 
           return (
             <article

@@ -2,6 +2,7 @@
 export const SERVICE_DISPLAY_NAMES: Record<string, string> = {
   "signature-bath-care": "The Signature Bath",
   "custom-full-haircut": "The Atelier Full Groom",
+  "long-coat-show-care": "Long Coat Show Care",
   "hand-stripping": "Hand-Stripping Specialty",
   "dead-sea-mud-bath": "Dead Sea Mineral Ritual",
   "aromatherapy-oil-bath": "Lavender & Chamomile Bath Ritual",
@@ -10,6 +11,7 @@ export const SERVICE_DISPLAY_NAMES: Record<string, string> = {
   "deshedding-treatment": "DeShedding Care",
   "dematting-brush-out": "Gentle DeMatting",
   "senior-comfort-care": "Gentle Care",
+  "mini-trim": "Mini Trim",
   "end-of-life-care": "End-of-Life Comfort Care",
 };
 
@@ -18,6 +20,8 @@ export const SERVICE_DISPLAY_DESCRIPTIONS: Record<string, string> = {
     "Coat-specific cleansing, conditioning and meticulous finishing.",
   "custom-full-haircut":
     "Complete grooming with bespoke haircut and finishing.",
+  "long-coat-show-care":
+    "A weekly wash-and-care ritual for full-coat breeds — preserving length, preventing matting, and keeping a silky, show-ready finish.",
   "hand-stripping":
     "Traditional coat preservation for wire-haired breeds.",
   "dead-sea-mud-bath":
@@ -33,9 +37,14 @@ export const SERVICE_DISPLAY_DESCRIPTIONS: Record<string, string> = {
     "Professional coat care when matting requires additional time.",
   "senior-comfort-care":
     "Additional time and adapted handling for comfort and an unhurried pace.",
+  "mini-trim":
+    "A focused tidy around the eyes, feet, and sanitary area.",
 };
 
 export const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
+  "bath-show-spa": "Bath, Show Care & Spa",
+  "full-grooming": "Full Grooming & Hand Stripping",
+  "add-on-care": "Add-On Care",
   "bath-grooming": "Signature Grooming",
   "spa-wellness": "Spa Rituals",
   "creative-accent-coloring": "Creative Accent Color",

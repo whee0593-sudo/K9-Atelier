@@ -4,13 +4,20 @@
 
 **Tagline:** Award-winning grooming experience at your doorstep.
 
+网站分区：
+1. Bath, Show Care & Spa — Signature Bath、Long Coat Show Care、三项 Spa
+2. Full Grooming & Hand Stripping — Custom Full Haircut、Hand Stripping
+3. Creative Accent Coloring
+4. Add-On Care — DeMatting、DeShedding、Senior & Gentle Comfort Care、Mini Trim
+5. End-of-Life Comfort Care
+
 ---
 
 ## 一、基础洗护与精剪 (Bath & Full Grooming)
 
 ### 1. Signature Bath & Care · 奢华水疗洗护套餐
 
-**包含：** 全套超微泡洗护、深度毛发滋养、顺毛吹干、全套梳理、修剪爪垫毛/腹部卫生毛、剪指甲磨甲、清耳、刷牙
+**包含：** 全套超微泡洗护、深度毛发滋养、顺毛吹干、全套梳理、剪指甲磨甲、清耳、刷牙
 
 | 体重 | 价格 | 时长 |
 |------|------|------|
@@ -19,7 +26,7 @@
 | 31 – 45 lbs | $120 起 | 75–90 min |
 
 **Amelia Description:**
-Comprehensive mobile bath and hygienic care tailored to your dog's specific coat and skin needs. Includes deep-cleansing wash, nourishing conditioning, gentle blow dry, thorough brush-out, sanitary trim, paw pad trimming, nail trimming & grinding, ear cleaning, and teeth brushing.
+Comprehensive mobile bath and hygienic care tailored to your dog's specific coat and skin needs. Includes deep-cleansing wash, nourishing conditioning, gentle blow dry, thorough brush-out, nail trimming & grinding, ear cleaning, and teeth brushing.
 
 ---
 
@@ -35,6 +42,33 @@ Comprehensive mobile bath and hygienic care tailored to your dog's specific coat
 
 **Amelia Description:**
 Full-service personalized grooming experience. Includes everything in the Signature Bath & Care, followed by a customized whole-body scissor or clipper haircut styled to your preferences (e.g., teddy bear head, custom length, or breed standard).
+
+---
+
+### 3. Long Coat Show Care · 长毛赛级护理
+
+A specialized weekly wash-and-care ritual for full-coat breeds — designed to preserve length, prevent matting, and maintain a silky, show-ready finish week after week.
+
+The longer a dog's coat grows, the harder it becomes for natural oils and nutrients to travel all the way from root to tip. Without that nourishment reaching the ends, hair becomes dry, brittle, and far more prone to tangling and matting. Long Coat Show Care is built around this exact challenge — a meticulous, multi-step process using coat-specific professional-grade shampoo and conditioner formulated to restore moisture and strength along the full length of the coat, keeping it soft, tangle-resistant, and beautifully maintained.
+
+**Best suited for:** Shih Tzu, Yorkshire Terrier, Maltese, Cavalier King Charles Spaniel — or any dog being kept at full coat length.
+
+**Best for:** Full-coat breeds maintained on a weekly grooming schedule, where preserving length and preventing matting is a priority.
+
+**Includes:**
+- Pre-Bath Detangling: Careful line-brushing to prevent matting before washing
+- Multi-Step Coat Wash: Layered application of specialized shampoo and deep conditioner suited to full-coat texture
+- Hand Blow-Dry & Straightening: Directional drying to preserve length and maximize shine
+- Full Line-Brush Finish: Section-by-section brush-out for a smooth, tangle-free result
+- Nail Care: Clipping and smooth electric filing with dremel
+- Ear Care: Specialized ear cleaning with protective cotton ball placement
+- Sanitary trim and paw-pad hair shaved
+
+| 体重 | 价格 | 时长 |
+|------|------|------|
+| Under 15 lbs | $120 起 | 60–75 min |
+| 15 – 30 lbs | $140 起 | 75–90 min |
+| 31 – 45 lbs | $160 起 | 90–105 min |
 
 ---
 
@@ -68,12 +102,26 @@ Specialized, low-stress care designed for senior or medically sensitive dogs. Pr
 
 ---
 
+### Mini Trim · 局部精修
+
+**包含：** 眼周修剪、脚圈/爪垫修剪、卫生部位修剪
+
+| 项目 | 详情 |
+|------|------|
+| 收费 | **+$50**（可附加于 Signature Bath 或 Long Coat Show Care；精剪与 Spa 已包含，不再另加） |
+
+**Amelia Description:**
+A focused tidy of the three areas that need the most frequent attention: around the eyes, the feet, and the sanitary region.
+
+---
+
 ### 3. Creative Accent Coloring · 创意局部染色
 
 **安全性：** 100% 宠物安全纯植物半永久染膏
 
 | 选项 | 价格 |
 |------|------|
+| Temporary Fun · 一次性趣味点缀 | $50 起（1–2 次洗澡可去除） |
 | Ears or Tail Accent · 耳尖/尾巴尖 | $35 起 |
 | Paws / Boots Accent · 四爪「小靴子」 | $50 起 |
 | Custom Creative Design · 自定义设计 | $60+（需提前沟通） |
@@ -91,9 +139,9 @@ Safe, trendy, and fun pop of color for your pet! Uses 100% non-toxic, pet-safe, 
 
 | 体重 | 价格 | 时长 |
 |------|------|------|
-| Under 15 lbs | $100 起 | 60 min |
-| 15 – 30 lbs | $120 起 | 75 min |
-| 31 – 45 lbs | $140 起 | 90 min |
+| Under 15 lbs | $140 起 | 60 min |
+| 15 – 30 lbs | $160 起 | 75 min |
+| 31 – 45 lbs | $180 起 | 90 min |
 
 **Amelia Description:**
 Complete mobile bath combined with a mineral-rich Dead Sea mud wrap and whole-body massage. Deeply nourishes skin, exfoliates, releases muscle tension, and restores coat shine. Includes gentle blow dry, brush-out, nail trim, ear cleaning, and teeth brushing.
@@ -104,9 +152,9 @@ Complete mobile bath combined with a mineral-rich Dead Sea mud wrap and whole-bo
 
 | 体重 | 价格 | 时长 |
 |------|------|------|
-| Under 15 lbs | $100 起 | 60 min |
-| 15 – 30 lbs | $120 起 | 75 min |
-| 31 – 45 lbs | $140 起 | 90 min |
+| Under 15 lbs | $140 起 | 60 min |
+| 15 – 30 lbs | $160 起 | 75 min |
+| 31 – 45 lbs | $180 起 | 90 min |
 
 **Amelia Description:**
 Relaxing mobile bath experience featuring a warm-water soak infused with 100% pet-safe organic essential oils (lavender & chamomile) paired with targeted joint-relief massage. Calms anxiety and leaves the coat smelling fresh. Includes full wash, blow dry, brush-out, nail care, ear cleaning, and teeth brushing.
@@ -117,9 +165,9 @@ Relaxing mobile bath experience featuring a warm-water soak infused with 100% pe
 
 | 体重 | 价格 | 时长 |
 |------|------|------|
-| Under 15 lbs | $100 起 | 60 min |
-| 15 – 30 lbs | $120 起 | 75 min |
-| 31 – 45 lbs | $140 起 | 90 min |
+| Under 15 lbs | $140 起 | 60 min |
+| 15 – 30 lbs | $160 起 | 75 min |
+| 31 – 45 lbs | $180 起 | 90 min |
 
 **Amelia Description:**
 Therapeutic bathing session tailored for dogs with sensitive skin, flaky dander, or seasonal allergies. Uses hypoallergenic botanical wash and soothing oatmeal/aloe skin treatments combined with gentle therapeutic massage. Includes blow dry, brush-out, nail trim, ear cleansing, and teeth brushing.

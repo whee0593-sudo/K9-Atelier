@@ -35,9 +35,6 @@ export function Footer() {
             <p className="font-body mt-1 text-[12px] font-medium uppercase tracking-[0.16em] text-taupe">
               Palm Beach
             </p>
-            <p className="font-display mt-6 text-2xl leading-snug text-ink md:text-[1.75rem]">
-              Private care, beautifully delivered.
-            </p>
           </div>
 
           <div>
@@ -76,6 +73,16 @@ export function Footer() {
               className="font-body mt-3 block text-sm text-ink transition hover:text-deep-lavender"
             >
               <span className="text-taupe">Instagram · </span>@{instagramHandle}
+            </a>
+            <a
+              href={brand.social.facebookUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Facebook ${brand.social.facebook}`}
+              className="font-body mt-3 block text-sm text-ink transition hover:text-deep-lavender"
+            >
+              <span className="text-taupe">Facebook · </span>
+              {brand.social.facebook}
             </a>
           </div>
         </div>

@@ -9,7 +9,8 @@
     "website": "https://k9atelier.com",
     "social": {
       "instagram": "K9 Atelier FL",
-      "facebook": "K9 Atelier"
+      "facebook": "K9 Atelier",
+      "facebookUrl": "https://www.facebook.com/share/1GyGZkHdNE/?mibextid=wwXIfr"
     }
   },
   "colors": {
@@ -183,9 +184,22 @@
   ],
   "serviceCategories": [
     {
-      "id": "bath-grooming",
-      "name": "Bath & Full Grooming",
-      "nameZh": "基础洗护与精剪",
+      "id": "bath-show-spa",
+      "name": "Bath, Show Care & Spa",
+      "nameZh": "洗护、长毛赛级护理与水疗",
+      "spaTreatments": {
+        "note": "Spa treatments include a full wellness bath experience paired with a soothing whole-body massage. To avoid over-tiring your pet, we recommend booking Spa treatments separately from full haircut/styling appointments.",
+        "includesAll": [
+          "Gentle blow-dry, brush-out, nail trim & dremel, ear cleaning, teeth brushing, and mini groom (sanitary & paw pad trim)"
+        ],
+        "spaPricing": {
+          "tiers": [
+            { "weightTier": "under15", "priceFrom": 140, "durationMin": 60 },
+            { "weightTier": "15to30", "priceFrom": 160, "durationMin": 75 },
+            { "weightTier": "31to45", "priceFrom": 180, "durationMin": 90 }
+          ]
+        }
+      },
       "services": [
         {
           "id": "signature-bath-care",
@@ -199,8 +213,7 @@
             "Dental Care: Gauze toothbrushing with oral hygiene solution",
             "Custom Bath & Conditioning: Premium luxury shampoo and conditioner tailored to coat type",
             "Hand Blow-Dry: Complete hand blow-dry and directional fluffing",
-            "Full Brush-Out: Deep coat brushing and dematting check",
-            "Sanitary & Paw Trim: Paw pad hair and sanitary area neatly trimmed"
+            "Full Brush-Out: Deep coat brushing and dematting check"
           ],
           "pricingType": "tiered",
           "tiers": [
@@ -209,6 +222,74 @@
             { "weightTier": "31to45", "priceFrom": 130, "durationMin": 75, "durationMax": 90 }
           ]
         },
+        {
+          "id": "long-coat-show-care",
+          "name": "Long Coat Show Care",
+          "nameZh": "长毛赛级护理",
+          "description": "A specialized weekly wash-and-care ritual for full-coat breeds — designed to preserve length, prevent matting, and maintain a silky, show-ready finish week after week.\n\nThe longer a dog's coat grows, the harder it becomes for natural oils and nutrients to travel all the way from root to tip. Without that nourishment reaching the ends, hair becomes dry, brittle, and far more prone to tangling and matting. Long Coat Show Care is built around this exact challenge — a meticulous, multi-step process using coat-specific professional-grade shampoo and conditioner formulated to restore moisture and strength along the full length of the coat, keeping it soft, tangle-resistant, and beautifully maintained.",
+          "bestFor": "Full-coat breeds maintained on a weekly grooming schedule, where preserving length and preventing matting is a priority — including Shih Tzu, Yorkshire Terrier, Maltese, Cavalier King Charles Spaniel, or any dog being kept at full coat length.",
+          "includes": [
+            "Pre-Bath Detangling: Careful line-brushing to prevent matting before washing",
+            "Multi-Step Coat Wash: Layered application of specialized shampoo and deep conditioner suited to full-coat texture",
+            "Hand Blow-Dry & Straightening: Directional drying to preserve length and maximize shine",
+            "Full Line-Brush Finish: Section-by-section brush-out for a smooth, tangle-free result",
+            "Nail Care: Clipping and smooth electric filing with dremel",
+            "Ear Care: Specialized ear cleaning with protective cotton ball placement",
+            "Sanitary trim and paw-pad hair shaved"
+          ],
+          "pricingType": "tiered",
+          "tiers": [
+            { "weightTier": "under15", "priceFrom": 120, "durationMin": 60, "durationMax": 75 },
+            { "weightTier": "15to30", "priceFrom": 140, "durationMin": 75, "durationMax": 90 },
+            { "weightTier": "31to45", "priceFrom": 160, "durationMin": 90, "durationMax": 105 }
+          ]
+        },
+        {
+          "id": "dead-sea-mud-bath",
+          "name": "Dead Sea Mud Bath Treatment",
+          "nameZh": "死海泥浴矿物 Spa",
+          "bestFor": "Heavy double coats and high-shedding breeds",
+          "description": "Mineral-rich Dead Sea mud wrap and whole-body massage. Deeply nourishes skin, exfoliates, releases muscle tension, and restores coat shine.",
+          "pricingType": "tiered",
+          "tiers": [
+            { "weightTier": "under15", "priceFrom": 140, "durationMin": 60 },
+            { "weightTier": "15to30", "priceFrom": 160, "durationMin": 75 },
+            { "weightTier": "31to45", "priceFrom": 180, "durationMin": 90 }
+          ]
+        },
+        {
+          "id": "aromatherapy-oil-bath",
+          "name": "Aromatherapy Essential Oil Bath Soak",
+          "nameZh": "芳香精油浸泡 Spa",
+          "bestFor": "Dry, dull, or tangle-prone coats",
+          "description": "Warm-water soak infused with 100% pet-safe organic essential oils (lavender & chamomile) paired with targeted joint-relief massage. Calms anxiety and leaves the coat silky, glossy, and fresh-scented.",
+          "pricingType": "tiered",
+          "tiers": [
+            { "weightTier": "under15", "priceFrom": 140, "durationMin": 60 },
+            { "weightTier": "15to30", "priceFrom": 160, "durationMin": 75 },
+            { "weightTier": "31to45", "priceFrom": 180, "durationMin": 90 }
+          ]
+        },
+        {
+          "id": "sensitive-skin-treatment",
+          "name": "Sensitive Skin & Dander Soothing Treatment",
+          "nameZh": "皮屑与敏感肌舒缓护理",
+          "bestFor": "Sensitive, dry, or red/irritated skin",
+          "description": "Therapeutic bathing session tailored for sensitive skin, flaky dander, or seasonal allergies using hypoallergenic botanical wash and soothing oatmeal/aloe skin treatments. Relieves dryness and reduces coat static.",
+          "pricingType": "tiered",
+          "tiers": [
+            { "weightTier": "under15", "priceFrom": 140, "durationMin": 60 },
+            { "weightTier": "15to30", "priceFrom": 160, "durationMin": 75 },
+            { "weightTier": "31to45", "priceFrom": 180, "durationMin": 90 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "full-grooming",
+      "name": "Full Grooming & Hand Stripping",
+      "nameZh": "精剪与手剥毛",
+      "services": [
         {
           "id": "custom-full-haircut",
           "name": "Custom Full Haircut & Styling",
@@ -234,7 +315,15 @@
           "durationNote": "1 – 1.5 hours (varies by coat texture & coverage)",
           "availableOver45Lbs": true,
           "noBathOver45Lbs": true
-        },
+        }
+      ]
+    },
+    {
+      "id": "add-on-care",
+      "name": "Add-On Care",
+      "nameZh": "附加护理",
+      "note": "Added to a bath, show-care, spa, or full grooming appointment as needed.",
+      "services": [
         {
           "id": "dematting-brush-out",
           "name": "DeMatting & Gentle Brush-Out",
@@ -274,63 +363,20 @@
             { "weightTier": "15to30", "priceFrom": 40 },
             { "weightTier": "31to45", "priceFrom": 50 }
           ]
-        }
-      ]
-    },
-    {
-      "id": "spa-wellness",
-      "name": "Spa & Wellness Treatments",
-      "nameZh": "水疗 SPA",
-      "note": "Spa treatments include a full wellness bath experience paired with a soothing whole-body massage. To avoid over-tiring your pet, we recommend booking Spa treatments separately from full haircut/styling appointments.",
-      "includesAll": [
-        "Gentle blow-dry, brush-out, nail trim & dremel, ear cleaning, teeth brushing, and mini groom (sanitary & paw pad trim)"
-      ],
-      "spaPricing": {
-        "tiers": [
-          { "weightTier": "under15", "priceFrom": 120, "durationMin": 60 },
-          { "weightTier": "15to30", "priceFrom": 150, "durationMin": 75 },
-          { "weightTier": "31to45", "priceFrom": 200, "durationMin": 90 }
-        ]
-      },
-      "services": [
-        {
-          "id": "dead-sea-mud-bath",
-          "name": "Dead Sea Mud Bath Treatment",
-          "nameZh": "死海泥浴矿物 Spa",
-          "bestFor": "Heavy double coats and high-shedding breeds",
-          "description": "Mineral-rich Dead Sea mud wrap and whole-body massage. Deeply nourishes skin, exfoliates, releases muscle tension, and restores coat shine.",
-          "pricingType": "tiered",
-          "tiers": [
-            { "weightTier": "under15", "priceFrom": 120, "durationMin": 60 },
-            { "weightTier": "15to30", "priceFrom": 150, "durationMin": 75 },
-            { "weightTier": "31to45", "priceFrom": 200, "durationMin": 90 }
-          ]
         },
         {
-          "id": "aromatherapy-oil-bath",
-          "name": "Aromatherapy Essential Oil Bath Soak",
-          "nameZh": "芳香精油浸泡 Spa",
-          "bestFor": "Dry, dull, or tangle-prone coats",
-          "description": "Warm-water soak infused with 100% pet-safe organic essential oils (lavender & chamomile) paired with targeted joint-relief massage. Calms anxiety and leaves the coat silky, glossy, and fresh-scented.",
-          "pricingType": "tiered",
-          "tiers": [
-            { "weightTier": "under15", "priceFrom": 120, "durationMin": 60 },
-            { "weightTier": "15to30", "priceFrom": 150, "durationMin": 75 },
-            { "weightTier": "31to45", "priceFrom": 200, "durationMin": 90 }
-          ]
-        },
-        {
-          "id": "sensitive-skin-treatment",
-          "name": "Sensitive Skin & Dander Soothing Treatment",
-          "nameZh": "皮屑与敏感肌舒缓护理",
-          "bestFor": "Sensitive, dry, or red/irritated skin",
-          "description": "Therapeutic bathing session tailored for sensitive skin, flaky dander, or seasonal allergies using hypoallergenic botanical wash and soothing oatmeal/aloe skin treatments. Relieves dryness and reduces coat static.",
-          "pricingType": "tiered",
-          "tiers": [
-            { "weightTier": "under15", "priceFrom": 120, "durationMin": 60 },
-            { "weightTier": "15to30", "priceFrom": 150, "durationMin": 75 },
-            { "weightTier": "31to45", "priceFrom": 200, "durationMin": 90 }
-          ]
+          "id": "mini-trim",
+          "name": "Mini Trim",
+          "nameZh": "局部精修",
+          "description": "A focused tidy of the three areas that need the most frequent attention: around the eyes, the feet, and the sanitary region. Already included with full grooming and spa treatments.",
+          "note": "Available as an add-on with Signature Bath & Care or Long Coat Show Care. Full grooming and spa treatments already include this tidy.",
+          "includes": [
+            "Eye-area trim",
+            "Feet outline and paw pad trim",
+            "Sanitary trim"
+          ],
+          "pricingType": "add_on",
+          "flatRate": 50
         }
       ]
     },
@@ -350,6 +396,13 @@
           "noteZh": "必须同时预约 Signature Bath & Care 或 Custom Full Haircut & Styling",
           "pricingType": "options",
           "options": [
+            {
+              "name": "Temporary Fun",
+              "nameZh": "一次性趣味点缀",
+              "description": "A small-area accent using a one-time, pet-safe coloring product. Color typically washes out after 1–2 baths.",
+              "priceFrom": 50,
+              "note": "From $50 · washes out in 1–2 baths"
+            },
             {
               "name": "Ears & Tail Accent",
               "nameZh": "耳尖 / 尾巴尖染色",
@@ -408,7 +461,7 @@
           "id": "end-of-life-care",
           "name": "End-of-Life Comfort Care",
           "nameZh": "临终关怀服务",
-          "description": "Compassionate, low-stress comfort grooming for dogs in their final stage of life. Focuses on gentle handling, dignity, and emotional comfort rather than cosmetic results. Available for dogs over 45 lbs when bath and full grooming services are not offered.",
+          "description": "Compassionate, low-stress comfort grooming for dogs in their final stage of life. Focuses on gentle handling, dignity, and emotional comfort rather than cosmetic results.",
           "includes": [
             "Gentle, low-stress handling focused on comfort and dignity",
             "Emotional comfort rather than cosmetic results",

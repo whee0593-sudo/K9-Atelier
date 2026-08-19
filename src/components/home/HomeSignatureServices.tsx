@@ -20,7 +20,7 @@ const services = [
   {
     title: "Spa Rituals",
     body: "Thoughtfully selected skin, coat and wellness rituals inspired by the quiet luxury of a private hotel spa.",
-    price: "From $120",
+    price: "From $140",
     href: "/services#spa-wellness",
     cta: "Explore Spa Rituals",
   },

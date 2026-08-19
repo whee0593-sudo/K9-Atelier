@@ -64,7 +64,7 @@ export function HomeSpaWellness() {
                 {service.bestFor}
               </p>
               <p className="font-body mt-6 text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
-                From $120 · 60–90 min
+                From $140 · 60–90 min
               </p>
             </article>
           ))}

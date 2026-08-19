@@ -6,7 +6,10 @@ import { Container } from "@/components/luxury/Container";
 import { Eyebrow } from "@/components/luxury/Eyebrow";
 import { PageShell } from "@/components/luxury/PageShell";
 import { business, formatDuration, formatPrice } from "@/lib/business";
-import { getCreativeBookingPolicy } from "@/lib/services";
+import {
+  getCreativeBookingPolicy,
+  isSpaService,
+} from "@/lib/services";
 
 export const metadata = {
   title: "Services · K9 Atelier",
@@ -15,6 +18,9 @@ export const metadata = {
 };
 
 const categoryAnchors: Record<string, string> = {
+  "bath-show-spa": "bath-show-spa",
+  "full-grooming": "full-grooming",
+  "add-on-care": "add-on-care",
   "signature-grooming": "signature-grooming",
   "spa-wellness": "spa-wellness",
   "specialty-care": "specialty-care",
@@ -24,6 +30,7 @@ const categoryAnchors: Record<string, string> = {
 const serviceAnchors: Record<string, string> = {
   "signature-bath-care": "signature-bath",
   "custom-full-haircut": "atelier-full-groom",
+  "long-coat-show-care": "long-coat-show-care",
 };
 
 const creativeBookingPolicy = getCreativeBookingPolicy();
@@ -127,7 +134,9 @@ export default function ServicesPage() {
                 {category.note}
               </p>
             )}
-            {"includesAll" in category && category.includesAll && (
+            {"includesAll" in category &&
+              category.includesAll &&
+              !("spaTreatments" in category) && (
               <div className="mt-6 border border-gray-line/80 bg-ivory p-6 text-sm">
                 <p className="font-body text-[11px] font-medium uppercase tracking-[0.14em] text-taupe">
                   All spa treatments include
@@ -146,10 +155,51 @@ export default function ServicesPage() {
               {category.services.map((service) => {
                 const s = service as Record<string, unknown>;
                 const anchorId = serviceAnchors[service.id];
+                const spaTreatments =
+                  "spaTreatments" in category
+                    ? (
+                        category as {
+                          spaTreatments?: {
+                            note?: string;
+                            includesAll?: string[];
+                          };
+                        }
+                      ).spaTreatments
+                    : undefined;
+                const showSpaIntro =
+                  isSpaService(service.id) &&
+                  service.id === "dead-sea-mud-bath" &&
+                  spaTreatments;
 
                 return (
+                  <div key={service.id} className="space-y-8">
+                    {showSpaIntro && spaTreatments && (
+                      <div
+                        id="spa-wellness"
+                        className="scroll-mt-28 border border-gray-line/80 bg-dusty-lavender/20 p-6 text-sm"
+                      >
+                        {spaTreatments.note && (
+                          <p className="italic text-text-muted">
+                            {spaTreatments.note}
+                          </p>
+                        )}
+                        {spaTreatments.includesAll && (
+                          <div className="mt-4">
+                            <p className="font-body text-[11px] font-medium uppercase tracking-[0.14em] text-taupe">
+                              All spa treatments include
+                            </p>
+                            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                              {spaTreatments.includesAll.map((item) => (
+                                <li key={item} className="text-ink">
+                                  {item}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   <article
-                    key={service.id}
                     id={anchorId}
                     className={`border border-gray-line/80 bg-ivory p-6 md:p-8 ${
                       anchorId ? "scroll-mt-28" : ""
@@ -166,7 +216,7 @@ export default function ServicesPage() {
                         {service.bestFor}
                       </p>
                     )}
-                    <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
+                    <p className="font-body mt-4 whitespace-pre-line text-sm leading-relaxed text-taupe">
                       {service.description}
                     </p>
 
@@ -218,8 +268,9 @@ export default function ServicesPage() {
                       service.pricingType === "add_on" && (
                       <div className="mt-4">
                         <p className="text-sm font-medium text-gold-dark">
-                          {formatPrice(s.flatRate as number)} /{" "}
-                          {(s.durationMin as number | undefined) ?? 15} mins (Add-on)
+                          {typeof s.durationMin === "number"
+                            ? `${formatPrice(s.flatRate as number)} / ${s.durationMin} mins (Add-on)`
+                            : `+${formatPrice(s.flatRate as number)} (Add-on)`}
                         </p>
                       </div>
                     )}
@@ -330,6 +381,7 @@ export default function ServicesPage() {
                         />
                       )}
                   </article>
+                  </div>
                 );
               })}
             </div>

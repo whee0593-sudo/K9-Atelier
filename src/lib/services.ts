@@ -72,10 +72,17 @@ export const CREATIVE_REQUIRED_BASE_IDS = [
   "custom-full-haircut",
 ] as const;
 
+export const SPA_SERVICE_IDS = [
+  "dead-sea-mud-bath",
+  "aromatherapy-oil-bath",
+  "sensitive-skin-treatment",
+] as const;
+
 const ADD_ON_ONLY_SERVICE_IDS = [
   "senior-comfort-care",
   "dematting-brush-out",
   "deshedding-treatment",
+  "mini-trim",
 ];
 
 function isAddOnOnlyService(serviceId: string) {
@@ -200,8 +207,10 @@ export function formatServicePrice(
       return `+${formatPrice(tier.priceFrom)} add-on`;
     }
     if (service.flatRate != null) {
-      const mins = service.durationMin ?? 15;
-      return `+${formatPrice(service.flatRate)} / ${mins} mins add-on`;
+      if (service.durationMin != null) {
+        return `+${formatPrice(service.flatRate)} / ${service.durationMin} mins add-on`;
+      }
+      return `+${formatPrice(service.flatRate)} add-on`;
     }
     const max = service.addOnMax ?? service.addOnMin ?? 0;
     return `+${formatPrice(service.addOnMin ?? 0)}–${formatPrice(max)} add-on`;
@@ -233,10 +242,21 @@ export function supportsSeniorAddOn(serviceId: string) {
   return [
     "signature-bath-care",
     "custom-full-haircut",
+    "long-coat-show-care",
     "dead-sea-mud-bath",
     "aromatherapy-oil-bath",
     "sensitive-skin-treatment",
   ].includes(serviceId);
+}
+
+export function supportsMiniTrimAddOn(serviceId: string) {
+  if (serviceId === "custom-full-haircut" || isSpaService(serviceId)) {
+    return false;
+  }
+  if (serviceId === "hand-stripping" || serviceId === "end-of-life-care") {
+    return false;
+  }
+  return true;
 }
 
 export function supportsCreativeColoringAddOn(serviceId: string) {
@@ -277,6 +297,10 @@ export function getRequiredBaseServicesForCreative() {
   ).filter((s): s is BookableService => s != null);
 }
 
+export function isSpaService(serviceId: string) {
+  return (SPA_SERVICE_IDS as readonly string[]).includes(serviceId);
+}
+
 export function isCreativeColoringCategory(categoryId: string) {
   return categoryId === CREATIVE_ACCENT_COLORING_ID;
 }
@@ -310,40 +334,35 @@ export function getCategoryAddOnServices(categoryId: string) {
 }
 
 export function getAvailableAddOns(
-  categoryId: string,
+  _categoryId: string,
   primaryServiceId: string,
 ) {
-  const categoryAddOns = getCategoryAddOnServices(categoryId).filter(
-    (addOn) => {
-      if (primaryServiceId === "hand-stripping") {
-        return addOn.id === "dematting-brush-out";
-      }
-      if (addOn.id === "senior-comfort-care") {
-        return supportsSeniorAddOn(primaryServiceId);
-      }
-      return true;
-    },
-  );
+  const addOns = allBookableServices().filter((service) => !service.bookableAsPrimary);
 
-  let addOns = categoryAddOns;
+  const filtered = addOns.filter((addOn) => {
+    if (primaryServiceId === "end-of-life-care") return false;
+    if (primaryServiceId === "hand-stripping") {
+      return addOn.id === "dematting-brush-out";
+    }
+    if (addOn.id === "senior-comfort-care") {
+      return supportsSeniorAddOn(primaryServiceId);
+    }
+    if (addOn.id === "mini-trim") {
+      return supportsMiniTrimAddOn(primaryServiceId);
+    }
+    return true;
+  });
+
+  let result = filtered;
 
   if (supportsCreativeColoringAddOn(primaryServiceId)) {
     const creative = getCreativeColoringService();
-    if (creative && !addOns.some((a) => a.id === creative.id)) {
-      addOns = [...addOns, creative];
+    if (creative && !result.some((item) => item.id === creative.id)) {
+      result = [...result, creative];
     }
   }
 
-  if (addOns.length > 0) return addOns;
-
-  if (supportsSeniorAddOn(primaryServiceId)) {
-    const senior = allBookableServices().find(
-      (s) => s.id === "senior-comfort-care",
-    );
-    return senior ? [senior] : [];
-  }
-
-  return [];
+  return result;
 }
 
 export function getAddOnService(id: string) {
@@ -388,8 +407,10 @@ export function formatServicePriceFrom(service: BookableService) {
       : `${formatPrice(min)} – ${formatPrice(max)} (Add-on)`;
   }
   if (service.pricingType === "add_on" && service.flatRate != null) {
-    const mins = service.durationMin ?? 15;
-    return `${formatPrice(service.flatRate)} / ${mins} mins (Add-on)`;
+    if (service.durationMin != null) {
+      return `${formatPrice(service.flatRate)} / ${service.durationMin} mins (Add-on)`;
+    }
+    return `+${formatPrice(service.flatRate)} (Add-on)`;
   }
   return "";
 }
@@ -425,7 +446,8 @@ export function getServicePriceEstimate(
     if (service.flatRate != null) {
       return {
         from: service.flatRate,
-        durationLabel: `${service.durationMin ?? 15} min`,
+        durationLabel:
+          service.durationMin != null ? `${service.durationMin} min` : undefined,
       };
     }
     if (service.options?.length) {
