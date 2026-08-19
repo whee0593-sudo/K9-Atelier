@@ -134,22 +134,6 @@ export default function ServicesPage() {
                 {category.note}
               </p>
             )}
-            {"includesAll" in category &&
-              category.includesAll &&
-              !("spaTreatments" in category) && (
-              <div className="mt-6 border border-gray-line/80 bg-ivory p-6 text-sm">
-                <p className="font-body text-[11px] font-medium uppercase tracking-[0.14em] text-taupe">
-                  All spa treatments include
-                </p>
-                <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {category.includesAll.map((item) => (
-                    <li key={item} className="text-ink">
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
 
             <div className="mt-10 space-y-8">
               {category.services.map((service) => {
