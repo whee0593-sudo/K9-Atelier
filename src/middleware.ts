@@ -19,6 +19,8 @@ const PUBLIC_PATHS = [
   "/api/site-access",
   "/preview",
   "/support",
+  "/privacy",
+  "/terms",
   "/api/support",
   "/api/notify",
   "/api/cron",

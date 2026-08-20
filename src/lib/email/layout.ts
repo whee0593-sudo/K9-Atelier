@@ -179,7 +179,14 @@ export function buildCustomerLetterEmailHtml(content: CustomerLetterEmailContent
   const detailsHtml = content.detailRows
     .map(({ label, value }) => customerLetterDetailRow(label, value))
     .join("");
-  const footerLine = `${business.brand.name} · ${business.brand.email} · k9atelier.com`;
+  const footerLine = [
+    business.brand.name,
+    business.brand.phone,
+    business.brand.email,
+    "k9atelier.com",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -341,7 +348,14 @@ function customerLetterHeader(subject: string) {
 }
 
 function customerLetterFooter() {
-  const footerLine = `${business.brand.name} · ${business.brand.email} · k9atelier.com`;
+  const footerLine = [
+    business.brand.name,
+    business.brand.phone,
+    business.brand.email,
+    "k9atelier.com",
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return `<div style="background-color:${STAFF_EMAIL.cream}; padding:22px 32px; text-align:center; font-size:11px; color:${STAFF_EMAIL.muted}; letter-spacing:0.5px; font-family:Georgia,'Times New Roman',serif;">
         ${escapeHtml(footerLine)}
       </div>
@@ -395,7 +409,7 @@ export function buildCustomerConfirmedEmailHtml(content: CustomerConfirmedEmailC
         )}
         ${customerConfirmedSection(
           "Need to reschedule?",
-          `<p style="margin:0; font-size:13px; color:#5A5347;">We kindly ask for at least 48 hours&apos; notice for any changes. Please reply to this email or reach us at ${escapeHtml(business.brand.email)}.</p>`,
+          `<p style="margin:0; font-size:13px; color:#5A5347;">We kindly ask for at least 48 hours&apos; notice for any changes. Please reply to this email or reach us at ${escapeHtml(business.brand.phone ?? business.brand.email)}.</p>`,
         )}
         <p style="margin:22px 0 0;">Warmly,</p>
         <p style="margin:2px 0 0;">${escapeHtml(business.brand.name)}</p>

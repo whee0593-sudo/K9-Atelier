@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { business } from "@/lib/business";
+import { business, getBrandPhoneTelHref } from "@/lib/business";
 import { Container } from "@/components/luxury/Container";
 
 const footerLinks = [
@@ -16,6 +16,7 @@ const footerLinks = [
 
 export function Footer() {
   const { brand, site } = business;
+  const phoneHref = getBrandPhoneTelHref();
   const instagram =
     site.underConstruction?.instagramUrl ?? "https://instagram.com/k9atelierfl";
   const instagramHandle =
@@ -65,6 +66,14 @@ export function Footer() {
             >
               {brand.email}
             </a>
+            {brand.phone && phoneHref ? (
+              <a
+                href={phoneHref}
+                className="font-body mt-3 block text-sm text-ink transition hover:text-deep-lavender"
+              >
+                {brand.phone}
+              </a>
+            ) : null}
             <a
               href={instagram}
               target="_blank"
@@ -90,6 +99,20 @@ export function Footer() {
         <div className="mt-14 border-t border-gray-line/80 pt-8">
           <p className="font-body text-center text-xs text-taupe">
             © {new Date().getFullYear()} {brand.name}. All rights reserved.
+            {" · "}
+            <Link
+              href="/privacy"
+              className="underline decoration-champagne/70 underline-offset-4 hover:text-deep-lavender"
+            >
+              Privacy Policy
+            </Link>
+            {" · "}
+            <Link
+              href="/terms"
+              className="underline decoration-champagne/70 underline-offset-4 hover:text-deep-lavender"
+            >
+              Terms
+            </Link>
           </p>
         </div>
       </Container>

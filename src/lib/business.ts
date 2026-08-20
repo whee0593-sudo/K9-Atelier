@@ -4,6 +4,16 @@ export type Business = typeof businessData;
 
 export const business: Business = businessData;
 
+/** Click-to-call href for the public studio number, or null if none is set. */
+export function getBrandPhoneTelHref() {
+  const phone = business.brand.phone;
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 10) return `tel:+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `tel:+${digits}`;
+  return digits.length >= 8 ? `tel:+${digits}` : null;
+}
+
 export function formatPrice(amount: number) {
   return `$${amount}`;
 }

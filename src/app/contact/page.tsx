@@ -1,7 +1,7 @@
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { LuxuryButton } from "@/components/luxury/LuxuryButton";
 import { PageShell } from "@/components/luxury/PageShell";
-import { business } from "@/lib/business";
+import { business, getBrandPhoneTelHref } from "@/lib/business";
 
 export const metadata = {
   title: "Contact · K9 Atelier",
@@ -24,6 +24,7 @@ function formatTime(value: string) {
 
 export default function ContactPage() {
   const { brand, booking, serviceArea, site } = business;
+  const phoneHref = getBrandPhoneTelHref();
 
   const days = booking.availableDays;
   const daysLabel =
@@ -62,6 +63,20 @@ export default function ContactPage() {
             {brand.email}
           </a>
         </section>
+
+        {brand.phone && phoneHref ? (
+          <section className="border border-gray-line/80 bg-ivory p-6 md:p-8">
+            <h2 className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
+              Phone
+            </h2>
+            <a
+              href={phoneHref}
+              className="font-body mt-3 inline-block text-lg text-ink transition hover:text-deep-lavender"
+            >
+              {brand.phone}
+            </a>
+          </section>
+        ) : null}
 
         <section className="border border-gray-line/80 bg-ivory p-6 md:p-8">
           <h2 className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">

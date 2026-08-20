@@ -360,7 +360,21 @@ export function BookingReviewStep({
             className="mt-0.5 size-4 shrink-0 accent-deep-lavender"
           />
           <span className="font-body text-xs leading-relaxed text-taupe">
-            {smsConsentCopy}
+            {smsConsentCopy} See our{" "}
+            <Link
+              href="/privacy"
+              className="underline decoration-champagne underline-offset-2 hover:text-deep-lavender"
+            >
+              Privacy Policy
+            </Link>{" "}
+            and{" "}
+            <Link
+              href="/terms"
+              className="underline decoration-champagne underline-offset-2 hover:text-deep-lavender"
+            >
+              Terms
+            </Link>
+            .
           </span>
         </label>
         <label className="mt-3 flex cursor-pointer items-start gap-3">
