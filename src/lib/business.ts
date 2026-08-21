@@ -49,8 +49,8 @@ export function getServiceAreaFaqParagraphs() {
 
 export function getPaymentFaqParagraphs() {
   return [
-    "A valid payment method must be on file before a pet profile can be saved.",
-    "After you choose your appointment date and time, you will select which saved card to use for that visit.",
+    "A valid payment method is required before you can reserve an appointment.",
+    "After you choose your appointment date and time, you will add or select which saved card to use for that visit.",
     "You are not charged when you book. Payment is settled after your appointment. Late cancellations and no-shows may be charged to the selected card according to our cancellation policy.",
   ] as const;
 }

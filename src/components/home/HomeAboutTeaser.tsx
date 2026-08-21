@@ -1,16 +1,22 @@
-import Link from "next/link";
 import { Container } from "@/components/luxury/Container";
 import { LuxuryButton } from "@/components/luxury/LuxuryButton";
-import { PhotoPlaceholder } from "@/components/luxury/PhotoPlaceholder";
+import { EditorialPhoto } from "@/components/luxury/EditorialPhoto";
+import { photoFor } from "@/lib/gallery";
 
 export function HomeAboutTeaser() {
+  const portrait = photoFor("about");
+
   return (
     <section className="border-b border-gray-line/60 bg-dusty-lavender/20 py-16 md:py-24">
       <Container className="grid items-center gap-12 lg:grid-cols-2">
-        <PhotoPlaceholder
-          aspect="portrait"
-          label="Portrait photography — forthcoming"
-        />
+        {portrait ? (
+          <EditorialPhoto
+            src={portrait.src}
+            alt={portrait.alt}
+            aspect="portrait"
+            sizes="(min-width: 1024px) 40vw, 100vw"
+          />
+        ) : null}
         <div>
           <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
             About Penny

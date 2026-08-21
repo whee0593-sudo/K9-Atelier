@@ -109,8 +109,8 @@ export default function TermsPage() {
 
         <Section title="Appointments and payment">
           <p>
-            A valid payment method must be on file before a pet profile can be
-            saved. You are not charged when you book. Payment is settled after
+            A valid payment method is required before you can reserve an
+            appointment. You are not charged when you book. Payment is settled after
             your appointment. Late cancellations and no-shows may be charged
             according to the cancellation policy on our{" "}
             <Link

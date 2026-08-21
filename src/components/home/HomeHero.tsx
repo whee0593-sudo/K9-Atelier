@@ -1,12 +1,14 @@
 import { Container } from "@/components/luxury/Container";
 import { Eyebrow } from "@/components/luxury/Eyebrow";
 import { LuxuryButton } from "@/components/luxury/LuxuryButton";
-import { PhotoPlaceholder } from "@/components/luxury/PhotoPlaceholder";
+import { EditorialPhoto } from "@/components/luxury/EditorialPhoto";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { getCommunitiesServedLabel } from "@/lib/business";
+import { photoFor } from "@/lib/gallery";
 
 export function HomeHero() {
   const communities = getCommunitiesServedLabel();
+  const heroPhoto = photoFor("hero");
 
   return (
     <section className="relative overflow-hidden border-b border-gray-line/60">
@@ -40,11 +42,16 @@ export function HomeHero() {
         </div>
 
         <div className="order-1 md:order-2">
-          <PhotoPlaceholder
-            aspect="hero"
-            label="Editorial grooming photography — forthcoming"
-            className="shadow-sm"
-          />
+          {heroPhoto ? (
+            <EditorialPhoto
+              src={heroPhoto.src}
+              alt={heroPhoto.alt}
+              aspect="hero"
+              priority
+              className="shadow-sm"
+              sizes="(min-width: 768px) 42vw, 100vw"
+            />
+          ) : null}
         </div>
       </Container>
     </section>

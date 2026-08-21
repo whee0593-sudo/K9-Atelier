@@ -10,7 +10,6 @@ import {
 } from "@/lib/pets/auth";
 import { PetValidationError } from "@/lib/pets/validation";
 import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
-import { customerHasPaymentMethod } from "@/lib/payments/service";
 
 const PET_SELECT =
   "id, customer_id, name, breed, weight_lbs, date_of_birth, approximate_age_years, sex, temperament_notes, health_comfort_notes, grooming_preferences, archived_at, created_at, updated_at";
@@ -44,14 +43,10 @@ export async function createPet(
   input: PetWriteInput,
 ): Promise<
   | { pet: PetRecord }
-  | { error: "unauthenticated" | "server" | "conflict" | "payment_required" }
+  | { error: "unauthenticated" | "server" | "conflict" }
 > {
   const user = await requireAuthenticatedUser();
   if (!user) return { error: "unauthenticated" };
-
-  if (!(await customerHasPaymentMethod(user.id))) {
-    return { error: "payment_required" };
-  }
 
   const supabase = await createAuthenticatedSupabaseClient();
   const insertRow = mapValidatedInputToInsertRow(input);

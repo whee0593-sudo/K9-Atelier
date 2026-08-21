@@ -84,7 +84,7 @@
   "booking": {
     "requiresPaymentMethod": true,
     "chargeAtBooking": false,
-    "paymentMethodNote": "A valid payment method must be on file before a pet profile can be saved. You choose which saved card to use for each appointment and are not charged when you book — payment is settled after your appointment. Late cancellations and no-shows may be charged to that card per our policy.",
+    "paymentMethodNote": "After you choose your appointment date and time, you will add or select a saved card to reserve. You are not charged when you book — payment is settled after your appointment. Late cancellations and no-shows may be charged to that card per our policy.",
     "availableDays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
     "hoursStart": "09:00",
     "hoursEnd": "16:00",
@@ -120,7 +120,7 @@
         },
         {
           "heading": "5. Payment Method on File",
-          "body": "A valid payment method is required on your account before a pet profile can be saved. After you choose your appointment date and time, you will select which saved card to use for that visit. You are not charged when you book. Payment is settled after your appointment. Late cancellations and no-shows may be charged to the selected card according to the policy above."
+          "body": "A valid payment method is required before you can reserve an appointment. After you choose your appointment date and time, you will add or select which saved card to use for that visit. You are not charged when you book. Payment is settled after your appointment. Late cancellations and no-shows may be charged to the selected card according to the policy above."
         }
       ],
       "outro": "Thank you for understanding — these policies allow us to protect the time and care every dog on our schedule deserves, including yours."

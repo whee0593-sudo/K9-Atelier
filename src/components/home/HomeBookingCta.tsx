@@ -13,8 +13,8 @@ export function HomeBookingCta() {
           A Private Appointment Starts With a Conversation.
         </h2>
         <p className="font-body mx-auto mt-5 max-w-2xl text-base leading-relaxed text-taupe">
-          Reserve a calm, one-on-one grooming experience for your dog. Save a
-          valid card on file before adding a pet profile — you will not be
+          Reserve a calm, one-on-one grooming experience for your dog. You
+          add a card after choosing your date and time — you will not be
           charged when you book.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">

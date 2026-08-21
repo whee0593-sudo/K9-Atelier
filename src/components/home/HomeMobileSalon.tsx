@@ -1,7 +1,8 @@
 import { Container } from "@/components/luxury/Container";
 import { LuxuryButton } from "@/components/luxury/LuxuryButton";
-import { PhotoPlaceholder } from "@/components/luxury/PhotoPlaceholder";
+import { EditorialPhoto } from "@/components/luxury/EditorialPhoto";
 import { SectionIntro } from "@/components/luxury/SectionIntro";
+import { photoFor } from "@/lib/gallery";
 
 const features = [
   "Self-Contained",
@@ -11,16 +12,22 @@ const features = [
 ] as const;
 
 export function HomeMobileSalon() {
+  const salonPhoto = photoFor("salon");
+
   return (
     <section
       id="mobile-salon"
       className="scroll-mt-24 border-b border-gray-line/60 bg-dusty-lavender/20 py-16 md:py-24"
     >
       <Container className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-        <PhotoPlaceholder
-          aspect="landscape"
-          label="Private mobile salon interior — photography forthcoming"
-        />
+        {salonPhoto ? (
+          <EditorialPhoto
+            src={salonPhoto.src}
+            alt={salonPhoto.alt}
+            aspect="landscape"
+            sizes="(min-width: 1024px) 46vw, 100vw"
+          />
+        ) : null}
 
         <div>
           <SectionIntro
@@ -61,8 +68,8 @@ export function HomeMobileSalon() {
           </ul>
 
           <div className="mt-10">
-            <LuxuryButton href="/#mobile-salon" variant="secondary">
-              Step Inside the Salon
+            <LuxuryButton href="/gallery" variant="secondary">
+              View the Gallery
             </LuxuryButton>
           </div>
         </div>

@@ -1,36 +1,45 @@
 import { Container } from "@/components/luxury/Container";
-import { PhotoPlaceholder } from "@/components/luxury/PhotoPlaceholder";
+import { EditorialPhoto } from "@/components/luxury/EditorialPhoto";
+import { LuxuryButton } from "@/components/luxury/LuxuryButton";
 import { SectionIntro } from "@/components/luxury/SectionIntro";
+import { photosFor } from "@/lib/gallery";
 
 export function HomeArtistry() {
+  const photos = photosFor("artistry").slice(0, 3);
+
   return (
-    <section className="border-b border-gray-line/60 bg-dusty-lavender/15 py-16 md:py-24">
+    <section
+      id="gallery"
+      className="scroll-mt-24 border-b border-gray-line/60 bg-dusty-lavender/15 py-16 md:py-24"
+    >
       <Container>
         <SectionIntro
           eyebrow="The Finish"
           title="The Artistry"
-          body="A restrained gallery of grooming transformations — Poodle, Shih Tzu, Pomeranian, Asian Fusion and Teddy Bear styling."
+          body="A restrained gallery of grooming transformations — teddy bear styling, breed-standard finishing, and creative color."
         />
 
         <div className="mt-12 grid gap-6 md:grid-cols-3">
-          <PhotoPlaceholder
-            aspect="portrait"
-            label="Before & after — Poodle styling"
-          />
-          <PhotoPlaceholder
-            aspect="portrait"
-            label="Before & after — Shih Tzu finishing"
-          />
-          <PhotoPlaceholder
-            aspect="portrait"
-            label="Before & after — Asian Fusion grooming"
-          />
+          {photos.map((photo) => (
+            <figure key={photo.id}>
+              <EditorialPhoto
+                src={photo.src}
+                alt={photo.alt}
+                aspect="portrait"
+                sizes="(min-width: 768px) 30vw, 100vw"
+              />
+              <figcaption className="font-body mt-4 text-[10px] font-medium uppercase tracking-[0.16em] text-taupe">
+                {photo.caption}
+              </figcaption>
+            </figure>
+          ))}
         </div>
 
-        <p className="font-body mx-auto mt-8 max-w-2xl text-center text-sm text-taupe">
-          Photography will be added as curated before-and-after imagery becomes
-          available. Only authentic results will be shown.
-        </p>
+        <div className="mt-12 text-center">
+          <LuxuryButton href="/gallery" variant="secondary">
+            View the Gallery
+          </LuxuryButton>
+        </div>
       </Container>
     </section>
   );

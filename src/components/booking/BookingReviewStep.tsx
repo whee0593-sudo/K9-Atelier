@@ -1,7 +1,8 @@
 "use client";
 
+import { Elements } from "@stripe/react-stripe-js";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatPrice } from "@/lib/business";
 import {
   bookingIncludesCreativeColoring,
@@ -17,11 +18,15 @@ import { formatServiceAddress, type ServiceAddress, type TravelQuote } from "@/l
 import type { PetProfile } from "@/lib/pets";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 import { createCustomerAppointment } from "@/lib/appointments/client";
-import { fetchCustomerPaymentMethods } from "@/lib/payments/client";
+import { createPaymentSetupIntent, fetchCustomerPaymentMethods } from "@/lib/payments/client";
 import {
   formatPaymentMethodLabel,
   type PaymentMethodRecord,
 } from "@/lib/payments/types";
+import {
+  AddCardForm,
+  stripePromiseFor,
+} from "@/components/account/PaymentMethodsManager";
 import { createClient } from "@/lib/supabase/client";
 import { isValidSmsPhone } from "@/lib/sms/phone";
 import {
@@ -92,6 +97,11 @@ export function BookingReviewStep({
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<string | null>(
     null,
   );
+  const [cardSetup, setCardSetup] = useState<{
+    clientSecret: string;
+    publishableKey: string;
+  } | null>(null);
+  const [addingCard, setAddingCard] = useState(false);
   const serviceEstimate = getServicePriceEstimate(service, pet.weightLbs);
   const addOnTotal = estimateAddOnTotal(addOnIds, addOnOptions, pet.weightLbs);
   const serviceFrom = serviceEstimate?.from ?? 0;
@@ -132,6 +142,38 @@ export function BookingReviewStep({
     };
   }, []);
 
+  const stripePromise = useMemo(
+    () => (cardSetup ? stripePromiseFor(cardSetup.publishableKey) : null),
+    [cardSetup],
+  );
+
+  async function startAddCard() {
+    setAddingCard(true);
+    try {
+      const next = await createPaymentSetupIntent();
+      setCardSetup(next);
+    } catch (startError) {
+      setError(
+        startError instanceof Error
+          ? startError.message
+          : "Card setup is not available yet.",
+      );
+      setAddingCard(false);
+    }
+  }
+
+  function rememberCard(method: PaymentMethodRecord) {
+    setPaymentMethods((current) => {
+      if (current.some((item) => item.id === method.id)) {
+        return current.map((item) => (item.id === method.id ? method : item));
+      }
+      return [...current, method];
+    });
+    setSelectedPaymentMethodId(method.id);
+    setCardSetup(null);
+    setAddingCard(false);
+  }
+
   const displayServiceName = getServiceDisplayName(
     service.id,
     bookingSelection.serviceName,
@@ -160,7 +202,10 @@ export function BookingReviewStep({
     }
 
     if (!selectedPaymentMethodId) {
-      setError("Please select a saved payment method for this appointment.");
+      setError(
+        "Please add a payment method to finish this reservation. You will not be charged when you book.",
+      );
+      if (!cardSetup && !addingCard) void startAddCard();
       return;
     }
 
@@ -288,15 +333,21 @@ export function BookingReviewStep({
         <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
           Payment Method for This Appointment
         </p>
-        {paymentMethods.length === 0 ? (
+        {paymentMethods.length === 0 && !cardSetup ? (
           <div>
             <p className="font-body text-sm leading-relaxed text-taupe">
-              A valid card must be on file before you can reserve. Add a card to
-              your account, then return to this step.
+              Add a valid card to complete this reservation. You will not be
+              charged when you book — payment is settled after your
+              appointment.
             </p>
-            <Link href="/account/payment" className={`${bookingSecondaryBtnClass} mt-4 inline-flex`}>
-              Add a payment method
-            </Link>
+            <button
+              type="button"
+              onClick={() => void startAddCard()}
+              disabled={addingCard}
+              className={`${bookingSecondaryBtnClass} mt-4 inline-flex`}
+            >
+              {addingCard ? "Preparing…" : "Add a payment method"}
+            </button>
           </div>
         ) : (
           <ul className="space-y-3">
@@ -321,6 +372,41 @@ export function BookingReviewStep({
             })}
           </ul>
         )}
+        {cardSetup && stripePromise ? (
+          <div className="border-t border-gray-line/70 pt-4">
+            <Elements
+              stripe={stripePromise}
+              options={{
+                clientSecret: cardSetup.clientSecret,
+                locale: "en",
+                appearance: { theme: "stripe" },
+              }}
+            >
+              <AddCardForm
+                clientSecret={cardSetup.clientSecret}
+                returnUrl={
+                  typeof window === "undefined"
+                    ? undefined
+                    : window.location.href
+                }
+                onSaved={rememberCard}
+                onCancel={() => {
+                  setCardSetup(null);
+                  setAddingCard(false);
+                }}
+              />
+            </Elements>
+          </div>
+        ) : paymentMethods.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => void startAddCard()}
+            disabled={addingCard}
+            className="font-body text-xs text-ink underline"
+          >
+            {addingCard ? "Preparing…" : "Use a different card"}
+          </button>
+        ) : null}
       </div>
 
       {creativePolicy && (
@@ -405,7 +491,7 @@ export function BookingReviewStep({
 
       <button
         type="button"
-        disabled={loading || !selectedPaymentMethodId}
+        disabled={loading}
         onClick={() => void handleReserve()}
         className={`${bookingPrimaryBtnClass} mt-8`}
       >

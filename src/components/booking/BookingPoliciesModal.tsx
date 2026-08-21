@@ -230,12 +230,12 @@ export function BookingPoliciesModal({
           >
             <div className="space-y-4">
               <p>
-                A valid payment method must be on file before a pet profile can
-                be saved.
+                A valid payment method is required before you can reserve an
+                appointment.
               </p>
               <p>
-                After you choose your appointment date and time, you will
-                select which saved card to use for that visit.
+                After you choose your appointment date and time, you will add
+                or select which saved card to use for that visit.
               </p>
               <p>
                 You are not charged when you book. Payment is settled after

@@ -1,0 +1,67 @@
+{
+  "photos": [
+    {
+      "id": "teddy-bear-smile",
+      "src": "/images/gallery/teddy-bear-smile.jpg",
+      "alt": "Apricot poodle with a rounded teddy bear head and a bright, finished expression",
+      "caption": "Teddy Bear Finish",
+      "placements": ["hero", "gallery"]
+    },
+    {
+      "id": "teddy-bear-cream",
+      "src": "/images/gallery/teddy-bear-cream.jpg",
+      "alt": "Cream toy poodle sitting in a full teddy bear cut",
+      "caption": "Teddy Bear Styling",
+      "placements": ["artistry", "gallery"]
+    },
+    {
+      "id": "westie",
+      "src": "/images/gallery/westie.jpg",
+      "alt": "West Highland White Terrier in a classic show-style groom",
+      "caption": "West Highland Finish",
+      "placements": ["artistry", "gallery"]
+    },
+    {
+      "id": "creative-color",
+      "src": "/images/gallery/creative-color.jpg",
+      "alt": "White dog with turquoise creative color on the ears, paws, and tail",
+      "caption": "Creative Color",
+      "placements": ["artistry", "gallery"]
+    },
+    {
+      "id": "schnauzer",
+      "src": "/images/gallery/schnauzer.jpg",
+      "alt": "Miniature Schnauzer with a precise salt-and-pepper head finish",
+      "caption": "Schnauzer Precision",
+      "placements": ["about", "gallery"]
+    },
+    {
+      "id": "teddy-bear-apricot",
+      "src": "/images/gallery/teddy-bear-apricot.jpg",
+      "alt": "Apricot poodle mix in a plush teddy bear cut",
+      "caption": "Asian Fusion Styling",
+      "placements": ["salon", "gallery"]
+    },
+    {
+      "id": "teddy-bear-silver",
+      "src": "/images/gallery/teddy-bear-silver.jpg",
+      "alt": "Silver-grey poodle with a rounded teddy bear head",
+      "caption": "Silver Teddy Bear",
+      "placements": ["gallery"]
+    },
+    {
+      "id": "westie-portrait",
+      "src": "/images/gallery/westie-portrait.jpg",
+      "alt": "West Highland White Terrier portrait against a dark studio backdrop",
+      "caption": "Show Grooming",
+      "placements": ["gallery"]
+    },
+    {
+      "id": "poodle-finish",
+      "src": "/images/gallery/poodle-finish.jpg",
+      "alt": "Phantom poodle with a teddy bear cut and finished ear styling",
+      "caption": "Signature Finishing",
+      "placements": ["gallery"]
+    }
+  ]
+}

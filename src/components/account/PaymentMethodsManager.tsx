@@ -33,10 +33,12 @@ function AddCardForm({
   clientSecret,
   onSaved,
   onCancel,
+  returnUrl,
 }: {
   clientSecret: string;
   onSaved: (method: PaymentMethodRecord) => void;
   onCancel: () => void;
+  returnUrl?: string;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -59,7 +61,7 @@ function AddCardForm({
         clientSecret,
         redirect: "if_required",
         confirmParams: {
-          return_url: `${window.location.origin}/account/payment`,
+          return_url: returnUrl ?? `${window.location.origin}/account/payment`,
         },
       });
       const timeout = new Promise<never>((_, reject) => {
@@ -223,7 +225,7 @@ export function PaymentMethodsManager() {
 
       {methods.length === 0 && !setup ? (
         <div className="rounded-xl border border-dashed border-lavender/50 bg-lavender-light/30 px-4 py-8 text-center text-sm text-text-muted">
-          No saved cards yet. Add a valid card before creating a pet profile.
+          No saved cards yet. Add a card before you reserve an appointment.
         </div>
       ) : (
         <ul className="space-y-3">
@@ -298,25 +300,5 @@ export function PaymentMethodsManager() {
   );
 }
 
-export function PaymentRequiredNotice({ compact = false }: { compact?: boolean }) {
-  return (
-    <div
-      className={
-        compact
-          ? "rounded-xl border border-champagne/40 bg-cream px-4 py-4"
-          : "rounded-xl border border-lavender/40 bg-lavender-light/30 px-4 py-5"
-      }
-    >
-      <p className="text-sm text-text">
-        A valid payment method must be on file before you can save a pet
-        profile. You will not be charged when you add a card.
-      </p>
-      <a
-        href="/account/payment"
-        className="mt-3 inline-flex rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white"
-      >
-        Add a payment method
-      </a>
-    </div>
-  );
-}
+export { AddCardForm, stripePromiseFor };
+
