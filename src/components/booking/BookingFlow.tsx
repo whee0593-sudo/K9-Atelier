@@ -30,6 +30,7 @@ import {
 import { CreativePairingModal } from "@/components/booking/CreativePairingModal";
 import Link from "next/link";
 import { bookingBackLinkClass } from "@/components/booking/booking-ui";
+import { reportBookAppointmentConversion } from "@/lib/google-ads";
 
 export function BookingFlow() {
   const [selectedPet, setSelectedPet] = useState<PetProfile | null>(null);
@@ -295,6 +296,7 @@ export function BookingFlow() {
             onReserved={(appointment) => {
               setCreatedAppointment(appointment);
               setReserved(true);
+              reportBookAppointmentConversion(appointment.id);
             }}
           />
         )}

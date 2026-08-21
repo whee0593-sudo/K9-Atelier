@@ -1,8 +1,10 @@
 /** Google Ads tag ID from Ads → Goals → Google tag setup. */
 export const GOOGLE_ADS_ID = "AW-18402037044";
 
-/** Conversion label, filled in after the Book appointment action is created. */
-export const GOOGLE_ADS_BOOK_CONVERSION_LABEL = "";
+/** Event snippet label for the Book appointment conversion action. */
+export const GOOGLE_ADS_BOOK_CONVERSION_LABEL = "x65RCOrWw-UcELSa48ZE";
+
+const BOOK_APPOINTMENT_VALUE_USD = 90;
 
 declare global {
   interface Window {
@@ -11,7 +13,7 @@ declare global {
   }
 }
 
-export function reportBookAppointmentConversion() {
+export function reportBookAppointmentConversion(transactionId?: string) {
   if (
     typeof window === "undefined" ||
     typeof window.gtag !== "function" ||
@@ -22,5 +24,8 @@ export function reportBookAppointmentConversion() {
 
   window.gtag("event", "conversion", {
     send_to: `${GOOGLE_ADS_ID}/${GOOGLE_ADS_BOOK_CONVERSION_LABEL}`,
+    value: BOOK_APPOINTMENT_VALUE_USD,
+    currency: "USD",
+    ...(transactionId ? { transaction_id: transactionId } : {}),
   });
 }
