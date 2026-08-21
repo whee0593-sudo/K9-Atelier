@@ -1,42 +1,32 @@
 import Image from "next/image";
 
-type Aspect = "hero" | "landscape" | "portrait" | "square";
-
 type Props = {
   src: string;
   alt: string;
-  aspect?: Aspect;
   className?: string;
   sizes?: string;
   priority?: boolean;
 };
 
-const aspectClasses: Record<Aspect, string> = {
-  hero: "aspect-[4/5] md:aspect-[16/10]",
-  landscape: "aspect-[4/3]",
-  portrait: "aspect-[3/4]",
-  square: "aspect-square",
-};
-
 export function EditorialPhoto({
   src,
   alt,
-  aspect = "landscape",
   className = "",
   sizes = "(min-width: 768px) 50vw, 100vw",
   priority = false,
 }: Props) {
   return (
     <div
-      className={`relative overflow-hidden rounded-sm bg-dusty-lavender/50 ${aspectClasses[aspect]} ${className}`}
+      className={`flex w-full min-w-0 items-center justify-center overflow-hidden rounded-sm bg-dusty-lavender/30 ${className}`}
     >
       <Image
         src={src}
         alt={alt}
-        fill
+        width={1600}
+        height={2000}
         priority={priority}
         sizes={sizes}
-        className="object-cover"
+        className="h-auto max-h-[80vh] w-auto max-w-full object-contain object-top"
       />
     </div>
   );

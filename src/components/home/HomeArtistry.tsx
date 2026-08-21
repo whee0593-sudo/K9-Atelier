@@ -25,7 +25,6 @@ export function HomeArtistry() {
               <EditorialPhoto
                 src={photo.src}
                 alt={photo.alt}
-                aspect="portrait"
                 sizes="(min-width: 768px) 30vw, 100vw"
               />
               <figcaption className="font-body mt-4 text-[10px] font-medium uppercase tracking-[0.16em] text-taupe">

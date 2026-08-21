@@ -24,7 +24,6 @@ export function HomeMobileSalon() {
           <EditorialPhoto
             src={salonPhoto.src}
             alt={salonPhoto.alt}
-            aspect="landscape"
             sizes="(min-width: 1024px) 46vw, 100vw"
           />
         ) : null}

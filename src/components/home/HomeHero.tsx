@@ -46,7 +46,6 @@ export function HomeHero() {
             <EditorialPhoto
               src={heroPhoto.src}
               alt={heroPhoto.alt}
-              aspect="hero"
               priority
               className="shadow-sm"
               sizes="(min-width: 768px) 42vw, 100vw"

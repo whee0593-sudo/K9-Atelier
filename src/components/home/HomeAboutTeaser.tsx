@@ -13,7 +13,6 @@ export function HomeAboutTeaser() {
           <EditorialPhoto
             src={portrait.src}
             alt={portrait.alt}
-            aspect="portrait"
             sizes="(min-width: 1024px) 40vw, 100vw"
           />
         ) : null}

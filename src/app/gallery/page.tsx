@@ -31,7 +31,6 @@ export default function GalleryPage() {
             <EditorialPhoto
               src={photo.src}
               alt={photo.alt}
-              aspect="portrait"
               sizes="(min-width: 1024px) 28vw, (min-width: 640px) 45vw, 100vw"
             />
             <figcaption className="font-body mt-4 text-[10px] font-medium uppercase tracking-[0.16em] text-taupe">
