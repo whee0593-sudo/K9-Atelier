@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { SiteShell } from "@/components/SiteShell";
 import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
 import { bodyFont, displayFont } from "@/lib/fonts";
+import { GOOGLE_ADS_ID } from "@/lib/google-ads";
 import "./globals.css";
 
 const siteTitle =
@@ -43,6 +45,18 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${displayFont.variable} ${bodyFont.variable}`}>
       <body className="min-h-screen antialiased font-body">
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ADS_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="google-ads-gtag" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GOOGLE_ADS_ID}');
+          `}
+        </Script>
         <LocalBusinessJsonLd />
         <SiteShell>{children}</SiteShell>
       </body>
