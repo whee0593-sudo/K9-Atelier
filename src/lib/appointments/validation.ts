@@ -1,5 +1,6 @@
 import { business } from "@/lib/business";
 import type { AppointmentWriteInput } from "@/lib/appointments/types";
+import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
 
 export class AppointmentValidationError extends Error {
@@ -93,6 +94,35 @@ export function validateCreateAppointmentInput(
     );
   }
 
+  if (!isDateBookable(parseDateValue(appointmentDate))) {
+    throw new AppointmentValidationError(
+      "That date is not available for booking.",
+      "appointmentDate",
+    );
+  }
+
+  const timePreferenceRaw = readString(
+    record,
+    "timePreference",
+    "Time of day",
+    20,
+  );
+  if (timePreferenceRaw !== "morning" && timePreferenceRaw !== "afternoon") {
+    throw new AppointmentValidationError(
+      "Please choose morning or afternoon.",
+      "timePreference",
+    );
+  }
+
+  const addressLat = readNumber(record, "addressLat", "Address location", -90);
+  const addressLon = readNumber(record, "addressLon", "Address location", -180);
+  if (addressLat < -90 || addressLat > 90 || addressLon < -180 || addressLon > 180) {
+    throw new AppointmentValidationError(
+      "We could not locate that address.",
+      "address",
+    );
+  }
+
   const addressRecord = record.address;
   if (
     addressRecord == null ||
@@ -183,6 +213,9 @@ export function validateCreateAppointmentInput(
     travelFee,
     appointmentDate,
     appointmentTime,
+    timePreference: timePreferenceRaw,
+    addressLat,
+    addressLon,
     estimatedTotal,
     paymentMethodId,
     customerPhone,

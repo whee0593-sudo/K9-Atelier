@@ -30,6 +30,12 @@ import {
   sendAppointmentStatusEmails,
 } from "@/lib/email/appointment-mails";
 import { getCustomerPaymentMethod } from "@/lib/payments/service";
+import { estimateServiceDurationMinutes } from "@/lib/services";
+import {
+  assignArrivalWindow,
+  claimDayPlan,
+  getBaseGeoPoint,
+} from "@/lib/appointments/schedule";
 
 const APPOINTMENT_SELECT = `
   id,
@@ -47,6 +53,10 @@ const APPOINTMENT_SELECT = `
   travel_fee,
   appointment_date,
   appointment_time,
+  scheduled_start,
+  time_preference,
+  address_lat,
+  address_lon,
   timezone,
   estimated_total,
   new_client_deposit,
@@ -77,6 +87,7 @@ export async function createAppointment(
         | "unauthenticated"
         | "not_found"
         | "conflict"
+        | "slot_unavailable"
         | "payment_required"
         | "server";
     }
@@ -116,6 +127,40 @@ export async function createAppointment(
   );
   if (!paymentMethod) return { error: "payment_required" };
 
+  const base = await getBaseGeoPoint();
+  if (!base) return { error: "server" };
+
+  const durationMinutes = estimateServiceDurationMinutes(
+    input.serviceId,
+    pet.weightLbs,
+    input.addOnIds,
+  );
+  const point = { lat: input.addressLat, lon: input.addressLon };
+  const assignment = await assignArrivalWindow({
+    date: input.appointmentDate,
+    point,
+    zip: input.address.zip,
+    durationMinutes,
+    preference: input.timePreference,
+    base,
+  });
+  if ("error" in assignment) {
+    if (assignment.error === "slot_unavailable") return { error: "slot_unavailable" };
+    if (assignment.error === "misconfigured") return { error: "server" };
+    return { error: "server" };
+  }
+
+  const claimed = await claimDayPlan(
+    input.appointmentDate,
+    input.address.zip,
+    point,
+  );
+  if ("error" in claimed) {
+    if (claimed.error === "slot_unavailable") return { error: "slot_unavailable" };
+    if (claimed.error === "misconfigured") return { error: "server" };
+    return { error: "server" };
+  }
+
   const { error: phoneError } = await supabase
     .from("profiles")
     .update({ phone: input.customerPhone })
@@ -146,7 +191,11 @@ export async function createAppointment(
       travel_distance_miles: input.travelDistanceMiles,
       travel_fee: input.travelFee,
       appointment_date: input.appointmentDate,
-      appointment_time: input.appointmentTime,
+      appointment_time: assignment.insertion.appointmentTime,
+      scheduled_start: assignment.insertion.scheduledStart,
+      time_preference: input.timePreference,
+      address_lat: input.addressLat,
+      address_lon: input.addressLon,
       timezone: business.booking.timezone,
       estimated_total: input.estimatedTotal,
       new_client_deposit: 0,
@@ -160,6 +209,7 @@ export async function createAppointment(
 
   if (error) {
     console.error("createAppointment insert failed:", error.code, error.message);
+    if (error.code === "23505") return { error: "slot_unavailable" };
     return { error: "server" };
   }
 
@@ -302,6 +352,7 @@ export async function listTodayConfirmedAdminAppointments(): Promise<
     .select(ADMIN_TODAY_APPOINTMENT_SELECT)
     .eq("status", "confirmed")
     .eq("appointment_date", todayInBusinessTimezone())
+    .order("scheduled_start", { ascending: true })
     .order("appointment_time", { ascending: true });
 
   if (error) {

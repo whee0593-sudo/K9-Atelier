@@ -6,6 +6,16 @@ import { formatPrice } from "@/lib/business";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import { formatServiceAddress } from "@/lib/travel";
 
+type ScheduleDay = {
+  date: string;
+  zoneId: string;
+  zoneLabel: string;
+  source: "staff" | "auto" | "weekly" | "open";
+  appointmentCount: number;
+};
+
+type ZoneOption = { id: string; label: string };
+
 function formatShortDate(iso: string): string {
   const date = new Date(iso.includes("T") ? iso : `${iso}T12:00:00`);
   if (Number.isNaN(date.getTime())) return iso;
@@ -23,6 +33,8 @@ export function AppointmentReviewPanel() {
   const [todayAppointments, setTodayAppointments] = useState<
     AdminAppointmentRecord[]
   >([]);
+  const [schedule, setSchedule] = useState<ScheduleDay[]>([]);
+  const [zones, setZones] = useState<ZoneOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +51,8 @@ export function AppointmentReviewPanel() {
         error?: string;
         appointments?: AdminAppointmentRecord[];
         today?: AdminAppointmentRecord[];
+        schedule?: ScheduleDay[];
+        zones?: ZoneOption[];
       };
 
       if (response.status === 401) {
@@ -58,6 +72,8 @@ export function AppointmentReviewPanel() {
 
       setAppointments(body.appointments ?? []);
       setTodayAppointments(body.today ?? []);
+      setSchedule(body.schedule ?? []);
+      setZones(body.zones ?? []);
     } catch {
       setError("Could not load appointments.");
     } finally {
@@ -131,6 +147,30 @@ export function AppointmentReviewPanel() {
     }
   }
 
+  async function setDayZone(date: string, zoneId: string) {
+    setBusyId(date);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/admin/schedule", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date, zoneId }),
+      });
+      const body = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setError(body.error ?? "Could not update that day's area.");
+        return;
+      }
+      await loadAppointments({ silent: true });
+    } catch {
+      setError("Could not update that day's area.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   if (loading) {
     return (
       <p className="mt-8 text-sm text-text-muted">Loading pending appointments…</p>
@@ -168,6 +208,69 @@ export function AppointmentReviewPanel() {
           {error}
         </p>
       ) : null}
+
+      <section>
+        <h3 className="text-lg font-medium text-gold-dark">Route days</h3>
+        <p className="mt-1 text-sm text-text-muted">
+          Lock a day to one area, or leave it on Auto so the first booking that
+          day sets the neighborhood.
+        </p>
+        {schedule.length === 0 ? (
+          <p className="mt-4 text-sm text-text-muted">
+            No upcoming bookable days yet.
+          </p>
+        ) : (
+          <ul className="mt-4 divide-y divide-lavender/30 overflow-hidden rounded-2xl border border-lavender/30 bg-cream">
+            {schedule.slice(0, 10).map((day) => {
+              const busy = busyId === day.date;
+              const sourceLabel =
+                day.source === "staff"
+                  ? "Staff"
+                  : day.source === "auto"
+                    ? "Auto"
+                    : day.source === "weekly"
+                      ? "Weekly default"
+                      : "Open";
+              return (
+                <li
+                  key={day.date}
+                  className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-gold-dark">
+                      {formatShortDate(day.date)}
+                    </p>
+                    <p className="mt-1 text-xs text-text-muted">
+                      {sourceLabel}
+                      {day.appointmentCount > 0
+                        ? ` · ${day.appointmentCount} booked`
+                        : " · no bookings"}
+                    </p>
+                  </div>
+                  <label className="sr-only" htmlFor={`zone-${day.date}`}>
+                    Service area for {formatShortDate(day.date)}
+                  </label>
+                  <select
+                    id={`zone-${day.date}`}
+                    disabled={busy}
+                    value={day.source === "open" ? "auto" : day.zoneId}
+                    onChange={(event) =>
+                      void setDayZone(day.date, event.target.value)
+                    }
+                    className="rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm text-text"
+                  >
+                    {zones.map((zone) => (
+                      <option key={zone.id} value={zone.id}>
+                        {zone.label}
+                      </option>
+                    ))}
+                  </select>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       {appointments.length === 0 ? (
         <div className="rounded-2xl border border-lavender/30 bg-cream p-8 text-center">
@@ -299,9 +402,10 @@ export function AppointmentReviewPanel() {
       )}
 
       <section>
-        <h3 className="text-lg font-medium text-gold-dark">Today</h3>
+        <h3 className="text-lg font-medium text-gold-dark">Today — drive order</h3>
         <p className="mt-1 text-sm text-text-muted">
-          Confirmed visits for today. Send an on-the-way text when you leave.
+          Confirmed visits in the order you should drive. Send an on-the-way
+          text when you leave.
         </p>
         {todayAppointments.length === 0 ? (
           <div className="mt-4 rounded-2xl border border-lavender/30 bg-cream p-8 text-center">
@@ -311,7 +415,7 @@ export function AppointmentReviewPanel() {
           </div>
         ) : (
           <ul className="mt-4 space-y-4">
-            {todayAppointments.map((appointment) => {
+            {todayAppointments.map((appointment, index) => {
               const busy = busyId === appointment.id;
               const customerLabel =
                 appointment.customerName ??
@@ -343,7 +447,7 @@ export function AppointmentReviewPanel() {
                       </p>
                     </div>
                     <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
-                      {appointment.appointmentTime}
+                      Stop {index + 1} · {appointment.appointmentTime}
                     </span>
                   </div>
                   <p className="mt-4 text-sm text-text">

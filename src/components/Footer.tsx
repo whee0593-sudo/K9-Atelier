@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { business, getBrandPhoneTelHref } from "@/lib/business";
+import { business, getBrandPhoneTelHref, getGoogleProfileUrl } from "@/lib/business";
 import { Container } from "@/components/luxury/Container";
 
 const footerLinks = [
   { href: "/#experience", label: "The Atelier" },
   { href: "/services", label: "Services" },
   { href: "/gallery", label: "Gallery" },
+  { href: "/reviews", label: "Reviews" },
   { href: "/#mobile-salon", label: "Experience" },
   { href: "/about", label: "About" },
   { href: "/faq", label: "FAQ" },
@@ -94,6 +95,18 @@ export function Footer() {
               <span className="text-taupe">Facebook · </span>
               {brand.social.facebook}
             </a>
+            {getGoogleProfileUrl() ? (
+              <a
+                href={getGoogleProfileUrl() ?? undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="K9 Atelier on Google"
+                className="font-body mt-3 block text-sm text-ink transition hover:text-deep-lavender"
+              >
+                <span className="text-taupe">Google · </span>
+                Find us
+              </a>
+            ) : null}
           </div>
         </div>
 

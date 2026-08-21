@@ -369,6 +369,27 @@ export function getAddOnService(id: string) {
   return allBookableServices().find((s) => s.id === id);
 }
 
+/** Minutes blocked on the van for a primary service plus selected add-ons. */
+export function estimateServiceDurationMinutes(
+  serviceId: string,
+  weightLbs: number,
+  addOnIds: string[] = [],
+) {
+  const service = allBookableServices().find((item) => item.id === serviceId);
+  const tier = service ? getTierForPet(service, weightLbs) : null;
+  let minutes =
+    tier?.durationMin ?? service?.durationMin ?? service?.durationMax ?? 60;
+
+  for (const addOnId of addOnIds) {
+    const addOn = getAddOnService(addOnId);
+    if (!addOn) continue;
+    const addOnTier = getTierForPet(addOn, weightLbs);
+    minutes += addOnTier?.durationMin ?? addOn.durationMin ?? 0;
+  }
+
+  return Math.max(30, minutes);
+}
+
 export function formatServicePriceFrom(service: BookableService) {
   if (service.pricingType === "tiered" && service.tiers?.length) {
     const min = Math.min(...service.tiers.map((t) => t.priceFrom));

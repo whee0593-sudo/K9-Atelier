@@ -150,6 +150,8 @@
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
+  justify-items: center;
+  align-items: center;
 }
 
 .weekdays {
@@ -167,37 +169,74 @@
 }
 
 .dayButton {
-  aspect-ratio: 1;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   border: none;
-  background: none;
+  background: transparent;
   font-family: var(--font-dt-jost), sans-serif;
   font-size: 13px;
+  font-weight: 400;
   color: #2e2a24;
   cursor: pointer;
   border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.dayNum {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s ease, color 0.2s ease;
+  line-height: 1;
 }
 
 .dayButtonEmpty {
   cursor: default;
+  background: none;
 }
 
 .dayButton:not(:disabled):not(.dayButtonEmpty):hover {
-  background: #f2ebde;
+  background: #efeaf6;
 }
 
 .dayButton:disabled {
-  color: #d6cfc2;
+  color: #c5bdb2;
   cursor: default;
+  opacity: 1;
+  -webkit-text-fill-color: #c5bdb2;
 }
 
-.dayButtonSelected {
-  background: #b7a8d4;
+.dayButtonSelected,
+.dayButtonSelected:hover {
+  background: #c8b8d8;
   color: #ffffff;
   font-weight: 500;
+}
+
+.dayButtonSelected .dayNum {
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+}
+
+.routeNote {
+  font-family: var(--font-dt-jost), sans-serif;
+  font-size: 12px;
+  color: #6b6259;
+  text-align: center;
+  margin: -10px 0 22px;
+  line-height: 1.4;
+}
+
+.errorNote {
+  font-family: var(--font-dt-jost), sans-serif;
+  font-size: 12px;
+  color: #9b3d3d;
+  text-align: center;
+  margin: 12px 0 0;
 }
 
 .rule {
@@ -222,47 +261,60 @@
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
   margin-bottom: 8px;
+  justify-items: center;
+  align-items: center;
 }
 
 .timeButton {
-  padding: 11px 6px;
-  border: 1px solid #e7e0d4;
-  background: #faf6ef;
-  border-radius: 2px;
+  width: 108px;
+  height: 108px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
   font-family: var(--font-dt-jost), sans-serif;
   font-size: 12.5px;
+  font-weight: 400;
   color: #2e2a24;
   cursor: pointer;
-  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.timeLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .timeButton:hover:not(:disabled) {
-  border-color: #b08d57;
+  background: #efeaf6;
 }
 
-.timeButtonSelected {
-  background: #b7a8d4;
-  border-color: #b7a8d4;
-  color: #ffffff;
-}
-
-.timeUnavailable {
-  color: #c9c1b3;
+.timeButton:disabled {
+  color: #c5bdb2;
   cursor: default;
-  background: #f2ebde;
+  opacity: 1;
+  -webkit-text-fill-color: #c5bdb2;
+  background: transparent;
 }
 
-.timeUnavailable:hover {
-  border-color: #e7e0d4;
+.timeButtonSelected,
+.timeButtonSelected:hover {
+  background: #c8b8d8;
+  color: #ffffff;
+  font-weight: 500;
 }
 
-.noTimes {
-  text-align: center;
-  font-size: 12.5px;
-  color: #6b6259;
-  font-style: italic;
-  font-family: var(--font-dt-cormorant), "Cormorant Garamond", Georgia, serif;
-  padding: 14px 0 4px;
+.timeButtonSelected .timeLabel {
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
 }
 
 .actions {

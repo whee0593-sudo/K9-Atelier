@@ -15,6 +15,8 @@ export type TravelQuote = {
   withinServiceArea: boolean;
   withinFreeRadius: boolean;
   summary: string;
+  lat?: number;
+  lon?: number;
 };
 
 export function formatServiceAddress(address: ServiceAddress) {

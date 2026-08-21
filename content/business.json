@@ -11,6 +11,12 @@
       "instagram": "K9 Atelier FL",
       "facebook": "K9 Atelier",
       "facebookUrl": "https://www.facebook.com/share/1GyGZkHdNE/?mibextid=wwXIfr"
+    },
+    "google": {
+      "businessProfileUrl": "",
+      "writeReviewUrl": "",
+      "placeId": "",
+      "mapsSearchUrl": "https://www.google.com/maps/search/?api=1&query=K9%20Atelier%20mobile%20pet%20grooming%20Palm%20Beach%20Gardens%20FL"
     }
   },
   "colors": {
@@ -86,9 +92,51 @@
     "chargeAtBooking": false,
     "paymentMethodNote": "After you choose your appointment date and time, you will add or select a saved card to reserve. You are not charged when you book — payment is settled after your appointment. Late cancellations and no-shows may be charged to that card per our policy.",
     "availableDays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+    "firstBookableDate": "2026-09-20",
     "hoursStart": "09:00",
     "hoursEnd": "16:00",
     "timezone": "America/New_York",
+    "routing": {
+      "maxAppointmentsPerDay": 4,
+      "clusterRadiusMiles": 8,
+      "travelBufferMinutes": 15,
+      "morningEndsAt": "12:00",
+      "zones": [
+        {
+          "id": "jupiter",
+          "label": "Jupiter",
+          "zips": ["33458", "33469", "33477", "33478"]
+        },
+        {
+          "id": "palm-beach-gardens",
+          "label": "Palm Beach Gardens",
+          "zips": ["33403", "33408", "33410", "33418"]
+        },
+        {
+          "id": "west-palm-beach",
+          "label": "West Palm Beach",
+          "zips": [
+            "33401",
+            "33405",
+            "33406",
+            "33407",
+            "33409",
+            "33411",
+            "33412",
+            "33413",
+            "33415",
+            "33417"
+          ]
+        }
+      ],
+      "weeklyDefaults": {
+        "monday": "auto",
+        "tuesday": "auto",
+        "wednesday": "auto",
+        "thursday": "auto",
+        "friday": "auto"
+      }
+    },
     "photoMarketingConsent": "I consent to K9 Atelier photographing/filming my pet during service for use in marketing (website, social media, ads). K9 Atelier retains ownership of all images. I understand I can opt out anytime by contacting K9 Atelier.",
     "cancellationPolicy": {
       "title": "Cancellation & Rescheduling Policy",

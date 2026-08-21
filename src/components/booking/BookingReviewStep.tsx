@@ -17,6 +17,7 @@ import { getServiceDisplayName } from "@/lib/service-display";
 import { formatServiceAddress, type ServiceAddress, type TravelQuote } from "@/lib/travel";
 import type { PetProfile } from "@/lib/pets";
 import type { AppointmentRecord } from "@/lib/appointments/types";
+import type { TimePreference } from "@/lib/booking-schedule";
 import { createCustomerAppointment } from "@/lib/appointments/client";
 import { createPaymentSetupIntent, fetchCustomerPaymentMethods } from "@/lib/payments/client";
 import {
@@ -54,6 +55,7 @@ type Props = {
   travelQuote: TravelQuote;
   appointmentDate: string;
   appointmentTime: string;
+  timePreference?: TimePreference | null;
   onMakeChange: () => void;
   onReserved: (appointment: AppointmentRecord) => void;
 };
@@ -85,6 +87,7 @@ export function BookingReviewStep({
   travelQuote,
   appointmentDate,
   appointmentTime,
+  timePreference,
   onMakeChange,
   onReserved,
 }: Props) {
@@ -209,6 +212,17 @@ export function BookingReviewStep({
       return;
     }
 
+    if (
+      !timePreference ||
+      travelQuote.lat == null ||
+      travelQuote.lon == null
+    ) {
+      setError(
+        "Please go back and confirm your address and appointment date.",
+      );
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -224,6 +238,9 @@ export function BookingReviewStep({
         travelFee: travelQuote.fee,
         appointmentDate,
         appointmentTime,
+        timePreference: timePreference ?? undefined,
+        addressLat: travelQuote.lat,
+        addressLon: travelQuote.lon,
         estimatedTotal,
         paymentMethodId: selectedPaymentMethodId,
         customerPhone: phone,
@@ -274,6 +291,9 @@ export function BookingReviewStep({
           </p>
           <p className="font-body mt-3 text-sm text-ink">
             {appointmentDate} · {appointmentTime}
+          </p>
+          <p className="font-body mt-2 text-xs text-taupe">
+            Arrival window assigned to fit that day&apos;s route.
           </p>
           <p className="font-body mt-2 text-sm text-taupe">
             {formatServiceAddress(address)}

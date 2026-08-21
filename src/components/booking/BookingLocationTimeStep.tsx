@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { business, formatPrice } from "@/lib/business";
 import {
   formatServiceAddress,
@@ -8,7 +8,11 @@ import {
   type TravelQuote,
 } from "@/lib/travel";
 import type { PetProfile } from "@/lib/pets";
-import { DateTimeStep } from "@/components/booking/DateTimeStep";
+import {
+  DateTimeStep,
+  type AvailabilityDay,
+} from "@/components/booking/DateTimeStep";
+import type { TimePreference } from "@/lib/booking-schedule";
 import {
   bookingBackLinkClass,
   bookingFieldClass,
@@ -19,25 +23,30 @@ import {
 
 type Props = {
   pet: PetProfile;
+  serviceId: string;
+  addOnIds: string[];
   initialAddress?: ServiceAddress | null;
   initialQuote?: TravelQuote | null;
   initialDate?: string | null;
-  initialTime?: string | null;
+  initialPreference?: TimePreference | null;
   onBack: () => void;
   onComplete: (
     address: ServiceAddress,
     quote: TravelQuote,
     date: string,
     time: string,
+    preference: TimePreference,
   ) => void;
 };
 
 export function BookingLocationTimeStep({
   pet,
+  serviceId,
+  addOnIds,
   initialAddress,
   initialQuote,
   initialDate,
-  initialTime,
+  initialPreference,
   onBack,
   onComplete,
 }: Props) {
@@ -51,14 +60,56 @@ export function BookingLocationTimeStep({
   const [quote, setQuote] = useState<TravelQuote | null>(initialQuote ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [appointmentDate, setAppointmentDate] = useState<string | null>(
-    initialDate ?? null,
-  );
-  const [appointmentTime, setAppointmentTime] = useState<string | null>(
-    initialTime ?? null,
-  );
+  const [days, setDays] = useState<AvailabilityDay[]>([]);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
 
   const { freeRadiusMiles } = business.serviceArea;
+
+  useEffect(() => {
+    if (phase !== "schedule" || !quote?.lat || !quote.lon) return;
+    let cancelled = false;
+
+    async function loadDays() {
+      setAvailabilityLoading(true);
+      setScheduleError(null);
+      try {
+        const params = new URLSearchParams({
+          lat: String(quote!.lat),
+          lon: String(quote!.lon),
+          zip: zip.trim(),
+          serviceId,
+          weightLbs: String(pet.weightLbs),
+          addOnIds: addOnIds.join(","),
+        });
+        const res = await fetch(`/api/booking/availability?${params}`, {
+          credentials: "include",
+        });
+        const data = (await res.json()) as {
+          error?: string;
+          days?: AvailabilityDay[];
+        };
+        if (cancelled) return;
+        if (!res.ok) {
+          setScheduleError(data.error ?? "Could not load available dates.");
+          return;
+        }
+        setDays(data.days ?? []);
+      } catch {
+        if (!cancelled) {
+          setScheduleError("Could not load available dates.");
+        }
+      } finally {
+        if (!cancelled) setAvailabilityLoading(false);
+      }
+    }
+
+    void loadDays();
+    return () => {
+      cancelled = true;
+    };
+  }, [phase, quote, zip, serviceId, pet.weightLbs, addOnIds]);
 
   async function handleCheckArea(e: React.FormEvent) {
     e.preventDefault();
@@ -91,8 +142,59 @@ export function BookingLocationTimeStep({
   }
 
   function handleContinueToSchedule() {
-    if (!quote?.withinServiceArea) return;
+    if (!quote?.withinServiceArea || quote.lat == null || quote.lon == null) {
+      setError("We could not locate that address. Please check it and try again.");
+      return;
+    }
     setPhase("schedule");
+  }
+
+  async function handleDateConfirmed(date: string, preference: TimePreference) {
+    if (!quote || quote.lat == null || quote.lon == null) return;
+    setAssigning(true);
+    setScheduleError(null);
+    try {
+      const res = await fetch("/api/booking/availability", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lat: quote.lat,
+          lon: quote.lon,
+          zip: zip.trim(),
+          serviceId,
+          weightLbs: pet.weightLbs,
+          addOnIds,
+          date,
+          timePreference: preference,
+        }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        appointmentTime?: string;
+        usedPreference?: TimePreference;
+      };
+      if (!res.ok || !data.appointmentTime) {
+        setScheduleError(data.error ?? "Could not assign an arrival window.");
+        return;
+      }
+      onComplete(
+        {
+          street: street.trim(),
+          city: city.trim(),
+          state: state.trim(),
+          zip: zip.trim(),
+        },
+        quote,
+        date,
+        data.appointmentTime,
+        data.usedPreference ?? preference,
+      );
+    } catch {
+      setScheduleError("Could not assign an arrival window.");
+    } finally {
+      setAssigning(false);
+    }
   }
 
   if (phase === "schedule") {
@@ -108,30 +210,19 @@ export function BookingLocationTimeStep({
           Available private appointments for {pet.name}.
         </h2>
         <p className="font-body mt-4 text-sm text-taupe">
-          Monday–Friday · 9:00 AM–4:00 PM Eastern · Weekend appointments by
-          request
+          Monday–Friday · 9:00 AM–4:00 PM Eastern · We assign your arrival
+          window to fit that day&apos;s route.
         </p>
         <div className="mt-8">
           <DateTimeStep
-            initialDate={appointmentDate}
-            initialTime={appointmentTime}
+            initialDate={initialDate}
+            initialPreference={initialPreference}
+            days={days}
+            loading={availabilityLoading}
+            assigning={assigning}
+            error={scheduleError}
             onBack={() => setPhase("address")}
-            onConfirmed={(date, time) => {
-              if (!quote) return;
-              setAppointmentDate(date);
-              setAppointmentTime(time);
-              onComplete(
-                {
-                  street: street.trim(),
-                  city: city.trim(),
-                  state: state.trim(),
-                  zip: zip.trim(),
-                },
-                quote,
-                date,
-                time,
-              );
-            }}
+            onConfirmed={handleDateConfirmed}
           />
         </div>
       </section>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SiteShell } from "@/components/SiteShell";
+import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
 import { bodyFont, displayFont } from "@/lib/fonts";
 import "./globals.css";
 
@@ -42,6 +43,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${displayFont.variable} ${bodyFont.variable}`}>
       <body className="min-h-screen antialiased font-body">
+        <LocalBusinessJsonLd />
         <SiteShell>{children}</SiteShell>
       </body>
     </html>

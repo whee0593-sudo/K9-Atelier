@@ -47,6 +47,12 @@ export function mapAppointmentRowToRecord(row: AppointmentRow): AppointmentRecor
     travelFee: Number(row.travel_fee),
     appointmentDate: row.appointment_date,
     appointmentTime: row.appointment_time,
+    scheduledStart:
+      typeof row.scheduled_start === "number" ? row.scheduled_start : null,
+    timePreference:
+      row.time_preference === "morning" || row.time_preference === "afternoon"
+        ? row.time_preference
+        : null,
     timezone: row.timezone,
     estimatedTotal:
       row.estimated_total == null ? null : Number(row.estimated_total),

@@ -46,6 +46,10 @@ export function isBookableWeekday(date: Date) {
   return business.booking.availableDays.includes(key);
 }
 
+export function weekdayKey(date: Date) {
+  return DAY_KEYS[date.getDay()];
+}
+
 /** Local calendar date as YYYY-MM-DD (avoids UTC shift from toISOString). */
 export function toDateValue(date: Date) {
   const y = date.getFullYear();
@@ -59,15 +63,31 @@ export function parseDateValue(value: string) {
   return new Date(y, m - 1, d, 12, 0, 0, 0);
 }
 
-/** Bookable if weekday, not today, and not in the past. */
+function startOfLocalDay(date: Date) {
+  const next = new Date(date);
+  next.setHours(12, 0, 0, 0);
+  return next;
+}
+
+function tomorrowLocal() {
+  const tomorrow = startOfLocalDay(new Date());
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow;
+}
+
+/** Earliest calendar day that can be reserved (not today; honors firstBookableDate). */
+export function getEarliestBookableDate() {
+  const tomorrow = tomorrowLocal();
+  const configured = business.booking.firstBookableDate;
+  if (!configured) return tomorrow;
+  const first = parseDateValue(configured);
+  return first > tomorrow ? first : tomorrow;
+}
+
+/** Bookable if weekday, not today, and not before the first bookable date. */
 export function isDateBookable(date: Date) {
-  const cursor = new Date(date);
-  cursor.setHours(12, 0, 0, 0);
-  const today = new Date();
-  today.setHours(12, 0, 0, 0);
-  const earliest = new Date(today);
-  earliest.setDate(earliest.getDate() + 1);
-  if (cursor < earliest) return false;
+  const cursor = startOfLocalDay(date);
+  if (cursor < getEarliestBookableDate()) return false;
   return isBookableWeekday(cursor);
 }
 
@@ -80,9 +100,7 @@ export function getAvailableTimeSlotsForDate(date: Date) {
 /** Next N bookable calendar dates (local date, Mon–Fri) */
 export function getUpcomingBookableDates(count = 20) {
   const dates: { value: string; label: string }[] = [];
-  const cursor = new Date();
-  cursor.setHours(12, 0, 0, 0);
-  cursor.setDate(cursor.getDate() + 1);
+  const cursor = getEarliestBookableDate();
 
   while (dates.length < count) {
     if (isDateBookable(cursor)) {

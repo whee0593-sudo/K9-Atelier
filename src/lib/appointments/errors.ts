@@ -22,7 +22,13 @@ export function handleAppointmentRouteError(error: unknown) {
 }
 
 export function mapAppointmentServiceError(
-  error: "unauthenticated" | "not_found" | "conflict" | "payment_required" | "server",
+  error:
+    | "unauthenticated"
+    | "not_found"
+    | "conflict"
+    | "slot_unavailable"
+    | "payment_required"
+    | "server",
 ) {
   switch (error) {
     case "unauthenticated":
@@ -33,6 +39,12 @@ export function mapAppointmentServiceError(
       return appointmentJsonError(
         "This pet is not ready to book yet. Please update vaccination records first.",
         409,
+      );
+    case "slot_unavailable":
+      return appointmentJsonError(
+        "That day is fully booked or no longer available for this address. Please choose another date.",
+        409,
+        "appointmentDate",
       );
     case "payment_required":
       return appointmentJsonError(

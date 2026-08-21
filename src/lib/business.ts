@@ -14,6 +14,15 @@ export function getBrandPhoneTelHref() {
   return digits.length >= 8 ? `tel:+${digits}` : null;
 }
 
+export function getGoogleProfileUrl() {
+  const google = business.brand.google;
+  return google.businessProfileUrl || google.mapsSearchUrl || null;
+}
+
+export function getGoogleWriteReviewUrl() {
+  return business.brand.google.writeReviewUrl || null;
+}
+
 export function formatPrice(amount: number) {
   return `$${amount}`;
 }

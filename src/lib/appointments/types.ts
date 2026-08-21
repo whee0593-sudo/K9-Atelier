@@ -21,6 +21,9 @@ export type AppointmentWriteInput = {
   travelFee: number;
   appointmentDate: string;
   appointmentTime: string;
+  timePreference: "morning" | "afternoon";
+  addressLat: number;
+  addressLon: number;
   estimatedTotal: number;
   paymentMethodId: string;
   customerPhone: string;
@@ -44,6 +47,8 @@ export type AppointmentRecord = {
   travelFee: number;
   appointmentDate: string;
   appointmentTime: string;
+  scheduledStart: number | null;
+  timePreference: "morning" | "afternoon" | null;
   timezone: string;
   estimatedTotal: number | null;
   newClientDeposit: number | null;
@@ -78,6 +83,10 @@ export type AppointmentRow = {
   travel_fee: number;
   appointment_date: string;
   appointment_time: string;
+  scheduled_start?: number | null;
+  time_preference?: "morning" | "afternoon" | null;
+  address_lat?: number | null;
+  address_lon?: number | null;
   timezone: string;
   estimated_total: number | null;
   new_client_deposit: number | null;

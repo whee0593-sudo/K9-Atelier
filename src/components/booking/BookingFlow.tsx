@@ -13,6 +13,7 @@ import {
 } from "@/lib/services";
 import { getServiceDisplayName } from "@/lib/service-display";
 import type { ServiceAddress, TravelQuote } from "@/lib/travel";
+import type { TimePreference } from "@/lib/booking-schedule";
 import { BookingProgress } from "@/components/booking/BookingProgress";
 import { BookingPoliciesModal } from "@/components/booking/BookingPoliciesModal";
 import { PetSelector } from "@/components/booking/PetSelector";
@@ -44,6 +45,9 @@ export function BookingFlow() {
   const [travelQuote, setTravelQuote] = useState<TravelQuote | null>(null);
   const [appointmentDate, setAppointmentDate] = useState<string | null>(null);
   const [appointmentTime, setAppointmentTime] = useState<string | null>(null);
+  const [timePreference, setTimePreference] = useState<TimePreference | null>(
+    null,
+  );
   const [reserved, setReserved] = useState(false);
   const [createdAppointment, setCreatedAppointment] =
     useState<AppointmentRecord | null>(null);
@@ -73,6 +77,7 @@ export function BookingFlow() {
     setTravelQuote(null);
     setAppointmentDate(null);
     setAppointmentTime(null);
+    setTimePreference(null);
     setShowCreativePairing(false);
   }
 
@@ -84,6 +89,7 @@ export function BookingFlow() {
     setTravelQuote(null);
     setAppointmentDate(null);
     setAppointmentTime(null);
+    setTimePreference(null);
   }
 
   function handlePetSelect(pet: PetProfile) {
@@ -173,7 +179,7 @@ export function BookingFlow() {
           selectedService.name,
         )}
         appointmentDate={appointmentDate}
-        appointmentTime={appointmentTime}
+        appointmentTime={createdAppointment?.appointmentTime ?? appointmentTime}
         address={address}
         appointmentStatus={createdAppointment?.status}
       />
@@ -245,16 +251,19 @@ export function BookingFlow() {
       {currentStep === 4 && selectedPet && selectedService && (
         <BookingLocationTimeStep
           pet={selectedPet}
+          serviceId={selectedService.id}
+          addOnIds={selectedAddOnIds}
           initialAddress={address}
           initialQuote={travelQuote}
           initialDate={appointmentDate}
-          initialTime={appointmentTime}
+          initialPreference={timePreference}
           onBack={() => setCareOptionsConfirmed(false)}
-          onComplete={(addr, quote, date, time) => {
+          onComplete={(addr, quote, date, time, preference) => {
             setAddress(addr);
             setTravelQuote(quote);
             setAppointmentDate(date);
             setAppointmentTime(time);
+            setTimePreference(preference);
           }}
         />
       )}
@@ -277,9 +286,11 @@ export function BookingFlow() {
             travelQuote={travelQuote}
             appointmentDate={appointmentDate}
             appointmentTime={appointmentTime}
+            timePreference={timePreference}
             onMakeChange={() => {
               setAppointmentDate(null);
               setAppointmentTime(null);
+              setTimePreference(null);
             }}
             onReserved={(appointment) => {
               setCreatedAppointment(appointment);

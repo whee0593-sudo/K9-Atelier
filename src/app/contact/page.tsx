@@ -1,7 +1,7 @@
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { LuxuryButton } from "@/components/luxury/LuxuryButton";
 import { PageShell } from "@/components/luxury/PageShell";
-import { business, getBrandPhoneTelHref } from "@/lib/business";
+import { business, getBrandPhoneTelHref, getGoogleProfileUrl, getGoogleWriteReviewUrl } from "@/lib/business";
 
 export const metadata = {
   title: "Contact · K9 Atelier",
@@ -91,6 +91,34 @@ export default function ContactPage() {
             @{instagramHandle}
           </a>
         </section>
+
+        {getGoogleProfileUrl() ? (
+          <section className="border border-gray-line/80 bg-ivory p-6 md:p-8">
+            <h2 className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
+              Google
+            </h2>
+            <a
+              href={getGoogleProfileUrl() ?? undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-body mt-3 inline-block text-lg text-ink transition hover:text-deep-lavender"
+            >
+              Find us on Google
+            </a>
+            {getGoogleWriteReviewUrl() ? (
+              <p className="font-body mt-2">
+                <a
+                  href={getGoogleWriteReviewUrl() ?? undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-taupe underline decoration-champagne underline-offset-4 hover:text-deep-lavender"
+                >
+                  Share a review
+                </a>
+              </p>
+            ) : null}
+          </section>
+        ) : null}
 
         <section className="border border-gray-line/80 bg-ivory p-6 md:p-8">
           <h2 className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">

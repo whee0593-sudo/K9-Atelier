@@ -13,6 +13,7 @@ const navItems = [
   { href: "/#experience", label: "The Atelier" },
   { href: "/services", label: "Services" },
   { href: "/gallery", label: "Gallery" },
+  { href: "/reviews", label: "Reviews" },
   { href: "/#mobile-salon", label: "Experience" },
   { href: "/about", label: "About" },
   { href: "/faq", label: "FAQ" },
