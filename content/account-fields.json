@@ -289,6 +289,13 @@
           "required": false
         }
       ]
+    },
+    {
+      "id": "password",
+      "path": "/account/password",
+      "title": "Password",
+      "description": "Set or change the password you use to sign in, so you do not need a new email code each visit.",
+      "fields": []
     }
   ]
 }

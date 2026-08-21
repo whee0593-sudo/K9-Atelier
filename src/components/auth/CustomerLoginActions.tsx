@@ -15,11 +15,26 @@ type Props = {
   adminFlow?: boolean;
 };
 
-type Step = "email" | "sent";
+type Mode = "signin" | "signup" | "forgot" | "magic";
+type Step = "form" | "magic-sent" | "check-email";
 
-/** Supabase Mailer OTP length: 6–10 digits (4 is not supported). */
 const OTP_MIN_LENGTH = 6;
 const OTP_MAX_LENGTH = 10;
+const MIN_PASSWORD_LENGTH = 8;
+
+function authErrorMessage(message: string) {
+  const lower = message.toLowerCase();
+  if (lower.includes("invalid login")) {
+    return "That email or password is incorrect.";
+  }
+  if (lower.includes("already registered") || lower.includes("already been registered")) {
+    return "An account with this email already exists. Sign in, or use the email link if you have not set a password yet.";
+  }
+  if (lower.includes("email not confirmed")) {
+    return "Please confirm your email first. Check your inbox for a confirmation link.";
+  }
+  return message;
+}
 
 export function CustomerLoginActions({
   next,
@@ -27,11 +42,98 @@ export function CustomerLoginActions({
   adminFlow,
 }: Props) {
   const destination = sanitizeAuthRedirect(next);
-  const [step, setStep] = useState<Step>("email");
+  const [mode, setMode] = useState<Mode>("signin");
+  const [step, setStep] = useState<Step>("form");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function switchMode(nextMode: Mode) {
+    setMode(nextMode);
+    setStep("form");
+    setPassword("");
+    setOtp("");
+    setError(null);
+  }
+
+  async function handlePasswordSignIn(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const supabase = createClient();
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    setLoading(false);
+
+    if (signInError) {
+      setError(authErrorMessage(signInError.message));
+      return;
+    }
+
+    window.location.assign(destination);
+  }
+
+  async function handleSignUp(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setLoading(false);
+      setError(`Use at least ${MIN_PASSWORD_LENGTH} characters.`);
+      return;
+    }
+
+    const supabase = createClient();
+    const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`;
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: { emailRedirectTo },
+    });
+
+    setLoading(false);
+
+    if (signUpError) {
+      setError(authErrorMessage(signUpError.message));
+      return;
+    }
+
+    if (data.session) {
+      window.location.assign(destination);
+      return;
+    }
+
+    setStep("check-email");
+  }
+
+  async function handleForgot(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const supabase = createClient();
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/account/password")}`;
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      email.trim(),
+      { redirectTo },
+    );
+
+    setLoading(false);
+
+    if (resetError) {
+      setError(authErrorMessage(resetError.message));
+      return;
+    }
+
+    setStep("check-email");
+  }
 
   async function handleSendLink(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -42,19 +144,17 @@ export function CustomerLoginActions({
     const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`;
     const { error: signInError } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: {
-        emailRedirectTo,
-      },
+      options: { emailRedirectTo },
     });
 
     setLoading(false);
 
     if (signInError) {
-      setError(signInError.message);
+      setError(authErrorMessage(signInError.message));
       return;
     }
 
-    setStep("sent");
+    setStep("magic-sent");
   }
 
   async function handleVerifyOtp(event: React.FormEvent<HTMLFormElement>) {
@@ -79,14 +179,35 @@ export function CustomerLoginActions({
     setLoading(false);
 
     if (verifyError) {
-      setError(verifyError.message);
+      setError(authErrorMessage(verifyError.message));
       return;
     }
 
     window.location.assign(destination);
   }
 
-  if (step === "sent") {
+  const footerLinks = adminFlow ? (
+    <p className="font-body text-xs text-taupe">
+      Customer account?{" "}
+      <a href="/login?next=/account" className="text-ink underline">
+        Customer sign in
+      </a>
+    </p>
+  ) : !bookingFlow ? (
+    <p className="font-body text-xs text-taupe">
+      Booking a private appointment?{" "}
+      <a href="/login?next=/book" className="text-ink underline">
+        Continue to booking
+      </a>
+      {" · "}
+      K9 Atelier team?{" "}
+      <a href="/login?next=/admin" className="text-ink underline">
+        Staff sign in
+      </a>
+    </p>
+  ) : null;
+
+  if (step === "magic-sent") {
     return (
       <div className="mt-10 text-left">
         <p className="font-body text-sm leading-relaxed text-ink">
@@ -139,21 +260,78 @@ export function CustomerLoginActions({
 
         <button
           type="button"
-          onClick={() => {
-            setStep("email");
-            setOtp("");
-            setError(null);
-          }}
+          onClick={() => switchMode("signin")}
           className="font-body mt-4 text-xs text-taupe underline"
         >
-          Use a different email
+          Back to password sign in
         </button>
       </div>
     );
   }
 
+  if (step === "check-email") {
+    const copy =
+      mode === "forgot"
+        ? "If an account exists for that email, we sent a link to set a new password."
+        : "Check your email to confirm your account. After that, you can sign in with your password.";
+
+    return (
+      <div className="mt-10 text-left">
+        <p className="font-body text-sm leading-relaxed text-ink">{copy}</p>
+        <p className="font-body mt-3 text-xs text-taupe">
+          Sent to <span className="font-medium">{email.trim()}</span>.
+        </p>
+        <button
+          type="button"
+          onClick={() => switchMode("signin")}
+          className="font-body mt-6 text-xs text-taupe underline"
+        >
+          Back to sign in
+        </button>
+      </div>
+    );
+  }
+
+  const title =
+    mode === "signup"
+      ? "Create an account"
+      : mode === "forgot"
+        ? "Reset password"
+        : mode === "magic"
+          ? "Email a sign-in link"
+          : "Sign in";
+
+  const onSubmit =
+    mode === "signup"
+      ? handleSignUp
+      : mode === "forgot"
+        ? handleForgot
+        : mode === "magic"
+          ? handleSendLink
+          : handlePasswordSignIn;
+
+  const submitLabel =
+    mode === "signup"
+      ? loading
+        ? "Creating…"
+        : "Create account"
+      : mode === "forgot"
+        ? loading
+          ? "Sending…"
+          : "Email reset link"
+        : mode === "magic"
+          ? loading
+            ? "Sending…"
+            : "Email me a sign-in link"
+          : loading
+            ? "Signing in…"
+            : "Sign in";
+
+  const showPassword = mode === "signin" || mode === "signup";
+
   return (
-    <form onSubmit={handleSendLink} className="mt-10 space-y-4 text-left">
+    <form onSubmit={onSubmit} className="mt-10 space-y-4 text-left">
+      <p className="font-body text-sm font-medium text-ink">{title}</p>
       <div>
         <label htmlFor="login-email" className={bookingLabelClass}>
           Email Address
@@ -171,6 +349,31 @@ export function CustomerLoginActions({
         />
       </div>
 
+      {showPassword ? (
+        <div>
+          <label htmlFor="login-password" className={bookingLabelClass}>
+            Password
+          </label>
+          <input
+            id="login-password"
+            name="password"
+            type="password"
+            autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            required
+            minLength={mode === "signup" ? MIN_PASSWORD_LENGTH : undefined}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className={bookingFieldClass}
+          />
+          {mode === "signup" ? (
+            <p className="font-body mt-2 text-xs text-taupe">
+              At least {MIN_PASSWORD_LENGTH} characters. We will email a
+              one-time confirmation link.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       {error && (
         <p className="font-body text-sm text-red-700" role="alert">
           {error}
@@ -182,29 +385,54 @@ export function CustomerLoginActions({
         disabled={loading || email.trim().length === 0}
         className={bookingPrimaryBtnClass}
       >
-        {loading ? "Sending…" : "Email Me a Sign-In Link"}
+        {submitLabel}
       </button>
 
-      {adminFlow ? (
-        <p className="font-body text-xs text-taupe">
-          Customer account?{" "}
-          <a href="/login?next=/account" className="text-ink underline">
-            Customer sign in
-          </a>
-        </p>
-      ) : !bookingFlow ? (
-        <p className="font-body text-xs text-taupe">
-          Booking a private appointment?{" "}
-          <a href="/login?next=/book" className="text-ink underline">
-            Continue to booking
-          </a>
-          {" · "}
-          K9 Atelier team?{" "}
-          <a href="/login?next=/admin" className="text-ink underline">
-            Staff sign in
-          </a>
-        </p>
-      ) : null}
+      <div className="font-body space-y-2 text-xs text-taupe">
+        {mode !== "signin" ? (
+          <p>
+            <button
+              type="button"
+              onClick={() => switchMode("signin")}
+              className="text-ink underline"
+            >
+              Sign in with password
+            </button>
+          </p>
+        ) : null}
+        {mode !== "signup" ? (
+          <p>
+            New here?{" "}
+            <button
+              type="button"
+              onClick={() => switchMode("signup")}
+              className="text-ink underline"
+            >
+              Create an account
+            </button>
+          </p>
+        ) : null}
+        {mode === "signin" ? (
+          <p>
+            <button
+              type="button"
+              onClick={() => switchMode("forgot")}
+              className="text-ink underline"
+            >
+              Forgot password?
+            </button>
+            {" · "}
+            <button
+              type="button"
+              onClick={() => switchMode("magic")}
+              className="text-ink underline"
+            >
+              Email me a sign-in link
+            </button>
+          </p>
+        ) : null}
+        {footerLinks}
+      </div>
     </form>
   );
 }

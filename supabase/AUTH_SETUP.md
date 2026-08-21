@@ -82,4 +82,5 @@ npm run verify:supabase
 - [ ] Magic Link template pasted; email shows 6-digit code
 - [ ] Confirm signup template pasted
 - [ ] Phase 2 archive migration applied
-- [ ] Test OTP login on `/login` locally
+- [ ] Test password sign-in and OTP fallback on `/login`
+- [ ] Email provider: allow new signups; Confirm email ON (one confirmation email at signup)

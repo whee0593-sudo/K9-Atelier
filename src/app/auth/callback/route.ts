@@ -1,28 +1,46 @@
 import { NextResponse } from "next/server";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { sanitizeAuthRedirect } from "@/lib/auth-redirect";
 import { createClient } from "@/lib/supabase/server";
+
+const EMAIL_OTP_TYPES = new Set<string>([
+  "email",
+  "signup",
+  "invite",
+  "magiclink",
+  "recovery",
+  "email_change",
+]);
 
 function redirectToLogin(origin: string) {
   return NextResponse.redirect(new URL("/login?error=auth", origin));
 }
 
+function asEmailOtpType(value: string | null): EmailOtpType | null {
+  if (!value || !EMAIL_OTP_TYPES.has(value)) return null;
+  return value as EmailOtpType;
+}
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
-  const next = sanitizeAuthRedirect(requestUrl.searchParams.get("next"));
+  const type = asEmailOtpType(requestUrl.searchParams.get("type"));
+  const next = sanitizeAuthRedirect(
+    type === "recovery" ? "/account/password" : requestUrl.searchParams.get("next"),
+    type === "recovery" ? "/account/password" : "/account",
+  );
   const supabase = await createClient();
 
   const tokenHash = requestUrl.searchParams.get("token_hash");
-  const type = requestUrl.searchParams.get("type");
   const code = requestUrl.searchParams.get("code");
   const email = requestUrl.searchParams.get("email");
   const token = requestUrl.searchParams.get("token");
 
   let authError: Error | null = null;
 
-  if (tokenHash && type === "email") {
+  if (tokenHash && type) {
     const { error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
-      type: "email",
+      type,
     });
     authError = error;
   } else if (code) {
@@ -32,7 +50,7 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.verifyOtp({
       email,
       token,
-      type: "email",
+      type: type ?? "email",
     });
     authError = error;
   } else {

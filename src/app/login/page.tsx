@@ -24,8 +24,8 @@ export default async function LoginPage({ searchParams }: Props) {
           {adminFlow
             ? "Sign in with your team email to review vaccinations and use admin tools."
             : bookingFlow
-              ? "Sign in to reserve or manage your dog's private grooming appointment."
-              : "Sign in to manage your profile, pets, and appointments."}
+              ? "Sign in with your email and password to reserve or manage your dog's private grooming appointment."
+              : "Sign in with your email and password to manage your profile, pets, and appointments."}
         </p>
 
         {error === "auth" && (
