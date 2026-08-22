@@ -95,8 +95,19 @@ async function getOrCreateStripeCustomerId(userId: string, email: string | undef
 
   if (profile?.stripe_customer_id) return profile.stripe_customer_id;
 
+  return createAndStoreStripeCustomer(admin, userId, profile?.email ?? email);
+}
+
+async function createAndStoreStripeCustomer(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  email: string | undefined,
+) {
+  const stripe = getStripe();
+  if (!stripe) return null;
+
   const customer = await stripe.customers.create({
-    email: profile?.email ?? email,
+    email,
     metadata: { supabase_user_id: userId },
   });
 
@@ -113,6 +124,27 @@ async function getOrCreateStripeCustomerId(userId: string, email: string | undef
   return customer.id;
 }
 
+function isMissingStripeCustomer(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const stripeError = error as { code?: string; message?: string };
+  return (
+    stripeError.code === "resource_missing" ||
+    (typeof stripeError.message === "string" &&
+      stripeError.message.includes("No such customer"))
+  );
+}
+
+async function clearStoredStripeCustomerId(userId: string) {
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("profiles")
+    .update({ stripe_customer_id: null })
+    .eq("id", userId);
+  if (error) {
+    console.error("clearStoredStripeCustomerId failed:", error.message);
+  }
+}
+
 export async function createSetupIntent(): Promise<
   | { clientSecret: string; publishableKey: string }
   | { error: "unauthenticated" | "misconfigured" | "server" }
@@ -124,22 +156,45 @@ export async function createSetupIntent(): Promise<
   const publishableKey = getStripePublishableKey();
   if (!stripe || !publishableKey) return { error: "misconfigured" };
 
-  const customerId = await getOrCreateStripeCustomerId(user.id, user.email);
-  if (!customerId) return { error: "server" };
-
   try {
-    const setupIntent = await stripe.setupIntents.create({
-      customer: customerId,
-      usage: "off_session",
-      automatic_payment_methods: { enabled: true, allow_redirects: "never" },
-    });
+    let customerId = await getOrCreateStripeCustomerId(user.id, user.email);
+    if (!customerId) return { error: "server" };
 
-    if (!setupIntent.client_secret) return { error: "server" };
+    try {
+      const setupIntent = await stripe.setupIntents.create({
+        customer: customerId,
+        usage: "off_session",
+        automatic_payment_methods: { enabled: true, allow_redirects: "never" },
+      });
 
-    return {
-      clientSecret: setupIntent.client_secret,
-      publishableKey,
-    };
+      if (!setupIntent.client_secret) return { error: "server" };
+
+      return {
+        clientSecret: setupIntent.client_secret,
+        publishableKey,
+      };
+    } catch (error) {
+      if (!isMissingStripeCustomer(error)) {
+        throw error;
+      }
+
+      await clearStoredStripeCustomerId(user.id);
+      customerId = await getOrCreateStripeCustomerId(user.id, user.email);
+      if (!customerId) return { error: "server" };
+
+      const setupIntent = await stripe.setupIntents.create({
+        customer: customerId,
+        usage: "off_session",
+        automatic_payment_methods: { enabled: true, allow_redirects: "never" },
+      });
+
+      if (!setupIntent.client_secret) return { error: "server" };
+
+      return {
+        clientSecret: setupIntent.client_secret,
+        publishableKey,
+      };
+    }
   } catch (error) {
     console.error("createSetupIntent failed:", error);
     return { error: "server" };
