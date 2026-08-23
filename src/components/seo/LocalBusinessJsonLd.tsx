@@ -22,6 +22,7 @@ export function LocalBusinessJsonLd() {
     "@context": "https://schema.org",
     "@type": "PetGroomer",
     name: brand.name,
+    slogan: brand.tagline,
     description: brand.intro,
     url: brand.website,
     image: `${brand.website}${brand.logo}`,

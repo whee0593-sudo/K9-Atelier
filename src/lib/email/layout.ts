@@ -115,7 +115,7 @@ export function buildBrandedEmailHtml(content: BrandedEmailContent) {
         <tr><td style="padding:32px 32px 24px;text-align:center;background:linear-gradient(180deg, ${c.lavenderLight} 0%, #ffffff 100%);">
           <img src="${logoUrl}" alt="${escapeHtml(brandName)}" width="72" height="72" style="border-radius:50%;display:inline-block;border:2px solid ${c.gold};"/>
           <div style="margin-top:12px;font-size:12px;font-weight:600;color:${c.goldDark};letter-spacing:0.24em;text-transform:uppercase;">${escapeHtml(brandName)}</div>
-          <div style="margin-top:4px;font-size:12px;color:${c.textMuted};letter-spacing:0.08em;">Private Pet Grooming Salon</div>
+          <div style="margin-top:4px;font-size:12px;color:${c.textMuted};letter-spacing:0.08em;">${escapeHtml(business.brand.tagline)}</div>
         </td></tr>
         <tr><td style="padding:32px;">
           <h1 style="margin:0 0 18px;color:${c.goldDark};font-size:26px;line-height:1.3;font-weight:600;">${escapeHtml(content.headline)}</h1>

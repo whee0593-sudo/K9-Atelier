@@ -3,7 +3,7 @@ import { Eyebrow } from "@/components/luxury/Eyebrow";
 import { LuxuryButton } from "@/components/luxury/LuxuryButton";
 import { EditorialPhoto } from "@/components/luxury/EditorialPhoto";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
-import { getCommunitiesServedLabel } from "@/lib/business";
+import { business, getCommunitiesServedLabel } from "@/lib/business";
 import { photoFor } from "@/lib/gallery";
 
 export function HomeHero() {
@@ -16,9 +16,7 @@ export function HomeHero() {
         <div className="order-2 md:order-1">
           <Eyebrow>K9 Atelier · Private Pet Grooming Salon · Palm Beach</Eyebrow>
           <h1 className="font-display mt-6 text-[2.75rem] leading-[1.08] font-medium text-ink md:text-[3.5rem] lg:text-[4.5rem]">
-            Precision and devotion —
-            <br />
-            in every appointment.
+            {business.brand.tagline}
           </h1>
           <p className="font-body mt-6 max-w-xl text-base leading-relaxed text-taupe md:text-[17px]">
             Award-winning grooming expertise, brought directly to your door in a

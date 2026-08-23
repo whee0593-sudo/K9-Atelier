@@ -2,7 +2,7 @@
 
 > 网站服务页终稿 · 可直接录入 Amelia 后台
 
-**Tagline:** Award-winning grooming experience at your doorstep.
+**Tagline:** K9 ATELIER — grooming, elevated.
 
 网站分区：
 1. Bath, Show Care & Spa — Signature Bath、Long Coat Show Care、三项 Spa

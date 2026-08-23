@@ -13,7 +13,7 @@ Mobile pet grooming business. Website at k9atelier.com.
 - Deploy: GitHub `whee0593-sudo/K9-Atelier` → Vercel (auto on push to main)
 
 ## Brand
-- Tagline: Award-winning grooming experience at your doorstep.
+- Tagline: K9 ATELIER — grooming, elevated.
 - Colors: cream `#FAF7F2`, lavender `#C8B8D8`, gold `#C4A882`, blue `#A8C4D4`
 - Logo: `public/logo.png`
 - Email: penny@k9atelier.com

@@ -31,8 +31,8 @@ export function Footer() {
             <p className="font-body text-[12px] font-semibold uppercase tracking-[0.22em] text-ink">
               {brand.name}
             </p>
-            <p className="font-body mt-3 text-[12px] font-medium uppercase tracking-[0.16em] text-taupe">
-              Private Pet Grooming Salon
+            <p className="font-body mt-3 text-[12px] font-medium tracking-[0.08em] text-taupe">
+              {brand.tagline}
             </p>
             <p className="font-body mt-1 text-[12px] font-medium uppercase tracking-[0.16em] text-taupe">
               Palm Beach

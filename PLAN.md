@@ -12,7 +12,7 @@
 |------|------|
 | 名称 | K9 Atelier |
 | Logo | `public/logo.png` |
-| 标语 | Award-winning grooming experience at your doorstep. |
+| 标语 | K9 ATELIER — grooming, elevated. |
 | 配色 | 奶油白 + 淡紫 + 柔金 + 淡蓝（见 `content/BRAND.md`） |
 
 ### 联系

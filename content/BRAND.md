@@ -2,9 +2,7 @@
 
 ## 标语
 
-**Award-winning grooming experience at your doorstep.**
-
-获奖级美容体验，送到您家门口。
+**K9 ATELIER — grooming, elevated.**
 
 ## Logo
 

@@ -35,7 +35,7 @@ export default function UnderConstructionPage() {
 
   const wordmark = copy?.wordmark ?? "K9 ATELIER";
   const subline =
-    copy?.subline ?? "Precision and devotion — in every appointment";
+    copy?.subline ?? "grooming, elevated.";
   const headline = copy?.headline ?? "Some things are worth the wait.";
   const lede = copy?.lede ?? [
     "A private atelier experience is being prepared — cage-free, one-on-one, and reserved exclusively for dogs under 45 lbs.",
