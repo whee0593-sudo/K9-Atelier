@@ -7,7 +7,7 @@ import { reviews } from "@/lib/reviews";
 export const metadata = {
   title: "Reviews · K9 Atelier",
   description:
-    "Client kind words for K9 Atelier private mobile dog grooming in Palm Beach — and a place to share your experience on Google.",
+    "Client kind words for K9 Atelier, a Private Mobile Pet Spa in Palm Beach — and a place to share your experience on Google.",
 };
 
 export default function ReviewsPage() {

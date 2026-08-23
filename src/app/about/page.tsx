@@ -5,7 +5,7 @@ import { PageShell } from "@/components/luxury/PageShell";
 export const metadata = {
   title: "About · K9 Atelier",
   description:
-    "The story behind K9 Atelier — a private, cage-free mobile grooming salon in Palm Beach, built on precision, patience, and purpose.",
+    "The story behind K9 Atelier — a cage-free Private Mobile Pet Spa in Palm Beach, built on precision, patience, and purpose.",
 };
 
 const timeline = [
@@ -37,7 +37,7 @@ const timeline = [
   {
     year: "Today",
     title: "K9 Atelier · Palm Beach",
-    body: "A private, cage-free mobile grooming salon built around technical expertise, individual attention and genuine care.",
+    body: "A cage-free Private Mobile Pet Spa built around technical expertise, individual attention and genuine care.",
   },
 ] as const;
 

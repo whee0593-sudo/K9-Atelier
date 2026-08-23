@@ -14,7 +14,7 @@ import {
 export const metadata = {
   title: "Services · K9 Atelier",
   description:
-    "Signature grooming, spa rituals, specialty care and gentle comfort services — private mobile dog grooming in Palm Beach.",
+    "Signature grooming, spa rituals, specialty care and gentle comfort services — Private Mobile Pet Spa in Palm Beach.",
 };
 
 const categoryAnchors: Record<string, string> = {

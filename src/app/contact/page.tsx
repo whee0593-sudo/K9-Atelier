@@ -7,7 +7,7 @@ import { business, getBrandPhoneTelHref, getGoogleProfileUrl, getGoogleWriteRevi
 export const metadata = {
   title: "Contact · K9 Atelier",
   description:
-    "Contact K9 Atelier for private mobile dog grooming in Palm Beach — email, Instagram, service area and booking hours.",
+    "Contact K9 Atelier, a Private Mobile Pet Spa in Palm Beach — email, Instagram, service area and booking hours.",
 };
 
 function capitalize(value: string) {

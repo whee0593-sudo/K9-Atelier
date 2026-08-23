@@ -6,7 +6,7 @@ import { business, getPaymentFaqParagraphs, getServiceAreaFaqParagraphs } from "
 export const metadata = {
   title: "FAQ · K9 Atelier",
   description:
-    "Frequently asked questions about K9 Atelier private mobile dog grooming — appointments, service area, payment, cancellations, and care policies.",
+    "Frequently asked questions about K9 Atelier, a Private Mobile Pet Spa — appointments, service area, payment, cancellations, and care policies.",
 };
 
 function capitalize(value: string) {

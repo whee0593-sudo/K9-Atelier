@@ -7,6 +7,7 @@ import {
   parseDateValue,
   toDateValue,
 } from "@/lib/booking-slots";
+import { business } from "@/lib/business";
 import type { TimePreference } from "@/lib/booking-schedule";
 import styles from "./datetime-step.module.css";
 
@@ -165,8 +166,8 @@ export function DateTimeStep({
     >
       <div className={styles.card}>
         <div className={styles.brand}>
-          <p className={styles.wordmark}>K9 ATELIER</p>
-          <p className={styles.subline}>Private Mobile Bathing Salon</p>
+          <p className={styles.wordmark}>{business.brand.wordmark}</p>
+          <p className={styles.subline}>{business.brand.lockup}</p>
         </div>
 
         <div className={styles.steps} aria-label="Booking progress">

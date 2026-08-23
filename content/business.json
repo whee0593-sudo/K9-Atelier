@@ -1,8 +1,10 @@
 {
   "brand": {
     "name": "K9 Atelier",
+    "wordmark": "K9 ATELIER",
+    "lockup": "Private Mobile Pet Spa · Palm Beach",
     "tagline": "K9 ATELIER — grooming, elevated.",
-    "intro": "K9 Atelier is a luxury mobile pet grooming studio serving Florida with award-winning care at your doorstep. We bring the salon to you — from signature baths and custom styling to specialty spa and gentle senior care — with transparent pricing, a calm experience, and every visit tailored to your dog's comfort and coat.",
+    "intro": "K9 Atelier is a luxury Private Mobile Pet Spa serving Florida with award-winning care at your doorstep. We bring the salon to you — from signature baths and custom styling to specialty spa and gentle senior care — with transparent pricing, a calm experience, and every visit tailored to your dog's comfort and coat.",
     "logo": "/logo.png",
     "email": "penny@k9atelier.com",
     "phone": "(561) 593-3335",
@@ -75,7 +77,7 @@
     "previewShareToken": "k9atelier-preview-8f2a1c",
     "underConstruction": {
       "wordmark": "K9 ATELIER",
-      "subline": "grooming, elevated.",
+      "subline": "Private Mobile Pet Spa · Palm Beach",
       "headline": "Some things are worth the wait.",
       "lede": [
         "A private atelier experience is being prepared — cage-free, one-on-one, and reserved exclusively for dogs under 45 lbs.",

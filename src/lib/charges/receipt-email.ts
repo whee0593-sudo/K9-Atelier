@@ -127,8 +127,7 @@ export function buildChargeReceiptCardHtml(
         <div style="text-align:center;">
           <img src="${logoUrl}" width="72" height="72" alt="${escapeHtml(business.brand.name)}" style="display:block;margin:0 auto;"/>
           <p style="margin:16px 0 0;color:${LAVENDER};font-size:22px;letter-spacing:3px;">${escapeHtml(business.brand.name)}</p>
-          <p style="margin:12px 0 0;color:${LAVENDER};font-size:12px;letter-spacing:2px;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;">Private Mobile Pet SPA</p>
-          <p style="margin:4px 0 0;color:${LAVENDER};font-size:12px;letter-spacing:2px;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;">Palm Beach</p>
+          <p style="margin:12px 0 0;color:${LAVENDER};font-size:12px;letter-spacing:2px;font-family:Arial,Helvetica,sans-serif;">${escapeHtml(business.brand.lockup)}</p>
         </div>
         <div style="margin-top:40px;color:${INK};font-family:Arial,Helvetica,sans-serif;">
           <p style="margin:0 0 32px;font-size:16px;line-height:1.6;text-align:left;">${escapeHtml(thankYouLine(petName))}</p>

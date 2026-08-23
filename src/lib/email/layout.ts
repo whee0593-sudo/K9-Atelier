@@ -115,7 +115,7 @@ export function buildBrandedEmailHtml(content: BrandedEmailContent) {
         <tr><td style="padding:32px 32px 24px;text-align:center;background:linear-gradient(180deg, ${c.lavenderLight} 0%, #ffffff 100%);">
           <img src="${logoUrl}" alt="${escapeHtml(brandName)}" width="72" height="72" style="border-radius:50%;display:inline-block;border:2px solid ${c.gold};"/>
           <div style="margin-top:12px;font-size:12px;font-weight:600;color:${c.goldDark};letter-spacing:0.24em;text-transform:uppercase;">${escapeHtml(brandName)}</div>
-          <div style="margin-top:4px;font-size:12px;color:${c.textMuted};letter-spacing:0.08em;">${escapeHtml(business.brand.tagline)}</div>
+          <div style="margin-top:4px;font-size:12px;color:${c.textMuted};letter-spacing:0.08em;">${escapeHtml(business.brand.lockup)}</div>
         </td></tr>
         <tr><td style="padding:32px;">
           <h1 style="margin:0 0 18px;color:${c.goldDark};font-size:26px;line-height:1.3;font-weight:600;">${escapeHtml(content.headline)}</h1>
@@ -200,7 +200,8 @@ export function buildCustomerLetterEmailHtml(content: CustomerLetterEmailContent
     <div style="max-width:480px; margin:0 auto; background-color:#ffffff; border:1px solid ${STAFF_EMAIL.border};">
       <div style="background-color:${STAFF_EMAIL.cream}; padding:32px 32px 20px; text-align:center; border-bottom:1px solid ${STAFF_EMAIL.gold};">
         <img src="${logoUrl}" width="64" height="64" style="border-radius:50%; display:block; margin:0 auto 12px;" alt="${escapeHtml(business.brand.name)}" />
-        <div style="font-size:20px; letter-spacing:4px; color:${STAFF_EMAIL.ink}; font-family:Georgia,'Times New Roman',serif;">K9 ATELIER</div>
+        <div style="font-size:20px; letter-spacing:4px; color:${STAFF_EMAIL.ink}; font-family:Georgia,'Times New Roman',serif;">${escapeHtml(business.brand.wordmark)}</div>
+        <div style="margin-top:8px;font-size:11px;letter-spacing:0.08em;color:${STAFF_EMAIL.muted};">${escapeHtml(business.brand.lockup)}</div>
       </div>
       <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:14px; line-height:1.8; background:#ffffff;">
         <p style="margin:0 0 14px;">Dear ${escapeHtml(content.greetingName)},</p>
@@ -343,7 +344,8 @@ function customerLetterHeader(subject: string) {
     <div style="max-width:480px; margin:0 auto; background-color:#ffffff; border:1px solid ${STAFF_EMAIL.border};">
       <div style="background-color:${STAFF_EMAIL.cream}; padding:32px 32px 20px; text-align:center; border-bottom:1px solid ${STAFF_EMAIL.gold};">
         <img src="${logoUrl}" width="64" height="64" style="border-radius:50%; display:block; margin:0 auto 12px;" alt="${escapeHtml(business.brand.name)}" />
-        <div style="font-size:20px; letter-spacing:4px; color:${STAFF_EMAIL.ink}; font-family:Georgia,'Times New Roman',serif;">K9 ATELIER</div>
+        <div style="font-size:20px; letter-spacing:4px; color:${STAFF_EMAIL.ink}; font-family:Georgia,'Times New Roman',serif;">${escapeHtml(business.brand.wordmark)}</div>
+        <div style="margin-top:8px;font-size:11px;letter-spacing:0.08em;color:${STAFF_EMAIL.muted};">${escapeHtml(business.brand.lockup)}</div>
       </div>`;
 }
 
@@ -460,7 +462,7 @@ export function buildStaffNotificationEmailHtml(content: StaffNotificationEmailC
   <div style="background-color:${STAFF_EMAIL.cream}; padding:32px 20px; font-family: Georgia, 'Times New Roman', serif;">
     <div style="max-width:520px; margin:0 auto; background-color:#ffffff; border:1px solid ${STAFF_EMAIL.border};">
       <div style="background-color:${STAFF_EMAIL.cream}; padding:20px 32px; border-bottom:2px solid ${STAFF_EMAIL.gold};">
-        <span style="font-size:18px; letter-spacing:2px; color:${STAFF_EMAIL.ink};">K9 ATELIER</span>
+        <span style="font-size:18px; letter-spacing:2px; color:${STAFF_EMAIL.ink};">${escapeHtml(business.brand.wordmark)}</span>
         <span style="float:right; font-size:12px; color:${STAFF_EMAIL.muted}; padding-top:4px;">Staff Notification</span>
       </div>
       <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:14px; line-height:1.7;">

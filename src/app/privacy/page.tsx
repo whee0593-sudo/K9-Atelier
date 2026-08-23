@@ -41,7 +41,7 @@ export default function PrivacyPage() {
       <div className="mx-auto grid max-w-3xl gap-4">
         <Section title="Who we are">
           <p>
-            K9 Atelier is a private mobile pet grooming studio serving the Palm
+            K9 Atelier is a Private Mobile Pet Spa serving the Palm
             Beach, Florida area. Website:{" "}
             <a
               href="https://k9atelier.com"

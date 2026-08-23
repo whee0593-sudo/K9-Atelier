@@ -5,7 +5,7 @@ import { business } from "@/lib/business";
 export const metadata = {
   title: "Terms & Conditions · K9 Atelier",
   description:
-    "Website and SMS program terms for K9 Atelier mobile pet grooming appointments.",
+    "Website and SMS program terms for K9 Atelier Private Mobile Pet Spa appointments.",
 };
 
 const lastUpdated = "August 20, 2026";
@@ -41,7 +41,7 @@ export default function TermsPage() {
       <div className="mx-auto grid max-w-3xl gap-4">
         <Section title="The atelier">
           <p>
-            K9 Atelier provides private, mobile pet grooming by appointment in
+            K9 Atelier is a Private Mobile Pet Spa serving clients by appointment in
             the Palm Beach, Florida area. Booking, payment, cancellation, and
             service policies published on this website apply to appointments.
           </p>

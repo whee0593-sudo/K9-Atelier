@@ -14,7 +14,7 @@ export function HomeHero() {
     <section className="relative overflow-hidden border-b border-gray-line/60">
       <Container className="grid items-center gap-10 py-14 md:grid-cols-2 md:gap-16 md:py-20 lg:py-24">
         <div className="order-2 md:order-1">
-          <Eyebrow>K9 Atelier · Private Pet Grooming Salon · Palm Beach</Eyebrow>
+          <Eyebrow>{business.brand.lockup}</Eyebrow>
           <h1 className="font-display mt-6 text-[2.75rem] leading-[1.08] font-medium text-ink md:text-[3.5rem] lg:text-[4.5rem]">
             {business.brand.tagline}
           </h1>

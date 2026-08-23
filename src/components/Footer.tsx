@@ -29,13 +29,10 @@ export function Footer() {
         <div className="grid gap-12 md:grid-cols-[1.2fr_1fr_1fr]">
           <div>
             <p className="font-body text-[12px] font-semibold uppercase tracking-[0.22em] text-ink">
-              {brand.name}
+              {brand.wordmark}
             </p>
             <p className="font-body mt-3 text-[12px] font-medium tracking-[0.08em] text-taupe">
-              {brand.tagline}
-            </p>
-            <p className="font-body mt-1 text-[12px] font-medium uppercase tracking-[0.16em] text-taupe">
-              Palm Beach
+              {brand.lockup}
             </p>
           </div>
 

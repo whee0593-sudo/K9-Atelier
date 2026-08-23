@@ -9,7 +9,7 @@ import "./globals.css";
 const siteTitle =
   "K9 Atelier | Best in Show Grooming — Jupiter, Palm Beach Gardens, West Palm Beach";
 const siteDescription =
-  "Cage-free mobile grooming for dogs under 45 lbs, led by a Best in Show-honored groomer. Serving Jupiter, Palm Beach Gardens & West Palm Beach.";
+  "Cage-free Private Mobile Pet Spa for dogs under 45 lbs, led by a Best in Show-honored groomer. Serving Jupiter, Palm Beach Gardens & West Palm Beach.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://k9atelier.com"),

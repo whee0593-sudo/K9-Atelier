@@ -58,11 +58,8 @@ export function ChargeReceiptLetter({
           <h1 className="font-display mt-4 text-[22px] font-normal tracking-[0.18em] text-[#756578] sm:text-2xl">
             {business.brand.name}
           </h1>
-          <p className="font-body mt-3 text-[12px] font-medium uppercase tracking-[0.16em] text-[#756578]">
-            Private Mobile Pet SPA
-          </p>
-          <p className="font-body mt-1 text-[12px] font-medium uppercase tracking-[0.16em] text-[#756578]">
-            Palm Beach
+          <p className="font-body mt-3 text-[12px] font-medium tracking-[0.08em] text-[#756578]">
+            {business.brand.lockup}
           </p>
         </header>
 
