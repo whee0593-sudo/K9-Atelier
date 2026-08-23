@@ -21,11 +21,23 @@ describe("staff customer SMS", () => {
     );
   });
 
-  it("includes booking, contact, and the website", () => {
+  it("includes booking, contact, and a reply prompt", () => {
     const body = buildStudioIntroSms();
-    assert.match(body, /Thanks for calling/);
-    assert.match(body, /k9atelier.com\/book/);
-    assert.match(body, /k9atelier.com\/contact/);
-    assert.match(body, /Reply STOP to opt out/);
+    assert.equal(
+      body,
+      [
+        "K9 ATELIER: Thank you for calling. We're caring for a guest and unable to answer at the moment.",
+        "",
+        "Reserve an appointment:",
+        "https://k9atelier.com/book",
+        "",
+        "Send us a message:",
+        "https://k9atelier.com/contact",
+        "",
+        "You may also reply with your pet's name, breed, age, weight, coat condition, and preferred appointment date. We'll get back to you as soon as we're available.",
+        "",
+        "Reply STOP to opt out.",
+      ].join("\n"),
+    );
   });
 });

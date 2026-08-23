@@ -11,13 +11,15 @@ function publicUrl(path: string) {
 
 export function buildStudioIntroSms() {
   return [
-    "K9 ATELIER: Thanks for calling. Book a visit at",
+    "K9 ATELIER: Thank you for calling. We're caring for a guest and unable to answer at the moment.",
+    "",
+    "Reserve an appointment:",
     publicUrl("/book"),
     "",
-    "Leave a message:",
+    "Send us a message:",
     publicUrl("/contact"),
     "",
-    `Website: ${publicUrl("/")}`,
+    "You may also reply with your pet's name, breed, age, weight, coat condition, and preferred appointment date. We'll get back to you as soon as we're available.",
     "",
     SMS_OPT_OUT,
   ].join("\n");
