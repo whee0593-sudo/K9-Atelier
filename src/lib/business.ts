@@ -49,7 +49,7 @@ export function getGoogleWriteReviewUrl() {
 }
 
 export function getBookAgainPath() {
-  return "/login?next=/book";
+  return "/book";
 }
 
 export function getBookAgainUrl() {

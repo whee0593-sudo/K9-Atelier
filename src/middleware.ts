@@ -29,7 +29,7 @@ const PUBLIC_PATHS = [
   "/api/voice",
 ];
 
-const CUSTOMER_PROTECTED_PREFIXES = ["/account", "/book"];
+const CUSTOMER_PROTECTED_PREFIXES = ["/account"];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some(
