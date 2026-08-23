@@ -1,6 +1,7 @@
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { LuxuryButton } from "@/components/luxury/LuxuryButton";
 import { PageShell } from "@/components/luxury/PageShell";
+import { SupportContactForm } from "@/components/support/SupportContactForm";
 import { business, getBrandPhoneTelHref, getGoogleProfileUrl, getGoogleWriteReviewUrl } from "@/lib/business";
 
 export const metadata = {
@@ -22,7 +23,26 @@ function formatTime(value: string) {
   return `${hour12}:${minute} ${period}`;
 }
 
-export default function ContactPage() {
+export default async function ContactPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ topic?: string }>;
+}) {
+  const { topic } = await searchParams;
+  if (topic === "concern") {
+    return (
+      <PageShell
+        eyebrow="Private Message"
+        title="Report a Concern"
+        intro="Share what happened and we will follow up with you privately."
+      >
+        <div className="mx-auto max-w-xl">
+          <SupportContactForm variant="concern" />
+        </div>
+      </PageShell>
+    );
+  }
+
   const { brand, booking, serviceArea, site } = business;
   const phoneHref = getBrandPhoneTelHref();
 

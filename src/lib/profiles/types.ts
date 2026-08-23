@@ -32,11 +32,7 @@ export type CustomerProfileRow = {
   emergency_contact_relationship: string | null;
 };
 
-export const PREFERRED_CONTACT_OPTIONS = [
-  "Email",
-  "Phone",
-  "Text Message",
-] as const;
+export const PREFERRED_CONTACT_OPTIONS = ["Email", "Text Message"] as const;
 
 export const EMERGENCY_RELATIONSHIP_OPTIONS = [
   "Spouse",

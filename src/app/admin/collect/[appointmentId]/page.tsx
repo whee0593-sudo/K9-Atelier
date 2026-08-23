@@ -1,4 +1,5 @@
 import { CollectCheckout } from "@/components/admin/CollectCheckout";
+import { getBrandPublicLinks } from "@/lib/business";
 import type { ChargeKind } from "@/lib/charges/types";
 
 export default async function CollectPage({
@@ -23,6 +24,7 @@ export default async function CollectPage({
       appointmentId={appointmentId}
       kind={kind}
       initialStep={initialStep}
+      brandLinks={getBrandPublicLinks()}
     />
   );
 }

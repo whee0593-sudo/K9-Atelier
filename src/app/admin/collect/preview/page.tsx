@@ -1,4 +1,5 @@
 import { CollectCheckout } from "@/components/admin/CollectCheckout";
+import { getBrandPublicLinks } from "@/lib/business";
 import type { ChargeKind } from "@/lib/charges/types";
 
 export default async function CollectPreviewPage({
@@ -20,6 +21,7 @@ export default async function CollectPreviewPage({
       kind={kind}
       preview
       initialStep={step}
+      brandLinks={getBrandPublicLinks()}
     />
   );
 }

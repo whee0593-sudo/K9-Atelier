@@ -37,9 +37,9 @@ export function ReviewsShowcase() {
       ) : (
         <div className="mx-auto max-w-2xl border border-gray-line/80 bg-ivory px-8 py-12 text-center">
           <p className="font-body text-sm leading-relaxed text-taupe">
-            As our first Palm Beach appointments begin, we invite you to share
-            your experience on Google. Your words help neighboring families
-            find a calmer, more private way to care for their dogs.
+            Your feedback is invaluable to us. We cherish every experience you
+            have with K9 ATELIER and invite you to tell us how we can serve you
+            even better.
           </p>
         </div>
       )}

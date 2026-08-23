@@ -41,6 +41,7 @@ function previewAppointment(
     createdAt: "2026-08-20T14:00:00.000Z",
     customerEmail: "alex@example.com",
     customerFirstName: "Alex",
+    customerLastName: null,
     customerPhone: "+15615550123",
     reminderSmsSentAt: null,
     enRouteSmsSentAt: null,

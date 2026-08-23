@@ -45,7 +45,7 @@
           "label": "Preferred Contact Method",
           "type": "select",
           "required": false,
-          "options": ["Email", "Phone", "Text Message"]
+          "options": ["Email", "Text Message"]
         },
         {
           "id": "emergencyContactHeading",

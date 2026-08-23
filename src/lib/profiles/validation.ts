@@ -57,9 +57,12 @@ export function validateProfileWriteInput(body: unknown): CustomerProfileWriteIn
   const record = assertPlainObject(body);
   const firstName = readRequiredName(record, "firstName", "First name");
   const lastName = readRequiredName(record, "lastName", "Last name");
-  const phoneRaw = readOptionalText(record, "phone", 32) ?? "";
-  const phone = phoneRaw ? normalizePhoneToE164(phoneRaw) : null;
-  if (phoneRaw && !phone) {
+  const phoneRaw = readOptionalText(record, "phone", 32);
+  if (!phoneRaw) {
+    throw new ProfileValidationError("Mobile phone is required.", "phone");
+  }
+  const phone = normalizePhoneToE164(phoneRaw);
+  if (!phone) {
     throw new ProfileValidationError("Please enter a valid US mobile number.", "phone");
   }
 
@@ -93,7 +96,7 @@ export function validateProfileWriteInput(body: unknown): CustomerProfileWriteIn
   return {
     firstName,
     lastName,
-    phone: phone ?? "",
+    phone,
     preferredContact,
     emergencyContactName: readOptionalText(record, "emergencyContactName", 80),
     emergencyContactPhone: readOptionalText(record, "emergencyContactPhone", 32),

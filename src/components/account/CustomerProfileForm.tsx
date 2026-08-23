@@ -26,7 +26,8 @@ function toDraft(profile: CustomerProfile): Draft {
     firstName: profile.firstName,
     lastName: profile.lastName,
     phone: profile.phone,
-    preferredContact: profile.preferredContact,
+    preferredContact:
+      profile.preferredContact === "Phone" ? "Email" : profile.preferredContact,
     emergencyContactName: profile.emergencyContactName,
     emergencyContactPhone: profile.emergencyContactPhone,
     emergencyContactRelationship: profile.emergencyContactRelationship,
@@ -91,30 +92,39 @@ export function CustomerProfileForm({
   return (
     <div className="space-y-5">
       <div>
-        <label className="block text-sm font-medium text-text">Email</label>
+        <label className="block text-sm font-medium text-text">
+          Email <span className="text-gold-dark">*</span>
+        </label>
         <input
+          type="email"
+          required
           readOnly={emailReadOnly}
           value={profile.email}
           className={`${inputClassName()} ${emailReadOnly ? "opacity-80" : ""}`}
         />
-        {emailReadOnly && (
-          <p className="mt-1.5 text-xs text-text-muted">
-            Used for booking confirmations and reminders.
+        <p className="mt-1.5 text-xs text-text-muted">
+          Required. Used for receipts, booking confirmations, and reminders.
+        </p>
+        {!profile.email.trim() ? (
+          <p className="mt-1.5 text-xs text-red-800">
+            An email address is required on this profile.
           </p>
-        )}
+        ) : null}
       </div>
       <div className="grid gap-5 sm:grid-cols-2">
         <label className="block text-sm font-medium text-text">
-          First Name
+          First Name <span className="text-gold-dark">*</span>
           <input
+            required
             value={draft.firstName}
             onChange={(event) => update("firstName", event.target.value)}
             className={inputClassName()}
           />
         </label>
         <label className="block text-sm font-medium text-text">
-          Last Name
+          Last Name <span className="text-gold-dark">*</span>
           <input
+            required
             value={draft.lastName}
             onChange={(event) => update("lastName", event.target.value)}
             className={inputClassName()}
@@ -122,14 +132,19 @@ export function CustomerProfileForm({
         </label>
       </div>
       <label className="block text-sm font-medium text-text">
-        Mobile Phone
+        Mobile Phone <span className="text-gold-dark">*</span>
         <input
           type="tel"
+          required
           value={draft.phone}
           onChange={(event) => update("phone", event.target.value)}
           placeholder="(555) 123-4567"
           className={inputClassName()}
         />
+        <span className="mt-1.5 block text-xs font-normal text-text-muted">
+          Required. We text a thank-you after checkout and may call or text
+          about the appointment day-of.
+        </span>
       </label>
       <label className="block text-sm font-medium text-text">
         Preferred Contact Method

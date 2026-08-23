@@ -14,13 +14,56 @@ export function getBrandPhoneTelHref() {
   return digits.length >= 8 ? `tel:+${digits}` : null;
 }
 
+export function getBrandWebsiteUrl() {
+  return business.brand.website?.trim() || "https://k9atelier.com";
+}
+
+export function getBrandWebsiteLabel() {
+  try {
+    const host = new URL(getBrandWebsiteUrl()).hostname.replace(/^www\./i, "");
+    if (host.toLowerCase() === "k9atelier.com") return "K9Atelier.com";
+    return host;
+  } catch {
+    return "K9Atelier.com";
+  }
+}
+
+export function getBrandInstagramUrl() {
+  const fromBrand = business.brand.social.instagramUrl?.trim();
+  if (fromBrand) return fromBrand;
+  const fromSite = business.site.underConstruction?.instagramUrl?.trim();
+  return fromSite || null;
+}
+
 export function getGoogleProfileUrl() {
   const google = business.brand.google;
   return google.businessProfileUrl || google.mapsSearchUrl || null;
 }
 
 export function getGoogleWriteReviewUrl() {
-  return business.brand.google.writeReviewUrl || null;
+  const fromEnv =
+    process.env.GOOGLE_REVIEW_URL?.trim() ||
+    process.env.NEXT_PUBLIC_GOOGLE_REVIEW_URL?.trim();
+  if (fromEnv) return fromEnv;
+  return business.brand.google.writeReviewUrl?.trim() || null;
+}
+
+export function getBookAgainPath() {
+  return "/login?next=/book";
+}
+
+export function getBookAgainUrl() {
+  return `${getBrandWebsiteUrl().replace(/\/$/, "")}${getBookAgainPath()}`;
+}
+
+export function getBrandPublicLinks() {
+  return {
+    websiteUrl: getBrandWebsiteUrl(),
+    websiteLabel: getBrandWebsiteLabel(),
+    instagramUrl: getBrandInstagramUrl(),
+    googleReviewUrl: getGoogleWriteReviewUrl(),
+    bookAgainUrl: getBookAgainUrl(),
+  };
 }
 
 export function formatPrice(amount: number) {

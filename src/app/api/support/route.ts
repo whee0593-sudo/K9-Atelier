@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { business } from "@/lib/business";
+import { createClient } from "@/lib/supabase/server";
 import {
   isValidContact,
   isValidEmail,
@@ -9,7 +10,18 @@ import {
 type SupportBody = {
   contact?: string;
   message?: string;
+  topic?: string;
+  appointmentId?: string;
+  chargeId?: string;
 };
+
+function safeRef(value: unknown) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 80) return null;
+  if (!/^[A-Za-z0-9_-]+$/.test(trimmed)) return null;
+  return trimmed;
+}
 
 export async function POST(request: Request) {
   const apiKey = process.env.RESEND_API_KEY?.trim();
@@ -32,6 +44,9 @@ export async function POST(request: Request) {
 
   const contact = normalizeContact(body.contact ?? "");
   const message = body.message?.trim() ?? "";
+  const isConcern = body.topic === "concern";
+  const appointmentId = safeRef(body.appointmentId);
+  const chargeId = safeRef(body.chargeId);
 
   if (!isValidContact(contact)) {
     return NextResponse.json(
@@ -54,20 +69,41 @@ export async function POST(request: Request) {
     );
   }
 
+  let customerAccountId: string | null = null;
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    customerAccountId = user?.id ?? null;
+  } catch {
+    customerAccountId = null;
+  }
+
   const fromEmail =
     process.env.SUPPORT_FROM_EMAIL?.trim() ||
     `K9 Atelier <${business.brand.email}>`;
   const toEmail = business.brand.email;
   const contactLabel = isValidEmail(contact) ? "Email" : "Phone";
-  const subject = `K9 Atelier support message (${contactLabel}: ${contact})`;
+  const subject = isConcern
+    ? `K9 Atelier concern (${contactLabel}: ${contact})`
+    : `K9 Atelier support message (${contactLabel}: ${contact})`;
   const text = [
-    "New support message from k9atelier.com",
+    isConcern
+      ? "New private concern from k9atelier.com"
+      : "New support message from k9atelier.com",
     "",
     `${contactLabel}: ${contact}`,
+    customerAccountId ? `Customer account: ${customerAccountId}` : "",
+    appointmentId ? `Related appointment: ${appointmentId}` : "",
+    chargeId ? `Related receipt: ${chargeId}` : "",
+    `Submitted: ${new Date().toISOString()}`,
     "",
     "Message:",
     message,
-  ].join("\n");
+  ]
+    .filter((line, index, lines) => line !== "" || lines[index - 1] !== "")
+    .join("\n");
 
   const payload: Record<string, unknown> = {
     from: fromEmail,

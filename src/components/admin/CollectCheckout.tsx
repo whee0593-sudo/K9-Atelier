@@ -15,8 +15,13 @@ import {
   hourlyRateForCatalogId,
 } from "@/lib/charges/hourly";
 import { HourlyVisitTimer } from "@/components/admin/HourlyVisitTimer";
+import { ChargeReceiptActions } from "@/components/admin/ChargeReceiptActions";
 import { ChargeReceiptLetter } from "@/components/admin/ChargeReceiptLetter";
 import { ChargeRefundForm } from "@/components/admin/ChargeRefundForm";
+import {
+  collectBillHeading,
+  formatReceiptPaymentMethod,
+} from "@/lib/charges/receipt-view";
 import type {
   AppointmentChargeRecord,
   CatalogChargeItem,
@@ -54,11 +59,17 @@ export function CollectCheckout({
   kind,
   preview = false,
   initialStep = "review",
+  brandLinks,
 }: {
   appointmentId: string;
   kind: ChargeKind;
   preview?: boolean;
   initialStep?: Step;
+  brandLinks?: {
+    websiteUrl: string;
+    instagramUrl: string | null;
+    googleReviewUrl: string | null;
+  };
 }) {
   const [context, setContext] = useState<CollectContext | null>(null);
   const [lineItems, setLineItems] = useState<ChargeLineItem[]>([]);
@@ -73,12 +84,13 @@ export function CollectCheckout({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [receiptSent, setReceiptSent] = useState<"sms" | "email" | null>(null);
   const [serviceStartedAt, setServiceStartedAt] = useState<string | null>(null);
   const [serviceEndedAt, setServiceEndedAt] = useState<string | null>(null);
   const [paidCharge, setPaidCharge] = useState<AppointmentChargeRecord | null>(
     null,
   );
+  const [chargedMethodId, setChargedMethodId] = useState<string | null>(null);
+  const [receiptSent, setReceiptSent] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -108,6 +120,7 @@ export function CollectCheckout({
         body.paidCharges.find((charge) => charge.kind === kind) ?? null;
       setPaidCharge(previewPaid);
       if (previewPaid) setChargeId(previewPaid.id);
+      if (previewPaid) setChargedMethodId(body.selectedPaymentMethodId);
       setLoading(false);
       return;
     }
@@ -201,7 +214,7 @@ export function CollectCheckout({
           subtotal,
           tipAmount,
           total,
-          receiptChannel: receiptSent,
+          receiptChannel: paidCharge?.receiptChannel ?? null,
           paidAt: new Date().toISOString(),
           refundedAmount: 0,
         }
@@ -250,6 +263,7 @@ export function CollectCheckout({
       };
       setChargeId(nextCharge.id);
       setPaidCharge(nextCharge);
+      if (!useNewCard) setChargedMethodId(selectedMethodId);
       setStep("receipt");
       return;
     }
@@ -280,6 +294,7 @@ export function CollectCheckout({
         return;
       }
       if (body.charge?.id) setChargeId(body.charge.id);
+      if (!useNewCard) setChargedMethodId(selectedMethodId);
       if (body.requiresAction && body.clientSecret) {
         if (kind === "no_show") {
           setError(
@@ -332,12 +347,12 @@ export function CollectCheckout({
     return null;
   }
 
-  async function sendReceipt(channel: "sms" | "email") {
-    if (!chargeId) return;
+  async function sendReceiptEmail() {
     if (preview) {
-      setReceiptSent(channel);
+      setReceiptSent(true);
       return;
     }
+    if (!chargeId) return;
     setBusy(true);
     setError(null);
     try {
@@ -345,16 +360,16 @@ export function CollectCheckout({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel }),
+        body: JSON.stringify({ channel: "email" }),
       });
       const body = (await response.json()) as { error?: string };
       if (!response.ok) {
-        setError(body.error ?? "Could not send the receipt.");
+        setError(body.error ?? "Could not send the email receipt.");
         return;
       }
-      setReceiptSent(channel);
+      setReceiptSent(true);
     } catch {
-      setError("Could not send the receipt.");
+      setError("Could not send the email receipt.");
     } finally {
       setBusy(false);
     }
@@ -419,7 +434,7 @@ export function CollectCheckout({
   const appointment = context.appointment;
 
   return (
-    <div className="mx-auto w-full max-w-lg">
+    <div className="mx-auto w-full max-w-[560px]">
       {preview ? (
         <p className="mb-4 rounded-xl border border-champagne bg-cream px-4 py-2 text-center text-xs uppercase tracking-[0.16em] text-taupe">
           Preview only · no charge
@@ -652,53 +667,19 @@ export function CollectCheckout({
           <ChargeReceiptLetter
             appointment={appointment}
             charge={receiptCharge}
+            paymentMethodLabel={formatReceiptPaymentMethod(
+              methods.find((method) => method.id === chargedMethodId) ?? null,
+            )}
+            websiteUrl={brandLinks?.websiteUrl}
+            instagramUrl={brandLinks?.instagramUrl}
+            googleReviewUrl={brandLinks?.googleReviewUrl}
           />
-          <div className="mx-auto mt-8 max-w-[480px] text-center">
-            <p className="mb-6 rounded-xl border border-champagne bg-cream px-4 py-2 text-[10px] font-medium uppercase tracking-[0.16em] text-taupe">
-              Staff only · the customer receipt has no refund button
-            </p>
-            <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
-              Send this receipt
-            </p>
-            <div className="mt-4 flex flex-col gap-3">
-              <button
-                type="button"
-                disabled={busy || !appointment.customerPhone}
-                onClick={() => void sendReceipt("sms")}
-                className="w-full rounded-sm bg-deep-lavender px-6 py-4 text-[11px] font-medium uppercase tracking-[0.16em] text-ivory disabled:opacity-50"
-              >
-                By text
-              </button>
-              <button
-                type="button"
-                disabled={busy || !appointment.customerEmail}
-                onClick={() => void sendReceipt("email")}
-                className="w-full rounded-sm border border-champagne px-6 py-4 text-[11px] font-medium uppercase tracking-[0.16em] text-ink disabled:opacity-50"
-              >
-                By email
-              </button>
-              {(receiptCharge.total - (receiptCharge.refundedAmount ?? 0)) > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => setStep("refund")}
-                  className="w-full rounded-sm border border-red-200 px-6 py-4 text-[11px] font-medium uppercase tracking-[0.16em] text-red-700"
-                >
-                  Refund
-                </button>
-              ) : null}
-            </div>
-            {receiptSent ? (
-              <p className="font-body mt-6 text-sm text-ink">
-                Receipt sent by {receiptSent === "sms" ? "text" : "email"}.
-              </p>
-            ) : null}
-            <Link
-              href="/admin/appointments"
-              className="font-body mt-8 inline-block text-sm text-taupe underline"
-            >
-              Done
-            </Link>
-          </div>
+          <ChargeReceiptActions
+            customerEmail={appointment.customerEmail}
+            busy={busy}
+            sent={receiptSent}
+            onSendEmail={() => void sendReceiptEmail()}
+          />
         </section>
       ) : null}
 
@@ -772,7 +753,7 @@ function PayStep({
         Today’s bill
       </p>
       <h2 className="font-display mt-3 text-4xl text-ink">
-        {context.appointment.petName}
+        {collectBillHeading(context.appointment)}
       </h2>
       <ul className="mt-8 space-y-3">
         {lineItems.map((item) => (

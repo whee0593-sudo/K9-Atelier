@@ -26,7 +26,10 @@ import type {
   CreateChargeInput,
   ReceiptChannel,
 } from "@/lib/charges/types";
-import { sendChargeReceiptEmail, sendChargeReceiptSms } from "@/lib/charges/receipts";
+import {
+  sendAfterVisitThankYouSms,
+  sendChargeReceiptEmail,
+} from "@/lib/charges/receipts";
 
 type ChargeRow = {
   id: string;
@@ -467,12 +470,21 @@ async function markChargePaid(
     console.error("markChargePaid failed:", error?.message);
     return null;
   }
-  return mapCharge(data as ChargeRow);
+
+  const charge = mapCharge(data as ChargeRow);
+  try {
+    const appointment = await fetchAppointmentAdminRecord(charge.appointmentId);
+    if (appointment) {
+      await sendAfterVisitThankYouSms(appointment);
+    }
+  } catch (smsError) {
+    console.error("after-visit thank-you SMS failed:", smsError);
+  }
+  return charge;
 }
 
 export async function sendChargeReceipt(
   chargeId: string,
-  channel: ReceiptChannel,
 ): Promise<
   | { ok: true }
   | { error: "unauthenticated" | "forbidden" | "not_found" | "conflict" | "server" }
@@ -500,17 +512,14 @@ export async function sendChargeReceipt(
   if (!appointment) return { error: "not_found" };
 
   const charge = mapCharge(row as ChargeRow);
-  const sent =
-    channel === "email"
-      ? await sendChargeReceiptEmail(appointment, charge)
-      : await sendChargeReceiptSms(appointment, charge);
+  const sent = await sendChargeReceiptEmail(appointment, charge);
 
   if (!sent) return { error: "server" };
 
   await admin
     .from("appointment_charges")
     .update({
-      receipt_channel: channel,
+      receipt_channel: "email",
       receipt_sent_at: new Date().toISOString(),
     })
     .eq("id", chargeId);

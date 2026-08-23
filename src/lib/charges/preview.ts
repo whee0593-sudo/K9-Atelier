@@ -60,6 +60,7 @@ export function buildPreviewCollectContext(
       customerEmail: "alex@example.com",
       customerName: options.paid ? "Maya Patel" : "Alex Rivera",
       customerFirstName: options.paid ? "Maya" : "Alex",
+      customerLastName: options.paid ? "Patel" : "Rivera",
       customerPhone: "+15615550123",
       reminderSmsSentAt: null,
       enRouteSmsSentAt: null,

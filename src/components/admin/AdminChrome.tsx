@@ -16,7 +16,7 @@ export function AdminChrome({
     pathname.startsWith("/admin/arrive")
   ) {
     return (
-      <div className="min-h-screen bg-ivory px-5 py-10">
+      <div className="min-h-screen bg-[#F8F4ED] px-5 py-10">
         {children}
       </div>
     );

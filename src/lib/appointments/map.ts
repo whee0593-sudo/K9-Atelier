@@ -78,6 +78,7 @@ export function mapAppointmentRowToAdminRecord(
     customerEmail: profile?.email ?? "",
     customerName: nameParts.length > 0 ? nameParts.join(" ") : null,
     customerFirstName: profile?.first_name ?? null,
+    customerLastName: profile?.last_name ?? null,
     customerPhone: profile?.phone ?? null,
     reminderSmsSentAt: row.reminder_sms_sent_at ?? null,
     enRouteSmsSentAt: row.en_route_sms_sent_at ?? null,

@@ -62,6 +62,7 @@ export type AdminAppointmentRecord = AppointmentRecord & {
   customerEmail: string;
   customerName: string | null;
   customerFirstName: string | null;
+  customerLastName: string | null;
   customerPhone: string | null;
   reminderSmsSentAt: string | null;
   enRouteSmsSentAt: string | null;
