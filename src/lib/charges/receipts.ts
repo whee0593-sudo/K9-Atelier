@@ -69,7 +69,7 @@ export function buildAfterVisitThankYouSms(appointment: AdminAppointmentRecord) 
     "Reserve your next appointment:",
     getBookAgainUrl(),
     "",
-    "Share a concern privately:",
+    "Share a concern with us:",
     siteUrl("/contact?topic=concern"),
     "",
     "Reply STOP to opt out.",
