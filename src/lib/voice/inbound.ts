@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { siteUrl } from "@/lib/email/resend";
 import type { CustomerByPhone } from "@/lib/sms/customer-by-phone";
 import { formatPetAndOwnerLabel } from "@/lib/sms/inbox-copy";
-import { digitsOnly, normalizePhoneToE164 } from "@/lib/sms/phone";
+import { normalizePhoneToE164 } from "@/lib/sms/phone";
 import { getStaffVoicePhone } from "@/lib/voice/config";
 import { escapeXml } from "@/lib/voice/bridge";
 
@@ -28,20 +28,8 @@ function sign(say: string, exp: number) {
     .slice(0, 32);
 }
 
-export function lastFourDigits(phone: string) {
-  const digits = digitsOnly(phone);
-  return digits.length >= 4 ? digits.slice(-4) : "";
-}
-
-function spokenLastFour(phone: string) {
-  return lastFourDigits(phone).split("").join(" ");
-}
-
 export function callerLabel(caller: IncomingCaller) {
-  if (!caller.customer) {
-    const lastFour = lastFourDigits(caller.phone);
-    return lastFour ? `unlisted caller · ${lastFour}` : "unlisted caller";
-  }
+  if (!caller.customer) return "an unknown number";
   return formatPetAndOwnerLabel({
     firstName: caller.customer.firstName,
     petNames: caller.customer.petNames,
@@ -54,10 +42,7 @@ export function buildIncomingCallSms(caller: IncomingCaller) {
 
 export function buildWhisperSay(caller: IncomingCaller) {
   if (!caller.customer) {
-    const spoken = spokenLastFour(caller.phone);
-    return spoken
-      ? `K9 Atelier transfer. This number is not in your customer list. Ending in ${spoken}.`
-      : "K9 Atelier transfer. This number is not in your customer list.";
+    return "K9 Atelier transfer. Call from an unknown number.";
   }
   const pets = caller.customer.petNames;
   if (pets.length > 0) {

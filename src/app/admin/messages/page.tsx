@@ -7,9 +7,9 @@ export default function AdminMessagesPage() {
         Customer Messages
       </h2>
       <p className="mt-2 text-sm text-text-muted">
-        Send a text from the studio number. Replies show on this page and are
-        forwarded to your phone. Use Call customer to ring your cell, then
-        connect the guest.
+        Send a text from the studio number. Unknown callers appear here so you
+        can send the booking and contact links. Replies are forwarded to your
+        phone.
       </p>
       <div className="mt-8">
         <AdminMessageComposer />

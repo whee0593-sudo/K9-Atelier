@@ -35,6 +35,7 @@ A2P 通过时，Twilio 通常已经建好一个 Messaging Service。
 1. `supabase/migrations/20260817180000_appointment_sms.sql` — 提醒已发 / 出发短信已发
 2. `supabase/migrations/20260823020000_customer_sms_confirmation.sql` — 客人回复 YES 的时间（和员工/疫苗通过后的预约成功分开存）
 3. `supabase/migrations/20260823160000_customer_sms_inbox.sql` — 后台 Customer Messages 存发出去的短信和客人回复
+4. `supabase/migrations/20260823170000_studio_inbound_calls.sql` — 陌生来电号码，方便发预约/留言短信
 
 若提示 column already exists，说明以前跑过，可以忽略。
 
@@ -118,6 +119,8 @@ Twilio Messaging Service → **Integration** / **A message comes in**：
 
 1. 转发到你的私人手机（`STAFF_VOICE_PHONE`）
 2. 出现在后台 **Customer Messages → Texts & replies**
+
+陌生来电会出现在 **Customer Messages → Unknown callers**。点 **Send website text** 会发出预约页、留言页和官网链接。也可以手输号码发送。
 
 ---
 

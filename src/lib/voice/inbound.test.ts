@@ -31,12 +31,12 @@ describe("inbound studio voice", () => {
     );
   });
 
-  it("speaks last four digits for an unlisted caller", () => {
+  it("keeps unknown callers as unknown number", () => {
     const unknown = { phone: "+15615550131", customer: null };
-    assert.equal(callerLabel(unknown), "unlisted caller · 0131");
-    assert.match(
+    assert.equal(callerLabel(unknown), "an unknown number");
+    assert.equal(
       buildWhisperSay(unknown),
-      /not in your customer list\. Ending in 0 1 3 1\./,
+      "K9 Atelier transfer. Call from an unknown number.",
     );
   });
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildStaffCustomerSms } from "./staff-compose-copy";
+import { buildStaffCustomerSms, buildStudioIntroSms } from "./staff-compose-copy";
 
 describe("staff customer SMS", () => {
   it("prefixes the studio name and adds STOP", () => {
@@ -19,5 +19,13 @@ describe("staff customer SMS", () => {
       body,
       "K9 ATELIER: Running 10 minutes late. Reply STOP to opt out.",
     );
+  });
+
+  it("includes booking, contact, and the website", () => {
+    const body = buildStudioIntroSms();
+    assert.match(body, /Thanks for calling/);
+    assert.match(body, /k9atelier.com\/book/);
+    assert.match(body, /k9atelier.com\/contact/);
+    assert.match(body, /Reply STOP to opt out/);
   });
 });

@@ -11,6 +11,7 @@ import {
   isStaffCallingStudio,
 } from "@/lib/voice/inbound";
 import { buildVoiceErrorTwiml } from "@/lib/voice/bridge";
+import { recordStudioInboundCall } from "@/lib/sms/studio-callers";
 import { getStaffVoicePhone, getTwilioVoiceFromNumber } from "@/lib/voice/config";
 
 export const runtime = "nodejs";
@@ -76,6 +77,9 @@ export async function POST(request: Request) {
   const caller = { phone, customer };
   const whisperUrl = buildWhisperUrl(buildWhisperSay(caller));
 
+  void recordStudioInboundCall({ phone, customer }).catch((error: unknown) => {
+    console.error("record inbound call failed:", error);
+  });
   void sendSms({
     to: staffPhone,
     body: buildIncomingCallSms(caller),
