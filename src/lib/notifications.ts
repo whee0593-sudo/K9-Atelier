@@ -1,4 +1,4 @@
-import { business } from "@/lib/business";
+import { business, getBrandWebsiteLabel } from "@/lib/business";
 
 /** Disclaimer shown under the estimated total in booking confirmations. */
 export const estimateNote =
@@ -90,13 +90,55 @@ export function buildAppointmentReminderSms(
   return `Hi ${name}! Reminder: ${details.petName}'s K9 Atelier appointment is today between ${details.timeLabel}. We'll text when we're on the way. ${SMS_OPT_OUT}`;
 }
 
-/** Sent 3 days before the visit. Customer replies YES to confirm. */
+/** "9:00–11:00 AM" / "11:30 AM – 1:00 PM" → "9am to 11am" / "11:30am to 1pm". */
+export function formatSmsTimeWindow(timeLabel: string) {
+  const trimmed = timeLabel.trim();
+  const samePeriod = trimmed.match(
+    /^(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})\s*(AM|PM)$/i,
+  );
+  if (samePeriod) {
+    const period = samePeriod[5]!;
+    return `${formatSmsClock(samePeriod[1]!, samePeriod[2]!, period)} to ${formatSmsClock(samePeriod[3]!, samePeriod[4]!, period)}`;
+  }
+
+  const bothPeriods = trimmed.match(
+    /^(\d{1,2}):(\d{2})\s*(AM|PM)\s*[–-]\s*(\d{1,2}):(\d{2})\s*(AM|PM)$/i,
+  );
+  if (bothPeriods) {
+    return `${formatSmsClock(bothPeriods[1]!, bothPeriods[2]!, bothPeriods[3]!)} to ${formatSmsClock(bothPeriods[4]!, bothPeriods[5]!, bothPeriods[6]!)}`;
+  }
+
+  return trimmed;
+}
+
+function formatSmsClock(hourText: string, minuteText: string, period: string) {
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const suffix = period.toLowerCase();
+  if (minute === 0) return `${hour}${suffix}`;
+  return `${hour}:${String(minute).padStart(2, "0")}${suffix}`;
+}
+
+export function accountAppointmentsUrl() {
+  return `https://${getBrandWebsiteLabel()}/account/appointments`;
+}
+
+/** Sent 3 days before the visit at 10am. Customer replies YES to confirm. */
 export function buildAppointmentConfirmRequestSms(
   details: BookingConfirmationDetails,
 ): string {
   const name = smsGreetingName(details);
-  const phone = business.brand.phone ?? "us";
-  return `K9 Atelier: Hi ${name}, please confirm ${details.petName}'s appointment on ${details.dateLabel} at ${details.timeLabel} (${details.serviceName}). Reply YES to confirm. Change or cancel 48+ hours ahead: free. Less than 48 hours: 50% of the service. Same-day cancel: 100%. Emergency? Call ${phone}. ${SMS_OPT_OUT}`;
+  const window = formatSmsTimeWindow(details.timeLabel);
+  return [
+    `K9 ATELIER: Hi ${name}, please reply YES to confirm ${details.petName}'s ${details.serviceName} appointment on ${details.dateLabel} between ${window}.`,
+    "",
+    "To view, change, or cancel your appointment, visit:",
+    accountAppointmentsUrl(),
+    "",
+    "Changes and cancellations are subject to the policy accepted at booking.",
+    "",
+    SMS_OPT_OUT,
+  ].join("\n");
 }
 
 export function buildAppointmentEnRouteSms(

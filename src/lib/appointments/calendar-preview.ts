@@ -38,6 +38,7 @@ function previewAppointment(
     vaccinationStatusAtBooking: null,
     status: "confirmed",
     confirmedAt: "2026-08-20T14:00:00.000Z",
+    customerConfirmedAt: null,
     createdAt: "2026-08-20T14:00:00.000Z",
     customerEmail: "alex@example.com",
     customerFirstName: "Alex",
@@ -64,7 +65,7 @@ export function buildPreviewCalendarMonth(month: string): {
   const counts: Record<string, number> = {
     "2026-07-08": 2,
     "2026-07-14": 3,
-    "2026-07-17": 1,
+    "2026-07-17": 2,
     "2026-07-23": 4,
     "2026-08-22": 2,
     "2026-08-25": 4,
@@ -130,6 +131,7 @@ export function buildPreviewCalendarAppointments(
         serviceName: "Signature Bath & Care",
         appointmentTime: "09:00",
         estimatedTotal: 140,
+        customerConfirmedAt: `${date}T13:00:00.000Z`,
         ...completedVisit(date, `${date}T13:08:00.000Z`, `${date}T15:02:00.000Z`),
       }),
       previewAppointment({
@@ -206,6 +208,22 @@ export function buildPreviewCalendarAppointments(
         appointmentTime: "10:00",
         estimatedTotal: 140,
         ...completedVisit(date, `${date}T14:04:00.000Z`, `${date}T15:48:00.000Z`),
+      }),
+      previewAppointment({
+        id: "preview-rex-pending",
+        petName: "Rex",
+        petBreed: "Cavapoo",
+        customerName: "Jamie Cole",
+        customerFirstName: "Jamie",
+        customerEmail: "jamie@example.com",
+        customerPhone: "+15615550145",
+        serviceName: "Signature Bath & Care",
+        appointmentTime: "1:00–3:00 PM",
+        appointmentDate: date,
+        estimatedTotal: 140,
+        status: "pending_confirmation",
+        confirmedAt: null,
+        vaccinationStatusAtBooking: "needs_review",
       }),
     ];
   }

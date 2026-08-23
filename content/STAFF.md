@@ -28,3 +28,15 @@
 若提示 column / table already exists，说明以前跑过，可以忽略。
 
 若弹出 **Potential issue detected**（`private.staff_invites` 没有 RLS），点绿色的 **Run and enable RLS**。不要点黄色的 Run without RLS。
+
+---
+
+## 预约右上角标记
+
+员工/疫苗通过后的预约成功，和客人回复 YES，是两件分开的事。
+
+- **红色感叹号：** 疫苗没通过，预约还没成功
+- **没有标记：** 疫苗已通过，预约已成功（后台状态是 Booked）
+- **confirm：** 客人回复了 YES
+
+疫苗审核页通过疫苗后，还要在预约页点 **Approve booking**。客人回 YES 不会代替这一步。

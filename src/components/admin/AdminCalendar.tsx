@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppointmentActionLinks } from "@/components/admin/AppointmentActionLinks";
+import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import type { AdminCalendarDay } from "@/lib/appointments/calendar";
 import {
@@ -43,7 +44,7 @@ function formatLongDate(iso: string) {
 function statusLabel(status: AdminAppointmentRecord["status"]) {
   if (status === "pending_confirmation") return "Pending";
   if (status === "cancelled") return "Cancelled";
-  return "Confirmed";
+  return "Booked";
 }
 
 export function AdminCalendar({ preview = false }: { preview?: boolean }) {
@@ -276,9 +277,19 @@ export function AdminCalendar({ preview = false }: { preview?: boolean }) {
                         : ""}
                     </p>
                   </div>
-                  <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
-                    {appointment.appointmentTime} · {statusLabel(appointment.status)}
-                  </span>
+                  <div className="flex flex-col items-end gap-2">
+                    <AppointmentCornerMark
+                      status={appointment.status}
+                      vaccinationStatusAtBooking={
+                        appointment.vaccinationStatusAtBooking
+                      }
+                      customerConfirmedAt={appointment.customerConfirmedAt}
+                    />
+                    <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
+                      {appointment.appointmentTime} ·{" "}
+                      {statusLabel(appointment.status)}
+                    </span>
+                  </div>
                 </div>
                 <p className="mt-4 text-sm text-text">{appointment.serviceName}</p>
                 <p className="mt-1 text-sm text-text-muted">

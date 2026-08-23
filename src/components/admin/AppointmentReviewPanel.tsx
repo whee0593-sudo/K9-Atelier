@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AdminCalendar } from "@/components/admin/AdminCalendar";
+import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
 import { AppointmentActionLinks } from "@/components/admin/AppointmentActionLinks";
 import { formatPrice } from "@/lib/business";
 import { formatStaffVisitTiming } from "@/lib/charges/hourly";
@@ -285,7 +286,7 @@ export function AppointmentReviewPanel() {
         <div className="rounded-2xl border border-lavender/30 bg-cream p-8 text-center">
           <p className="font-medium text-gold-dark">All caught up</p>
           <p className="mt-2 text-sm text-text-muted">
-            No appointments are waiting for confirmation.
+            No appointments are waiting for vaccination review.
           </p>
         </div>
       ) : (
@@ -325,9 +326,18 @@ export function AppointmentReviewPanel() {
                       </p>
                     ) : null}
                   </div>
-                  <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
-                    Pending confirmation
-                  </span>
+                  <div className="flex flex-col items-end gap-2">
+                    <AppointmentCornerMark
+                      status={appointment.status}
+                      vaccinationStatusAtBooking={
+                        appointment.vaccinationStatusAtBooking
+                      }
+                      customerConfirmedAt={appointment.customerConfirmedAt}
+                    />
+                    <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
+                      Vaccination review
+                    </span>
+                  </div>
                 </div>
 
                 <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
@@ -393,7 +403,7 @@ export function AppointmentReviewPanel() {
                     onClick={() => void updateStatus(appointment.id, "confirmed")}
                     className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-cream transition hover:bg-gold-dark disabled:opacity-50"
                   >
-                    Confirm
+                    Approve booking
                   </button>
                   <button
                     type="button"
@@ -455,9 +465,18 @@ export function AppointmentReviewPanel() {
                           : ""}
                       </p>
                     </div>
-                    <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
-                      Stop {index + 1} · {appointment.appointmentTime}
-                    </span>
+                    <div className="flex flex-col items-end gap-2">
+                      <AppointmentCornerMark
+                        status={appointment.status}
+                        vaccinationStatusAtBooking={
+                          appointment.vaccinationStatusAtBooking
+                        }
+                        customerConfirmedAt={appointment.customerConfirmedAt}
+                      />
+                      <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
+                        Stop {index + 1} · {appointment.appointmentTime}
+                      </span>
+                    </div>
                   </div>
                   <p className="mt-4 text-sm text-text">
                     {appointment.serviceName}

@@ -8,7 +8,7 @@
 客人会收到：
 
 1. **确认短信** — 预约确认时（若还在等审核，先发一条“已收到”）
-2. **当天早上提醒** — 工作日纽约时间约早上 8 点（夏令时）
+2. **提前三天确认** — 每天纽约时间早上 10 点（周末也发，夏令时/冬令时都是 10 点），请客人回复 YES。这和员工/疫苗通过后的预约成功不是同一件事。
 3. **出发短信** — 后台预约页点 **Text: on the way**
 
 ---
@@ -30,9 +30,10 @@ A2P 通过时，Twilio 通常已经建好一个 Messaging Service。
 
 ## 2. 在 Supabase 跑 SQL
 
-打开 [Supabase SQL Editor](https://supabase.com/dashboard)，执行 `supabase/migrations/20260817180000_appointment_sms.sql`。
+打开 [Supabase SQL Editor](https://supabase.com/dashboard)，按顺序执行：
 
-这会给预约表加上“提醒已发 / 出发短信已发”，避免重复发。
+1. `supabase/migrations/20260817180000_appointment_sms.sql` — 提醒已发 / 出发短信已发
+2. `supabase/migrations/20260823020000_customer_sms_confirmation.sql` — 客人回复 YES 的时间（和员工/疫苗通过后的预约成功分开存）
 
 若提示 column already exists，说明以前跑过，可以忽略。
 
@@ -92,14 +93,24 @@ Trial 只能发到 Twilio 里验证过的手机号。正式给客人发，账户
 
 ---
 
-## 6. 自动提醒
+## 6. 自动提醒（提前三天）
 
-Vercel Cron 工作日 UTC 12:00 调用 `/api/cron/appointment-reminders`：
+Vercel Cron 每天 UTC 14:00 和 15:00 调用 `/api/cron/appointment-reminders`（周末也跑）。代码只在纽约时间正好早上 10 点时发送，所以夏令时、冬令时都是 10 点。
 
-- 夏令时 ≈ 纽约时间早上 8:00
-- 冬令时 ≈ 纽约时间早上 7:00
+只给 **3 天后**、员工/疫苗侧已经预约成功（Booked）、还没发过这条短信、档案里有手机号的预约发。请客人回复 YES。改期/取消链接是 `https://K9Atelier.com/account/appointments`。
 
-只给当天、已确认、还没发过提醒、档案里有手机号的预约发短信。请求头需要 `Authorization: Bearer <CRON_SECRET>`。
+客人回复 YES 只记 `customer_confirmed_at`，**不会**改员工确认状态。后台预约右上角会显示 **confirm**。请求头需要 `Authorization: Bearer <CRON_SECRET>`。
+
+---
+
+## 7. 接收客人回复 YES
+
+Twilio Messaging Service → **Integration** / **A message comes in**：
+
+- Webhook URL：`https://k9atelier.com/api/sms/inbound`
+- Method：`HTTP POST`
+
+号码详情页的 Messaging webhook 也指到同一个地址。STOP / HELP 仍由 Twilio 自动处理。
 
 ---
 

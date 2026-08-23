@@ -10,6 +10,7 @@ import {
 import { buildPreviewCollectContext } from "@/lib/charges/preview";
 import type { CollectContext } from "@/lib/charges/types";
 import { formatServiceAddress } from "@/lib/travel";
+import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
 
 export function VisitCheckIn({
   appointmentId,
@@ -127,7 +128,14 @@ export function VisitCheckIn({
   const timeZone = appointment.timezone;
 
   return (
-    <div className="mx-auto flex min-h-[80vh] w-full max-w-lg flex-col justify-center text-center">
+    <div className="relative mx-auto flex min-h-[80vh] w-full max-w-lg flex-col justify-center text-center">
+      <div className="absolute right-0 top-0">
+        <AppointmentCornerMark
+          status={appointment.status}
+          vaccinationStatusAtBooking={appointment.vaccinationStatusAtBooking}
+          customerConfirmedAt={appointment.customerConfirmedAt}
+        />
+      </div>
       {preview ? (
         <p className="mb-6 rounded-xl border border-champagne bg-cream px-4 py-2 text-xs uppercase tracking-[0.16em] text-taupe">
           Preview only · no save

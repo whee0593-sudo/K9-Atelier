@@ -6,6 +6,7 @@ import {
   buildAppointmentReminderSms,
   buildAppointmentSubmittedSms,
   buildBookingConfirmationSms,
+  formatSmsTimeWindow,
 } from "@/lib/notifications";
 
 const details = {
@@ -41,12 +42,31 @@ describe("appointment SMS copy", () => {
     assert.match(enRoute, /We're on the way/);
   });
 
-  it("asks for YES and uses the 48-hour change policy", () => {
-    const body = buildAppointmentConfirmRequestSms(details);
-    assert.match(body, /Reply YES to confirm/);
-    assert.match(body, /48\+ hours ahead: free/);
-    assert.match(body, /Less than 48 hours: 50%/);
-    assert.match(body, /Same-day cancel: 100%/);
-    assert.match(body, /Reply STOP to opt out/);
+  it("asks for YES and points to the appointments page", () => {
+    const body = buildAppointmentConfirmRequestSms({
+      customerName: "Maya",
+      petName: "Daisy",
+      serviceName: "Signature Bath & Care",
+      dateLabel: "Wednesday, July 8, 2026",
+      timeLabel: "9:00–11:00 AM",
+    });
+    assert.equal(
+      body,
+      [
+        "K9 ATELIER: Hi Maya, please reply YES to confirm Daisy's Signature Bath & Care appointment on Wednesday, July 8, 2026 between 9am to 11am.",
+        "",
+        "To view, change, or cancel your appointment, visit:",
+        "https://K9Atelier.com/account/appointments",
+        "",
+        "Changes and cancellations are subject to the policy accepted at booking.",
+        "",
+        "Reply STOP to opt out.",
+      ].join("\n"),
+    );
+  });
+
+  it("formats arrival windows like 9am to 11am", () => {
+    assert.equal(formatSmsTimeWindow("9:00–11:00 AM"), "9am to 11am");
+    assert.equal(formatSmsTimeWindow("11:30 AM – 1:00 PM"), "11:30am to 1pm");
   });
 });

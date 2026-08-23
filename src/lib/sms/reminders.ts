@@ -3,8 +3,12 @@ import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import { mapAppointmentRowToAdminRecord } from "@/lib/appointments/map";
 import type { AppointmentRow } from "@/lib/appointments/types";
 import { contactFromAdminAppointment } from "@/lib/email/appointment-context";
-import { sendAppointmentReminderSms } from "@/lib/sms/appointment-sms";
-import { todayInBusinessTimezone } from "@/lib/sms/schedule";
+import { sendAppointmentConfirmRequestSms } from "@/lib/sms/appointment-sms";
+import {
+  addDaysToIsoDate,
+  hourInBusinessTimezone,
+  todayInBusinessTimezone,
+} from "@/lib/sms/schedule";
 import { isSmsConfigured } from "@/lib/sms/twilio";
 
 const REMINDER_SELECT = `
@@ -29,6 +33,7 @@ const REMINDER_SELECT = `
   vaccination_status_at_booking,
   status,
   confirmed_at,
+  customer_confirmed_at,
   created_at,
   reminder_sms_sent_at,
   en_route_sms_sent_at,
@@ -43,7 +48,12 @@ export type ReminderRunResult = {
   reason?: string;
 };
 
-export async function sendTodaysAppointmentReminders(): Promise<ReminderRunResult> {
+const CONFIRM_REQUEST_LEAD_DAYS = 3;
+
+export async function sendThreeDayConfirmRequestSms(): Promise<ReminderRunResult> {
+  if (hourInBusinessTimezone() !== 10) {
+    return { sent: 0, skipped: 0, failed: 0, reason: "outside_10am_window" };
+  }
   if (!isSmsConfigured()) {
     return { sent: 0, skipped: 0, failed: 0, reason: "sms_not_configured" };
   }
@@ -52,16 +62,19 @@ export async function sendTodaysAppointmentReminders(): Promise<ReminderRunResul
   }
 
   const admin = createAdminClient();
-  const today = todayInBusinessTimezone();
+  const targetDate = addDaysToIsoDate(
+    todayInBusinessTimezone(),
+    CONFIRM_REQUEST_LEAD_DAYS,
+  );
   const { data, error } = await admin
     .from("appointments")
     .select(REMINDER_SELECT)
     .eq("status", "confirmed")
-    .eq("appointment_date", today)
+    .eq("appointment_date", targetDate)
     .is("reminder_sms_sent_at", null);
 
   if (error) {
-    console.error("sendTodaysAppointmentReminders lookup failed:", error.message);
+    console.error("sendThreeDayConfirmRequestSms lookup failed:", error.message);
     return { sent: 0, skipped: 0, failed: 0, reason: "lookup_failed" };
   }
 
@@ -77,7 +90,7 @@ export async function sendTodaysAppointmentReminders(): Promise<ReminderRunResul
       continue;
     }
 
-    const ok = await sendAppointmentReminderSms(appointment, contact);
+    const ok = await sendAppointmentConfirmRequestSms(appointment, contact);
     if (!ok) {
       failed += 1;
       continue;
@@ -90,7 +103,7 @@ export async function sendTodaysAppointmentReminders(): Promise<ReminderRunResul
 
     if (markError) {
       console.error(
-        "sendTodaysAppointmentReminders mark failed:",
+        "sendThreeDayConfirmRequestSms mark failed:",
         appointment.id,
         markError.message,
       );

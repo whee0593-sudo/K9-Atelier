@@ -63,6 +63,7 @@ export function mapAppointmentRowToRecord(row: AppointmentRow): AppointmentRecor
     ),
     status: row.status,
     confirmedAt: row.confirmed_at,
+    customerConfirmedAt: row.customer_confirmed_at ?? null,
     createdAt: row.created_at,
   };
 }

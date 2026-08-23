@@ -2,6 +2,7 @@ import type { AppointmentRecord } from "@/lib/appointments/types";
 import type { CustomerContact } from "@/lib/email/appointment-context";
 import { bookingDetailsFromAppointment } from "@/lib/email/html-templates";
 import {
+  buildAppointmentConfirmRequestSms,
   buildAppointmentDeclinedSms,
   buildAppointmentEnRouteSms,
   buildAppointmentReminderSms,
@@ -87,6 +88,16 @@ export async function sendAppointmentReminderSms(
   return sendCustomerSms(
     customer.phone,
     buildAppointmentReminderSms(detailsForSms(appointment, customer)),
+  );
+}
+
+export async function sendAppointmentConfirmRequestSms(
+  appointment: AppointmentRecord,
+  customer: CustomerContact,
+) {
+  return sendCustomerSms(
+    customer.phone,
+    buildAppointmentConfirmRequestSms(detailsForSms(appointment, customer)),
   );
 }
 

@@ -9,6 +9,7 @@ const cases: Array<[string | null | undefined, string]> = [
   ["/account/pets", "/account/pets"],
   ["/account/profile", "/account/profile"],
   ["/account/bookings", "/account/bookings"],
+  ["/account/appointments", "/account/appointments"],
   ["/account/evil", "/account"],
   ["/book/extra", "/account"],
   ["/login", "/account"],

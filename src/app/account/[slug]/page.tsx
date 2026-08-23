@@ -16,6 +16,7 @@ const SECTION_IDS = [
   "payment",
   "messages",
   "bookings",
+  "appointments",
 ] as const;
 
 export function generateStaticParams() {
@@ -37,7 +38,7 @@ export default async function AccountSectionPage({ params }: Props) {
           <PetProfilesManager />
         ) : slug === "messages" ? (
           <CustomerInbox />
-        ) : slug === "bookings" ? (
+        ) : slug === "bookings" || slug === "appointments" ? (
           <CustomerBookingsList />
         ) : slug === "payment" ? (
           <PaymentMethodsManager />

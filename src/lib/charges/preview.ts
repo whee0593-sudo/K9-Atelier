@@ -56,6 +56,7 @@ export function buildPreviewCollectContext(
       vaccinationStatusAtBooking: null,
       status: "confirmed",
       confirmedAt: "2026-08-20T14:00:00.000Z",
+      customerConfirmedAt: null,
       createdAt: "2026-08-20T14:00:00.000Z",
       customerEmail: "alex@example.com",
       customerName: options.paid ? "Maya Patel" : "Alex Rivera",

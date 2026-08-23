@@ -55,6 +55,8 @@ export type AppointmentRecord = {
   vaccinationStatusAtBooking: VaccinationBookingStatus | null;
   status: AppointmentStatus;
   confirmedAt: string | null;
+  /** Customer replied YES to the 3-day SMS. Separate from staff confirmedAt. */
+  customerConfirmedAt: string | null;
   createdAt: string;
 };
 
@@ -96,6 +98,7 @@ export type AppointmentRow = {
   vaccination_status_at_booking: string | null;
   status: AppointmentStatus;
   confirmed_at: string | null;
+  customer_confirmed_at?: string | null;
   created_at: string;
   reminder_sms_sent_at?: string | null;
   en_route_sms_sent_at?: string | null;

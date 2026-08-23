@@ -74,7 +74,8 @@ export default function PrivacyPage() {
           <p>
             If you opt in on our booking form, we send appointment-related text
             messages from K9 Atelier. These may include request received,
-            confirmation, same-day reminders, and on-the-way notices.
+            confirmation, a confirmation request a few days before the visit,
+            and on-the-way notices.
           </p>
           <p>
             <strong>Message frequency:</strong> message frequency varies and is

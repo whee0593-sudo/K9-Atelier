@@ -34,6 +34,7 @@ const sampleAppointment: AppointmentRecord = {
   vaccinationStatusAtBooking: "needs_review",
   status: "pending_confirmation",
   confirmedAt: null,
+  customerConfirmedAt: null,
   createdAt: "2026-08-12T12:00:00.000Z",
 };
 

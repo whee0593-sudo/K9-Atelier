@@ -11,6 +11,7 @@ import { formatPaymentMethodLabel } from "@/lib/payments/types";
 import type { StaffCustomerHistory } from "@/lib/charges/history";
 import { formatChargeMoney } from "@/lib/charges/money";
 import { formatStaffVisitTiming } from "@/lib/charges/hourly";
+import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
 
 type LoadState =
   | { status: "loading" }
@@ -143,7 +144,7 @@ function formatHistoryDate(iso: string) {
 function appointmentStatusLabel(status: string) {
   if (status === "pending_confirmation") return "Pending";
   if (status === "cancelled") return "Cancelled";
-  return "Confirmed";
+  return "Booked";
 }
 
 function CustomerHistory({ customerId, open }: { customerId: string; open: boolean }) {
@@ -193,12 +194,21 @@ function CustomerHistory({ customerId, open }: { customerId: string; open: boole
           <ul className="mt-3 divide-y divide-lavender/30 overflow-hidden rounded-xl border border-lavender/30">
             {history.appointments.map((appointment) => (
               <li key={appointment.id} className="px-4 py-3 text-sm">
-                <p className="font-medium text-text">
-                  {formatHistoryDate(appointment.appointmentDate)}
-                  <span className="ml-2 font-normal text-text-muted">
-                    {appointment.appointmentTime}
-                  </span>
-                </p>
+                <div className="flex items-start justify-between gap-3">
+                  <p className="font-medium text-text">
+                    {formatHistoryDate(appointment.appointmentDate)}
+                    <span className="ml-2 font-normal text-text-muted">
+                      {appointment.appointmentTime}
+                    </span>
+                  </p>
+                  <AppointmentCornerMark
+                    status={appointment.status}
+                    vaccinationStatusAtBooking={
+                      appointment.vaccinationStatusAtBooking
+                    }
+                    customerConfirmedAt={appointment.customerConfirmedAt}
+                  />
+                </div>
                 <p className="mt-1 text-text-muted">
                   {appointment.petName} · {appointment.serviceName} ·{" "}
                   {appointmentStatusLabel(appointment.status)}

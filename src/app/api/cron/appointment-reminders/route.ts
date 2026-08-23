@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { sendTodaysAppointmentReminders } from "@/lib/sms/reminders";
+import { sendThreeDayConfirmRequestSms } from "@/lib/sms/reminders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +15,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const result = await sendTodaysAppointmentReminders();
+  const result = await sendThreeDayConfirmRequestSms();
   return NextResponse.json(result);
 }

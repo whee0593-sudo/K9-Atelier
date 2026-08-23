@@ -26,7 +26,8 @@ export const accountConfig = accountFields as {
 };
 
 export function getAccountSection(id: string) {
-  return accountConfig.sections.find((s) => s.id === id);
+  const slug = id === "appointments" ? "bookings" : id;
+  return accountConfig.sections.find((s) => s.id === slug);
 }
 
 export function filterFieldsByAudience(

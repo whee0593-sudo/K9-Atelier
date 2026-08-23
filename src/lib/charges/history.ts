@@ -39,6 +39,7 @@ const CUSTOMER_HISTORY_APPOINTMENT_SELECT = `
   vaccination_status_at_booking,
   status,
   confirmed_at,
+  customer_confirmed_at,
   created_at,
   reminder_sms_sent_at,
   en_route_sms_sent_at,

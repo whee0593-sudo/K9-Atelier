@@ -58,8 +58,8 @@ export default function TermsPage() {
             </a>
             , you agree to receive recurring, appointment-related text messages
             from K9 Atelier at the number you provide. Messages may include
-            appointment request received, confirmation, decline, same-day
-            reminders, and on-the-way arrival notices.
+            appointment request received, confirmation, decline, a confirmation
+            request a few days before the visit, and on-the-way arrival notices.
           </p>
           <p>
             <strong>Message frequency varies</strong> and is tied to a booked

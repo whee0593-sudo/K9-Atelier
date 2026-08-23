@@ -24,6 +24,7 @@ const PUBLIC_PATHS = [
   "/api/support",
   "/api/notify",
   "/api/cron",
+  "/api/sms",
 ];
 
 const CUSTOMER_PROTECTED_PREFIXES = ["/account", "/book"];
