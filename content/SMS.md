@@ -51,6 +51,7 @@ Vercel 项目 → **Settings → Environment Variables**（Production + Preview�
 | `TWILIO_AUTH_TOKEN` | Auth Token |
 | `TWILIO_FROM_NUMBER` | `+15615933335` |
 | `TWILIO_MESSAGING_SERVICE_SID` | `MGxxxx`（上一步复制的） |
+| `STAFF_VOICE_PHONE` | 你的私人手机，E.164，例如 `+1561xxxxxxx` |
 | `CRON_SECRET` | 一串很长的随机密码 |
 
 加完后 **Deployments → 最新部署 → Redeploy**。只 Save 不会生效。
@@ -90,6 +91,8 @@ Trial 只能发到 Twilio 里验证过的手机号。正式给客人发，账户
 如果详情页没有 Voice 这一栏，说明这个号买的时候没开通语音，只能发短信，不能接电话。需要另买一个带 **Voice + SMS** 的号码。
 
 拨号测试用 `+1 561 593 3335`。
+
+后台 **Call customer** 会先打这个私人号码（`STAFF_VOICE_PHONE`），你接起来后 Twilio 再接通客人。客人看到的来电是店号。号码必须开通 **Voice**，否则只能发短信、不能外呼。
 
 ---
 

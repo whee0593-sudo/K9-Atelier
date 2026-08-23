@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CallCustomerButton } from "@/components/admin/CallCustomerButton";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import type { ChargeKind } from "@/lib/charges/types";
 
@@ -23,6 +24,11 @@ export function AppointmentActionLinks({
 
   return (
     <>
+      <CallCustomerButton
+        appointmentId={appointment.id}
+        disabled={!appointment.customerPhone}
+        preview={preview}
+      />
       <Link
         href={`/admin/pets?customer=${appointment.customerId}`}
         className="rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text"

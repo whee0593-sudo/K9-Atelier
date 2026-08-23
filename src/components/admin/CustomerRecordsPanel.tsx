@@ -12,6 +12,7 @@ import type { StaffCustomerHistory } from "@/lib/charges/history";
 import { formatChargeMoney } from "@/lib/charges/money";
 import { formatStaffVisitTiming } from "@/lib/charges/hourly";
 import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
+import { CallCustomerButton } from "@/components/admin/CallCustomerButton";
 
 type LoadState =
   | { status: "loading" }
@@ -293,7 +294,13 @@ function CustomerCard({
       {open && (
         <div className="space-y-8 border-t border-lavender/30 px-5 py-6">
           <section>
-            <h3 className="text-base font-medium text-gold-dark">Owner Profile</h3>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-base font-medium text-gold-dark">Owner Profile</h3>
+              <CallCustomerButton
+                customerId={customer.profile.id}
+                disabled={!customer.profile.phone}
+              />
+            </div>
             <div className="mt-4">
               <CustomerProfileForm
                 profile={customer.profile}

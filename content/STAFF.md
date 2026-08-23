@@ -40,3 +40,11 @@
 - **confirm：** 客人回复了 YES
 
 疫苗审核页通过疫苗后，还要在预约页点 **Approve booking**。客人回 YES 不会代替这一步。
+
+---
+
+## 用店号给客人打电话
+
+后台预约或客人档案点 **Call customer**。Twilio 先打你的私人手机，你接听后再接通客人。客人手机显示 `(561) 593-3335`。
+
+Vercel 环境变量要有 `STAFF_VOICE_PHONE`（你的私人号，写成 `+1...`）。加完后要 Redeploy。
