@@ -16,6 +16,7 @@ import {
   isStaffPhone,
   recordCustomerSms,
 } from "@/lib/sms/inbox";
+import { handleStaffPhoneReply } from "@/lib/sms/staff-reply";
 
 const INBOUND_SELECT = `
   id,
@@ -76,17 +77,28 @@ export function buildCustomerYesReceivedSms(input: {
 export type InboundSmsResult =
   | { handled: "ignored" }
   | { handled: "message" }
+  | { handled: "staff_reply" }
   | { handled: "yes"; already: boolean; appointmentId: string }
   | { handled: "unmatched" };
 
 export async function handleInboundCustomerSms(input: {
   from: string;
+  to?: string;
   body: string;
   mediaUrls?: string[];
 }): Promise<InboundSmsResult> {
   const mediaUrls = (input.mediaUrls ?? []).filter(Boolean).slice(0, 10);
-  if (isIgnoredInboundReply(input.body) || isStaffPhone(input.from)) {
+  if (isIgnoredInboundReply(input.body)) {
     return { handled: "ignored" };
+  }
+  if (isStaffPhone(input.from)) {
+    await handleStaffPhoneReply({
+      from: input.from,
+      to: input.to,
+      body: input.body,
+      mediaUrls,
+    });
+    return { handled: "staff_reply" };
   }
   if (!input.body.trim() && mediaUrls.length === 0) {
     return { handled: "ignored" };

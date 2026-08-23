@@ -62,6 +62,7 @@ export async function POST(request: Request) {
 
   const result = await handleInboundCustomerSms({
     from,
+    to: params.To ?? "",
     body,
     mediaUrls: inboundMediaUrls(params),
   });

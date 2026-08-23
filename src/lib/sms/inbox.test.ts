@@ -27,7 +27,6 @@ describe("staff SMS inbox copy", () => {
   it("forwards photo-only replies with a photo label", () => {
     assert.deepEqual(
       inboundMediaUrls({
-        NumMedia: "1",
         MediaUrl0: "https://api.twilio.com/media/ME1",
       }),
       ["https://api.twilio.com/media/ME1"],

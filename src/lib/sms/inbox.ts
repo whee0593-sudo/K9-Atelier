@@ -10,6 +10,7 @@ import {
   type StaffSmsInboxItem,
 } from "@/lib/sms/inbox-copy";
 import { normalizePhoneToE164, phonesMatch } from "@/lib/sms/phone";
+import { rememberStaffReplyTarget } from "@/lib/sms/staff-reply-target";
 import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
 import { getStaffVoicePhone } from "@/lib/voice/config";
 
@@ -65,17 +66,26 @@ export async function forwardInboundSmsToStaff(input: {
   if (!input.body.trim() && mediaUrls.length === 0) return false;
 
   const customer = input.customer ?? (await lookupCustomerByPhone(input.from));
-  return sendSms({
+  const customerPhone = normalizePhoneToE164(input.from) ?? input.from;
+  const sent = await sendSms({
     to: staffPhone,
     body: buildStaffInboundForwardSms({
       ownerName: customer?.name ?? "Unknown",
       petNames: customer?.petNames ?? [],
       body: input.body,
-      phone: normalizePhoneToE164(input.from) ?? input.from,
+      phone: customerPhone,
       mediaCount: mediaUrls.length,
     }),
     mediaUrls,
   });
+  if (sent) {
+    await rememberStaffReplyTarget({
+      customerPhone,
+      customerName: customer?.name ?? null,
+      petNames: customer?.petNames ?? [],
+    });
+  }
+  return sent;
 }
 
 export async function listStaffSmsInbox(): Promise<

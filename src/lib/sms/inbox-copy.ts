@@ -28,10 +28,8 @@ export type StaffSmsInboxItem = {
 };
 
 export function inboundMediaUrls(params: Record<string, string>) {
-  const count = Number(params.NumMedia ?? 0);
-  if (!Number.isFinite(count) || count <= 0) return [];
   const urls: string[] = [];
-  for (let i = 0; i < Math.min(count, 10); i += 1) {
+  for (let i = 0; i < 10; i += 1) {
     const url = params[`MediaUrl${i}`]?.trim();
     if (url) urls.push(url);
   }
