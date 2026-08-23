@@ -8,8 +8,8 @@ export default function AdminMessagesPage() {
       </h2>
       <p className="mt-2 text-sm text-text-muted">
         Send a text from the studio number. Unknown callers appear here so you
-        can send the booking and contact links. Replies are forwarded to your
-        phone.
+        can call back or send the booking and contact links. Replies are
+        forwarded to your phone.
       </p>
       <div className="mt-8">
         <AdminMessageComposer />

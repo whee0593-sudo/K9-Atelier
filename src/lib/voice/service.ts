@@ -12,6 +12,7 @@ import { buildVoiceBridgeUrl } from "@/lib/voice/bridge";
 export async function startStaffOutboundCall(input: {
   appointmentId?: string;
   customerId?: string;
+  phone?: string;
 }): Promise<
   | { ok: true }
   | {
@@ -74,7 +75,11 @@ export async function startStaffOutboundCall(input: {
 async function resolveCustomerPhone(input: {
   appointmentId?: string;
   customerId?: string;
+  phone?: string;
 }): Promise<string | null | "invalid"> {
+  if (input.phone?.trim()) {
+    return normalizePhoneToE164(input.phone) ?? "invalid";
+  }
   if (input.appointmentId) {
     let appointmentId: string;
     try {

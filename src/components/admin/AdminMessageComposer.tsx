@@ -191,22 +191,30 @@ export function AdminMessageComposer() {
                 className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-lavender/30 px-4 py-3 text-sm"
               >
                 <div>
-                  <p className="font-medium text-text">{caller.phone}</p>
+                  <a
+                    href={`tel:${caller.phone}`}
+                    className="font-medium text-text underline-offset-2 hover:underline"
+                  >
+                    {caller.phone}
+                  </a>
                   <p className="mt-1 text-xs text-text-muted">
                     Called {new Date(caller.calledAt).toLocaleString()}
                     {caller.introSentAt ? " · website text sent" : ""}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  disabled={Boolean(sendingIntro)}
-                  onClick={() => void sendIntro(caller.phone)}
-                  className="rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text hover:border-gold/40 disabled:opacity-50"
-                >
-                  {sendingIntro === caller.phone
-                    ? "Sending…"
-                    : "Send website text"}
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <CallCustomerButton phone={caller.phone} label="Call back" />
+                  <button
+                    type="button"
+                    disabled={Boolean(sendingIntro)}
+                    onClick={() => void sendIntro(caller.phone)}
+                    className="rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text hover:border-gold/40 disabled:opacity-50"
+                  >
+                    {sendingIntro === caller.phone
+                      ? "Sending…"
+                      : "Send website text"}
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

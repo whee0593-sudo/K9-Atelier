@@ -5,6 +5,8 @@ import { useState } from "react";
 type Props = {
   appointmentId?: string;
   customerId?: string;
+  phone?: string;
+  label?: string;
   disabled?: boolean;
   preview?: boolean;
 };
@@ -12,6 +14,8 @@ type Props = {
 export function CallCustomerButton({
   appointmentId,
   customerId,
+  phone,
+  label = "Call customer",
   disabled = false,
   preview = false,
 }: Props) {
@@ -30,7 +34,7 @@ export function CallCustomerButton({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ appointmentId, customerId }),
+        body: JSON.stringify({ appointmentId, customerId, phone }),
       });
       const body = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -49,11 +53,11 @@ export function CallCustomerButton({
     <span className="inline-flex flex-col items-start gap-1">
       <button
         type="button"
-        disabled={disabled || busy || (!appointmentId && !customerId)}
+        disabled={disabled || busy || (!appointmentId && !customerId && !phone)}
         onClick={() => void startCall()}
         className="rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text transition hover:border-gold/40 disabled:opacity-50"
       >
-        {busy ? "Calling…" : "Call customer"}
+        {busy ? "Calling…" : label}
       </button>
       {message ? (
         <span className="max-w-xs text-xs text-text-muted">{message}</span>

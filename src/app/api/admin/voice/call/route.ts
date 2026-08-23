@@ -8,11 +8,13 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     appointmentId?: string;
     customerId?: string;
+    phone?: string;
   } | null;
 
   const result = await startStaffOutboundCall({
     appointmentId: body?.appointmentId,
     customerId: body?.customerId,
+    phone: body?.phone,
   });
 
   if ("error" in result) {
