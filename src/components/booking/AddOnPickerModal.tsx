@@ -64,7 +64,7 @@ function AddOnPricingDetails({ addOn }: { addOn: BookableService }) {
               {opt.consultationRequired
                 ? "Consultation required"
                 : opt.priceFrom != null
-                  ? `${formatPrice(opt.priceFrom)}+`
+                  ? `From ${formatPrice(opt.priceFrom)}`
                   : "—"}
             </span>
           </li>
@@ -90,7 +90,7 @@ function AddOnPricingDetails({ addOn }: { addOn: BookableService }) {
                   {labels[tier.weightTier] ?? tier.weightTier}
                 </td>
                 <td className="px-3 py-2 font-medium text-gold-dark">
-                  +{formatPrice(tier.priceFrom)} (Add-on)
+                  From {formatPrice(tier.priceFrom)} (Add-on)
                 </td>
               </tr>
             ))}
@@ -263,7 +263,7 @@ export function AddOnPickerModal({
                               {opt.consultationRequired
                                 ? "Consultation required"
                                 : opt.priceFrom != null
-                                  ? `${formatPrice(opt.priceFrom)}+`
+                                  ? `From ${formatPrice(opt.priceFrom)}`
                                   : "—"}
                             </span>
                               </>

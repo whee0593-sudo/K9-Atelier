@@ -50,7 +50,7 @@ function WeightTierTable({
                 {weightLabels[tier.weightTier] ?? tier.weightTier}
               </td>
               <td className={`${tdClass} font-medium text-gold-dark`}>
-                +{formatPrice(tier.priceFrom)} {feeSuffix}
+                From {formatPrice(tier.priceFrom)} {feeSuffix}
               </td>
             </tr>
           ))}
@@ -170,13 +170,7 @@ export function ServiceFeesSection({ className = "" }: { className?: string }) {
                     <tbody>
                       <tr>
                         <td className={tdClass}>
-                          +{formatPrice(f.rateMin as number)} –{" "}
-                          {formatPrice(
-                            typeof f.rateMax === "number"
-                              ? (f.rateMax as number)
-                              : (f.rateMin as number),
-                          )}
-                          +
+                          From {formatPrice(f.rateMin as number)}
                         </td>
                         <td className={tdClass}>
                           Based on level of anxiety, resistance, or aggression

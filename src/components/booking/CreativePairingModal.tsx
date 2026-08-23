@@ -39,7 +39,7 @@ function BaseServicePricing({ service }: { service: BookableService }) {
                   {labels[tier.weightTier] ?? tier.weightTier}
                 </td>
                 <td className="px-3 py-2 font-medium text-gold-dark">
-                  {formatPrice(tier.priceFrom)}+
+                  From {formatPrice(tier.priceFrom)}
                 </td>
               </tr>
             ))}

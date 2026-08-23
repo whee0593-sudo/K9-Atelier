@@ -87,7 +87,7 @@ function PricingBlock({ service }: { service: BookableService }) {
                   {formatDuration(tier.durationMin ?? 0, tier.durationMax)}
                 </td>
                 <td className="px-4 py-2.5 font-medium text-gold-dark">
-                  {formatPrice(tier.priceFrom)}+
+                  From {formatPrice(tier.priceFrom)}
                 </td>
               </tr>
             ))}
@@ -132,7 +132,7 @@ function PricingBlock({ service }: { service: BookableService }) {
                     {labels[tier.weightTier] ?? tier.weightTier}
                   </td>
                   <td className="px-4 py-2.5 font-medium text-gold-dark">
-                    +{formatPrice(tier.priceFrom)} on base service
+                    From {formatPrice(tier.priceFrom)} on base service
                   </td>
                 </tr>
               ))}
@@ -151,8 +151,8 @@ function PricingBlock({ service }: { service: BookableService }) {
     }
     return (
       <p className="mt-6 text-center text-sm font-medium text-text">
-        Additional fee: +{formatPrice(service.addOnMin ?? 0)}–
-        {formatPrice(service.addOnMax ?? service.addOnMin ?? 0)} on base service
+        Additional fee: From {formatPrice(service.addOnMin ?? 0)} on base
+        service
       </p>
     );
   }
@@ -199,7 +199,7 @@ function PricingBlock({ service }: { service: BookableService }) {
               {opt.consultationRequired
                 ? "Consultation required"
                 : opt.priceFrom != null
-                  ? `${formatPrice(opt.priceFrom)}+`
+                  ? `From ${formatPrice(opt.priceFrom)}`
                   : "—"}
             </span>
           </li>

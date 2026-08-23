@@ -100,7 +100,7 @@ export function BookingCareOptionsStep({
 
   function addOnPriceLabel(addOn: BookableService) {
     const estimate = getServicePriceEstimate(addOn, pet.weightLbs);
-    if (estimate) return `From +${formatPrice(estimate.from)}`;
+    if (estimate) return `From ${formatPrice(estimate.from)}`;
     return formatServicePriceFrom(addOn);
   }
 

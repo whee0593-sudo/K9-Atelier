@@ -22,7 +22,7 @@ const SECTIONS: Array<{ id: SectionId; number: string; title: string }> = [
   { id: "cancellation", number: "02", title: "Cancellation & Rescheduling" },
   { id: "travel", number: "03", title: "Service Area & Travel" },
   { id: "flea", number: "04", title: "Flea & Tick Care" },
-  { id: "special-handling", number: "05", title: "Special Handling" },
+  { id: "special-handling", number: "05", title: "Additional Fee" },
 ];
 
 const fleaFee = business.fees.find((fee) => fee.id === "flea-tick-fee");
@@ -38,10 +38,6 @@ const behaviorMin =
   behaviorFee && "rateMin" in behaviorFee && typeof behaviorFee.rateMin === "number"
     ? behaviorFee.rateMin
     : 25;
-const behaviorMax =
-  behaviorFee && "rateMax" in behaviorFee && typeof behaviorFee.rateMax === "number"
-    ? behaviorFee.rateMax
-    : 50;
 
 function PolicyRow({
   label,
@@ -128,7 +124,7 @@ function AccordionPanel({
         role="region"
         aria-labelledby={headerId}
         hidden={!open}
-        className="overflow-hidden pb-5 pl-[calc(1.5rem+0.75rem)] pr-0 text-sm leading-relaxed text-taupe motion-reduce:transition-none sm:pl-[calc(1.75rem+1rem)]"
+        className="overflow-hidden px-1 pb-5 text-center text-sm leading-relaxed text-taupe motion-reduce:transition-none"
       >
         {open ? children : null}
       </div>
@@ -207,16 +203,16 @@ export function BookingPoliciesModal({
         className="max-h-[85vh] w-full max-w-[760px] overflow-y-auto rounded-sm border border-gray-line bg-ivory p-5 shadow-sm sm:p-10 lg:p-12"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+        <p className="font-body text-center text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
           Service Policies
         </p>
         <h2
           id={titleId}
-          className="font-display mt-3 text-3xl text-ink sm:text-4xl"
+          className="font-display mt-3 text-center text-3xl text-ink sm:text-4xl"
         >
           Policies &amp; Fees
         </h2>
-        <p className="font-body mt-3 max-w-xl text-sm leading-relaxed text-taupe">
+        <p className="font-body mx-auto mt-3 max-w-xl text-center text-sm leading-relaxed text-taupe">
           Everything you need to know before reserving your K9 Atelier
           appointment.
         </p>
@@ -331,11 +327,11 @@ export function BookingPoliciesModal({
               <div>
                 <PolicyPriceRow
                   label="Medicated Treatment"
-                  value={`+${formatPrice(medicatedRate)}`}
+                  value={`From ${formatPrice(medicatedRate)}`}
                 />
                 <PolicyPriceRow
                   label="Vehicle Sanitation"
-                  value={`+${formatPrice(sanitationRate)}`}
+                  value={`From ${formatPrice(sanitationRate)}`}
                 />
               </div>
             </div>
@@ -343,20 +339,30 @@ export function BookingPoliciesModal({
 
           <AccordionPanel
             id="special-handling"
-            title="Special Handling"
+            title="Additional Fee"
             open={openSection === "special-handling"}
             onToggle={() => toggleSection("special-handling")}
           >
             <div className="space-y-4">
               <p>
-                If your dog requires additional time or specialized handling due
-                to significant anxiety, resistance or aggression, an additional
-                handling fee may apply.
+                Final service items will vary based on the specific
+                circumstances.
               </p>
-              <PolicyPriceRow
-                label="Additional Handling"
-                value={`+${formatPrice(behaviorMin)}–${formatPrice(behaviorMax)}+`}
-              />
+              <p>
+                If your dog requires additional time or specialized handling due
+                to matting, significant anxiety, resistance or aggression, an
+                additional handling fee may apply.
+              </p>
+              <div className="mx-auto max-w-sm text-left">
+                <PolicyPriceRow
+                  label="Dematting Fee"
+                  value={`From ${formatPrice(30)}`}
+                />
+                <PolicyPriceRow
+                  label="Special Handling"
+                  value={`From ${formatPrice(behaviorMin)}`}
+                />
+              </div>
               <p>
                 Whenever possible, we will communicate any additional care
                 requirements with you.
@@ -369,7 +375,7 @@ export function BookingPoliciesModal({
           ref={closeRef}
           type="button"
           onClick={onClose}
-          className={`${bookingSecondaryBtnClass} mt-8 w-full sm:w-auto`}
+          className={`${bookingSecondaryBtnClass} mx-auto mt-8 block w-full sm:w-auto`}
         >
           Close
         </button>

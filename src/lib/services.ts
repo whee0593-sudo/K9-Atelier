@@ -184,7 +184,7 @@ export function formatServicePrice(
   if (service.pricingType === "tiered") {
     const tier = getTierForPet(service, weightLbs);
     if (!tier) return "Not available for this weight";
-    return `${formatPrice(tier.priceFrom)}+ · ${formatDuration(tier.durationMin ?? 0, tier.durationMax)}`;
+    return `From ${formatPrice(tier.priceFrom)} · ${formatDuration(tier.durationMin ?? 0, tier.durationMax)}`;
   }
 
   if (service.pricingType === "hourly" && service.hourlyRate) {
@@ -197,23 +197,22 @@ export function formatServicePrice(
         service.options.find((o) => o.name === optionName) ?? service.options[0];
       if (option?.consultationRequired) return "Consultation required add-on";
       if (option?.priceFrom != null) {
-        return `+${formatPrice(option.priceFrom)}+ · ${option.name}`;
+        return `From ${formatPrice(option.priceFrom)} · ${option.name}`;
       }
-      return "From $50+ add-on";
+      return "From $50 add-on";
     }
     if (service.tiers?.length) {
       const tier = getTierForPet(service, weightLbs);
       if (!tier) return "Not available for this weight";
-      return `+${formatPrice(tier.priceFrom)} add-on`;
+      return `From ${formatPrice(tier.priceFrom)} add-on`;
     }
     if (service.flatRate != null) {
       if (service.durationMin != null) {
-        return `+${formatPrice(service.flatRate)} / ${service.durationMin} mins add-on`;
+        return `From ${formatPrice(service.flatRate)} / ${service.durationMin} mins add-on`;
       }
-      return `+${formatPrice(service.flatRate)} add-on`;
+      return `From ${formatPrice(service.flatRate)} add-on`;
     }
-    const max = service.addOnMax ?? service.addOnMin ?? 0;
-    return `+${formatPrice(service.addOnMin ?? 0)}–${formatPrice(max)} add-on`;
+    return `From ${formatPrice(service.addOnMin ?? 0)} add-on`;
   }
 
   if (service.pricingType === "options" && service.options) {
@@ -221,9 +220,9 @@ export function formatServicePrice(
       service.options.find((o) => o.name === optionName) ?? service.options[0];
     if (option?.consultationRequired) return "Consultation required";
     if (option?.priceFrom != null) {
-      return `${formatPrice(option.priceFrom)}+ · ${option.name}`;
+      return `From ${formatPrice(option.priceFrom)} · ${option.name}`;
     }
-    return "From $50+";
+    return "From $50";
   }
 
   if (service.pricingType === "consultation") {
@@ -393,7 +392,7 @@ export function estimateServiceDurationMinutes(
 export function formatServicePriceFrom(service: BookableService) {
   if (service.pricingType === "tiered" && service.tiers?.length) {
     const min = Math.min(...service.tiers.map((t) => t.priceFrom));
-    return `From ${formatPrice(min)}+`;
+    return `From ${formatPrice(min)}`;
   }
   if (service.pricingType === "hourly" && service.hourlyRate) {
     return `${formatPrice(service.hourlyRate)}/hr`;
@@ -402,7 +401,7 @@ export function formatServicePriceFrom(service: BookableService) {
     const priced = service.options.filter((o) => o.priceFrom != null);
     if (priced.length) {
       const min = Math.min(...priced.map((o) => o.priceFrom!));
-      return `From ${formatPrice(min)}+`;
+      return `From ${formatPrice(min)}`;
     }
     return "Consultation required";
   }
@@ -416,22 +415,19 @@ export function formatServicePriceFrom(service: BookableService) {
     const priced = service.options.filter((o) => o.priceFrom != null);
     if (priced.length) {
       const min = Math.min(...priced.map((o) => o.priceFrom!));
-      return `From ${formatPrice(min)}+ (Add-on)`;
+      return `From ${formatPrice(min)} (Add-on)`;
     }
     return "Consultation required (Add-on)";
   }
   if (service.pricingType === "add_on" && service.tiers?.length) {
     const min = Math.min(...service.tiers.map((t) => t.priceFrom));
-    const max = Math.max(...service.tiers.map((t) => t.priceFrom));
-    return min === max
-      ? `+${formatPrice(min)} (Add-on)`
-      : `${formatPrice(min)} – ${formatPrice(max)} (Add-on)`;
+    return `From ${formatPrice(min)} (Add-on)`;
   }
   if (service.pricingType === "add_on" && service.flatRate != null) {
     if (service.durationMin != null) {
-      return `${formatPrice(service.flatRate)} / ${service.durationMin} mins (Add-on)`;
+      return `From ${formatPrice(service.flatRate)} / ${service.durationMin} mins (Add-on)`;
     }
-    return `+${formatPrice(service.flatRate)} (Add-on)`;
+    return `From ${formatPrice(service.flatRate)} (Add-on)`;
   }
   return "";
 }

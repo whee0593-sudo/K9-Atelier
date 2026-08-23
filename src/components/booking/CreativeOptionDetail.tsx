@@ -41,7 +41,7 @@ export function CreativeOptionDetail({
           {opt.consultationRequired
             ? "Consultation required"
             : opt.priceFrom != null
-              ? `${formatPrice(opt.priceFrom)}+`
+              ? `From ${formatPrice(opt.priceFrom)}`
               : "—"}
         </span>
       )}

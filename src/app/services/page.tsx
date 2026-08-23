@@ -74,9 +74,7 @@ function TierTable({
             <tr key={tier.weightTier} className="border-t border-gray-line/60">
               <td className="px-4 py-3 text-ink">{labels[tier.weightTier]}</td>
               <td className="px-4 py-3 text-ink">
-                {priceOnly
-                  ? `+${formatPrice(tier.priceFrom)}`
-                  : `From ${formatPrice(tier.priceFrom)}`}
+                {`From ${formatPrice(tier.priceFrom)}`}
               </td>
               {!priceOnly && (
                 <td className="px-4 py-2">
@@ -253,8 +251,8 @@ export default function ServicesPage() {
                       <div className="mt-4">
                         <p className="text-sm font-medium text-gold-dark">
                           {typeof s.durationMin === "number"
-                            ? `${formatPrice(s.flatRate as number)} / ${s.durationMin} mins (Add-on)`
-                            : `+${formatPrice(s.flatRate as number)} (Add-on)`}
+                            ? `From ${formatPrice(s.flatRate as number)} / ${s.durationMin} mins (Add-on)`
+                            : `From ${formatPrice(s.flatRate as number)} (Add-on)`}
                         </p>
                       </div>
                     )}
@@ -284,12 +282,7 @@ export default function ServicesPage() {
                     {typeof s.addOnMin === "number" && !Array.isArray(s.tiers) && (
                       <div className="mt-4 text-sm">
                         <p className="font-medium text-gold-dark">
-                          Additional fee: +{formatPrice(s.addOnMin as number)}–
-                          {formatPrice(
-                            typeof s.addOnMax === "number"
-                              ? (s.addOnMax as number)
-                              : (s.addOnMin as number),
-                          )}{" "}
+                          Additional fee: From {formatPrice(s.addOnMin as number)}{" "}
                           (added to base bath or grooming price)
                         </p>
                         {"suitableFor" in service && service.suitableFor && (
@@ -333,7 +326,7 @@ export default function ServicesPage() {
                               opt.consultationRequired
                                 ? "Consultation required"
                                 : opt.priceFrom != null
-                                  ? `${formatPrice(opt.priceFrom)}+`
+                                  ? `From ${formatPrice(opt.priceFrom)}`
                                   : "—"}
                             </span>
                           </li>
