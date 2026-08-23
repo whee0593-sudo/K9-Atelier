@@ -26,7 +26,7 @@ describe("staff customer SMS", () => {
     assert.equal(
       body,
       [
-        "K9 ATELIER: Thank you for calling. We're caring for a guest and unable to answer at the moment.",
+        "K9 ATELIER: Thank you for calling. We're taking care of a guest and unable to answer at the moment.",
         "",
         "Reserve an appointment:",
         "https://k9atelier.com/book",
