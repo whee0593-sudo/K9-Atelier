@@ -90,6 +90,15 @@ export function buildAppointmentReminderSms(
   return `Hi ${name}! Reminder: ${details.petName}'s K9 Atelier appointment is today between ${details.timeLabel}. We'll text when we're on the way. ${SMS_OPT_OUT}`;
 }
 
+/** Sent 3 days before the visit. Customer replies YES to confirm. */
+export function buildAppointmentConfirmRequestSms(
+  details: BookingConfirmationDetails,
+): string {
+  const name = smsGreetingName(details);
+  const phone = business.brand.phone ?? "us";
+  return `K9 Atelier: Hi ${name}, please confirm ${details.petName}'s appointment on ${details.dateLabel} at ${details.timeLabel} (${details.serviceName}). Reply YES to confirm. Change or cancel 48+ hours ahead: free. Less than 48 hours: 50% of the service. Same-day cancel: 100%. Emergency? Call ${phone}. ${SMS_OPT_OUT}`;
+}
+
 export function buildAppointmentEnRouteSms(
   details: BookingConfirmationDetails,
 ): string {

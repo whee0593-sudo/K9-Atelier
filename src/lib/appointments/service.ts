@@ -75,7 +75,9 @@ const ADMIN_APPOINTMENT_SELECT = `
 const ADMIN_TODAY_APPOINTMENT_SELECT = `
   ${ADMIN_APPOINTMENT_SELECT.trim()},
   reminder_sms_sent_at,
-  en_route_sms_sent_at
+  en_route_sms_sent_at,
+  service_started_at,
+  service_ended_at
 `;
 
 export async function createAppointment(
@@ -371,6 +373,37 @@ export async function listTodayConfirmedAdminAppointments(): Promise<
   };
 }
 
+export async function listAdminAppointmentsOnDate(
+  date: string,
+): Promise<
+  | { appointments: AdminAppointmentRecord[] }
+  | { error: "unauthenticated" | "forbidden" | "conflict" | "server" }
+> {
+  const { getStaffSession } = await import("@/lib/staff/auth");
+  const session = await getStaffSession();
+  if ("error" in session) return { error: session.error };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { error: "conflict" };
+
+  const supabase = await createAuthenticatedSupabaseClient();
+  const { data, error } = await supabase
+    .from("appointments")
+    .select(ADMIN_TODAY_APPOINTMENT_SELECT)
+    .eq("appointment_date", date)
+    .order("scheduled_start", { ascending: true })
+    .order("appointment_time", { ascending: true });
+
+  if (error) {
+    console.error("listAdminAppointmentsOnDate failed:", error.message);
+    return { error: "server" };
+  }
+
+  return {
+    appointments: ((data ?? []) as unknown as AppointmentRow[]).map(
+      mapAppointmentRowToAdminRecord,
+    ),
+  };
+}
+
 export async function sendAppointmentEnRouteNotification(
   appointmentId: string,
 ): Promise<
@@ -439,4 +472,67 @@ export async function sendAppointmentEnRouteNotification(
   }
 
   return { ok: true };
+}
+
+export async function setAppointmentVisitTiming(
+  appointmentId: string,
+  action: "check_in" | "check_out",
+): Promise<
+  | { startedAt: string | null; endedAt: string | null }
+  | {
+      error:
+        | "unauthenticated"
+        | "forbidden"
+        | "not_found"
+        | "conflict"
+        | "server";
+    }
+> {
+  const { getStaffSession } = await import("@/lib/staff/auth");
+  const session = await getStaffSession();
+  if ("error" in session) return { error: session.error };
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const { data: row, error } = await admin
+    .from("appointments")
+    .select("id, service_started_at, service_ended_at")
+    .eq("id", appointmentId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("setAppointmentVisitTiming load failed:", error.message);
+    return { error: "server" };
+  }
+  if (!row) return { error: "not_found" };
+
+  const now = new Date().toISOString();
+  if (action === "check_out" && !row.service_started_at) {
+    return { error: "conflict" };
+  }
+
+  const next =
+    action === "check_in"
+      ? { service_started_at: now, service_ended_at: null }
+      : {
+          service_started_at: (row.service_started_at as string | null) ?? now,
+          service_ended_at: now,
+        };
+
+  const { data: updated, error: updateError } = await admin
+    .from("appointments")
+    .update(next)
+    .eq("id", appointmentId)
+    .select("service_started_at, service_ended_at")
+    .single();
+
+  if (updateError || !updated) {
+    console.error("setAppointmentVisitTiming save failed:", updateError?.message);
+    return { error: "server" };
+  }
+
+  return {
+    startedAt: (updated.service_started_at as string | null) ?? null,
+    endedAt: (updated.service_ended_at as string | null) ?? null,
+  };
 }

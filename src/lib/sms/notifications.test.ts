@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  buildAppointmentConfirmRequestSms,
   buildAppointmentEnRouteSms,
   buildAppointmentReminderSms,
   buildAppointmentSubmittedSms,
@@ -38,5 +39,14 @@ describe("appointment SMS copy", () => {
     assert.match(submitted, /We received your K9 Atelier request/);
     assert.match(reminder, /appointment is today/);
     assert.match(enRoute, /We're on the way/);
+  });
+
+  it("asks for YES and uses the 48-hour change policy", () => {
+    const body = buildAppointmentConfirmRequestSms(details);
+    assert.match(body, /Reply YES to confirm/);
+    assert.match(body, /48\+ hours ahead: free/);
+    assert.match(body, /Less than 48 hours: 50%/);
+    assert.match(body, /Same-day cancel: 100%/);
+    assert.match(body, /Reply STOP to opt out/);
   });
 });

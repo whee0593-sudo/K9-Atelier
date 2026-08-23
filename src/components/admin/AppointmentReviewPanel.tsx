@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { AdminCalendar } from "@/components/admin/AdminCalendar";
+import { AppointmentActionLinks } from "@/components/admin/AppointmentActionLinks";
 import { formatPrice } from "@/lib/business";
+import { formatStaffVisitTiming } from "@/lib/charges/hourly";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
+import type { ChargeKind } from "@/lib/charges/types";
 import { formatServiceAddress } from "@/lib/travel";
 
 type ScheduleDay = {
@@ -35,6 +39,7 @@ export function AppointmentReviewPanel() {
   >([]);
   const [schedule, setSchedule] = useState<ScheduleDay[]>([]);
   const [zones, setZones] = useState<ZoneOption[]>([]);
+  const [paidKinds, setPaidKinds] = useState<Record<string, ChargeKind[]>>({});
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +58,7 @@ export function AppointmentReviewPanel() {
         today?: AdminAppointmentRecord[];
         schedule?: ScheduleDay[];
         zones?: ZoneOption[];
+        paidKinds?: Record<string, ChargeKind[]>;
       };
 
       if (response.status === 401) {
@@ -74,6 +80,7 @@ export function AppointmentReviewPanel() {
       setTodayAppointments(body.today ?? []);
       setSchedule(body.schedule ?? []);
       setZones(body.zones ?? []);
+      setPaidKinds(body.paidKinds ?? {});
     } catch {
       setError("Could not load appointments.");
     } finally {
@@ -208,6 +215,8 @@ export function AppointmentReviewPanel() {
           {error}
         </p>
       ) : null}
+
+      <AdminCalendar />
 
       <section>
         <h3 className="text-lg font-medium text-gold-dark">Route days</h3>
@@ -461,7 +470,14 @@ export function AppointmentReviewPanel() {
                       zip: appointment.addressZip,
                     })}
                   </p>
-                  <div className="mt-6">
+                  <p className="mt-2 text-sm text-gold-dark">
+                    {formatStaffVisitTiming(
+                      appointment.serviceStartedAt,
+                      appointment.serviceEndedAt,
+                      appointment.timezone,
+                    )}
+                  </p>
+                  <div className="mt-6 flex flex-wrap gap-3">
                     <button
                       type="button"
                       disabled={busy || alreadySent || !appointment.customerPhone}
@@ -474,6 +490,10 @@ export function AppointmentReviewPanel() {
                           ? "Text: on the way"
                           : "No mobile number"}
                     </button>
+                    <AppointmentActionLinks
+                      appointment={appointment}
+                      paidKinds={paidKinds[appointment.id] ?? []}
+                    />
                   </div>
                 </li>
               );

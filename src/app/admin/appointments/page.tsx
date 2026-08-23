@@ -31,11 +31,13 @@ export default async function AdminAppointmentsPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-gold-dark">Appointments</h2>
+      <h2 className="text-2xl font-semibold text-gold-dark">
+        Calendar & Appointments
+      </h2>
       <p className="mt-2 text-sm text-text-muted">
-        Confirm or decline appointment requests, lock each day to a service
-        area, and text today&apos;s clients in drive order when you are on the
-        way.
+        Open any day on the calendar to see who is booked. Confirm new
+        requests, lock each day to a service area, and text today&apos;s
+        clients in drive order.
       </p>
       <AppointmentReviewPanel />
     </div>

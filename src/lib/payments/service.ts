@@ -40,6 +40,166 @@ export async function listCustomerPaymentMethods(): Promise<
   };
 }
 
+export async function listStaffCustomerPaymentMethods(
+  customerId: string,
+): Promise<
+  | { methods: PaymentMethodRecord[] }
+  | { error: "unauthenticated" | "forbidden" | "server" }
+> {
+  const { getStaffSession } = await import("@/lib/staff/auth");
+  const session = await getStaffSession();
+  if ("error" in session) return { error: session.error };
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("payment_methods")
+    .select(PAYMENT_METHOD_SELECT)
+    .eq("customer_id", customerId)
+    .order("is_default", { ascending: false })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("listStaffCustomerPaymentMethods failed:", error.message);
+    return { error: "server" };
+  }
+
+  return {
+    methods: ((data ?? []) as PaymentMethodRow[]).map(mapPaymentMethodRow),
+  };
+}
+
+export async function createStaffCustomerSetupIntent(
+  customerId: string,
+): Promise<
+  | { clientSecret: string; publishableKey: string }
+  | { error: "unauthenticated" | "forbidden" | "misconfigured" | "server" }
+> {
+  const { getStaffSession } = await import("@/lib/staff/auth");
+  const session = await getStaffSession();
+  if ("error" in session) return { error: session.error };
+
+  const stripe = getStripe();
+  const publishableKey = getStripePublishableKey();
+  if (!stripe || !publishableKey) return { error: "misconfigured" };
+
+  const admin = createAdminClient();
+  const { data: profile, error: profileError } = await admin
+    .from("profiles")
+    .select("id, email")
+    .eq("id", customerId)
+    .maybeSingle();
+
+  if (profileError) {
+    console.error("createStaffCustomerSetupIntent profile failed:", profileError.message);
+    return { error: "server" };
+  }
+  if (!profile) return { error: "server" };
+
+  const stripeCustomerId = await getOrCreateStripeCustomerId(
+    customerId,
+    profile.email,
+  );
+  if (!stripeCustomerId) return { error: "server" };
+
+  try {
+    const setupIntent = await stripe.setupIntents.create({
+      customer: stripeCustomerId,
+      usage: "off_session",
+      automatic_payment_methods: { enabled: true, allow_redirects: "never" },
+    });
+    if (!setupIntent.client_secret) return { error: "server" };
+    return { clientSecret: setupIntent.client_secret, publishableKey };
+  } catch (error) {
+    console.error("createStaffCustomerSetupIntent failed:", error);
+    return { error: "server" };
+  }
+}
+
+export async function saveStaffCustomerPaymentMethod(
+  customerId: string,
+  setupIntentId: string,
+): Promise<
+  | { method: PaymentMethodRecord }
+  | { error: "unauthenticated" | "forbidden" | "conflict" | "server" }
+> {
+  const { getStaffSession } = await import("@/lib/staff/auth");
+  const session = await getStaffSession();
+  if ("error" in session) return { error: session.error };
+
+  const stripe = getStripe();
+  if (!stripe) return { error: "server" };
+
+  let setupIntent;
+  try {
+    setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
+  } catch (error) {
+    console.error("saveStaffCustomerPaymentMethod retrieve failed:", error);
+    return { error: "server" };
+  }
+
+  if (setupIntent.status !== "succeeded") return { error: "conflict" };
+
+  const stripeCustomerId = await getOrCreateStripeCustomerId(customerId, undefined);
+  const setupCustomerId =
+    typeof setupIntent.customer === "string"
+      ? setupIntent.customer
+      : setupIntent.customer && "id" in setupIntent.customer
+        ? setupIntent.customer.id
+        : null;
+  if (!stripeCustomerId || setupCustomerId !== stripeCustomerId) {
+    return { error: "conflict" };
+  }
+
+  const paymentMethodId =
+    typeof setupIntent.payment_method === "string"
+      ? setupIntent.payment_method
+      : setupIntent.payment_method?.id;
+  if (!paymentMethodId) return { error: "conflict" };
+
+  let paymentMethod;
+  try {
+    paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+  } catch (error) {
+    console.error("saveStaffCustomerPaymentMethod pm failed:", error);
+    return { error: "server" };
+  }
+
+  const card = paymentMethod.card;
+  if (!card) return { error: "conflict" };
+
+  const admin = createAdminClient();
+  const { data: existingRow } = await admin
+    .from("payment_methods")
+    .select("id, is_default")
+    .eq("stripe_payment_method_id", paymentMethod.id)
+    .maybeSingle();
+  const hasExisting = await customerHasPaymentMethod(customerId);
+
+  const { data, error } = await admin
+    .from("payment_methods")
+    .upsert(
+      {
+        customer_id: customerId,
+        stripe_payment_method_id: paymentMethod.id,
+        brand: card.brand ?? "card",
+        last4: card.last4 ?? "0000",
+        exp_month: card.exp_month,
+        exp_year: card.exp_year,
+        is_default: existingRow?.is_default ?? !hasExisting,
+      },
+      { onConflict: "stripe_payment_method_id" },
+    )
+    .select(PAYMENT_METHOD_SELECT)
+    .single();
+
+  if (error) {
+    console.error("saveStaffCustomerPaymentMethod insert failed:", error.message);
+    return { error: "server" };
+  }
+
+  return { method: mapPaymentMethodRow(data as PaymentMethodRow) };
+}
+
 export async function customerHasPaymentMethod(
   customerId: string,
 ): Promise<boolean> {
@@ -77,7 +237,7 @@ export async function getCustomerPaymentMethod(
   return mapPaymentMethodRow(data as PaymentMethodRow);
 }
 
-async function getOrCreateStripeCustomerId(userId: string, email: string | undefined) {
+export async function getOrCreateStripeCustomerId(userId: string, email: string | undefined) {
   const stripe = getStripe();
   if (!stripe) return null;
 

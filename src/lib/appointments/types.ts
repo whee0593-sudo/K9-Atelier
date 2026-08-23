@@ -65,6 +65,8 @@ export type AdminAppointmentRecord = AppointmentRecord & {
   customerPhone: string | null;
   reminderSmsSentAt: string | null;
   enRouteSmsSentAt: string | null;
+  serviceStartedAt: string | null;
+  serviceEndedAt: string | null;
 };
 
 export type AppointmentRow = {
@@ -96,6 +98,8 @@ export type AppointmentRow = {
   created_at: string;
   reminder_sms_sent_at?: string | null;
   en_route_sms_sent_at?: string | null;
+  service_started_at?: string | null;
+  service_ended_at?: string | null;
   pets?: { name: string; breed: string } | { name: string; breed: string }[] | null;
   profiles?: {
     email: string;

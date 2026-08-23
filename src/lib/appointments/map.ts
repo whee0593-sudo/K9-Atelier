@@ -81,6 +81,8 @@ export function mapAppointmentRowToAdminRecord(
     customerPhone: profile?.phone ?? null,
     reminderSmsSentAt: row.reminder_sms_sent_at ?? null,
     enRouteSmsSentAt: row.en_route_sms_sent_at ?? null,
+    serviceStartedAt: row.service_started_at ?? null,
+    serviceEndedAt: row.service_ended_at ?? null,
   };
 }
 

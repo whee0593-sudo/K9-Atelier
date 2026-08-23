@@ -13,9 +13,10 @@ export default function AdminDashboardPage() {
           href="/admin/appointments"
           className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
         >
-          <h3 className="font-medium text-gold-dark">Appointments</h3>
+          <h3 className="font-medium text-gold-dark">Calendar</h3>
           <p className="mt-2 text-sm text-text-muted">
-            Confirm or decline appointment requests waiting on staff approval.
+            Click any day to see bookings. Gray days are past or full; white
+            days still have room.
           </p>
         </Link>
         <Link
@@ -26,6 +27,16 @@ export default function AdminDashboardPage() {
           <p className="mt-2 text-sm text-text-muted">
             Approve or reject customer vaccination uploads before confirming
             pending appointments.
+          </p>
+        </Link>
+        <Link
+          href="/admin/finance"
+          className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
+        >
+          <h3 className="font-medium text-gold-dark">Finance</h3>
+          <p className="mt-2 text-sm text-text-muted">
+            Daily, weekly, quarterly, and yearly revenue. Service, tips, and
+            tax are listed separately, plus how often each service was sold.
           </p>
         </Link>
         <Link
@@ -43,7 +54,7 @@ export default function AdminDashboardPage() {
         >
           <h3 className="font-medium text-gold-dark">Customers & Pets</h3>
           <p className="mt-2 text-sm text-text-muted">
-            Edit owner profiles, pet records, and internal service notes.
+            Owner profiles, pets, past appointment dates, and paid orders.
           </p>
         </Link>
         <Link

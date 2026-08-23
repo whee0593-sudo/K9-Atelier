@@ -8,6 +8,9 @@ import { normalizePetProfile, type PetProfile } from "@/lib/pets";
 import type { CustomerProfile } from "@/lib/profiles/types";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
 import { formatPaymentMethodLabel } from "@/lib/payments/types";
+import type { StaffCustomerHistory } from "@/lib/charges/history";
+import { formatChargeMoney } from "@/lib/charges/money";
+import { formatStaffVisitTiming } from "@/lib/charges/hourly";
 
 type LoadState =
   | { status: "loading" }
@@ -128,16 +131,138 @@ function StaffPetEditor({
   );
 }
 
+function formatHistoryDate(iso: string) {
+  if (!iso) return "—";
+  return new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function appointmentStatusLabel(status: string) {
+  if (status === "pending_confirmation") return "Pending";
+  if (status === "cancelled") return "Cancelled";
+  return "Confirmed";
+}
+
+function CustomerHistory({ customerId, open }: { customerId: string; open: boolean }) {
+  const [history, setHistory] = useState<StaffCustomerHistory | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || history) return;
+    let cancelled = false;
+    void fetch(`/api/admin/customers/${customerId}/history`, {
+      credentials: "include",
+    })
+      .then(async (response) => {
+        const body = (await response.json()) as StaffCustomerHistory & {
+          error?: string;
+        };
+        if (cancelled) return;
+        if (!response.ok) {
+          setError(body.error ?? "Could not load history.");
+          return;
+        }
+        setHistory({ appointments: body.appointments, orders: body.orders });
+      })
+      .catch(() => {
+        if (!cancelled) setError("Could not load history.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [customerId, history, open]);
+
+  if (!open) return null;
+
+  return (
+    <>
+      <section>
+        <h3 className="text-base font-medium text-gold-dark">
+          Appointment history
+        </h3>
+        {error ? (
+          <p className="mt-3 text-sm text-red-800">{error}</p>
+        ) : !history ? (
+          <p className="mt-3 text-sm text-text-muted">Loading history…</p>
+        ) : history.appointments.length === 0 ? (
+          <p className="mt-3 text-sm text-text-muted">No appointments yet.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-lavender/30 overflow-hidden rounded-xl border border-lavender/30">
+            {history.appointments.map((appointment) => (
+              <li key={appointment.id} className="px-4 py-3 text-sm">
+                <p className="font-medium text-text">
+                  {formatHistoryDate(appointment.appointmentDate)}
+                  <span className="ml-2 font-normal text-text-muted">
+                    {appointment.appointmentTime}
+                  </span>
+                </p>
+                <p className="mt-1 text-text-muted">
+                  {appointment.petName} · {appointment.serviceName} ·{" "}
+                  {appointmentStatusLabel(appointment.status)}
+                </p>
+                <p className="mt-1 text-xs text-gold-dark">
+                  {formatStaffVisitTiming(
+                    appointment.serviceStartedAt,
+                    appointment.serviceEndedAt,
+                    appointment.timezone,
+                  )}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section>
+        <h3 className="text-base font-medium text-gold-dark">Paid orders</h3>
+        {!history ? null : history.orders.length === 0 ? (
+          <p className="mt-3 text-sm text-text-muted">No paid orders yet.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-lavender/30 overflow-hidden rounded-xl border border-lavender/30">
+            {history.orders.map((order) => (
+              <li key={order.id} className="px-4 py-3 text-sm">
+                <p className="font-medium text-text">
+                  {formatHistoryDate(order.appointmentDate)} ·{" "}
+                  {formatChargeMoney(order.total)}
+                </p>
+                <p className="mt-1 text-text-muted">
+                  {order.kind === "no_show" ? "No-show" : "Service"}
+                  {order.petName ? ` · ${order.petName}` : ""}
+                  {order.serviceName ? ` · ${order.serviceName}` : ""}
+                </p>
+                {order.lineItems.length > 0 ? (
+                  <p className="mt-1 text-xs text-text-muted">
+                    {order.lineItems
+                      .map((item) => `${item.label} ${formatChargeMoney(item.amount)}`)
+                      .join(" · ")}
+                    {order.tipAmount > 0
+                      ? ` · Tip ${formatChargeMoney(order.tipAmount)}`
+                      : ""}
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </>
+  );
+}
+
 function CustomerCard({
   customer,
+  startOpen,
   onProfileSaved,
   onPetSaved,
 }: {
   customer: StaffCustomerRecord;
+  startOpen?: boolean;
   onProfileSaved: (profile: CustomerProfile) => void;
   onPetSaved: (pet: StaffCustomerRecord["pets"][number]) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(Boolean(startOpen));
 
   return (
     <article className="rounded-2xl border border-lavender/30 bg-cream">
@@ -179,6 +304,7 @@ function CustomerCard({
               </ul>
             )}
           </section>
+          <CustomerHistory customerId={customer.profile.id} open={open} />
           <section>
             <h3 className="text-base font-medium text-gold-dark">Pet Profiles</h3>
             {customer.pets.length === 0 ? (
@@ -209,7 +335,11 @@ function CustomerCard({
   );
 }
 
-export function CustomerRecordsPanel() {
+export function CustomerRecordsPanel({
+  focusCustomerId,
+}: {
+  focusCustomerId?: string;
+}) {
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
 
   const loadCustomers = useCallback(async () => {
@@ -286,6 +416,7 @@ export function CustomerRecordsPanel() {
         <CustomerCard
           key={customer.profile.id}
           customer={customer}
+          startOpen={customer.profile.id === focusCustomerId}
           onProfileSaved={(profile) => {
             setLoadState((current) => {
               if (current.status !== "ready") return current;
