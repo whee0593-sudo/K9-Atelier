@@ -2,7 +2,11 @@
   "crons": [
     {
       "path": "/api/cron/appointment-reminders",
-      "schedule": "0 14,15 * * *"
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/appointment-reminders",
+      "schedule": "0 15 * * *"
     }
   ]
 }

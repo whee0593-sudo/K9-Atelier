@@ -98,7 +98,7 @@ Trial 只能发到 Twilio 里验证过的手机号。正式给客人发，账户
 
 ## 6. 自动提醒（提前三天）
 
-Vercel Cron 每天 UTC 14:00 和 15:00 调用 `/api/cron/appointment-reminders`（周末也跑）。代码只在纽约时间正好早上 10 点时发送，所以夏令时、冬令时都是 10 点。
+Vercel 用两条各每天一次的 Cron（UTC 14:00 和 15:00）调用 `/api/cron/appointment-reminders`（周末也跑）。免费套餐不允许一条 Cron 一天跑两次。代码只在纽约时间正好早上 10 点时发送，所以夏令时、冬令时都是 10 点。
 
 只给 **3 天后**、员工/疫苗侧已经预约成功（Booked）、还没发过这条短信、档案里有手机号的预约发。请客人回复 YES。改期/取消链接是 `https://K9Atelier.com/account/appointments`。
 
