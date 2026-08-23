@@ -214,7 +214,7 @@ export function CollectCheckout({
           subtotal,
           tipAmount,
           total,
-          receiptChannel: paidCharge?.receiptChannel ?? null,
+          receiptChannel: null,
           paidAt: new Date().toISOString(),
           refundedAmount: 0,
         }
