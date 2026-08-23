@@ -11,7 +11,7 @@ import {
   isStaffCallingStudio,
 } from "@/lib/voice/inbound";
 import { buildVoiceErrorTwiml } from "@/lib/voice/bridge";
-import { getStaffVoicePhone } from "@/lib/voice/config";
+import { getStaffVoicePhone, getTwilioVoiceFromNumber } from "@/lib/voice/config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -62,7 +62,8 @@ export async function POST(request: Request) {
   }
 
   const staffPhone = getStaffVoicePhone();
-  if (!staffPhone) {
+  const studioCallerId = getTwilioVoiceFromNumber();
+  if (!staffPhone || !studioCallerId) {
     return twiml(
       buildVoiceErrorTwiml(
         "We could not reach K9 Atelier. Please text this number or email penny@k9atelier.com.",
@@ -82,5 +83,5 @@ export async function POST(request: Request) {
     console.error("incoming call SMS failed:", error);
   });
 
-  return twiml(buildForwardCallTwiml(staffPhone, whisperUrl));
+  return twiml(buildForwardCallTwiml(staffPhone, whisperUrl, studioCallerId));
 }

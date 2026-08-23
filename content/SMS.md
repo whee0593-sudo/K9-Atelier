@@ -71,9 +71,9 @@ Trial 只能发到 Twilio 里验证过的手机号。正式给客人发，账户
 
 ## 5. 来电转接到你的手机
 
-网站会把店号来电转到 `STAFF_VOICE_PHONE`。你的私人手机会响。接起来先听到一句英文报名字（例如 Bella · Jane），然后再接通客人。同时你会收到一条来电短信。
+网站会把店号来电转到 `STAFF_VOICE_PHONE`。你的私人手机会响，来电号码是店号 `(561) 593-3335`。把这个号存进手机通讯录，名字写成 **K9 ATELIER 转接**，响铃时屏幕就会显示这几个字。
 
-手机系统**不能**把来电显示改成自定义「K9Atelier」或狗名；屏幕上通常是客人的手机号。把客人存进通讯录后，可以显示他们的名字。
+接起来先听到一句英文报名字（例如 Bella · Jane），然后再接通客人。同时你会收到一条来电短信（响铃时可能被通话界面挡住）。
 
 1. [Phone Numbers Inventory](https://www.twilio.com/console/phone-numbers/incoming) → 点开 `+15615933335`
 2. **Configuration details** → **Voice and emergency calling** → **Edit details**

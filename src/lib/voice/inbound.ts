@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { siteUrl } from "@/lib/email/resend";
 import type { CustomerByPhone } from "@/lib/sms/customer-by-phone";
 import { formatPetAndOwnerLabel } from "@/lib/sms/inbox-copy";
-import { normalizePhoneToE164 } from "@/lib/sms/phone";
+import { digitsOnly, normalizePhoneToE164 } from "@/lib/sms/phone";
 import { getStaffVoicePhone } from "@/lib/voice/config";
 import { escapeXml } from "@/lib/voice/bridge";
 
@@ -28,8 +28,20 @@ function sign(say: string, exp: number) {
     .slice(0, 32);
 }
 
+export function lastFourDigits(phone: string) {
+  const digits = digitsOnly(phone);
+  return digits.length >= 4 ? digits.slice(-4) : "";
+}
+
+function spokenLastFour(phone: string) {
+  return lastFourDigits(phone).split("").join(" ");
+}
+
 export function callerLabel(caller: IncomingCaller) {
-  if (!caller.customer) return "an unknown number";
+  if (!caller.customer) {
+    const lastFour = lastFourDigits(caller.phone);
+    return lastFour ? `unlisted caller · ${lastFour}` : "unlisted caller";
+  }
   return formatPetAndOwnerLabel({
     firstName: caller.customer.firstName,
     petNames: caller.customer.petNames,
@@ -42,7 +54,10 @@ export function buildIncomingCallSms(caller: IncomingCaller) {
 
 export function buildWhisperSay(caller: IncomingCaller) {
   if (!caller.customer) {
-    return "K9 Atelier transfer. Call from an unknown number.";
+    const spoken = spokenLastFour(caller.phone);
+    return spoken
+      ? `K9 Atelier transfer. This number is not in your customer list. Ending in ${spoken}.`
+      : "K9 Atelier transfer. This number is not in your customer list.";
   }
   const pets = caller.customer.petNames;
   if (pets.length > 0) {
@@ -83,8 +98,12 @@ export function buildWhisperTwiml(say: string) {
   return `<?xml version="1.0" encoding="UTF-8"?><Response><Say>${escapeXml(say)}</Say></Response>`;
 }
 
-export function buildForwardCallTwiml(staffPhone: string, whisperUrl: string) {
-  return `<?xml version="1.0" encoding="UTF-8"?><Response><Dial timeout="25" answerOnBridge="true"><Number url="${escapeXml(whisperUrl)}">${escapeXml(staffPhone)}</Number></Dial><Say>We could not reach K9 Atelier. Please text this number or email penny@k9atelier.com.</Say></Response>`;
+export function buildForwardCallTwiml(
+  staffPhone: string,
+  whisperUrl: string,
+  studioCallerId: string,
+) {
+  return `<?xml version="1.0" encoding="UTF-8"?><Response><Dial callerId="${escapeXml(studioCallerId)}" timeout="25" answerOnBridge="true"><Number url="${escapeXml(whisperUrl)}">${escapeXml(staffPhone)}</Number></Dial><Say>We could not reach K9 Atelier. Please text this number or email penny@k9atelier.com.</Say></Response>`;
 }
 
 export function isStaffCallingStudio(from: string) {
