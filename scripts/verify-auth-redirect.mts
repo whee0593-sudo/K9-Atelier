@@ -18,6 +18,8 @@ const cases: Array<[string | null | undefined, string]> = [
   ["/admin/vaccinations", "/admin/vaccinations"],
   ["/admin/evil", "/admin/evil"],
   ["/administrator", "/account"],
+  ["/auth/reset", "/auth/reset"],
+  ["/account/password", "/account/password"],
 ];
 
 for (const [input, expected] of cases) {

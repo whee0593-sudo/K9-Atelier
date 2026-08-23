@@ -3,6 +3,7 @@ import { accountConfig } from "@/lib/account-fields";
 const ALLOWED_REDIRECT_PATHS = new Set<string>([
   "/account",
   "/account/password",
+  "/auth/reset",
   "/account/appointments",
   "/book",
   ...accountConfig.sections.map((section) => section.path),

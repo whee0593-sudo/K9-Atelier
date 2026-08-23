@@ -12,6 +12,7 @@ Full setup (redirect URLs, checklist): [`../AUTH_SETUP.md`](../AUTH_SETUP.md)
 |----------|-----------|--------------|
 | Magic Link | [`magic-link.html`](./magic-link.html) | `Your K9 Atelier sign-in link` |
 | Confirm signup | [`confirm-signup.html`](./confirm-signup.html) | `Welcome to K9 Atelier — confirm your email` |
+| Reset password | [`reset-password.html`](./reset-password.html) | `Reset your K9 Atelier password` |
 
 Open each `.html` file, copy all contents, paste into the matching Dashboard template body.
 
@@ -34,7 +35,9 @@ Add in **Authentication → URL Configuration**:
 
 ```
 https://k9atelier.com/auth/callback
+https://k9atelier.com/auth/reset
 http://localhost:3000/auth/callback
+http://localhost:3000/auth/reset
 http://localhost:3003/auth/callback
 http://localhost:3004/auth/callback
 ```
@@ -51,6 +54,7 @@ Site URL stays `https://k9atelier.com`.
 
 - [ ] Magic Link body pasted from `magic-link.html`
 - [ ] Confirm signup body pasted from `confirm-signup.html`
+- [ ] Reset password body pasted from `reset-password.html`
 - [ ] Test email shows **Access My Account** button and **6-digit code**
 - [ ] OTP login works on `/login`
 - [ ] Magic Link opens `/auth/callback` on the same port you used to request login

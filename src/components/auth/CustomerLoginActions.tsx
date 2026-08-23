@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { RecoveryCodeForm } from "@/components/auth/RecoveryCodeForm";
+import { createImplicitAuthClient } from "@/lib/auth-implicit";
 import { setRememberMePreference } from "@/lib/auth-remember";
 import { createClient } from "@/lib/supabase/client";
 import { sanitizeAuthRedirect } from "@/lib/auth-redirect";
@@ -14,6 +16,7 @@ type Props = {
   next?: string;
   bookingFlow?: boolean;
   adminFlow?: boolean;
+  startWithReset?: boolean;
 };
 
 type Mode = "signin" | "signup" | "forgot" | "magic";
@@ -41,9 +44,10 @@ export function CustomerLoginActions({
   next,
   bookingFlow,
   adminFlow,
+  startWithReset = false,
 }: Props) {
   const destination = sanitizeAuthRedirect(next);
-  const [mode, setMode] = useState<Mode>("signin");
+  const [mode, setMode] = useState<Mode>(startWithReset ? "forgot" : "signin");
   const [step, setStep] = useState<Step>("form");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -122,8 +126,8 @@ export function CustomerLoginActions({
     setLoading(true);
     setError(null);
 
-    const supabase = createClient();
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/account/password")}`;
+    const supabase = createImplicitAuthClient();
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/auth/reset")}`;
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       email.trim(),
       { redirectTo },
@@ -198,14 +202,13 @@ export function CustomerLoginActions({
         Customer sign in
       </a>
     </p>
-  ) : !bookingFlow ? (
+  ) : (
     <p className="font-body text-xs text-taupe">
-      Booking a private appointment?{" "}
-      <a href="/login?next=/book" className="text-ink underline">
-        Continue to booking
+      <a href="/login?next=/admin" className="text-ink underline">
+        Staff Login
       </a>
     </p>
-  ) : null;
+  );
 
   if (step === "magic-sent") {
     return (
@@ -272,7 +275,7 @@ export function CustomerLoginActions({
   if (step === "check-email") {
     const copy =
       mode === "forgot"
-        ? "If an account exists for that email, we sent a link to set a new password."
+        ? "If an account exists for that email, we sent a reset link and a 6-digit code. On a phone, enter the code below."
         : "Check your email to confirm your account. After that, you can sign in with your password.";
 
     return (
@@ -281,6 +284,14 @@ export function CustomerLoginActions({
         <p className="font-body mt-3 text-xs text-taupe">
           Sent to <span className="font-medium">{email.trim()}</span>.
         </p>
+        {mode === "forgot" ? (
+          <RecoveryCodeForm
+            defaultEmail={email.trim()}
+            onVerified={() => {
+              window.location.assign("/auth/reset");
+            }}
+          />
+        ) : null}
         <button
           type="button"
           onClick={() => switchMode("signin")}

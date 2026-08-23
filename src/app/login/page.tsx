@@ -33,8 +33,8 @@ export default async function LoginPage({ searchParams }: Props) {
             className="font-body mx-auto mt-6 max-w-md text-sm text-red-700"
             role="alert"
           >
-            We could not complete sign-in. Please request a new link and try
-            again.
+            This email link only works in the browser that requested it. On
+            your phone, request a new reset and enter the 6-digit code.
           </p>
         )}
 
@@ -42,6 +42,7 @@ export default async function LoginPage({ searchParams }: Props) {
           next={next}
           bookingFlow={bookingFlow}
           adminFlow={adminFlow}
+          startWithReset={error === "auth"}
         />
 
         <Link
@@ -51,16 +52,6 @@ export default async function LoginPage({ searchParams }: Props) {
           Return Home
         </Link>
       </div>
-      {adminFlow ? null : (
-        <div className="mt-16 flex justify-end">
-          <Link
-            href="/login?next=/admin"
-            className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-taupe transition hover:text-ink"
-          >
-            Staff Login
-          </Link>
-        </div>
-      )}
     </Container>
   );
 }

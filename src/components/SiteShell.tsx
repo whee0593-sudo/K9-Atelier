@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { AuthRecoveryRedirect } from "@/components/auth/AuthRecoveryRedirect";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 
@@ -16,11 +17,17 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
     pathname === "/admin/finance/preview";
 
   if (bare) {
-    return <>{children}</>;
+    return (
+      <>
+        <AuthRecoveryRedirect />
+        {children}
+      </>
+    );
   }
 
   return (
     <>
+      <AuthRecoveryRedirect />
       <Header />
       <main>{children}</main>
       <Footer />

@@ -22,7 +22,9 @@ Add every URL below (one per line):
 
 ```
 https://k9atelier.com/auth/callback
+https://k9atelier.com/auth/reset
 http://localhost:3000/auth/callback
+http://localhost:3000/auth/reset
 http://localhost:3003/auth/callback
 http://localhost:3004/auth/callback
 ```
@@ -49,6 +51,7 @@ Copy HTML from:
 |----------|------|---------|
 | **Magic Link** | [`email-templates/magic-link.html`](./email-templates/magic-link.html) | `Your K9 Atelier sign-in link` |
 | **Confirm signup** | [`email-templates/confirm-signup.html`](./email-templates/confirm-signup.html) | `Welcome to K9 Atelier — confirm your email` |
+| **Reset password** | [`email-templates/reset-password.html`](./email-templates/reset-password.html) | `Reset your K9 Atelier password` |
 
 Both templates include:
 
