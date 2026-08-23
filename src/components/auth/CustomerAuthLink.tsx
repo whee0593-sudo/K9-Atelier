@@ -12,7 +12,7 @@ export function CustomerAuthLink({
   onNavigate?: () => void;
 }) {
   const [href, setHref] = useState("/login");
-  const [label, setLabel] = useState("Client Login");
+  const [label, setLabel] = useState("Login");
 
   useEffect(() => {
     const supabase = createClient();
@@ -32,7 +32,7 @@ export function CustomerAuthLink({
         setLabel("My Account");
       } else {
         setHref("/login");
-        setLabel("Client Login");
+        setLabel("Login");
       }
     });
 

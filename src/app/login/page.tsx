@@ -51,6 +51,16 @@ export default async function LoginPage({ searchParams }: Props) {
           Return Home
         </Link>
       </div>
+      {adminFlow ? null : (
+        <div className="mt-16 flex justify-end">
+          <Link
+            href="/login?next=/admin"
+            className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-taupe transition hover:text-ink"
+          >
+            Staff Login
+          </Link>
+        </div>
+      )}
     </Container>
   );
 }

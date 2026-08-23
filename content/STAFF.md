@@ -26,3 +26,5 @@
 - 建立待确认的管理员邀请表
 
 若提示 column / table already exists，说明以前跑过，可以忽略。
+
+若弹出 **Potential issue detected**（`private.staff_invites` 没有 RLS），点绿色的 **Run and enable RLS**。不要点黄色的 Run without RLS。

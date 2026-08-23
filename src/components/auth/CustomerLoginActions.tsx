@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { setRememberMePreference } from "@/lib/auth-remember";
 import { createClient } from "@/lib/supabase/client";
 import { sanitizeAuthRedirect } from "@/lib/auth-redirect";
 import {
@@ -49,6 +50,7 @@ export function CustomerLoginActions({
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rememberMe, setRememberMe] = useState(false);
 
   function switchMode(nextMode: Mode) {
     setMode(nextMode);
@@ -63,6 +65,7 @@ export function CustomerLoginActions({
     setLoading(true);
     setError(null);
 
+    setRememberMePreference(rememberMe);
     const supabase = createClient();
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: email.trim(),
@@ -90,6 +93,7 @@ export function CustomerLoginActions({
       return;
     }
 
+    setRememberMePreference(rememberMe);
     const supabase = createClient();
     const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`;
     const { data, error: signUpError } = await supabase.auth.signUp({
@@ -169,6 +173,7 @@ export function CustomerLoginActions({
       return;
     }
 
+    setRememberMePreference(rememberMe);
     const supabase = createClient();
     const { error: verifyError } = await supabase.auth.verifyOtp({
       email: email.trim(),
@@ -198,11 +203,6 @@ export function CustomerLoginActions({
       Booking a private appointment?{" "}
       <a href="/login?next=/book" className="text-ink underline">
         Continue to booking
-      </a>
-      {" · "}
-      K9 Atelier team?{" "}
-      <a href="/login?next=/admin" className="text-ink underline">
-        Staff sign in
       </a>
     </p>
   ) : null;
@@ -372,6 +372,20 @@ export function CustomerLoginActions({
             </p>
           ) : null}
         </div>
+      ) : null}
+
+      {mode === "signin" ? (
+        <label className="flex cursor-pointer items-center gap-3 pt-1">
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(event) => setRememberMe(event.target.checked)}
+            className="h-4 w-4 accent-deep-lavender"
+          />
+          <span className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-taupe">
+            Remember me
+          </span>
+        </label>
       ) : null}
 
       {error && (

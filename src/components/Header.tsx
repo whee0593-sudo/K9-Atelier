@@ -5,7 +5,6 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { business } from "@/lib/business";
-import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { Container } from "@/components/luxury/Container";
 import { CustomerAuthLink } from "@/components/auth/CustomerAuthLink";
 
@@ -104,27 +103,21 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-6 lg:flex">
-          <CustomerAuthLink
-            className="font-body text-[12px] font-medium uppercase tracking-[0.14em] text-taupe transition hover:text-ink"
-          />
-          <BookServiceLink className="inline-flex min-h-[50px] items-center justify-center rounded-sm bg-deep-lavender px-6 text-[12px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink">
-            Book an Appointment
-          </BookServiceLink>
+        <div className="flex items-center gap-3">
+          <CustomerAuthLink className="inline-flex min-h-[50px] items-center justify-center rounded-sm bg-deep-lavender px-6 text-[12px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink" />
+          <button
+            type="button"
+            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm border border-gray-line lg:hidden"
+            aria-expanded={open}
+            aria-controls="mobile-nav"
+            aria-label={open ? "Close menu" : "Open menu"}
+            onClick={() => setOpen((value) => !value)}
+          >
+            <span className="font-body text-[12px] font-medium uppercase tracking-[0.14em] text-ink">
+              {open ? "Close" : "Menu"}
+            </span>
+          </button>
         </div>
-
-        <button
-          type="button"
-          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm border border-gray-line lg:hidden"
-          aria-expanded={open}
-          aria-controls="mobile-nav"
-          aria-label={open ? "Close menu" : "Open menu"}
-          onClick={() => setOpen((value) => !value)}
-        >
-          <span className="font-body text-[12px] font-medium uppercase tracking-[0.14em] text-ink">
-            {open ? "Close" : "Menu"}
-          </span>
-        </button>
       </Container>
 
       {open && (
@@ -141,16 +134,6 @@ export function Header() {
                 onNavigate={closeMenu}
               />
             ))}
-            <CustomerAuthLink
-              onNavigate={closeMenu}
-              className="font-body text-[12px] font-medium uppercase tracking-[0.14em] text-taupe"
-            />
-            <BookServiceLink
-              onClick={closeMenu}
-              className="inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-deep-lavender text-[12px] font-medium uppercase tracking-[0.16em] text-ivory"
-            >
-              Book an Appointment
-            </BookServiceLink>
           </Container>
         </div>
       )}

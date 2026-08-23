@@ -37,6 +37,9 @@ REVOKE ALL ON TABLE private.staff_invites FROM anon;
 GRANT ALL ON TABLE private.staff_invites TO postgres, service_role;
 GRANT ALL ON TABLE private.staff_members TO postgres, service_role;
 
+ALTER TABLE private.staff_invites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE private.staff_members ENABLE ROW LEVEL SECURITY;
+
 UPDATE private.staff_members sm
 SET email = u.email,
     role = CASE

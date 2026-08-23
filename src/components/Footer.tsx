@@ -13,7 +13,6 @@ const footerLinks = [
   { href: "/about", label: "About" },
   { href: "/faq", label: "FAQ" },
   { href: "/contact", label: "Contact" },
-  { href: "/login", label: "Client Login" },
 ] as const;
 
 export function Footer() {
@@ -126,13 +125,6 @@ export function Footer() {
               className="underline decoration-champagne/70 underline-offset-4 hover:text-deep-lavender"
             >
               Terms
-            </Link>
-            {" · "}
-            <Link
-              href="/login?next=/admin"
-              className="underline decoration-champagne/70 underline-offset-4 hover:text-deep-lavender"
-            >
-              Staff Login
             </Link>
           </p>
         </div>
