@@ -11,6 +11,8 @@ import {
 } from "@/components/booking/booking-ui";
 import { createClient } from "@/lib/supabase/client";
 
+const guestAuthBtnClass = `${bookingPrimaryBtnClass} mt-6 !w-[12.75rem]`;
+
 export function BookPageGate({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
@@ -51,16 +53,31 @@ export function BookPageGate({ children }: { children: React.ReactNode }) {
               Select a dog to begin their private appointment.
             </p>
             <div className="mt-8">
-              <div className={`${bookingNoticeClass} text-center`}>
-                <p className="font-body text-sm text-taupe">
-                  No dogs in your profile yet.
-                </p>
-                <Link
-                  href="/login?next=/book"
-                  className={`${bookingPrimaryBtnClass} mt-6`}
-                >
-                  Create My Account
-                </Link>
+              <div className={bookingNoticeClass}>
+                <div className="grid gap-8 sm:grid-cols-2 sm:items-start">
+                  <div className="flex flex-col items-center text-center sm:items-start sm:text-left">
+                    <p className="font-body text-sm text-taupe">
+                      No dogs in your profile yet.
+                    </p>
+                    <Link
+                      href="/login?next=/book&mode=signup"
+                      className={guestAuthBtnClass}
+                    >
+                      Create My Account
+                    </Link>
+                  </div>
+                  <div className="flex flex-col items-center text-center sm:items-start sm:text-left">
+                    <p className="font-body text-sm text-taupe">
+                      Already have an account?
+                    </p>
+                    <Link
+                      href="/login?next=/book"
+                      className={guestAuthBtnClass}
+                    >
+                      Login
+                    </Link>
+                  </div>
+                </div>
               </div>
             </div>
           </section>

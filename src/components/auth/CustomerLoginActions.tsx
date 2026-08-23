@@ -17,6 +17,7 @@ type Props = {
   bookingFlow?: boolean;
   adminFlow?: boolean;
   startWithReset?: boolean;
+  startWithSignup?: boolean;
 };
 
 type Mode = "signin" | "signup" | "forgot" | "magic";
@@ -45,9 +46,12 @@ export function CustomerLoginActions({
   bookingFlow,
   adminFlow,
   startWithReset = false,
+  startWithSignup = false,
 }: Props) {
   const destination = sanitizeAuthRedirect(next);
-  const [mode, setMode] = useState<Mode>(startWithReset ? "forgot" : "signin");
+  const [mode, setMode] = useState<Mode>(
+    startWithReset ? "forgot" : startWithSignup ? "signup" : "signin",
+  );
   const [step, setStep] = useState<Step>("form");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

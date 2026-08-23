@@ -3,11 +3,11 @@ import { CustomerLoginActions } from "@/components/auth/CustomerLoginActions";
 import { Container } from "@/components/luxury/Container";
 
 type Props = {
-  searchParams: Promise<{ next?: string; error?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; mode?: string }>;
 };
 
 export default async function LoginPage({ searchParams }: Props) {
-  const { next, error } = await searchParams;
+  const { next, error, mode } = await searchParams;
   const bookingFlow = next === "/book";
   const adminFlow = Boolean(next?.startsWith("/admin"));
 
@@ -43,6 +43,7 @@ export default async function LoginPage({ searchParams }: Props) {
           bookingFlow={bookingFlow}
           adminFlow={adminFlow}
           startWithReset={error === "auth"}
+          startWithSignup={mode === "signup"}
         />
 
         <Link
