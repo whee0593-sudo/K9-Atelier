@@ -34,6 +34,7 @@ A2P 通过时，Twilio 通常已经建好一个 Messaging Service。
 
 1. `supabase/migrations/20260817180000_appointment_sms.sql` — 提醒已发 / 出发短信已发
 2. `supabase/migrations/20260823020000_customer_sms_confirmation.sql` — 客人回复 YES 的时间（和员工/疫苗通过后的预约成功分开存）
+3. `supabase/migrations/20260823160000_customer_sms_inbox.sql` — 后台 Customer Messages 存发出去的短信和客人回复
 
 若提示 column already exists，说明以前跑过，可以忽略。
 
@@ -70,29 +71,27 @@ Trial 只能发到 Twilio 里验证过的手机号。正式给客人发，账户
 
 ## 5. 来电转接到你的手机
 
-这个 Twilio 号默认不会响你的私人手机。
+网站会把店号来电转到 `STAFF_VOICE_PHONE`。你的私人手机会响。接起来先听到一句英文报名字（例如 Bella · Jane），然后再接通客人。同时你会收到一条来电短信。
 
-1. [TwiML Bins](https://www.twilio.com/console/twiml-bins) → Create → 名称 `Forward calls`：
+手机系统**不能**把来电显示改成自定义「K9Atelier」或狗名；屏幕上通常是客人的手机号。把客人存进通讯录后，可以显示他们的名字。
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Dial>
-    <Number>+1你自己的手机号</Number>
-  </Dial>
-</Response>
-```
-
-2. [Phone Numbers Inventory](https://www.twilio.com/console/phone-numbers/incoming) → 点开 `+15615933335`
-3. **Configuration details** → **Voice and emergency calling** → **Edit details**
-4. 选 **Webhook, TwiML Bin, Function, Studio Flow, Proxy Service**
-5. Primary method 选 **TwiML Bin** → `Forward calls` → Save
+1. [Phone Numbers Inventory](https://www.twilio.com/console/phone-numbers/incoming) → 点开 `+15615933335`
+2. **Configuration details** → **Voice and emergency calling** → **Edit details**
+3. 选 **Webhook, TwiML Bin, Function, Studio Flow, Proxy Service**
+4. When a call comes in：
+   - Webhook URL：`https://k9atelier.com/api/voice/inbound`
+   - Method：`HTTP POST`
+5. Save
 
 如果详情页没有 Voice 这一栏，说明这个号买的时候没开通语音，只能发短信，不能接电话。需要另买一个带 **Voice + SMS** 的号码。
 
 拨号测试用 `+1 561 593 3335`。
 
 后台 **Call customer** 会先打这个私人号码（`STAFF_VOICE_PHONE`），你接起来后 Twilio 再接通客人。客人看到的来电是店号。号码必须开通 **Voice**，否则只能发短信、不能外呼。
+
+**Call customer 在哪：** Calendar 打开某一天的预约、Customers & Pets 点开客人、Customer Messages 选客人后都有这个按钮。
+
+只用 Wi‑Fi 的 iPad 可以点按钮，但电话会打到你的私人手机，iPad 本身不会响、也不能在 iPad 上接听。
 
 ---
 
@@ -114,6 +113,11 @@ Twilio Messaging Service → **Integration** / **A message comes in**：
 - Method：`HTTP POST`
 
 号码详情页的 Messaging webhook 也指到同一个地址。STOP / HELP 仍由 Twilio 自动处理。
+
+客人回复的普通短信（不只是 YES）会：
+
+1. 转发到你的私人手机（`STAFF_VOICE_PHONE`）
+2. 出现在后台 **Customer Messages → Texts & replies**
 
 ---
 

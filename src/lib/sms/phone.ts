@@ -24,3 +24,13 @@ export function normalizePhoneToE164(value: string): string | null {
 export function isValidSmsPhone(value: string) {
   return normalizePhoneToE164(value) != null;
 }
+
+export function phonesMatch(
+  left: string | null | undefined,
+  right: string | null | undefined,
+) {
+  const a = digitsOnly(left ?? "");
+  const b = digitsOnly(right ?? "");
+  if (a.length < 10 || b.length < 10) return false;
+  return a.slice(-10) === b.slice(-10);
+}

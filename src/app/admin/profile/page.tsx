@@ -52,7 +52,7 @@ export default function AdminProfilePage() {
           href="/admin/messages"
           className="inline-block rounded-xl bg-gold px-6 py-2.5 text-sm font-medium text-white hover:bg-gold-dark"
         >
-          Send message to a customer
+          Text a customer
         </Link>
       </div>
     </div>

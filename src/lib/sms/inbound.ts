@@ -6,9 +6,15 @@ import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
 import { contactFromAdminAppointment } from "@/lib/email/appointment-context";
 import { business } from "@/lib/business";
 import { sendEmail } from "@/lib/email/resend";
-import { digitsOnly } from "@/lib/sms/phone";
+import { phonesMatch } from "@/lib/sms/phone";
 import { sendSms } from "@/lib/sms/twilio";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
+import { lookupCustomerByPhone } from "@/lib/sms/customer-by-phone";
+import {
+  forwardInboundSmsToStaff,
+  isStaffPhone,
+  recordCustomerSms,
+} from "@/lib/sms/inbox";
 
 const INBOUND_SELECT = `
   id,
@@ -51,15 +57,7 @@ export function isIgnoredInboundReply(body: string) {
   );
 }
 
-export function phonesMatch(
-  left: string | null | undefined,
-  right: string | null | undefined,
-) {
-  const a = digitsOnly(left ?? "");
-  const b = digitsOnly(right ?? "");
-  if (a.length < 10 || b.length < 10) return false;
-  return a.slice(-10) === b.slice(-10);
-}
+export { phonesMatch };
 
 function firstName(name: string | null | undefined) {
   const first = name?.trim().split(/\s+/)[0];
@@ -76,6 +74,7 @@ export function buildCustomerYesReceivedSms(input: {
 
 export type InboundSmsResult =
   | { handled: "ignored" }
+  | { handled: "message" }
   | { handled: "yes"; already: boolean; appointmentId: string }
   | { handled: "unmatched" };
 
@@ -83,11 +82,25 @@ export async function handleInboundCustomerSms(input: {
   from: string;
   body: string;
 }): Promise<InboundSmsResult> {
-  if (isIgnoredInboundReply(input.body)) {
+  if (isIgnoredInboundReply(input.body) || isStaffPhone(input.from)) {
     return { handled: "ignored" };
   }
+
+  const customer = await lookupCustomerByPhone(input.from);
+  await recordCustomerSms({
+    direction: "inbound",
+    phone: input.from,
+    body: input.body,
+    customer,
+  });
+  await forwardInboundSmsToStaff({
+    from: input.from,
+    body: input.body,
+    customer,
+  });
+
   if (!isCustomerYesReply(input.body)) {
-    return { handled: "ignored" };
+    return { handled: "message" };
   }
   if (!hasSupabaseAdminConfig()) {
     return { handled: "unmatched" };

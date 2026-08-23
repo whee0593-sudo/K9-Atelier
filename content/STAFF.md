@@ -45,6 +45,16 @@
 
 ## 用店号给客人打电话
 
-后台预约或客人档案点 **Call customer**。Twilio 先打你的私人手机，你接听后再接通客人。客人手机显示 `(561) 593-3335`。
+这三个地方都有 **Call customer**：
+
+- **Calendar** → 点某一天 → 预约卡片上
+- **Customers & Pets** → 点开客人 → Owner Profile 右侧
+- **Customer Messages** → 选好客人后，下拉框旁边
+
+Twilio 先打你的私人手机，你接听后再接通客人。客人手机显示 `(561) 593-3335`。
+
+只用 Wi‑Fi 的 iPad 可以点按钮，电话会响你的手机，iPad 不能接听。
 
 Vercel 环境变量要有 `STAFF_VOICE_PHONE`（你的私人号，写成 `+1...`）。加完后要 Redeploy。
+
+客人回短信：看 **Customer Messages → Texts & replies**，同时会转发到你的手机。

@@ -17,8 +17,8 @@ export default async function AdminDashboardPage() {
         >
           <h3 className="font-medium text-gold-dark">Calendar</h3>
           <p className="mt-2 text-sm text-text-muted">
-            Click any day to see bookings. Gray days are past or full; white
-            days still have room.
+            Click any day to see bookings. Each booking has Call customer.
+            Gray days are past or full; white days still have room.
           </p>
         </Link>
         <Link
@@ -47,7 +47,8 @@ export default async function AdminDashboardPage() {
         >
           <h3 className="font-medium text-gold-dark">Customer Messages</h3>
           <p className="mt-2 text-sm text-text-muted">
-            Send messages and files to a customer&apos;s account inbox.
+            Send texts, read replies, and call a customer from the studio
+            number.
           </p>
         </Link>
         <Link

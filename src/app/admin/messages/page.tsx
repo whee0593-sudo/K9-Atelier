@@ -7,8 +7,9 @@ export default function AdminMessagesPage() {
         Customer Messages
       </h2>
       <p className="mt-2 text-sm text-text-muted">
-        Send a message or file to a customer. It appears in their account under
-        Messages from K9 Atelier.
+        Send a text from the studio number. Replies show on this page and are
+        forwarded to your phone. Use Call customer to ring your cell, then
+        connect the guest.
       </p>
       <div className="mt-8">
         <AdminMessageComposer />
