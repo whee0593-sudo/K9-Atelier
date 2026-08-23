@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleInboundCustomerSms } from "@/lib/sms/inbound";
+import { inboundMediaUrls } from "@/lib/sms/inbox-copy";
 import { isValidTwilioSignature } from "@/lib/sms/twilio-signature";
 
 export const runtime = "nodejs";
@@ -59,7 +60,11 @@ export async function POST(request: Request) {
   const body = params.Body ?? "";
   if (!from) return twiml();
 
-  const result = await handleInboundCustomerSms({ from, body });
+  const result = await handleInboundCustomerSms({
+    from,
+    body,
+    mediaUrls: inboundMediaUrls(params),
+  });
   if (result.handled === "unmatched") {
     return twiml(
       "K9 ATELIER: We could not match that YES to an upcoming appointment. Please use the link in your text or email penny@k9atelier.com.",

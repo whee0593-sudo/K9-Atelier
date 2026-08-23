@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildStaffInboundForwardSms } from "./inbox-copy";
+import {
+  buildStaffInboundForwardSms,
+  inboundMediaUrls,
+  inboundReplyTextForStaff,
+} from "./inbox-copy";
 import { formatPetAndOwnerLabel } from "./inbox-copy";
 
 describe("staff SMS inbox copy", () => {
@@ -11,12 +15,33 @@ describe("staff SMS inbox copy", () => {
     );
     assert.equal(
       buildStaffInboundForwardSms({
-        firstName: "Jane",
+        ownerName: "Jane Doe",
         petNames: ["Bella"],
         body: "Can we move to 2pm?",
         phone: "+15615550131",
       }),
-      "K9 ATELIER reply from Bella · Jane +15615550131:\n\nCan we move to 2pm?",
+      "K9 ATELIER reply from Bella Jane Doe +15615550131:\n\nCan we move to 2pm?",
+    );
+  });
+
+  it("forwards photo-only replies with a photo label", () => {
+    assert.deepEqual(
+      inboundMediaUrls({
+        NumMedia: "1",
+        MediaUrl0: "https://api.twilio.com/media/ME1",
+      }),
+      ["https://api.twilio.com/media/ME1"],
+    );
+    assert.equal(inboundReplyTextForStaff({ body: "", mediaCount: 1 }), "Photo");
+    assert.equal(
+      buildStaffInboundForwardSms({
+        ownerName: "Jane Doe",
+        petNames: ["Bella"],
+        body: "",
+        phone: "+15615550131",
+        mediaCount: 1,
+      }),
+      "K9 ATELIER reply from Bella Jane Doe +15615550131:\n\nPhoto",
     );
   });
 });

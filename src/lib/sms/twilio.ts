@@ -1,6 +1,7 @@
 export type SendSmsInput = {
   to: string;
   body: string;
+  mediaUrls?: string[];
 };
 
 function envValue(name: string) {
@@ -29,6 +30,9 @@ export async function sendSms(input: SendSmsInput): Promise<boolean> {
   const params = new URLSearchParams();
   params.set("To", input.to);
   params.set("Body", input.body);
+  for (const url of (input.mediaUrls ?? []).slice(0, 10)) {
+    if (url.trim()) params.append("MediaUrl", url.trim());
+  }
   if (messagingServiceSid) {
     params.set("MessagingServiceSid", messagingServiceSid);
   } else {

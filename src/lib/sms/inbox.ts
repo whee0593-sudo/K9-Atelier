@@ -55,20 +55,26 @@ export async function forwardInboundSmsToStaff(input: {
   from: string;
   body: string;
   customer?: CustomerByPhone | null;
+  mediaUrls?: string[];
 }) {
   const staffPhone = getStaffVoicePhone();
   if (!staffPhone || !isSmsConfigured()) return false;
   if (isStaffPhone(input.from)) return false;
 
+  const mediaUrls = (input.mediaUrls ?? []).filter(Boolean).slice(0, 10);
+  if (!input.body.trim() && mediaUrls.length === 0) return false;
+
   const customer = input.customer ?? (await lookupCustomerByPhone(input.from));
   return sendSms({
     to: staffPhone,
     body: buildStaffInboundForwardSms({
-      firstName: customer?.firstName ?? "Unknown",
+      ownerName: customer?.name ?? "Unknown",
       petNames: customer?.petNames ?? [],
       body: input.body,
       phone: normalizePhoneToE164(input.from) ?? input.from,
+      mediaCount: mediaUrls.length,
     }),
+    mediaUrls,
   });
 }
 

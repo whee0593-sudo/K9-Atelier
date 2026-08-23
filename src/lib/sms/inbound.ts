@@ -10,6 +10,7 @@ import { phonesMatch } from "@/lib/sms/phone";
 import { sendSms } from "@/lib/sms/twilio";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
 import { lookupCustomerByPhone } from "@/lib/sms/customer-by-phone";
+import { inboundReplyTextForStaff } from "@/lib/sms/inbox-copy";
 import {
   forwardInboundSmsToStaff,
   isStaffPhone,
@@ -81,8 +82,13 @@ export type InboundSmsResult =
 export async function handleInboundCustomerSms(input: {
   from: string;
   body: string;
+  mediaUrls?: string[];
 }): Promise<InboundSmsResult> {
+  const mediaUrls = (input.mediaUrls ?? []).filter(Boolean).slice(0, 10);
   if (isIgnoredInboundReply(input.body) || isStaffPhone(input.from)) {
+    return { handled: "ignored" };
+  }
+  if (!input.body.trim() && mediaUrls.length === 0) {
     return { handled: "ignored" };
   }
 
@@ -90,13 +96,17 @@ export async function handleInboundCustomerSms(input: {
   await recordCustomerSms({
     direction: "inbound",
     phone: input.from,
-    body: input.body,
+    body: inboundReplyTextForStaff({
+      body: input.body,
+      mediaCount: mediaUrls.length,
+    }),
     customer,
   });
   await forwardInboundSmsToStaff({
     from: input.from,
     body: input.body,
     customer,
+    mediaUrls,
   });
 
   if (!isCustomerYesReply(input.body)) {

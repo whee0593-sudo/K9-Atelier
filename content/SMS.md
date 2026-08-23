@@ -120,6 +120,8 @@ Twilio Messaging Service → **Integration** / **A message comes in**：
 1. 转发到你的私人手机（`STAFF_VOICE_PHONE`）
 2. 出现在后台 **Customer Messages → Texts & replies**
 
+客人发到店号的**图片**也会转到你的手机（彩信）。店号和 Messaging Service 需要开通 MMS。
+
 陌生来电会出现在 **Customer Messages → Unknown callers**。点 **Send website text** 会发出预约页、留言页和官网链接。也可以手输号码发送。
 
 ---
