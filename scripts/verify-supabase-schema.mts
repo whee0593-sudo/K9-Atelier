@@ -86,6 +86,24 @@ async function verifyMigration() {
     );
     if (!staffTable.rows[0]?.regclass) process.exitCode = 1;
 
+    const staffInvites = await client.query(
+      `SELECT to_regclass('private.staff_invites') AS regclass`,
+    );
+    console.log(
+      "TABLE_PRIVATE_STAFF_INVITES:",
+      staffInvites.rows[0]?.regclass ? "ok" : "missing",
+    );
+    if (!staffInvites.rows[0]?.regclass) process.exitCode = 1;
+
+    const ownerRpc = await client.query(
+      `SELECT to_regprocedure('public.is_owner_user()') AS regproc`,
+    );
+    console.log(
+      "FUNCTION_IS_OWNER_USER:",
+      ownerRpc.rows[0]?.regproc ? "ok" : "missing",
+    );
+    if (!ownerRpc.rows[0]?.regproc) process.exitCode = 1;
+
     const archiveRpc = await client.query(
       `SELECT to_regprocedure('public.archive_own_pet(uuid)') AS regproc`,
     );

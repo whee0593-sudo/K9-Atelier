@@ -6,9 +6,11 @@ import { AdminNav } from "@/components/admin/AdminNav";
 export function AdminChrome({
   banner,
   children,
+  showTeam = false,
 }: {
   banner: React.ReactNode;
   children: React.ReactNode;
+  showTeam?: boolean;
 }) {
   const pathname = usePathname();
   if (
@@ -34,7 +36,7 @@ export function AdminChrome({
           <h1 className="mb-4 text-xl font-semibold text-gold-dark">
             K9 Atelier Admin
           </h1>
-          <AdminNav />
+          <AdminNav showTeam={showTeam} />
         </aside>
         <div>{children}</div>
       </div>

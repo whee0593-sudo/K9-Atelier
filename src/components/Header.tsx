@@ -77,14 +77,8 @@ export function Header() {
     );
   }
 
-  const isHome = pathname === "/";
-
   return (
-    <header
-      className={`sticky top-0 z-50 border-b border-gray-line/70 bg-ivory/95 backdrop-blur-sm ${
-        isHome ? "" : ""
-      }`}
-    >
+    <header className="sticky top-0 z-50 border-b border-gray-line/70 bg-ivory/95 backdrop-blur-sm">
       <Container className="flex items-center justify-between gap-6 py-4 md:py-5">
         <Link
           href="/"

@@ -127,6 +127,13 @@ export function Footer() {
             >
               Terms
             </Link>
+            {" · "}
+            <Link
+              href="/login?next=/admin"
+              className="underline decoration-champagne/70 underline-offset-4 hover:text-deep-lavender"
+            >
+              Staff Login
+            </Link>
           </p>
         </div>
       </Container>

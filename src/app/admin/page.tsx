@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { isOwnerUser } from "@/lib/staff/auth";
 
-export default function AdminDashboardPage() {
+export default async function AdminDashboardPage() {
+  const showTeam = await isOwnerUser();
   return (
     <div>
       <h2 className="text-2xl font-semibold text-gold-dark">Dashboard</h2>
@@ -66,6 +68,18 @@ export default function AdminDashboardPage() {
             Your name, role, and work contact details.
           </p>
         </Link>
+        {showTeam ? (
+          <Link
+            href="/admin/team"
+            className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
+          >
+            <h3 className="font-medium text-gold-dark">Admin Team</h3>
+            <p className="mt-2 text-sm text-text-muted">
+              Add admins, confirm access, and remove accounts. Only the owner
+              can do this.
+            </p>
+          </Link>
+        ) : null}
         <Link
           href="/account"
           className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"

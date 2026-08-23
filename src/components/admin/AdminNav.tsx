@@ -13,12 +13,15 @@ const links = [
   { href: "/admin/profile", label: "My Admin Profile" },
 ];
 
-export function AdminNav() {
+export function AdminNav({ showTeam = false }: { showTeam?: boolean }) {
   const pathname = usePathname();
+  const items = showTeam
+    ? [...links, { href: "/admin/team", label: "Admin Team" }]
+    : links;
 
   return (
     <nav className="flex flex-col gap-1">
-      {links.map((link) => {
+      {items.map((link) => {
         const active =
           link.href === "/admin"
             ? pathname === "/admin"
