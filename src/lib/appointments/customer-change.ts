@@ -108,7 +108,10 @@ function asChangeRow(row: ChangeRow): AppointmentRecord {
   return mapAppointmentRowToRecord(row);
 }
 
-async function loadOwnedAppointment(userId: string, appointmentId: string) {
+async function loadOwnedAppointment(
+  userId: string,
+  appointmentId: string,
+): Promise<{ row: ChangeRow } | { error: "server" | "not_found" | "conflict" }> {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("appointments")
@@ -127,7 +130,10 @@ async function loadOwnedAppointment(userId: string, appointmentId: string) {
   return { row };
 }
 
-async function loadVisitSiblings(userId: string, row: ChangeRow) {
+async function loadVisitSiblings(
+  userId: string,
+  row: ChangeRow,
+): Promise<{ rows: ChangeRow[] } | { error: "server" }> {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("appointments")
@@ -214,11 +220,16 @@ export async function quoteAppointmentChange(
 async function resolvePaymentMethod(
   customerId: string,
   appointmentMethodId: string | null,
-) {
+): Promise<{
+  id: string;
+  stripePaymentMethodId: string;
+  brand?: string;
+  last4?: string;
+} | null> {
   const admin = createAdminClient();
   const query = admin
     .from("payment_methods")
-    .select("id, stripe_payment_method_id")
+    .select("id, stripe_payment_method_id, brand, last4")
     .eq("customer_id", customerId);
 
   const { data } = appointmentMethodId
@@ -229,13 +240,15 @@ async function resolvePaymentMethod(
     return {
       id: data.id as string,
       stripePaymentMethodId: data.stripe_payment_method_id as string,
+      brand: (data.brand as string | null) ?? undefined,
+      last4: (data.last4 as string | null) ?? undefined,
     };
   }
 
   if (appointmentMethodId) {
     const { data: fallback } = await admin
       .from("payment_methods")
-      .select("id, stripe_payment_method_id")
+      .select("id, stripe_payment_method_id, brand, last4")
       .eq("customer_id", customerId)
       .order("is_default", { ascending: false })
       .limit(1)
@@ -244,6 +257,8 @@ async function resolvePaymentMethod(
       return {
         id: fallback.id as string,
         stripePaymentMethodId: fallback.stripe_payment_method_id as string,
+        brand: (fallback.brand as string | null) ?? undefined,
+        last4: (fallback.last4 as string | null) ?? undefined,
       };
     }
   }
@@ -257,7 +272,16 @@ async function chargeChangeFee(options: {
   customerEmail: string | undefined;
   fee: number;
   action: AppointmentChangeAction;
-}) {
+}): Promise<
+  | { ok: true; cardBrand?: string; cardLast4?: string }
+  | {
+      error:
+        | "payment_required"
+        | "misconfigured"
+        | "server"
+        | "payment_failed";
+    }
+> {
   if (options.fee <= 0) {
     return { ok: true as const, cardBrand: undefined, cardLast4: undefined };
   }
@@ -356,7 +380,9 @@ async function chargeChangeFee(options: {
   }
 }
 
-async function cancelRows(rows: ChangeRow[]) {
+async function cancelRows(
+  rows: ChangeRow[],
+): Promise<{ ok: true } | { error: "server" }> {
   const admin = createAdminClient();
   const { error } = await admin
     .from("appointments")
@@ -515,7 +541,10 @@ async function rescheduleRows(
   rows: ChangeRow[],
   date: string,
   preference: TimePreference,
-) {
+): Promise<
+  | { appointments: AppointmentRecord[] }
+  | { error: "server" | "slot_unavailable" }
+> {
   const base = await getBaseGeoPoint();
   if (!base) return { error: "server" as const };
   const admin = createAdminClient();
@@ -573,7 +602,17 @@ async function addDogToVisit(
   userId: string,
   visit: ChangeRow,
   input: ApplyAppointmentChangeInput,
-) {
+): Promise<
+  | { appointment: AppointmentRecord }
+  | {
+      error:
+        | "conflict"
+        | "server"
+        | "not_found"
+        | "payment_required"
+        | "slot_unavailable";
+    }
+> {
   if (!input.petId || !input.serviceId) return { error: "conflict" as const };
   if (visit.address_lat == null || visit.address_lon == null) {
     return { error: "server" as const };
@@ -663,7 +702,7 @@ async function addDogToVisit(
       payment_method_id: paymentMethod.id,
       vaccination_status_at_booking: vaccinationStatus,
       status,
-      confirmed_at: status === "confirmed" ? new Date().toISOString() : null,
+      confirmed_at: null,
     })
     .select(CHANGE_SELECT)
     .single();

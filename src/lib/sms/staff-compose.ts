@@ -81,6 +81,14 @@ export async function listStaffSmsRecipients(): Promise<
   return { recipients };
 }
 
+type StaffSmsProfile = {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+};
+
 export async function sendStaffCustomerSms(input: {
   customerId?: string;
   phone?: string;
@@ -111,13 +119,7 @@ export async function sendStaffCustomerSms(input: {
   if (!isSmsConfigured()) return { error: "misconfigured" };
 
   const admin = createAdminClient();
-  let data: {
-    id: string;
-    email: string;
-    first_name: string | null;
-    last_name: string | null;
-    phone: string | null;
-  } | null = null;
+  let data: StaffSmsProfile | null = null;
 
   if (customerId) {
     const { data: row, error } = await admin
@@ -131,7 +133,13 @@ export async function sendStaffCustomerSms(input: {
       return { error: "server" };
     }
     if (!row) return { error: "not_found" };
-    data = row as typeof data;
+    data = {
+      id: String(row.id),
+      email: String(row.email ?? ""),
+      first_name: (row.first_name as string | null) ?? null,
+      last_name: (row.last_name as string | null) ?? null,
+      phone: (row.phone as string | null) ?? null,
+    };
   }
 
   const to =

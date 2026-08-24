@@ -4,9 +4,10 @@ import { normalizePhoneToE164 } from "@/lib/sms/phone";
 import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
 import { buildCheckoutReadySms } from "@/lib/sms/checkout-copy";
 
-function firstRelation<T>(value: T | T[] | null | undefined): T | null {
+function firstRelation<T>(value: unknown): T | null {
   if (value == null) return null;
-  return Array.isArray(value) ? (value[0] ?? null) : value;
+  if (Array.isArray(value)) return (value[0] ?? null) as T | null;
+  return value as T;
 }
 
 export async function sendCheckoutReadySms(appointmentId: string) {
@@ -27,16 +28,14 @@ export async function sendCheckoutReadySms(appointmentId: string) {
   }
   if (!data) return false;
 
-  const pet = firstRelation(
-    data.pets as { name: string | null; sex: string | null } | null,
+  const pet = firstRelation<{ name: string | null; sex: string | null }>(
+    data.pets,
   );
-  const profile = firstRelation(
-    data.profiles as {
-      first_name: string | null;
-      last_name: string | null;
-      phone: string | null;
-    } | null,
-  );
+  const profile = firstRelation<{
+    first_name: string | null;
+    last_name: string | null;
+    phone: string | null;
+  }>(data.profiles);
   const to = normalizePhoneToE164(profile?.phone ?? "");
   if (!to) return false;
 

@@ -78,13 +78,11 @@ export async function updateAppointmentVisitServices(input: {
 
   const smsSent = await sendVisitServicesUpdatedSms({
     customerId: row.customer_id as string,
-    profile: firstRelation(
-      row.profiles as {
-        first_name: string | null;
-        last_name: string | null;
-        phone: string | null;
-      } | null,
-    ),
+    profile: firstRelation<{
+      first_name: string | null;
+      last_name: string | null;
+      phone: string | null;
+    }>(row.profiles),
     lineItems,
     estimatedTotal: fields.estimatedTotal,
   });
@@ -98,9 +96,10 @@ export async function updateAppointmentVisitServices(input: {
   };
 }
 
-function firstRelation<T>(value: T | T[] | null | undefined): T | null {
+function firstRelation<T>(value: unknown): T | null {
   if (value == null) return null;
-  return Array.isArray(value) ? (value[0] ?? null) : value;
+  if (Array.isArray(value)) return (value[0] ?? null) as T | null;
+  return value as T;
 }
 
 async function sendVisitServicesUpdatedSms(input: {

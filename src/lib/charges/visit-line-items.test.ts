@@ -41,7 +41,7 @@ describe("visit line items", () => {
     const merged = mergeVisitLineItemsIntoOptions(
       { "creative-accent-coloring": "Lavender" },
       items,
-    );
+    ) as Record<string, unknown>;
     assert.equal(merged["creative-accent-coloring"], "Lavender");
     assert.deepEqual(readStoredVisitLineItems(merged), items);
     assert.equal(

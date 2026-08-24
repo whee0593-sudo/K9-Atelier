@@ -145,7 +145,9 @@ describe("cancel fee failed email", () => {
   });
 
   it("uses the authenticated payment page as the primary button", () => {
-    assert.match(cancelPaymentUpdateUrl(), /\/account\/payment$/);
+    const paymentUrl = cancelPaymentUpdateUrl();
+    assert.ok(paymentUrl);
+    assert.match(paymentUrl, /\/account\/payment$/);
     const email = buildCancelFeeFailedEmail({
       appointment: appointment(),
       customer: alex,
