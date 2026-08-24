@@ -4,6 +4,10 @@ export type Business = typeof businessData;
 
 export const business: Business = businessData;
 
+export function getBrandSearchName() {
+  return business.brand.searchName?.trim() || "K9 Atelier Mobile Pet Spa";
+}
+
 /** Click-to-call href for the public studio number, or null if none is set. */
 export function getBrandPhoneTelHref() {
   const phone = business.brand.phone;

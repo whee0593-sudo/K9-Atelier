@@ -1,4 +1,4 @@
-import { business, getBrandPhoneTelHref, getCommunitiesServedLabel } from "@/lib/business";
+import { business, getBrandPhoneTelHref, getBrandSearchName, getCommunitiesServedLabel } from "@/lib/business";
 import { reviews } from "@/lib/reviews";
 
 function e164Phone() {
@@ -18,10 +18,15 @@ export function LocalBusinessJsonLd() {
     brand.google.businessProfileUrl,
   ].filter((url): url is string => Boolean(url));
 
-  const data: Record<string, unknown> = {
-    "@context": "https://schema.org",
+  const searchName = getBrandSearchName();
+  const siteId = `${brand.website.replace(/\/$/, "")}/#website`;
+  const businessId = `${brand.website.replace(/\/$/, "")}/#business`;
+
+  const localBusiness: Record<string, unknown> = {
     "@type": "PetGroomer",
-    name: brand.name,
+    "@id": businessId,
+    name: searchName,
+    alternateName: brand.name,
     slogan: brand.tagline,
     description: brand.intro,
     url: brand.website,
@@ -56,7 +61,7 @@ export function LocalBusinessJsonLd() {
     ],
   };
 
-  if (sameAs.length > 0) data.sameAs = sameAs;
+  if (sameAs.length > 0) localBusiness.sameAs = sameAs;
 
   if (reviews.items.length > 0) {
     const rated = reviews.items.filter(
@@ -65,7 +70,7 @@ export function LocalBusinessJsonLd() {
     if (rated.length > 0) {
       const average =
         rated.reduce((sum, item) => sum + (item.rating ?? 0), 0) / rated.length;
-      data.aggregateRating = {
+      localBusiness.aggregateRating = {
         "@type": "AggregateRating",
         ratingValue: Number(average.toFixed(1)),
         reviewCount: rated.length,
@@ -73,7 +78,7 @@ export function LocalBusinessJsonLd() {
         worstRating: 1,
       };
     }
-    data.review = reviews.items.map((item) => ({
+    localBusiness.review = reviews.items.map((item) => ({
       "@type": "Review",
       reviewBody: item.quote,
       author: { "@type": "Person", name: item.name },
@@ -89,6 +94,20 @@ export function LocalBusinessJsonLd() {
         : {}),
     }));
   }
+
+  const data = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": siteId,
+        name: searchName,
+        url: brand.website,
+        publisher: { "@id": businessId },
+      },
+      localBusiness,
+    ],
+  };
 
   return (
     <script

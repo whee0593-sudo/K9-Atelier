@@ -4,12 +4,14 @@ import { SiteShell } from "@/components/SiteShell";
 import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
 import { bodyFont, displayFont } from "@/lib/fonts";
 import { GOOGLE_ADS_ID } from "@/lib/google-ads";
+import { getBrandSearchName } from "@/lib/business";
 import "./globals.css";
 
 const siteTitle =
   "K9 Atelier Mobile Pet Spa | Best in Show Grooming — Jupiter, Palm Beach Gardens, West Palm Beach";
 const siteDescription =
   "Cage-free Private Mobile Pet Spa for dogs under 45 lbs, led by a Best in Show-honored groomer. Serving Jupiter, Palm Beach Gardens & West Palm Beach.";
+const siteName = getBrandSearchName();
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://k9atelier.com"),
@@ -28,6 +30,7 @@ export const metadata: Metadata = {
     apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
+    siteName,
     title: siteTitle,
     description: siteDescription,
   },
