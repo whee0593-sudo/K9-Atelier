@@ -10,7 +10,7 @@ import { formatChargeMoney } from "@/lib/charges/money";
 import {
   formatReceiptDate,
   formatReceiptPaymentDate,
-  formatReceiptTime,
+  formatReceiptServiceTime,
   receiptPaymentStatus,
 } from "@/lib/charges/receipt-view";
 import type { AppointmentChargeRecord } from "@/lib/charges/types";
@@ -60,7 +60,7 @@ export function buildChargeReceiptCardHtml(
   const { logoUrl } = getEmailBrand();
   const petName = appointment.petName?.trim() || null;
   const appointmentDate = formatReceiptDate(appointment.appointmentDate);
-  const appointmentTime = formatReceiptTime(appointment.appointmentTime);
+  const appointmentTime = formatReceiptServiceTime(appointment);
   const paymentDate = formatReceiptPaymentDate(
     charge.paidAt,
     appointment.timezone,
@@ -188,7 +188,7 @@ export function buildChargeReceiptCardText(
     thankYouLine(petName),
     "",
     formatReceiptDate(appointment.appointmentDate),
-    formatReceiptTime(appointment.appointmentTime),
+    formatReceiptServiceTime(appointment),
     petName ? `Pet: ${petName}` : null,
     "",
     ...charge.lineItems.map(

@@ -1,4 +1,5 @@
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
+import { formatAppointmentTimeRange } from "@/lib/appointments/time-label";
 import type { AppointmentChargeRecord } from "@/lib/charges/types";
 import type { PaymentMethodRecord } from "@/lib/payments/types";
 
@@ -26,6 +27,37 @@ export function formatReceiptTime(value: string | null | undefined) {
   const period = hour >= 12 ? "PM" : "AM";
   const hour12 = hour % 12 === 0 ? 12 : hour % 12;
   return `${hour12}:${minute} ${period}`;
+}
+
+function formatReceiptClock(iso: string, timeZone?: string) {
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: timeZone || "America/New_York",
+  }).replace(/\u202f|\u00a0/g, " ");
+}
+
+export function formatReceiptServiceTime(appointment: {
+  appointmentTime?: string | null;
+  timezone?: string | null;
+  serviceStartedAt?: string | null;
+  serviceEndedAt?: string | null;
+}) {
+  const timeZone = appointment.timezone || "America/New_York";
+  const start = appointment.serviceStartedAt
+    ? formatReceiptClock(appointment.serviceStartedAt, timeZone)
+    : null;
+  const end = appointment.serviceEndedAt
+    ? formatReceiptClock(appointment.serviceEndedAt, timeZone)
+    : null;
+  if (start && end) return `${start}–${end}`;
+  if (start) return start;
+  return (
+    formatAppointmentTimeRange(appointment.appointmentTime) ??
+    formatReceiptTime(appointment.appointmentTime)
+  );
 }
 
 export function formatReceiptPaymentDate(

@@ -5,7 +5,7 @@ import { formatChargeMoney } from "@/lib/charges/money";
 import {
   formatReceiptDate,
   formatReceiptPaymentDate,
-  formatReceiptTime,
+  formatReceiptServiceTime,
   receiptPaymentStatus,
 } from "@/lib/charges/receipt-view";
 import type { AppointmentChargeRecord } from "@/lib/charges/types";
@@ -31,7 +31,7 @@ export function ChargeReceiptLetter({
 }) {
   const petName = appointment.petName?.trim() || null;
   const appointmentDate = formatReceiptDate(appointment.appointmentDate);
-  const appointmentTime = formatReceiptTime(appointment.appointmentTime);
+  const appointmentTime = formatReceiptServiceTime(appointment);
   const paymentDate = formatReceiptPaymentDate(
     charge.paidAt,
     appointment.timezone,

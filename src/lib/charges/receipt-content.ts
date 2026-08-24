@@ -1,5 +1,6 @@
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import { formatChargeMoney } from "@/lib/charges/money";
+import { formatReceiptServiceTime } from "@/lib/charges/receipt-view";
 import type { AppointmentChargeRecord } from "@/lib/charges/types";
 import { getCatalogItemDisplayLabel } from "@/lib/service-display";
 
@@ -35,7 +36,7 @@ export function buildChargeReceiptParagraphs(
 
   return [
     `Thank you for trusting K9 Atelier with ${appointment.petName}. Here is your ${kindLabel.toLowerCase()} receipt.`,
-    `${formatReceiptDate(appointment.appointmentDate)} · ${appointment.appointmentTime}`,
+    `${formatReceiptDate(appointment.appointmentDate)} · ${formatReceiptServiceTime(appointment) ?? appointment.appointmentTime}`,
     ...itemLines,
     charge.tipAmount > 0 ? `Tip  ${formatChargeMoney(charge.tipAmount)}` : "",
     `Total paid  ${formatChargeMoney(charge.total)}`,

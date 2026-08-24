@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "npx --yes tsx --test src/lib/pets/validation.test.ts src/lib/vaccinations/magic-bytes.test.ts src/lib/vaccinations/booking.test.ts src/lib/sms/phone.test.ts src/lib/sms/notifications.test.ts src/lib/sms/schedule.test.ts src/lib/sms/inbound.test.ts src/lib/sms/staff-compose.test.ts src/lib/sms/inbox.test.ts src/lib/sms/staff-reply.test.ts src/lib/sms/checkout-copy.test.ts src/lib/appointments/marks.test.ts src/lib/voice/bridge.test.ts src/lib/voice/inbound.test.ts src/lib/booking-schedule.test.ts",
+    "test": "npx --yes tsx --test src/lib/pets/validation.test.ts src/lib/vaccinations/magic-bytes.test.ts src/lib/vaccinations/booking.test.ts src/lib/sms/phone.test.ts src/lib/sms/notifications.test.ts src/lib/sms/schedule.test.ts src/lib/sms/inbound.test.ts src/lib/sms/staff-compose.test.ts src/lib/sms/inbox.test.ts src/lib/sms/staff-reply.test.ts src/lib/sms/checkout-copy.test.ts src/lib/charges/receipt-view.test.ts src/lib/appointments/marks.test.ts src/lib/voice/bridge.test.ts src/lib/voice/inbound.test.ts src/lib/booking-schedule.test.ts",
     "verify:supabase": "npx --yes tsx scripts/verify-supabase-schema.mts"
   },
   "dependencies": {
