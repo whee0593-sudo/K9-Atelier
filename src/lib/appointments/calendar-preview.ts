@@ -374,3 +374,32 @@ export function buildPreviewCalendarAppointments(
 
   return [];
 }
+
+export function buildPreviewOnTheWayAppointments(): AdminAppointmentRecord[] {
+  const date = "2026-08-24";
+  return [
+    previewAppointment({
+      id: "preview-on-the-way-maple",
+      petName: "Maple",
+      petBreed: "Cavapoo",
+      customerName: "Alex Rivera",
+      customerFirstName: "Alex",
+      serviceName: "Signature Bath & Care",
+      appointmentTime: "10:00–12:00 PM",
+      appointmentDate: date,
+      customerConfirmedAt: `${date}T12:00:00.000Z`,
+    }),
+    previewAppointment({
+      id: "preview-on-the-way-otto",
+      petName: "Otto",
+      petBreed: "Schnauzer",
+      customerName: "Jordan Ellis",
+      customerFirstName: "Jordan",
+      serviceName: "Hand Stripping Specialty",
+      appointmentTime: "1:00–3:00 PM",
+      appointmentDate: date,
+      estimatedTotal: 225,
+      enRouteSmsSentAt: `${date}T14:40:00.000Z`,
+    }),
+  ];
+}

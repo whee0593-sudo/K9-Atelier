@@ -45,9 +45,11 @@ function sectionLabel(label: string) {
 }
 
 function emailButton(href: string, label: string) {
-  return `<td style="padding:4px;width:50%;">
-    <a href="${escapeHtml(href)}" style="display:block;border:1px solid ${LAVENDER};border-radius:8px;color:${LAVENDER};text-decoration:none;text-align:center;padding:12px 8px;font-size:13px;">${escapeHtml(label)}</a>
-  </td>`;
+  return `<tr>
+    <td align="center" style="padding:4px 0;">
+      <a href="${escapeHtml(href)}" style="display:block;max-width:264px;margin:0 auto;background:#6b596e;border-radius:8px;color:#FFFDFC;text-decoration:none;text-align:center;padding:12px 8px;font-size:13px;">${escapeHtml(label)}</a>
+    </td>
+  </tr>`;
 }
 
 export function buildChargeReceiptCardHtml(
@@ -101,19 +103,12 @@ export function buildChargeReceiptCardHtml(
     paymentMethodLabel ? `Payment method: ${paymentMethodLabel}` : null,
   ].filter(Boolean) as string[];
 
-  const buttonCells = [
-    emailButton(website, "Website"),
-    instagram ? emailButton(instagram, "Instagram") : null,
-    google ? emailButton(google, "Review") : null,
+  const buttonRows = [
+    google ? emailButton(google, "Leave A Review") : null,
     emailButton(bookAgain, "Book Again"),
+    instagram ? emailButton(instagram, "Instagram") : null,
+    emailButton(website, "Website"),
   ].filter(Boolean);
-
-  const buttonRows: string[] = [];
-  for (let i = 0; i < buttonCells.length; i += 2) {
-    buttonRows.push(
-      `<tr>${buttonCells[i] ?? "<td></td>"}${buttonCells[i + 1] ?? "<td></td>"}</tr>`,
-    );
-  }
 
   return `<!DOCTYPE html>
 <html lang="en">

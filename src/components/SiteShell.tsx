@@ -14,6 +14,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
     pathname.startsWith("/admin/collect") ||
     pathname.startsWith("/admin/arrive") ||
     pathname === "/admin/appointments/preview" ||
+    pathname === "/admin/appointments/preview/on-the-way" ||
     pathname === "/admin/finance/preview";
 
   if (bare) {

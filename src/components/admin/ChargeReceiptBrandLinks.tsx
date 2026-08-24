@@ -11,7 +11,7 @@ import {
 import { storeConcernContext } from "@/lib/support-concern";
 
 const buttonClass =
-  "inline-flex min-h-11 w-full items-center justify-center rounded-[8px] border border-[#756578] bg-[#FFFDFC] px-2 text-[13px] text-[#756578] transition hover:bg-[#756578]/10 active:bg-[#756578]/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#756578]/40 focus-visible:ring-offset-2";
+  "inline-flex min-h-11 w-full items-center justify-center rounded-[8px] bg-deep-lavender px-2 text-[13px] text-ivory transition hover:bg-[#5a4b5d] active:bg-[#4f4252] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deep-lavender/40 focus-visible:ring-offset-2";
 
 export function ChargeReceiptBrandLinks({
   appointmentId,
@@ -32,27 +32,17 @@ export function ChargeReceiptBrandLinks({
     googleReviewUrl ?? getGoogleWriteReviewUrl() ?? getGoogleProfileUrl();
 
   const buttons = [
-    { href: siteUrl, label: "Website", external: true },
-    instagram ? { href: instagram, label: "Instagram", external: true } : null,
-    google ? { href: google, label: "Review", external: true } : null,
+    google ? { href: google, label: "Leave A Review", external: true } : null,
     { href: getBookAgainPath(), label: "Book Again", external: false },
+    instagram ? { href: instagram, label: "Instagram", external: true } : null,
+    { href: siteUrl, label: "Website", external: true },
   ].filter((item): item is { href: string; label: string; external: boolean } =>
     Boolean(item),
   );
 
   return (
     <div className="mt-5">
-      <div
-        className={`grid gap-2 ${
-          buttons.length === 4
-            ? "grid-cols-2"
-            : buttons.length === 3
-              ? "grid-cols-3"
-              : buttons.length === 2
-                ? "grid-cols-2"
-                : "grid-cols-1"
-        }`}
-      >
+      <div className="mx-auto flex w-full max-w-[16.5rem] flex-col items-center gap-2">
         {buttons.map((button) => (
           <a
             key={button.label}
