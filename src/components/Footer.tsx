@@ -97,9 +97,6 @@ export function Footer() {
             <p className="font-body mt-5 text-sm text-ink">
               {daysLabel} · {hoursLabel} Eastern
             </p>
-            <p className="font-body mt-2 text-sm text-taupe">
-              By appointment only. Weekend appointments by request.
-            </p>
           </div>
 
           <div>
