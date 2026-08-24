@@ -16,3 +16,6 @@ export function isValidContact(value: string) {
 export function normalizeContact(value: string) {
   return value.trim();
 }
+
+export const MAX_SUPPORT_PHOTOS = 3;
+export const MAX_SUPPORT_PHOTO_BYTES = 4_194_304;
