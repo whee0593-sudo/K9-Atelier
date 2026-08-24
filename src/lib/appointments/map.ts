@@ -3,6 +3,7 @@ import type {
   AppointmentRecord,
   AppointmentRow,
 } from "@/lib/appointments/types";
+import { stringAddOnOptions } from "@/lib/charges/visit-line-items";
 import { getServiceDisplayName } from "@/lib/service-display";
 import type { VaccinationBookingStatus } from "@/lib/vaccinations/types";
 
@@ -39,7 +40,9 @@ export function mapAppointmentRowToRecord(row: AppointmentRow): AppointmentRecor
     serviceId: row.service_id,
     serviceName: getServiceDisplayName(row.service_id, row.service_name),
     addOnIds: row.add_on_ids ?? [],
-    addOnOptions: row.add_on_options ?? {},
+    addOnOptions: stringAddOnOptions(
+      row.add_on_options as Record<string, unknown> | null,
+    ),
     addressStreet: row.address_street,
     addressCity: row.address_city,
     addressState: row.address_state,

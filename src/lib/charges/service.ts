@@ -17,6 +17,7 @@ import {
   catalogChargeItems,
   sanitizeLineItems,
 } from "@/lib/charges/line-items";
+import { readStoredVisitLineItems } from "@/lib/charges/visit-line-items";
 import { dollarsToCents, sumLineItems } from "@/lib/charges/money";
 import type {
   AppointmentChargeRecord,
@@ -111,7 +112,7 @@ export async function getCollectContext(
 
   const { data: timing } = await admin
     .from("appointments")
-    .select("service_started_at, service_ended_at")
+    .select("service_started_at, service_ended_at, add_on_options")
     .eq("id", appointmentId)
     .maybeSingle();
 
@@ -133,7 +134,10 @@ export async function getCollectContext(
     context: {
       appointment: appointmentWithTiming,
       petWeightLbs: weightLbs,
-      lineItems: buildDefaultLineItems(appointment, weightLbs),
+      lineItems:
+        readStoredVisitLineItems(
+          (timing?.add_on_options as Record<string, unknown> | null) ?? null,
+        ) ?? buildDefaultLineItems(appointment, weightLbs),
       catalog: catalogChargeItems(weightLbs),
       catalogGroups: catalogChargeGroups(weightLbs),
       methods: methods.methods,

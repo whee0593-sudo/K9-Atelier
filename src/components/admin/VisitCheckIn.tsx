@@ -12,6 +12,10 @@ import type { CollectContext } from "@/lib/charges/types";
 import { formatServiceAddress } from "@/lib/travel";
 import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
 import { CheckoutTextToggle } from "@/components/admin/CheckoutTextToggle";
+import { VisitServiceEditor } from "@/components/admin/VisitServiceEditor";
+import { sumLineItems } from "@/lib/charges/money";
+import { buildVisitServicesUpdatedSms } from "@/lib/sms/visit-update-copy";
+import type { ChargeLineItem } from "@/lib/charges/types";
 
 export function VisitCheckIn({
   appointmentId,
@@ -28,6 +32,9 @@ export function VisitCheckIn({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sendCheckoutText, setSendCheckoutText] = useState(true);
+  const [lineItems, setLineItems] = useState<ChargeLineItem[]>([]);
+  const [savingServices, setSavingServices] = useState(false);
+  const [servicesNotice, setServicesNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -35,6 +42,7 @@ export function VisitCheckIn({
     if (preview) {
       const body = buildPreviewCollectContext();
       setContext(body);
+      setLineItems(body.lineItems);
       setStartedAt(body.appointment.serviceStartedAt);
       setEndedAt(body.appointment.serviceEndedAt);
       setLoading(false);
@@ -50,6 +58,7 @@ export function VisitCheckIn({
         return;
       }
       setContext(body);
+      setLineItems(body.lineItems);
       setStartedAt(body.appointment.serviceStartedAt);
       setEndedAt(body.appointment.serviceEndedAt);
     } catch {
@@ -114,6 +123,72 @@ export function VisitCheckIn({
     }
   }
 
+  async function saveServices() {
+    if (!context || lineItems.length === 0) return;
+    setSavingServices(true);
+    setError(null);
+    setServicesNotice(null);
+    if (preview) {
+      const total = Math.round(sumLineItems(lineItems) * 100) / 100;
+      setContext({
+        ...context,
+        lineItems,
+        appointment: {
+          ...context.appointment,
+          serviceName: lineItems[0]?.label ?? context.appointment.serviceName,
+          estimatedTotal: total,
+        },
+      });
+      setServicesNotice(
+        `Preview only · guest would receive: ${buildVisitServicesUpdatedSms({
+          services: lineItems,
+          estimatedTotal: total,
+        })}`,
+      );
+      setSavingServices(false);
+      return;
+    }
+    try {
+      const response = await fetch(
+        `/api/admin/appointments/${appointmentId}/services`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lineItems }),
+        },
+      );
+      const body = (await response.json()) as {
+        error?: string;
+        serviceName?: string;
+        estimatedTotal?: number;
+        smsSent?: boolean;
+      };
+      if (!response.ok) {
+        setError(body.error ?? "Could not save the services.");
+        return;
+      }
+      setContext({
+        ...context,
+        lineItems,
+        appointment: {
+          ...context.appointment,
+          serviceName: body.serviceName ?? lineItems[0]?.label ?? context.appointment.serviceName,
+          estimatedTotal: body.estimatedTotal ?? context.appointment.estimatedTotal,
+        },
+      });
+      setServicesNotice(
+        body.smsSent
+          ? "Services saved. The guest was texted the update."
+          : "Services saved. The guest could not be texted.",
+      );
+    } catch {
+      setError("Could not save the services.");
+    } finally {
+      setSavingServices(false);
+    }
+  }
+
   if (loading) {
     return <p className="font-body text-sm text-taupe">Preparing check-in…</p>;
   }
@@ -159,7 +234,11 @@ export function VisitCheckIn({
       <p className="font-body mt-3 text-base text-taupe">
         {appointment.customerName ?? appointment.customerEmail}
       </p>
-      <p className="font-body mt-6 text-sm text-ink">{appointment.serviceName}</p>
+      <p className="font-body mt-6 text-sm text-ink">
+        {lineItems.length > 0
+          ? lineItems.map((item) => item.label).join(" · ")
+          : appointment.serviceName}
+      </p>
       <p className="font-body mt-2 text-sm text-taupe">
         {formatServiceAddress({
           street: appointment.addressStreet,
@@ -195,6 +274,15 @@ export function VisitCheckIn({
             <p className="font-body mt-3 text-sm text-taupe">
               In progress · {formatVisitDuration(startedAt, null, now)}
             </p>
+            <VisitServiceEditor
+              lineItems={lineItems}
+              catalogGroups={context.catalogGroups ?? []}
+              disabled={busy}
+              saving={savingServices}
+              notice={servicesNotice}
+              onChange={setLineItems}
+              onSave={() => void saveServices()}
+            />
             <CheckoutTextToggle
               checked={sendCheckoutText}
               onChange={setSendCheckoutText}
