@@ -3,6 +3,7 @@ import type {
   AppointmentRecord,
   AppointmentRow,
 } from "@/lib/appointments/types";
+import { getServiceDisplayName } from "@/lib/service-display";
 import type { VaccinationBookingStatus } from "@/lib/vaccinations/types";
 
 function firstRelation<T>(value: T | T[] | null | undefined): T | null {
@@ -36,7 +37,7 @@ export function mapAppointmentRowToRecord(row: AppointmentRow): AppointmentRecor
     petName: pet?.name ?? "Unknown pet",
     petBreed: pet?.breed ?? "",
     serviceId: row.service_id,
-    serviceName: row.service_name,
+    serviceName: getServiceDisplayName(row.service_id, row.service_name),
     addOnIds: row.add_on_ids ?? [],
     addOnOptions: row.add_on_options ?? {},
     addressStreet: row.address_street,

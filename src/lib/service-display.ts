@@ -2,7 +2,7 @@
 export const SERVICE_DISPLAY_NAMES: Record<string, string> = {
   "signature-bath-care": "The Signature Bath",
   "custom-full-haircut": "The Atelier Full Groom",
-  "long-coat-show-care": "Long Coat Show Care",
+  "long-coat-show-care": "Show Care for Long Coats",
   "hand-stripping": "Hand-Stripping Specialty",
   "dead-sea-mud-bath": "Dead Sea Mineral Ritual",
   "aromatherapy-oil-bath": "Lavender & Chamomile Bath Ritual",
@@ -53,6 +53,15 @@ export const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
 
 export function getServiceDisplayName(serviceId: string, fallback: string) {
   return SERVICE_DISPLAY_NAMES[serviceId] ?? fallback;
+}
+
+export function getCatalogItemDisplayLabel(
+  catalogId: string | undefined,
+  fallback: string,
+) {
+  if (catalogId) return getServiceDisplayName(catalogId, fallback);
+  if (fallback === "Long Coat Show Care") return "Show Care for Long Coats";
+  return fallback;
 }
 
 export function getServiceDisplayDescription(

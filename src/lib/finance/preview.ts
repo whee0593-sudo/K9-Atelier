@@ -44,7 +44,7 @@ export function buildPreviewFinanceCharges(): FinanceChargeRow[] {
       kind: "service",
       paidDate: "2026-07-14",
       lineItems: [
-        { id: "1", label: "Long Coat Show Care", amount: 140, catalogId: "long-coat-show-care" },
+        { id: "1", label: "Show Care for Long Coats", amount: 140, catalogId: "long-coat-show-care" },
       ],
       subtotal: 140,
       tipAmount: 25.2,
@@ -110,7 +110,7 @@ export function buildPreviewFinanceCharges(): FinanceChargeRow[] {
       kind: "service",
       paidDate: "2026-07-23",
       lineItems: [
-        { id: "1", label: "Long Coat Show Care", amount: 140, catalogId: "long-coat-show-care" },
+        { id: "1", label: "Show Care for Long Coats", amount: 140, catalogId: "long-coat-show-care" },
       ],
       subtotal: 140,
       tipAmount: 25.2,

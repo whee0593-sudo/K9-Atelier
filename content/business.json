@@ -275,9 +275,9 @@
         },
         {
           "id": "long-coat-show-care",
-          "name": "Long Coat Show Care",
+          "name": "Show Care for Long Coats",
           "nameZh": "长毛赛级护理",
-          "description": "A specialized weekly wash-and-care ritual for full-coat breeds — designed to preserve length, prevent matting, and maintain a silky, show-ready finish week after week.\n\nThe longer a dog's coat grows, the harder it becomes for natural oils and nutrients to travel all the way from root to tip. Without that nourishment reaching the ends, hair becomes dry, brittle, and far more prone to tangling and matting. Long Coat Show Care is built around this exact challenge — a meticulous, multi-step process using coat-specific professional-grade shampoo and conditioner formulated to restore moisture and strength along the full length of the coat, keeping it soft, tangle-resistant, and beautifully maintained.",
+          "description": "A specialized weekly wash-and-care ritual for full-coat breeds — designed to preserve length, prevent matting, and maintain a silky, show-ready finish week after week.\n\nThe longer a dog's coat grows, the harder it becomes for natural oils and nutrients to travel all the way from root to tip. Without that nourishment reaching the ends, hair becomes dry, brittle, and far more prone to tangling and matting. Show Care for Long Coats is built around this exact challenge — a meticulous, multi-step process using coat-specific professional-grade shampoo and conditioner formulated to restore moisture and strength along the full length of the coat, keeping it soft, tangle-resistant, and beautifully maintained.",
           "bestFor": "Full-coat breeds maintained on a weekly grooming schedule, where preserving length and preventing matting is a priority — including Shih Tzu, Yorkshire Terrier, Maltese, Cavalier King Charles Spaniel, or any dog being kept at full coat length.",
           "includes": [
             "Pre-Bath Detangling: Careful line-brushing to prevent matting before washing",
@@ -420,7 +420,7 @@
           "name": "Mini Trim",
           "nameZh": "局部精修",
           "description": "A focused tidy of the three areas that need the most frequent attention: around the eyes, the feet, and the sanitary region. Already included with full grooming and spa treatments.",
-          "note": "Available as an add-on with Signature Bath & Care or Long Coat Show Care. Full grooming and spa treatments already include this tidy.",
+          "note": "Available as an add-on with Signature Bath & Care or Show Care for Long Coats. Full grooming and spa treatments already include this tidy.",
           "includes": [
             "Eye-area trim",
             "Feet outline and paw pad trim",

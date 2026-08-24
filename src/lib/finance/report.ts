@@ -1,5 +1,6 @@
 import { formatChargeMoney } from "@/lib/charges/money";
 import type { ChargeKind, ChargeLineItem } from "@/lib/charges/types";
+import { getCatalogItemDisplayLabel } from "@/lib/service-display";
 import {
   bucketKeyForDate,
   bucketKeys,
@@ -58,7 +59,7 @@ function serviceIdentity(item: ChargeLineItem) {
   }
   return {
     id: item.catalogId ?? item.label.toLowerCase().replace(/\s+/g, "-"),
-    name: item.label,
+    name: getCatalogItemDisplayLabel(item.catalogId, item.label),
   };
 }
 

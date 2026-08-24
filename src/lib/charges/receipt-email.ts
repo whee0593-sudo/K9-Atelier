@@ -16,6 +16,7 @@ import {
 import type { AppointmentChargeRecord } from "@/lib/charges/types";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import { escapeHtml, getEmailBrand } from "@/lib/email/layout";
+import { getCatalogItemDisplayLabel } from "@/lib/service-display";
 import { siteUrl } from "@/lib/email/resend";
 
 const PAGE = "#F8F4ED";
@@ -71,7 +72,9 @@ export function buildChargeReceiptCardHtml(
   const concern = siteUrl("/contact?topic=concern");
 
   const itemRows = charge.lineItems
-    .map((item) => moneyRow(item.label, item.amount))
+    .map((item) =>
+      moneyRow(getCatalogItemDisplayLabel(item.catalogId, item.label), item.amount),
+    )
     .join("");
   const tipRow =
     charge.tipAmount > 0 ? moneyRow("Gratuity", charge.tipAmount) : "";
@@ -194,7 +197,8 @@ export function buildChargeReceiptCardText(
     petName ? `Pet: ${petName}` : null,
     "",
     ...charge.lineItems.map(
-      (item) => `${item.label}  ${formatChargeMoney(item.amount)}`,
+      (item) =>
+        `${getCatalogItemDisplayLabel(item.catalogId, item.label)}  ${formatChargeMoney(item.amount)}`,
     ),
     charge.tipAmount > 0
       ? `Gratuity  ${formatChargeMoney(charge.tipAmount)}`

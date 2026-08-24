@@ -5,6 +5,7 @@ import {
   getAddOnService,
   getServicePriceEstimate,
 } from "@/lib/services";
+import { getServiceDisplayName } from "@/lib/service-display";
 import type { ChargeLineItem } from "@/lib/charges/types";
 
 export { catalogChargeItems, catalogChargeGroups } from "@/lib/charges/catalog";
@@ -23,7 +24,7 @@ export function buildDefaultLineItems(
 
   items.push({
     id: randomUUID(),
-    label: appointment.serviceName,
+    label: getServiceDisplayName(appointment.serviceId, appointment.serviceName),
     amount: Number(primaryPrice ?? appointment.estimatedTotal ?? 0),
     catalogId: appointment.serviceId,
   });
@@ -36,7 +37,9 @@ export function buildDefaultLineItems(
       : null;
     items.push({
       id: randomUUID(),
-      label: addOn?.name ?? addOnId,
+      label: addOn
+        ? getServiceDisplayName(addOn.id, addOn.name)
+        : addOnId,
       amount: Number(estimate?.from ?? 0),
       catalogId: addOnId,
     });

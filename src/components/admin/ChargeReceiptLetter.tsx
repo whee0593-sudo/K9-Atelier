@@ -10,6 +10,7 @@ import {
 } from "@/lib/charges/receipt-view";
 import type { AppointmentChargeRecord } from "@/lib/charges/types";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
+import { getCatalogItemDisplayLabel } from "@/lib/service-display";
 
 export function ChargeReceiptLetter({
   appointment,
@@ -90,7 +91,11 @@ export function ChargeReceiptLetter({
               <SectionLabel>Service summary</SectionLabel>
               <ul className="mt-3 space-y-2">
                 {charge.lineItems.map((item) => (
-                  <MoneyRow key={item.id} label={item.label} amount={item.amount} />
+                  <MoneyRow
+                    key={item.id}
+                    label={getCatalogItemDisplayLabel(item.catalogId, item.label)}
+                    amount={item.amount}
+                  />
                 ))}
                 {charge.tipAmount > 0 ? (
                   <MoneyRow label="Gratuity" amount={charge.tipAmount} />

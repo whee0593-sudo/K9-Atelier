@@ -5,7 +5,7 @@
 **Tagline:** K9 ATELIER — grooming, elevated.
 
 网站分区：
-1. Bath, Show Care & Spa — Signature Bath、Long Coat Show Care、三项 Spa
+1. Bath, Show Care & Spa — Signature Bath、Show Care for Long Coats、三项 Spa
 2. Full Grooming & Hand Stripping — Custom Full Haircut、Hand Stripping
 3. Creative Accent Coloring
 4. Add-On Care — DeMatting、DeShedding、Senior & Gentle Comfort Care、Mini Trim
@@ -45,11 +45,11 @@ Full-service personalized grooming experience. Includes everything in the Signat
 
 ---
 
-### 3. Long Coat Show Care · 长毛赛级护理
+### 3. Show Care for Long Coats · 长毛赛级护理
 
 A specialized weekly wash-and-care ritual for full-coat breeds — designed to preserve length, prevent matting, and maintain a silky, show-ready finish week after week.
 
-The longer a dog's coat grows, the harder it becomes for natural oils and nutrients to travel all the way from root to tip. Without that nourishment reaching the ends, hair becomes dry, brittle, and far more prone to tangling and matting. Long Coat Show Care is built around this exact challenge — a meticulous, multi-step process using coat-specific professional-grade shampoo and conditioner formulated to restore moisture and strength along the full length of the coat, keeping it soft, tangle-resistant, and beautifully maintained.
+The longer a dog's coat grows, the harder it becomes for natural oils and nutrients to travel all the way from root to tip. Without that nourishment reaching the ends, hair becomes dry, brittle, and far more prone to tangling and matting. Show Care for Long Coats is built around this exact challenge — a meticulous, multi-step process using coat-specific professional-grade shampoo and conditioner formulated to restore moisture and strength along the full length of the coat, keeping it soft, tangle-resistant, and beautifully maintained.
 
 **Best suited for:** Shih Tzu, Yorkshire Terrier, Maltese, Cavalier King Charles Spaniel — or any dog being kept at full coat length.
 
@@ -108,7 +108,7 @@ Specialized, low-stress care designed for senior or medically sensitive dogs. Pr
 
 | 项目 | 详情 |
 |------|------|
-| 收费 | **+$50**（可附加于 Signature Bath 或 Long Coat Show Care；精剪与 Spa 已包含，不再另加） |
+| 收费 | **+$50**（可附加于 Signature Bath 或 Show Care for Long Coats；精剪与 Spa 已包含，不再另加） |
 
 **Amelia Description:**
 A focused tidy of the three areas that need the most frequent attention: around the eyes, the feet, and the sanitary region.
