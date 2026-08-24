@@ -182,7 +182,6 @@ export function buildCustomerLetterEmailHtml(content: CustomerLetterEmailContent
   const footerLine = [
     business.brand.name,
     business.brand.phone,
-    business.brand.email,
     "k9atelier.com",
   ]
     .filter(Boolean)
@@ -353,7 +352,6 @@ function customerLetterFooter() {
   const footerLine = [
     business.brand.name,
     business.brand.phone,
-    business.brand.email,
     "k9atelier.com",
   ]
     .filter(Boolean)

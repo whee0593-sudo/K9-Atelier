@@ -17,7 +17,8 @@ export function AdminChrome({
     pathname.startsWith("/admin/collect") ||
     pathname.startsWith("/admin/arrive") ||
     pathname === "/admin/appointments/preview/on-the-way" ||
-    pathname === "/admin/appointments/preview/change"
+    pathname === "/admin/appointments/preview/change" ||
+    pathname === "/admin/appointments/preview/change-emails"
   ) {
     return (
       <div className="min-h-screen bg-[#F8F4ED] px-5 py-10">

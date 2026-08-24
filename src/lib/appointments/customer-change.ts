@@ -9,12 +9,16 @@ import {
   type AppointmentChangeAction,
 } from "@/lib/appointments/change-policy";
 import { assignArrivalWindow, getBaseGeoPoint } from "@/lib/appointments/schedule";
-import { fetchCustomerContact } from "@/lib/email/appointment-context";
+import {
+  fetchCustomerContact,
+  type CustomerContact,
+} from "@/lib/email/appointment-context";
+import {
+  notifyCustomerAppointmentChange,
+  notifyStaffNewAppointment,
+} from "@/lib/email/appointment-mails";
 import { getOrCreateStripeCustomerId } from "@/lib/payments/service";
 import { business } from "@/lib/business";
-import {
-  sendAppointmentCreatedEmails,
-} from "@/lib/email/appointment-mails";
 import { getStripe } from "@/lib/stripe/server";
 import { isStripeConfigured } from "@/lib/stripe/config";
 import { dollarsToCents } from "@/lib/charges/money";
@@ -22,10 +26,7 @@ import type { ChargeKind, ChargeLineItem } from "@/lib/charges/types";
 import { mapPetRowToRecord } from "@/lib/pets/map";
 import type { PetRow } from "@/lib/pets/types";
 import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
-import {
-  vaccinationBookingNeedsAdminConfirmation,
-  vaccinationReadyToBook,
-} from "@/lib/vaccinations/booking";
+import { vaccinationReadyToBook } from "@/lib/vaccinations/booking";
 import {
   allBookableServices,
   estimateServiceDurationMinutes,
@@ -257,7 +258,9 @@ async function chargeChangeFee(options: {
   fee: number;
   action: AppointmentChangeAction;
 }) {
-  if (options.fee <= 0) return { ok: true as const };
+  if (options.fee <= 0) {
+    return { ok: true as const, cardBrand: undefined, cardLast4: undefined };
+  }
 
   const method = await resolvePaymentMethod(
     options.customerId,
@@ -338,7 +341,11 @@ async function chargeChangeFee(options: {
     if (paymentIntent.status !== "succeeded") {
       return { error: "payment_failed" as const };
     }
-    return { ok: true as const };
+    return {
+      ok: true as const,
+      cardBrand: method.brand,
+      cardLast4: method.last4,
+    };
   } catch (error) {
     console.error("chargeChangeFee stripe failed:", error);
     await admin
@@ -428,12 +435,80 @@ export async function applyAppointmentChange(
     if (!input.date || !input.timePreference) return { error: "conflict" };
     const moved = await rescheduleRows(targetRows, input.date, input.timePreference);
     if ("error" in moved) return moved;
+    await sendChangeConfirmationEmail({
+      action: "reschedule",
+      appointments: moved.appointments,
+      contact,
+      fee: quote.fee,
+      cardBrand: charged.cardBrand,
+      cardLast4: charged.cardLast4,
+    });
     return { ok: true, quote };
   }
 
+  const remainingAppointments =
+    input.action === "remove_dog"
+      ? recordsFromRows(
+          siblings.rows.filter(
+            (row) => !targetRows.some((target) => target.id === row.id),
+          ),
+        )
+      : [];
   const cancelled = await cancelRows(targetRows);
   if ("error" in cancelled) return cancelled;
+  await sendChangeConfirmationEmail({
+    action: input.action === "remove_dog" ? "remove_dog" : "cancel",
+    appointments: recordsFromRows(targetRows),
+    remainingAppointments,
+    contact,
+    fee: quote.fee,
+    cardBrand: charged.cardBrand,
+    cardLast4: charged.cardLast4,
+  });
   return { ok: true, quote };
+}
+
+function recordsFromRows(rows: ChangeRow[]): AppointmentRecord[] {
+  return rows.map((row) =>
+    mapAppointmentRowToRecord(row as unknown as AppointmentRow),
+  );
+}
+
+async function sendChangeConfirmationEmail({
+  action,
+  appointments,
+  remainingAppointments = [],
+  contact,
+  fee,
+  cardBrand,
+  cardLast4,
+}: {
+  action: AppointmentChangeAction;
+  appointments: AppointmentRecord[];
+  remainingAppointments?: AppointmentRecord[];
+  contact: CustomerContact | null;
+  fee: number;
+  cardBrand?: string;
+  cardLast4?: string;
+}) {
+  const appointment = appointments[0];
+  if (!appointment || !contact) return;
+  try {
+    await notifyCustomerAppointmentChange(action, appointment, contact, {
+      petNames: appointments.map((row) => row.petName),
+      serviceLabels: appointments.map(
+        (row) => `${row.petName} · ${row.serviceName}`,
+      ),
+      remainingAppointments,
+      manageAppointmentId: remainingAppointments[0]?.id,
+      fee,
+      feeStatus: fee > 0 ? "paid" : "none",
+      cardBrand,
+      cardLast4,
+    });
+  } catch (emailError) {
+    console.error("appointment change email failed:", emailError);
+  }
 }
 
 async function rescheduleRows(
@@ -444,6 +519,7 @@ async function rescheduleRows(
   const base = await getBaseGeoPoint();
   if (!base) return { error: "server" as const };
   const admin = createAdminClient();
+  const updated: AppointmentRecord[] = [];
 
   for (const row of rows) {
     if (row.address_lat == null || row.address_lon == null) {
@@ -469,7 +545,7 @@ async function rescheduleRows(
       return { error: "server" as const };
     }
 
-    const { error } = await admin
+    const { data, error } = await admin
       .from("appointments")
       .update({
         appointment_date: date,
@@ -477,16 +553,20 @@ async function rescheduleRows(
         scheduled_start: assignment.insertion.scheduledStart,
         time_preference: preference,
       })
-      .eq("id", row.id);
+      .eq("id", row.id)
+      .select(CHANGE_SELECT)
+      .single();
 
-    if (error) {
-      console.error("rescheduleRows failed:", error.message);
-      if (error.code === "23505") return { error: "slot_unavailable" as const };
+    if (error || !data) {
+      console.error("rescheduleRows failed:", error?.message);
+      if (error?.code === "23505") return { error: "slot_unavailable" as const };
       return { error: "server" as const };
     }
+
+    updated.push(mapAppointmentRowToRecord(data as unknown as AppointmentRow));
   }
 
-  return { ok: true as const };
+  return { appointments: updated };
 }
 
 async function addDogToVisit(
@@ -554,9 +634,7 @@ async function addDogToVisit(
   }
 
   const vaccinationStatus = pet.vaccinationBookingStatus ?? "missing";
-  const status = vaccinationBookingNeedsAdminConfirmation(vaccinationStatus)
-    ? "pending_confirmation"
-    : "confirmed";
+  const status = "pending_confirmation";
 
   const { data, error } = await admin
     .from("appointments")
@@ -600,7 +678,8 @@ async function addDogToVisit(
   try {
     const contact = await fetchCustomerContact(userId);
     if (contact) {
-      await sendAppointmentCreatedEmails(appointment, contact);
+      await notifyStaffNewAppointment(appointment, contact);
+      await notifyCustomerAppointmentChange("add_dog", appointment, contact);
     }
   } catch (emailError) {
     console.error("addDogToVisit email failed:", emailError);

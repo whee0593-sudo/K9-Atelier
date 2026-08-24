@@ -16,6 +16,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
     pathname === "/admin/appointments/preview" ||
     pathname === "/admin/appointments/preview/on-the-way" ||
     pathname === "/admin/appointments/preview/change" ||
+    pathname === "/admin/appointments/preview/change-emails" ||
     pathname === "/admin/finance/preview";
 
   if (bare) {

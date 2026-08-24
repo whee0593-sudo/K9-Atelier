@@ -1,4 +1,14 @@
 import { business, formatDuration, formatPrice } from "@/lib/business";
+import { formatChargeMoney } from "@/lib/charges/money";
+import {
+  buildCustomerCancelConfirmationEmail,
+  type CancelFeeStatus,
+} from "@/lib/email/cancel-confirmation";
+import { buildCustomerRemoveDogConfirmationEmail } from "@/lib/email/remove-dog-confirmation";
+import {
+  buildCancelFeeFailedEmail,
+  type CancelPaymentFailureKind,
+} from "@/lib/email/cancel-fee-failed";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 import {
   buildCustomerConfirmedEmail,
@@ -19,6 +29,7 @@ import { allBookableServices } from "@/lib/services";
 type CustomerContact = {
   email: string;
   name?: string | null;
+  firstName?: string | null;
 };
 
 export function formatAppointmentDateLabel(date: string) {
@@ -403,6 +414,214 @@ export function buildVaccinationVerifiedEmail(context: VaccinationMailContext) {
       closingParagraph,
       bookUrl: siteUrl("/book"),
       accountUrl: siteUrl("/account/pets"),
+    },
+    text,
+  );
+}
+
+function joinPetNames(names: string[]) {
+  if (names.length === 0) return "your pet";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
+}
+
+function policyFeeSentence(fee: number) {
+  if (fee <= 0) return null;
+  return `A policy fee of ${formatChargeMoney(fee)} was charged to the card on file.`;
+}
+
+function changeDetailRows(
+  appointment: AppointmentRecord,
+  petNames: string[],
+  serviceLabels: string[] = [],
+): CustomerLetterDetailRow[] {
+  const rows = customerAppointmentDetailRows(appointment);
+  if (petNames.length < 2) return rows;
+  return rows.map((row) => {
+    if (row.label === "Pet") return { ...row, value: joinPetNames(petNames) };
+    if (row.label === "Service" && serviceLabels.length > 1) {
+      return { ...row, value: serviceLabels.join("; ") };
+    }
+    return row;
+  });
+}
+
+export type AppointmentChangeEmailInput = {
+  appointment: AppointmentRecord;
+  customer: CustomerContact;
+  petNames?: string[];
+  serviceLabels?: string[];
+  remainingAppointments?: AppointmentRecord[];
+  remainingUpdated?: boolean;
+  manageAppointmentId?: string | null;
+  fee?: number;
+  feeStatus?: CancelFeeStatus;
+  cardBrand?: string | null;
+  cardLast4?: string | null;
+  paymentFailureKind?: CancelPaymentFailureKind | null;
+  willAutoRetry?: boolean;
+  paymentUpdateUrl?: string | null;
+};
+
+export function buildCustomerRescheduleEmail({
+  appointment,
+  customer,
+  petNames,
+  serviceLabels,
+  fee = 0,
+}: AppointmentChangeEmailInput) {
+  const names = petNames?.length ? petNames : [appointment.petName];
+  const pets = joinPetNames(names);
+  const subject = `Your K9 Atelier appointment has been rescheduled`;
+  const greetingName = customer.name ?? "Client";
+  const introParagraph = `We've updated ${pets}'s appointment to the new date and time below.`;
+  const estimateNote =
+    policyFeeSentence(fee) ??
+    "No policy fee was charged for this change.";
+  const closingParagraph =
+    "If you need to make another change, you can manage the visit from your booking history.";
+  const detailRows = changeDetailRows(appointment, names, serviceLabels);
+
+  const text = [
+    `Dear ${greetingName},`,
+    "",
+    introParagraph,
+    "",
+    ...detailRows.map(({ label, value }) => `${label}: ${value}`),
+    "",
+    estimateNote,
+    "",
+    closingParagraph,
+    "",
+    `View bookings: ${siteUrl("/account/appointments")}`,
+  ].join("\n");
+
+  return buildCustomerLetterEmail(
+    {
+      subject,
+      greetingName,
+      introParagraph,
+      detailRows,
+      estimateNote,
+      closingParagraph,
+      cta: {
+        href: siteUrl("/account/appointments"),
+        label: "VIEW BOOKINGS",
+      },
+    },
+    text,
+  );
+}
+
+export function buildCustomerCancelEmail({
+  appointment,
+  customer,
+  petNames,
+  fee = 0,
+  feeStatus,
+  cardBrand,
+  cardLast4,
+  paymentFailureKind,
+  willAutoRetry,
+  paymentUpdateUrl,
+}: AppointmentChangeEmailInput) {
+  const contact = {
+    email: customer.email,
+    name: customer.name ?? null,
+    firstName: customer.firstName,
+  };
+  if (feeStatus === "failed") {
+    return buildCancelFeeFailedEmail({
+      appointment,
+      customer: contact,
+      petNames,
+      fee,
+      feeStatus,
+      paymentFailureKind,
+      willAutoRetry,
+      paymentUpdateUrl,
+    });
+  }
+  return buildCustomerCancelConfirmationEmail({
+    appointment,
+    customer: contact,
+    petNames,
+    fee,
+    feeStatus,
+    cardBrand,
+    cardLast4,
+  });
+}
+
+export function buildCustomerRemoveDogEmail({
+  appointment,
+  customer,
+  remainingAppointments,
+  remainingUpdated,
+  manageAppointmentId,
+  fee = 0,
+  feeStatus,
+  cardBrand,
+  cardLast4,
+}: AppointmentChangeEmailInput) {
+  return buildCustomerRemoveDogConfirmationEmail({
+    appointment,
+    customer: {
+      email: customer.email,
+      name: customer.name ?? null,
+      firstName: customer.firstName,
+    },
+    remainingAppointments,
+    remainingUpdated,
+    manageAppointmentId,
+    fee,
+    feeStatus,
+    cardBrand,
+    cardLast4,
+  });
+}
+
+export function buildCustomerAddDogEmail({
+  appointment,
+  customer,
+}: AppointmentChangeEmailInput) {
+  const dateLabel = formatAppointmentDateLabel(appointment.appointmentDate);
+  const subject = `We received your request to add ${appointment.petName}`;
+  const greetingName = customer.name ?? "Client";
+  const introParagraph = `We've received your request to add ${appointment.petName} to the visit on ${dateLabel}.`;
+  const estimateNote =
+    "Adding another pet is subject to availability and is not confirmed automatically.";
+  const closingParagraph =
+    "We'll review the day's schedule and email you once the change has been confirmed.";
+  const detailRows = customerAppointmentDetailRows(appointment);
+
+  const text = [
+    `Dear ${greetingName},`,
+    "",
+    introParagraph,
+    "",
+    ...detailRows.map(({ label, value }) => `${label}: ${value}`),
+    "",
+    estimateNote,
+    "",
+    closingParagraph,
+    "",
+    `View bookings: ${siteUrl("/account/appointments")}`,
+  ].join("\n");
+
+  return buildCustomerLetterEmail(
+    {
+      subject,
+      greetingName,
+      introParagraph,
+      detailRows,
+      estimateNote,
+      closingParagraph,
+      cta: {
+        href: siteUrl("/account/appointments"),
+        label: "VIEW BOOKINGS",
+      },
     },
     text,
   );
