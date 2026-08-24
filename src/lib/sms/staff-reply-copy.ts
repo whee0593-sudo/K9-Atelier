@@ -17,5 +17,5 @@ export function buildStaffReplySentSms(label: string) {
 }
 
 export function buildStaffReplyFailedSms() {
-  return "K9 ATELIER: No recent customer to reply to. Use Customer Messages on the website.";
+  return "K9 ATELIER: No recent customer to reply to. Use Contact Customer on the website.";
 }

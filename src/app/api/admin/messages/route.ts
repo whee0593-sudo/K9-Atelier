@@ -31,6 +31,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     customerId?: string;
+    phone?: string;
     message?: string;
     introPhone?: string;
   } | null;
@@ -54,12 +55,16 @@ export async function POST(request: Request) {
 
   const result = await sendStaffCustomerSms({
     customerId: body?.customerId?.trim() ?? "",
+    phone: body?.phone?.trim() ?? "",
     message: body?.message ?? "",
   });
 
   if ("error" in result) {
     if (result.error === "invalid") {
-      return staffJsonError("Enter a message of 1–1,200 characters.", 409);
+      return staffJsonError(
+        "Choose a customer or enter a valid mobile number, and a message of 1–1,200 characters.",
+        409,
+      );
     }
     if (result.error === "no_phone") {
       return staffJsonError(

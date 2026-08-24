@@ -45,7 +45,7 @@ export default async function AdminDashboardPage() {
           href="/admin/messages"
           className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
         >
-          <h3 className="font-medium text-gold-dark">Customer Messages</h3>
+          <h3 className="font-medium text-gold-dark">Contact Customer</h3>
           <p className="mt-2 text-sm text-text-muted">
             Send texts, read replies, and call a customer from the studio
             number.

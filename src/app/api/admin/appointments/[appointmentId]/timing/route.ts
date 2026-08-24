@@ -10,12 +10,17 @@ export async function POST(
   try {
     const { appointmentId: rawId } = await context.params;
     const appointmentId = validateAppointmentId(rawId);
-    const body = (await request.json()) as { action?: string };
+    const body = (await request.json()) as {
+      action?: string;
+      sendCheckoutText?: boolean;
+    };
     if (body.action !== "check_in" && body.action !== "check_out") {
       return staffJsonError("Choose check in or check out.", 400);
     }
 
-    const result = await setAppointmentVisitTiming(appointmentId, body.action);
+    const result = await setAppointmentVisitTiming(appointmentId, body.action, {
+      sendCheckoutText: body.sendCheckoutText !== false,
+    });
     if ("error" in result) {
       if (result.error === "conflict") {
         return staffJsonError("Check in before you check out.", 409);

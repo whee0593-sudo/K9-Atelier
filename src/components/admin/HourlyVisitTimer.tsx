@@ -7,6 +7,7 @@ import {
   hourlyAmountFromTimes,
 } from "@/lib/charges/hourly";
 import { formatChargeMoney } from "@/lib/charges/money";
+import { CheckoutTextToggle } from "@/components/admin/CheckoutTextToggle";
 
 export function HourlyVisitTimer({
   appointmentId,
@@ -31,6 +32,7 @@ export function HourlyVisitTimer({
   const [now, setNow] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sendCheckoutText, setSendCheckoutText] = useState(true);
 
   useEffect(() => {
     if (!startedAt || endedAt) return;
@@ -58,7 +60,10 @@ export function HourlyVisitTimer({
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action }),
+          body: JSON.stringify({
+            action,
+            sendCheckoutText: action === "check_out" ? sendCheckoutText : undefined,
+          }),
         },
       );
       const body = (await response.json()) as {
@@ -104,7 +109,7 @@ export function HourlyVisitTimer({
           Check in when you start. {formatChargeMoney(rate)}/hr
         </p>
       )}
-      <div className="mt-3 flex flex-wrap gap-3">
+      <div className="mt-3 flex flex-col items-start gap-3">
         {!startedAt || endedAt ? (
           <button
             type="button"
@@ -115,14 +120,22 @@ export function HourlyVisitTimer({
             {endedAt ? "Start again" : "Check in"}
           </button>
         ) : (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void setTiming("check_out")}
-            className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-          >
-            Check out
-          </button>
+          <>
+            <CheckoutTextToggle
+              checked={sendCheckoutText}
+              onChange={setSendCheckoutText}
+              disabled={busy}
+              className="justify-start"
+            />
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void setTiming("check_out")}
+              className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            >
+              Check out
+            </button>
+          </>
         )}
       </div>
       {error ? <p className="mt-2 text-sm text-red-800">{error}</p> : null}

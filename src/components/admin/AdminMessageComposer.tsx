@@ -4,18 +4,29 @@ import { useCallback, useEffect, useState } from "react";
 import { CallCustomerButton } from "@/components/admin/CallCustomerButton";
 import {
   STAFF_SMS_MAX_CHARS,
+  buildStaffCustomerSms,
+  formatStaffRecipientLabel,
+  matchesStaffRecipientSearch,
   type StaffSmsRecipient,
   type StudioUnknownCaller,
 } from "@/lib/sms/staff-compose-copy";
+import { isValidSmsPhone } from "@/lib/sms/phone";
 import type { StaffSmsInboxItem } from "@/lib/sms/inbox-copy";
+import { buildPreviewStaffMessages } from "@/lib/sms/staff-compose-preview";
 
-export function AdminMessageComposer() {
+export function AdminMessageComposer({
+  preview = false,
+}: {
+  preview?: boolean;
+}) {
   const [recipients, setRecipients] = useState<StaffSmsRecipient[]>([]);
   const [inbox, setInbox] = useState<StaffSmsInboxItem[]>([]);
   const [unknownCallers, setUnknownCallers] = useState<StudioUnknownCaller[]>([]);
   const [introPreview, setIntroPreview] = useState("");
   const [introPhone, setIntroPhone] = useState("");
   const [customerId, setCustomerId] = useState("");
+  const [search, setSearch] = useState("");
+  const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -23,6 +34,21 @@ export function AdminMessageComposer() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (keepCustomer = true) => {
+    if (preview) {
+      const sample = buildPreviewStaffMessages();
+      setRecipients(sample.recipients);
+      setInbox(sample.inbox);
+      setUnknownCallers(sample.unknownCallers);
+      setIntroPreview(sample.introPreview);
+      if (!keepCustomer) {
+        const first = sample.recipients.find((item) => item.canText);
+        if (first) {
+          setCustomerId(first.id);
+          setPhone(first.phone);
+        }
+      }
+      return;
+    }
     const response = await fetch("/api/admin/messages", {
       credentials: "include",
     });
@@ -43,9 +69,12 @@ export function AdminMessageComposer() {
     if (body.introPreview) setIntroPreview(body.introPreview);
     if (!keepCustomer) {
       const first = list.find((item) => item.canText);
-      if (first) setCustomerId(first.id);
+      if (first) {
+        setCustomerId(first.id);
+        setPhone(first.phone);
+      }
     }
-  }, []);
+  }, [preview]);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,25 +97,48 @@ export function AdminMessageComposer() {
   }, [load]);
 
   const selected = recipients.find((item) => item.id === customerId);
+  const filteredRecipients = recipients.filter((item) =>
+    matchesStaffRecipientSearch(item, search),
+  );
+  const canSendToNumber = isValidSmsPhone(phone) || Boolean(selected?.canText);
   const canSend =
-    Boolean(selected?.canText) &&
+    canSendToNumber &&
     message.trim().length > 0 &&
     message.trim().length <= STAFF_SMS_MAX_CHARS &&
     !sending;
 
   async function handleSend(event: React.FormEvent) {
     event.preventDefault();
-    if (!canSend || !selected) return;
+    if (!canSend) return;
 
     setSending(true);
     setError(null);
+    if (preview) {
+      const to = phone.trim() || selected?.phone || "";
+      setInbox((current) => [
+        {
+          id: `preview-out-${Date.now()}`,
+          direction: "outbound",
+          customerName: selected?.name || to,
+          petNames: selected?.petNames.join(", ") ?? "",
+          phone: to,
+          body: buildStaffCustomerSms(message.trim()),
+          createdAt: new Date().toISOString(),
+        },
+        ...current,
+      ]);
+      setMessage("");
+      setSending(false);
+      return;
+    }
     try {
       const response = await fetch("/api/admin/messages", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customerId: selected.id,
+          customerId: selected?.id,
+          phone: phone.trim() || selected?.phone,
           message: message.trim(),
         }),
       });
@@ -110,6 +162,26 @@ export function AdminMessageComposer() {
     if (!trimmed || sendingIntro) return;
     setSendingIntro(trimmed);
     setError(null);
+    if (preview) {
+      setUnknownCallers((current) => {
+        const stamp = new Date().toISOString();
+        const exists = current.some((caller) => caller.phone === trimmed);
+        if (exists) {
+          return current.map((caller) =>
+            caller.phone === trimmed
+              ? { ...caller, introSentAt: stamp }
+              : caller,
+          );
+        }
+        return [
+          { phone: trimmed, calledAt: stamp, introSentAt: stamp },
+          ...current,
+        ];
+      });
+      setIntroPhone("");
+      setSendingIntro(null);
+      return;
+    }
     try {
       const response = await fetch("/api/admin/messages", {
         method: "POST",
@@ -203,7 +275,11 @@ export function AdminMessageComposer() {
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <CallCustomerButton phone={caller.phone} label="Call back" />
+                  <CallCustomerButton
+                    phone={caller.phone}
+                    label="Call back"
+                    preview={preview}
+                  />
                   <button
                     type="button"
                     disabled={Boolean(sendingIntro)}
@@ -227,11 +303,27 @@ export function AdminMessageComposer() {
       >
         <h3 className="font-medium text-gold-dark">Text a customer</h3>
         <p className="mt-1 text-sm text-text-muted">
-          Sends from the studio number. Replies are forwarded to your phone and
-          listed below. Guests can reply STOP to opt out.
+          Search or choose a guest, or type any mobile number. Sends from the
+          studio number. Replies are forwarded to your phone and listed below.
+          Guests can reply STOP to opt out.
         </p>
 
         <div className="mt-6 space-y-4">
+          <div>
+            <label htmlFor="sms-search" className="block text-sm font-medium text-text">
+              Search
+            </label>
+            <input
+              id="sms-search"
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Pet name, first name, last name, or phone"
+              disabled={loading || recipients.length === 0}
+              className="mt-1.5 w-full rounded-xl border border-lavender/40 bg-cream px-4 py-2.5 text-sm"
+            />
+          </div>
+
           <div>
             <label htmlFor="sms-customer" className="block text-sm font-medium text-text">
               Customer
@@ -240,7 +332,12 @@ export function AdminMessageComposer() {
               <select
                 id="sms-customer"
                 value={customerId}
-                onChange={(event) => setCustomerId(event.target.value)}
+                onChange={(event) => {
+                  const nextId = event.target.value;
+                  setCustomerId(nextId);
+                  const next = recipients.find((item) => item.id === nextId);
+                  setPhone(next?.phone ?? "");
+                }}
                 disabled={loading || recipients.length === 0}
                 className="w-full rounded-xl border border-lavender/40 bg-cream px-4 py-2.5 text-sm"
               >
@@ -251,20 +348,51 @@ export function AdminMessageComposer() {
                 ) : recipients.length === 0 ? (
                   <option value="">No customers yet</option>
                 ) : (
-                  recipients.map((item) => (
-                    <option key={item.id} value={item.id} disabled={!item.canText}>
-                      {item.canText
-                        ? `${item.name} · ${item.phone}`
-                        : `${item.name} · no mobile number`}
+                  <>
+                    <option value="">
+                      Choose a customer, or type a number below
                     </option>
-                  ))
+                    {(selected &&
+                    !filteredRecipients.some((item) => item.id === selected.id)
+                      ? [selected, ...filteredRecipients]
+                      : filteredRecipients
+                    ).map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {formatStaffRecipientLabel(item)}
+                      </option>
+                    ))}
+                  </>
                 )}
               </select>
               <CallCustomerButton
                 customerId={selected?.id}
-                disabled={!selected?.canText}
+                phone={phone.trim() || selected?.phone}
+                disabled={!isValidSmsPhone(phone) && !selected?.canText}
+                preview={preview}
               />
             </div>
+            {!loading && recipients.length > 0 && filteredRecipients.length === 0 ? (
+              <p className="mt-2 text-xs text-text-muted">
+                No customers match that search.
+              </p>
+            ) : null}
+          </div>
+
+          <div>
+            <label htmlFor="sms-phone" className="block text-sm font-medium text-text">
+              Mobile number
+            </label>
+            <input
+              id="sms-phone"
+              type="tel"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              placeholder="(561) 555-0123"
+              className="mt-1.5 w-full rounded-xl border border-lavender/40 bg-cream px-4 py-2.5 text-sm"
+            />
+            <p className="mt-1 text-xs text-text-muted">
+              Type any US mobile number to text, or pick a customer above.
+            </p>
           </div>
 
           <div>

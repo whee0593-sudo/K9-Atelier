@@ -11,6 +11,7 @@ import { buildPreviewCollectContext } from "@/lib/charges/preview";
 import type { CollectContext } from "@/lib/charges/types";
 import { formatServiceAddress } from "@/lib/travel";
 import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
+import { CheckoutTextToggle } from "@/components/admin/CheckoutTextToggle";
 
 export function VisitCheckIn({
   appointmentId,
@@ -26,6 +27,7 @@ export function VisitCheckIn({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sendCheckoutText, setSendCheckoutText] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -88,7 +90,10 @@ export function VisitCheckIn({
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action }),
+          body: JSON.stringify({
+            action,
+            sendCheckoutText: action === "check_out" ? sendCheckoutText : undefined,
+          }),
         },
       );
       const body = (await response.json()) as {
@@ -190,11 +195,17 @@ export function VisitCheckIn({
             <p className="font-body mt-3 text-sm text-taupe">
               In progress · {formatVisitDuration(startedAt, null, now)}
             </p>
+            <CheckoutTextToggle
+              checked={sendCheckoutText}
+              onChange={setSendCheckoutText}
+              disabled={busy}
+              className="mt-8"
+            />
             <button
               type="button"
               disabled={busy}
               onClick={() => void setTiming("check_out")}
-              className="mt-8 w-full rounded-sm bg-gold px-6 py-5 text-[12px] font-medium uppercase tracking-[0.16em] text-white disabled:opacity-50"
+              className="mt-4 w-full rounded-sm bg-gold px-6 py-5 text-[12px] font-medium uppercase tracking-[0.16em] text-white disabled:opacity-50"
             >
               Check out
             </button>

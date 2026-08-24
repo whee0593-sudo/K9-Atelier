@@ -478,6 +478,7 @@ export async function sendAppointmentEnRouteNotification(
 export async function setAppointmentVisitTiming(
   appointmentId: string,
   action: "check_in" | "check_out",
+  options?: { sendCheckoutText?: boolean },
 ): Promise<
   | { startedAt: string | null; endedAt: string | null }
   | {
@@ -530,6 +531,19 @@ export async function setAppointmentVisitTiming(
   if (updateError || !updated) {
     console.error("setAppointmentVisitTiming save failed:", updateError?.message);
     return { error: "server" };
+  }
+
+  if (
+    action === "check_out" &&
+    !row.service_ended_at &&
+    options?.sendCheckoutText !== false
+  ) {
+    try {
+      const { sendCheckoutReadySms } = await import("@/lib/sms/checkout");
+      await sendCheckoutReadySms(appointmentId);
+    } catch (smsError) {
+      console.error("checkout ready SMS failed:", smsError);
+    }
   }
 
   return {

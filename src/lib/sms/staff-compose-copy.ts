@@ -33,11 +33,52 @@ export type StudioUnknownCaller = {
 
 export type StaffSmsRecipient = {
   id: string;
+  firstName: string;
+  lastName: string;
   name: string;
   email: string;
   phone: string;
+  petNames: string[];
   canText: boolean;
 };
+
+function formatListedPhone(phone: string) {
+  const digits = phone.replace(/\D/g, "").slice(-10);
+  if (digits.length !== 10) return phone.trim() || "no mobile number";
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+export function staffRecipientSortKey(item: StaffSmsRecipient) {
+  return formatStaffRecipientLabel(item).toLowerCase();
+}
+
+export function formatStaffRecipientLabel(item: StaffSmsRecipient) {
+  const pets = item.petNames.join(", ") || "—";
+  const first = item.firstName.trim() || "—";
+  const last = item.lastName.trim() || "—";
+  const phone = item.canText ? formatListedPhone(item.phone) : "no mobile number";
+  return `${pets} · ${first} · ${last} · ${phone}`;
+}
+
+export function matchesStaffRecipientSearch(
+  item: StaffSmsRecipient,
+  query: string,
+) {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  const digits = needle.replace(/\D/g, "");
+  if (item.petNames.some((name) => name.toLowerCase().includes(needle))) {
+    return true;
+  }
+  if (item.firstName.toLowerCase().includes(needle)) return true;
+  if (item.lastName.toLowerCase().includes(needle)) return true;
+  if (item.phone.toLowerCase().includes(needle)) return true;
+  if (digits.length >= 3) {
+    const phoneDigits = item.phone.replace(/\D/g, "");
+    if (phoneDigits.includes(digits)) return true;
+  }
+  return false;
+}
 
 export function buildStaffCustomerSms(message: string) {
   const trimmed = message.trim();
