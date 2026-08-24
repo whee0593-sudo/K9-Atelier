@@ -16,10 +16,10 @@ export function buildStudioIntroSms() {
     "Reserve an appointment:",
     publicUrl("/book"),
     "",
-    "Send us a message:",
+    "Send an online inquiry:",
     publicUrl("/contact"),
     "",
-    "You may also reply with your pet's name, breed, age, weight, coat condition, and preferred appointment date. We'll get back to you as soon as we're available.",
+    "Or reply with your pet's name, breed, age, weight, coat condition, and preferred appointment date. We'll get back to you as soon as we're available.",
     "",
     SMS_OPT_OUT,
   ].join("\n");
