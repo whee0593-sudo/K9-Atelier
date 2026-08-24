@@ -1,7 +1,7 @@
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import type { PaymentMethodRecord } from "@/lib/payments/types";
 
-export type ChargeKind = "service" | "no_show";
+export type ChargeKind = "service" | "no_show" | "cancellation";
 export type ChargeStatus = "pending" | "paid" | "failed";
 export type ReceiptChannel = "sms" | "email";
 

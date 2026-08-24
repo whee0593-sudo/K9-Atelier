@@ -15,7 +15,9 @@ function formatReceiptDate(date: string) {
 }
 
 export function chargeKindLabel(kind: AppointmentChargeRecord["kind"]) {
-  return kind === "no_show" ? "No-show" : "Grooming";
+  if (kind === "no_show") return "No-show";
+  if (kind === "cancellation") return "Cancellation";
+  return "Grooming";
 }
 
 export function buildChargeReceiptParagraphs(

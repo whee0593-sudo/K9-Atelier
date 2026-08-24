@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { formatPrice } from "@/lib/business";
 import {
@@ -56,6 +57,14 @@ function AppointmentCard({ appointment }: { appointment: AppointmentRecord }) {
         <p className="mt-3 text-sm text-text-muted">
           Estimated from {formatPrice(appointment.estimatedTotal)}
         </p>
+      ) : null}
+      {appointmentIsUpcoming(appointment) ? (
+        <Link
+          href={`/account/appointments/${appointment.id}`}
+          className="mt-4 inline-flex text-sm font-medium text-gold-dark underline"
+        >
+          Change or cancel
+        </Link>
       ) : null}
     </li>
   );

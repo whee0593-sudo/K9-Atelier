@@ -274,7 +274,7 @@
       "id": "bookings",
       "path": "/account/bookings",
       "title": "Booking History",
-      "description": "Upcoming and past appointments.",
+      "description": "Upcoming and past appointments. You can reschedule, cancel, or change the dogs on an upcoming visit.",
       "fields": [
         {
           "id": "upcoming",

@@ -239,7 +239,11 @@ function CustomerHistory({ customerId, open }: { customerId: string; open: boole
                   {formatChargeMoney(order.total)}
                 </p>
                 <p className="mt-1 text-text-muted">
-                  {order.kind === "no_show" ? "No-show" : "Service"}
+                  {order.kind === "no_show"
+                    ? "No-show"
+                    : order.kind === "cancellation"
+                      ? "Cancellation"
+                      : "Service"}
                   {order.petName ? ` · ${order.petName}` : ""}
                   {order.serviceName ? ` · ${order.serviceName}` : ""}
                 </p>

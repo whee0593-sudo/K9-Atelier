@@ -24,7 +24,9 @@ export function AccountNav() {
           key={section.id}
           href={section.path}
           className={`rounded-lg px-4 py-2.5 text-sm transition ${
-            pathname === section.path
+            pathname === section.path ||
+            (section.id === "bookings" &&
+              pathname.startsWith("/account/appointments/"))
               ? "bg-lavender-light font-medium text-gold-dark"
               : "text-text-muted hover:bg-lavender-light/60 hover:text-text"
           }`}

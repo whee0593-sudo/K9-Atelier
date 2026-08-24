@@ -4,18 +4,19 @@ import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import { business, formatPrice } from "@/lib/business";
 import { bookingSecondaryBtnClass } from "@/components/booking/booking-ui";
 
-type Props = {
-  open: boolean;
-  onClose: () => void;
-  returnFocusRef?: RefObject<HTMLElement | null>;
-};
-
 type SectionId =
   | "payment"
   | "cancellation"
   | "travel"
   | "flea"
   | "special-handling";
+
+type Props = {
+  open: boolean;
+  onClose: () => void;
+  returnFocusRef?: RefObject<HTMLElement | null>;
+  initialSection?: SectionId;
+};
 
 const SECTIONS: Array<{ id: SectionId; number: string; title: string }> = [
   { id: "payment", number: "01", title: "Payment & Deposits" },
@@ -136,17 +137,21 @@ export function BookingPoliciesModal({
   open,
   onClose,
   returnFocusRef,
+  initialSection,
 }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
-  const [openSection, setOpenSection] = useState<SectionId | null>(null);
+  const [openSection, setOpenSection] = useState<SectionId | null>(
+    initialSection ?? null,
+  );
 
   useEffect(() => {
     if (!open) {
       setOpenSection(null);
       return;
     }
+    setOpenSection(initialSection ?? null);
 
     closeRef.current?.focus();
 
@@ -177,7 +182,7 @@ export function BookingPoliciesModal({
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
+  }, [open, onClose, initialSection]);
 
   useEffect(() => {
     if (open) return;
