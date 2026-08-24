@@ -15,18 +15,39 @@ const footerLinks = [
   { href: "/contact", label: "Contact" },
 ] as const;
 
+function capitalize(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function formatTime(value: string) {
+  const [hStr, mStr] = value.split(":");
+  const hour = Number(hStr);
+  const minute = mStr ?? "00";
+  const period = hour >= 12 ? "PM" : "AM";
+  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${hour12}:${minute} ${period}`;
+}
+
 export function Footer() {
-  const { brand, site } = business;
+  const { brand, site, booking } = business;
   const phoneHref = getBrandPhoneTelHref();
   const instagram =
     site.underConstruction?.instagramUrl ?? "https://instagram.com/k9atelierfl";
   const instagramHandle =
     site.underConstruction?.instagramHandle ?? "k9AtelierFL";
+  const days = booking.availableDays;
+  const daysLabel =
+    days.length > 1
+      ? `${capitalize(days[0])} – ${capitalize(days[days.length - 1])}`
+      : capitalize(days[0] ?? "");
+  const hoursLabel = `${formatTime(booking.hoursStart)} – ${formatTime(
+    booking.hoursEnd,
+  )}`;
 
   return (
     <footer className="border-t border-gray-line bg-dusty-lavender/35">
       <Container className="py-16 md:py-20">
-        <div className="grid gap-12 md:grid-cols-[1.2fr_1fr_1fr]">
+        <div className="grid gap-12 md:grid-cols-[1.2fr_1fr]">
           <div>
             <p className="font-body text-[12px] font-semibold uppercase tracking-[0.22em] text-ink">
               {brand.wordmark}
@@ -34,40 +55,10 @@ export function Footer() {
             <p className="font-body mt-3 text-[12px] font-medium tracking-[0.08em] text-taupe">
               {brand.lockup}
             </p>
-          </div>
-
-          <div>
-            <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-taupe">
-              Explore
-            </p>
-            <ul className="mt-4 space-y-3">
-              {footerLinks.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className="font-body text-sm text-ink transition hover:text-deep-lavender"
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-taupe">
-              Contact
-            </p>
-            <a
-              href={`mailto:${brand.email}`}
-              className="font-body mt-4 block text-sm text-ink transition hover:text-deep-lavender"
-            >
-              {brand.email}
-            </a>
             {brand.phone && phoneHref ? (
               <a
                 href={phoneHref}
-                className="font-body mt-3 block text-sm text-ink transition hover:text-deep-lavender"
+                className="font-body mt-5 block text-sm text-ink transition hover:text-deep-lavender"
               >
                 {brand.phone}
               </a>
@@ -103,6 +94,30 @@ export function Footer() {
                 Find us
               </a>
             ) : null}
+            <p className="font-body mt-5 text-sm text-ink">
+              {daysLabel} · {hoursLabel} Eastern
+            </p>
+            <p className="font-body mt-2 text-sm text-taupe">
+              By appointment only. Weekend appointments by request.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-taupe">
+              Explore
+            </p>
+            <ul className="mt-4 space-y-3">
+              {footerLinks.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="font-body text-sm text-ink transition hover:text-deep-lavender"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
 

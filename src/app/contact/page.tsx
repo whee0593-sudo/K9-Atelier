@@ -10,19 +10,6 @@ export const metadata = {
     "Contact K9 Atelier, a Private Mobile Pet Spa in Palm Beach — email, Instagram, service area and booking hours.",
 };
 
-function capitalize(value: string) {
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-function formatTime(value: string) {
-  const [hStr, mStr] = value.split(":");
-  const hour = Number(hStr);
-  const minute = mStr ?? "00";
-  const period = hour >= 12 ? "PM" : "AM";
-  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
-  return `${hour12}:${minute} ${period}`;
-}
-
 export default async function ContactPage({
   searchParams,
 }: {
@@ -43,17 +30,8 @@ export default async function ContactPage({
     );
   }
 
-  const { brand, booking, serviceArea, site } = business;
+  const { brand, serviceArea, site } = business;
   const phoneHref = getBrandPhoneTelHref();
-
-  const days = booking.availableDays;
-  const daysLabel =
-    days.length > 1
-      ? `${capitalize(days[0])} – ${capitalize(days[days.length - 1])}`
-      : capitalize(days[0] ?? "");
-  const hoursLabel = `${formatTime(booking.hoursStart)} – ${formatTime(
-    booking.hoursEnd,
-  )}`;
   const instagramUrl =
     site.underConstruction?.instagramUrl ?? "https://instagram.com/k9atelierfl";
   const instagramHandle =
@@ -153,18 +131,6 @@ export default async function ContactPage({
             {serviceArea.maxDistanceMiles} miles. $
             {serviceArea.travelFeePerMile} / one-way mile outside standard
             radius.
-          </p>
-        </section>
-
-        <section className="border border-gray-line/80 bg-ivory p-6 md:p-8">
-          <h2 className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
-            Hours
-          </h2>
-          <p className="font-body mt-3 text-base text-ink">
-            {daysLabel} · {hoursLabel} Eastern
-          </p>
-          <p className="font-body mt-2 text-sm text-taupe">
-            By appointment only. Weekend appointments by request.
           </p>
         </section>
       </div>
