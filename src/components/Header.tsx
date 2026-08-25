@@ -18,20 +18,38 @@ const navItems = [
   { href: "/faq", label: "FAQ" },
 ] as const;
 
+const navLinkBase =
+  "inline-flex min-h-[44px] items-center justify-center rounded-sm px-4 font-body text-[13px] font-medium uppercase tracking-[0.16em] transition duration-500";
+
+function isNavItemActive(href: string, pathname: string) {
+  const path = href.split("#")[0];
+  if (!path || path === "/") {
+    return false;
+  }
+  return pathname === path || pathname.startsWith(`${path}/`);
+}
+
 function NavLink({
   href,
   label,
+  active,
   onNavigate,
 }: {
   href: string;
   label: string;
+  active?: boolean;
   onNavigate?: () => void;
 }) {
   return (
     <Link
       href={href}
       onClick={onNavigate}
-      className="font-body text-[13px] font-medium uppercase tracking-[0.16em] text-taupe transition duration-500 hover:text-ink"
+      aria-current={active ? "page" : undefined}
+      className={
+        active
+          ? `${navLinkBase} bg-deep-lavender text-ivory`
+          : `${navLinkBase} text-taupe hover:text-ink`
+      }
     >
       {label}
     </Link>
@@ -44,37 +62,6 @@ export function Header() {
   const isBooking = pathname === "/book";
 
   const closeMenu = () => setOpen(false);
-
-  if (isBooking) {
-    return (
-      <header className="sticky top-0 z-50 border-b border-gray-line/70 bg-ivory/95 backdrop-blur-sm">
-        <Container className="flex items-center justify-between gap-6 py-4 md:py-5">
-          <Link href="/" className="flex shrink-0 items-center gap-3">
-            <Image
-              src={business.brand.logo}
-              alt={business.brand.name}
-              width={52}
-              height={52}
-              className="rounded-full"
-              priority
-            />
-            <span className="inline whitespace-nowrap font-body text-[14px] font-semibold uppercase tracking-[0.14em] text-[#3A3236] sm:tracking-[0.2em]">
-              {business.brand.name}
-            </span>
-          </Link>
-          <p className="font-body text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
-            Booking
-          </p>
-          <Link
-            href="/contact"
-            className="font-body text-[12px] font-medium uppercase tracking-[0.14em] text-taupe transition hover:text-ink"
-          >
-            Need Help?
-          </Link>
-        </Container>
-      </header>
-    );
-  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-line/70 bg-ivory/95 backdrop-blur-sm">
@@ -97,17 +84,27 @@ export function Header() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-8 lg:flex" aria-label="Primary">
-          {navItems.map((item) => (
-            <NavLink key={item.href} href={item.href} label={item.label} />
-          ))}
-        </nav>
+        {isBooking ? (
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
+            Booking
+          </p>
+        ) : (
+          <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                active={isNavItemActive(item.href, pathname)}
+              />
+            ))}
+          </nav>
+        )}
 
-        <div className="flex items-center gap-3">
-          <CustomerAuthLink className="inline-flex min-h-[50px] items-center justify-center rounded-sm bg-deep-lavender px-6 text-[12px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink" />
+        {isBooking ? (
           <button
             type="button"
-            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm border border-gray-line lg:hidden"
+            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm border border-gray-line"
             aria-expanded={open}
             aria-controls="mobile-nav"
             aria-label={open ? "Close menu" : "Open menu"}
@@ -117,13 +114,33 @@ export function Header() {
               {open ? "Close" : "Menu"}
             </span>
           </button>
-        </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <CustomerAuthLink className="inline-flex min-h-[50px] items-center justify-center rounded-sm bg-deep-lavender px-6 text-[12px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink" />
+            <button
+              type="button"
+              className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm border border-gray-line lg:hidden"
+              aria-expanded={open}
+              aria-controls="mobile-nav"
+              aria-label={open ? "Close menu" : "Open menu"}
+              onClick={() => setOpen((value) => !value)}
+            >
+              <span className="font-body text-[12px] font-medium uppercase tracking-[0.14em] text-ink">
+                {open ? "Close" : "Menu"}
+              </span>
+            </button>
+          </div>
+        )}
       </Container>
 
       {open && (
         <div
           id="mobile-nav"
-          className="border-t border-gray-line bg-ivory lg:hidden"
+          className={
+            isBooking
+              ? "border-t border-gray-line bg-ivory"
+              : "border-t border-gray-line bg-ivory lg:hidden"
+          }
         >
           <Container className="flex flex-col gap-5 py-6">
             {navItems.map((item) => (
@@ -131,9 +148,18 @@ export function Header() {
                 key={item.href}
                 href={item.href}
                 label={item.label}
+                active={isNavItemActive(item.href, pathname)}
                 onNavigate={closeMenu}
               />
             ))}
+            {isBooking ? (
+              <NavLink
+                href="/contact"
+                label="Need Help?"
+                active={isNavItemActive("/contact", pathname)}
+                onNavigate={closeMenu}
+              />
+            ) : null}
           </Container>
         </div>
       )}
