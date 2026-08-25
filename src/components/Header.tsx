@@ -19,7 +19,10 @@ const navItems = [
 ] as const;
 
 const navLinkBase =
-  "inline-flex min-h-[44px] items-center justify-center rounded-sm px-4 font-body text-[13px] font-medium uppercase tracking-[0.16em] transition duration-500";
+  "inline-flex min-h-[44px] items-center justify-center rounded-sm border-0 px-4 font-body text-[13px] font-medium uppercase tracking-[0.16em] transition duration-500";
+
+const menuBtnClass =
+  "inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm border-0 px-4 font-body text-[12px] font-medium uppercase tracking-[0.14em] transition duration-500";
 
 function isNavItemActive(href: string, pathname: string) {
   const path = href.split("#")[0];
@@ -48,7 +51,7 @@ function NavLink({
       className={
         active
           ? `${navLinkBase} bg-deep-lavender text-ivory`
-          : `${navLinkBase} text-taupe hover:text-ink`
+          : `${navLinkBase} bg-transparent text-taupe hover:bg-dusty-lavender/40 hover:text-ink`
       }
     >
       {label}
@@ -104,30 +107,34 @@ export function Header() {
         {isBooking ? (
           <button
             type="button"
-            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm border border-gray-line"
+            className={
+              open
+                ? `${menuBtnClass} bg-deep-lavender text-ivory`
+                : `${menuBtnClass} bg-transparent text-ink hover:bg-dusty-lavender/40`
+            }
             aria-expanded={open}
             aria-controls="mobile-nav"
             aria-label={open ? "Close menu" : "Open menu"}
             onClick={() => setOpen((value) => !value)}
           >
-            <span className="font-body text-[12px] font-medium uppercase tracking-[0.14em] text-ink">
-              {open ? "Close" : "Menu"}
-            </span>
+            {open ? "Close" : "Menu"}
           </button>
         ) : (
           <div className="flex items-center gap-3">
             <CustomerAuthLink className="inline-flex min-h-[50px] items-center justify-center rounded-sm bg-deep-lavender px-6 text-[12px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink" />
             <button
               type="button"
-              className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm border border-gray-line lg:hidden"
+              className={
+                open
+                  ? `${menuBtnClass} bg-deep-lavender text-ivory lg:hidden`
+                  : `${menuBtnClass} bg-transparent text-ink hover:bg-dusty-lavender/40 lg:hidden`
+              }
               aria-expanded={open}
               aria-controls="mobile-nav"
               aria-label={open ? "Close menu" : "Open menu"}
               onClick={() => setOpen((value) => !value)}
             >
-              <span className="font-body text-[12px] font-medium uppercase tracking-[0.14em] text-ink">
-                {open ? "Close" : "Menu"}
-              </span>
+              {open ? "Close" : "Menu"}
             </button>
           </div>
         )}
