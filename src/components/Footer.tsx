@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { business, getBrandPhoneTelHref, getGoogleProfileUrl } from "@/lib/business";
+import {
+  business,
+  getBrandInstagramUrl,
+  getBrandPhoneTelHref,
+  getBrandSearchName,
+  getGoogleProfileUrl,
+} from "@/lib/business";
 import { Container } from "@/components/luxury/Container";
 
 const footerLinks = [
@@ -29,18 +35,17 @@ function formatTime(value: string) {
 }
 
 export function Footer() {
-  const { brand, site, booking } = business;
+  const { brand, booking } = business;
   const phoneHref = getBrandPhoneTelHref();
   const instagram =
-    site.underConstruction?.instagramUrl ?? "https://instagram.com/k9atelierfl";
-  const instagramHandle =
-    site.underConstruction?.instagramHandle ?? "k9AtelierFL";
+    getBrandInstagramUrl() ?? "https://instagram.com/k9atelierfl";
+  const instagramHandle = "K9AtelierFL";
   const days = booking.availableDays;
   const daysLabel =
     days.length > 1
-      ? `${capitalize(days[0])} – ${capitalize(days[days.length - 1])}`
+      ? `${capitalize(days[0])}–${capitalize(days[days.length - 1])}`
       : capitalize(days[0] ?? "");
-  const hoursLabel = `${formatTime(booking.hoursStart)} – ${formatTime(
+  const hoursLabel = `${formatTime(booking.hoursStart)}–${formatTime(
     booking.hoursEnd,
   )}`;
 
@@ -49,11 +54,14 @@ export function Footer() {
       <Container className="py-16 md:py-20">
         <div className="grid gap-12 md:grid-cols-[1.2fr_1fr]">
           <div>
-            <p className="font-body text-[12px] font-semibold uppercase tracking-[0.22em] text-ink">
-              {brand.wordmark}
+            <p className="font-body text-[12px] font-semibold uppercase tracking-[0.14em] text-ink">
+              {getBrandSearchName()}
             </p>
-            <p className="font-body mt-3 text-[12px] font-medium tracking-[0.08em] text-taupe">
-              {brand.lockup}
+            <p className="font-body mt-3 text-[12px] font-medium leading-relaxed text-taupe">
+              Private, cage-free mobile dog grooming for dogs under 45 lbs.
+            </p>
+            <p className="font-body mt-1.5 text-[12px] font-medium leading-relaxed text-taupe">
+              Serving Jupiter, Palm Beach Gardens & West Palm Beach.
             </p>
             {brand.phone && phoneHref ? (
               <a
@@ -91,7 +99,7 @@ export function Footer() {
                 className="font-body mt-3 block text-sm text-ink transition hover:text-deep-lavender"
               >
                 <span className="text-taupe">Google · </span>
-                Find us
+                Find Us
               </a>
             ) : null}
             <p className="font-body mt-5 text-sm text-ink">
