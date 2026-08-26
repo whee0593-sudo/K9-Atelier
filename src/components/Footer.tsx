@@ -6,7 +6,7 @@ import {
   getBrandInstagramUrl,
   getBrandPhoneTelHref,
   getBrandSearchName,
-  getGoogleProfileUrl,
+  getGoogleWriteReviewUrl,
 } from "@/lib/business";
 import { Container } from "@/components/luxury/Container";
 
@@ -90,16 +90,16 @@ export function Footer() {
               <span className="text-taupe">Facebook · </span>
               {brand.social.facebook}
             </a>
-            {getGoogleProfileUrl() ? (
+            {getGoogleWriteReviewUrl() ? (
               <a
-                href={getGoogleProfileUrl() ?? undefined}
+                href={getGoogleWriteReviewUrl() ?? undefined}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="K9 Atelier on Google"
+                aria-label="Review K9 Atelier on Google"
                 className="font-body mt-3 block text-sm text-ink transition hover:text-deep-lavender"
               >
                 <span className="text-taupe">Google · </span>
-                Find Us
+                Review K9 Atelier
               </a>
             ) : null}
             <p className="font-body mt-5 text-sm text-ink">
