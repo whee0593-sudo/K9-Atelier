@@ -1,9 +1,5 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  env: {
-    SITE_ACCESS_PASSWORD: process.env.SITE_ACCESS_PASSWORD,
-  },
-};
+const nextConfig: NextConfig = {};
 
 export default nextConfig;

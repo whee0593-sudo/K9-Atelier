@@ -20,7 +20,7 @@ const sampleAppointment: AppointmentRecord = {
   serviceName: "Signature Bath & Style",
   addOnIds: [],
   addOnOptions: {},
-  addressStreet: "1408 14th Lane",
+  addressStreet: "123 Example Avenue",
   addressCity: "Palm Beach Gardens",
   addressState: "FL",
   addressZip: "33418",

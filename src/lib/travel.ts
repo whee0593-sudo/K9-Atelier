@@ -23,12 +23,6 @@ export function formatServiceAddress(address: ServiceAddress) {
   return `${address.street}, ${address.city}, ${address.state} ${address.zip}`;
 }
 
-export function getBaseAddressFormatted() {
-  const home = business.serviceArea.homeAddress;
-  if (!home || typeof home !== "object") return null;
-  return "formatted" in home ? String(home.formatted) : null;
-}
-
 /** Pure fee math from one-way miles */
 export function calculateTravelFee(distanceMiles: number): TravelQuote {
   const { freeRadiusMiles, travelFeePerMile, maxDistanceMiles } =

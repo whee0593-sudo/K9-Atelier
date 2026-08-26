@@ -9,10 +9,8 @@ export default function ServiceAreaPage() {
       <p className="mt-3 max-w-2xl text-text-muted">
         K9 Atelier is a mobile grooming service — we bring the salon to your
         doorstep
-        {serviceArea.homeAddress &&
-        typeof serviceArea.homeAddress === "object" &&
-        "publicLabel" in serviceArea.homeAddress
-          ? ` from the ${serviceArea.homeAddress.publicLabel}`
+        {serviceArea.publicBaseLabel
+          ? ` from the ${serviceArea.publicBaseLabel}`
           : ""}
         .
       </p>

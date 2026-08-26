@@ -36,9 +36,8 @@ export function LocalBusinessJsonLd() {
     priceRange: "$$",
     address: {
       "@type": "PostalAddress",
-      addressLocality: serviceArea.homeAddress.city,
-      addressRegion: serviceArea.homeAddress.state,
-      postalCode: serviceArea.homeAddress.zip,
+      addressLocality: serviceArea.publicLocality,
+      addressRegion: serviceArea.publicRegion,
       addressCountry: "US",
     },
     areaServed: communities.map((name) => ({

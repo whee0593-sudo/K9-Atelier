@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { calculateTravelFee, getBaseAddressFormatted } from "@/lib/travel";
+import { calculateTravelFee } from "@/lib/travel";
 import { drivingDistanceMiles, geocodeAddress } from "@/lib/geo";
+import { getBaseAddressFormatted } from "@/lib/server/base-address";
 
 export async function POST(request: Request) {
   try {

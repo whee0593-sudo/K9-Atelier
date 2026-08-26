@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import { estimateServiceDurationMinutes } from "@/lib/services";
-import { getBaseAddressFormatted } from "@/lib/travel";
+import { getBaseAddressFormatted } from "@/lib/server/base-address";
 import { geocodeBaseAddress } from "@/lib/geo";
 import {
   addressAllowedForPlan,

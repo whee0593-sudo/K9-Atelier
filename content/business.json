@@ -56,14 +56,9 @@
     "travelFeeNote": "Charged per one-way mile beyond free radius, based on GPS driving distance from base",
     "maxDistanceMiles": 20,
     "communitiesServed": "West Palm Beach · Palm Beach Gardens · Jupiter",
-    "homeAddress": {
-      "street": "1408 14th Lane",
-      "city": "Palm Beach Gardens",
-      "state": "FL",
-      "zip": "33418",
-      "formatted": "1408 14th Lane, Palm Beach Gardens, FL 33418",
-      "publicLabel": "Palm Beach Gardens, FL area"
-    }
+    "publicBaseLabel": "Palm Beach Gardens, FL area",
+    "publicLocality": "Palm Beach Gardens",
+    "publicRegion": "FL"
   },
   "weightPolicy": {
     "maxStandardWeightLbs": 45,
@@ -74,8 +69,6 @@
   "site": {
     "privacyMode": false,
     "useDemoPets": false,
-    "previewAccessPassword": "Anakin",
-    "previewShareToken": "k9atelier-preview-8f2a1c",
     "underConstruction": {
       "wordmark": "K9 ATELIER",
       "subline": "Private Mobile Pet Spa · Palm Beach",

@@ -23,7 +23,7 @@ function previewAppointment(
     serviceId: "signature-bath-care",
     addOnIds: [],
     addOnOptions: {},
-    addressStreet: "1408 14th Lane",
+    addressStreet: "123 Example Avenue",
     addressCity: "Palm Beach Gardens",
     addressState: "FL",
     addressZip: "33418",

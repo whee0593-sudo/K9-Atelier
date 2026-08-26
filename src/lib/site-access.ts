@@ -1,5 +1,3 @@
-import { business } from "./business";
-
 export const SITE_ACCESS_COOKIE = "k9-site-access";
 
 const ACCESS_MESSAGE = "k9-atelier-site-access-v1";
@@ -19,30 +17,14 @@ function timingSafeEqualString(a: string, b: string): boolean {
   return result === 0;
 }
 
-/** Env var overrides business.json preview password when set. */
+/** Server-side team password for privacy / preview mode. */
 export function getSiteAccessPassword() {
-  const fromEnv = process.env.SITE_ACCESS_PASSWORD?.trim();
-  if (fromEnv) return fromEnv;
-
-  const fromConfig =
-    "previewAccessPassword" in business.site &&
-    typeof business.site.previewAccessPassword === "string"
-      ? business.site.previewAccessPassword.trim()
-      : "";
-  return fromConfig || undefined;
+  return process.env.SITE_ACCESS_PASSWORD?.trim() || undefined;
 }
 
 /** Secret token for password-free preview share links. */
 export function getPreviewShareToken() {
-  const fromEnv = process.env.SITE_PREVIEW_SHARE_TOKEN?.trim();
-  if (fromEnv) return fromEnv;
-
-  const fromConfig =
-    "previewShareToken" in business.site &&
-    typeof business.site.previewShareToken === "string"
-      ? business.site.previewShareToken.trim()
-      : "";
-  return fromConfig || undefined;
+  return process.env.SITE_PREVIEW_SHARE_TOKEN?.trim() || undefined;
 }
 
 export function isValidPreviewShareToken(token: string | undefined) {
