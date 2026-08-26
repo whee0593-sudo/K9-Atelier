@@ -36,6 +36,7 @@ import {
 } from "@/lib/notifications";
 import { vaccinationBookingNeedsAdminConfirmation } from "@/lib/vaccinations/booking";
 import { CreativeBookingPolicy } from "@/components/booking/CreativeBookingPolicy";
+import type { BookingPolicySectionId } from "@/components/booking/BookingPoliciesModal";
 import {
   bookingBackLinkClass,
   bookingNoticeClass,
@@ -56,6 +57,7 @@ type Props = {
   appointmentDate: string;
   appointmentTime: string;
   timePreference?: TimePreference | null;
+  onOpenPolicy: (section: BookingPolicySectionId) => void;
   onMakeChange: () => void;
   onReserved: (appointment: AppointmentRecord) => void;
 };
@@ -77,6 +79,28 @@ function estimateAddOnTotal(
   }, 0);
 }
 
+function PolicyTermButton({
+  children,
+  onOpen,
+}: {
+  children: string;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onOpen();
+      }}
+      className="underline decoration-champagne underline-offset-2 hover:text-deep-lavender"
+    >
+      {children}
+    </button>
+  );
+}
+
 export function BookingReviewStep({
   pet,
   service,
@@ -88,6 +112,7 @@ export function BookingReviewStep({
   appointmentDate,
   appointmentTime,
   timePreference,
+  onOpenPolicy,
   onMakeChange,
   onReserved,
 }: Props) {
@@ -96,6 +121,7 @@ export function BookingReviewStep({
   const [phone, setPhone] = useState("");
   const [smsConsent, setSmsConsent] = useState(false);
   const [photoMarketingConsent, setPhotoMarketingConsent] = useState(false);
+  const [servicePoliciesConsent, setServicePoliciesConsent] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodRecord[]>([]);
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<string | null>(
     null,
@@ -204,6 +230,13 @@ export function BookingReviewStep({
       return;
     }
 
+    if (!servicePoliciesConsent) {
+      setError(
+        "Please confirm you have read and agree to the cancellation, rescheduling, payment, and incomplete service policies.",
+      );
+      return;
+    }
+
     if (!selectedPaymentMethodId) {
       setError(
         "Please add a payment method to finish this reservation. You will not be charged when you book.",
@@ -246,6 +279,7 @@ export function BookingReviewStep({
         customerPhone: phone,
         smsConsent: true,
         photoMarketingConsent: true,
+        servicePoliciesConsent: true,
       });
       onReserved(appointment);
     } catch (submitError) {
@@ -496,6 +530,37 @@ export function BookingReviewStep({
           />
           <span className="font-body text-xs leading-relaxed text-taupe">
             {photoMarketingConsentCopy}
+          </span>
+        </label>
+        <label className="mt-3 flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={servicePoliciesConsent}
+            onChange={(event) =>
+              setServicePoliciesConsent(event.target.checked)
+            }
+            required
+            aria-required="true"
+            className="mt-0.5 size-4 shrink-0 accent-deep-lavender"
+          />
+          <span className="font-body text-xs leading-relaxed text-taupe">
+            I have read and agree to the{" "}
+            <PolicyTermButton onOpen={() => onOpenPolicy("cancellation")}>
+              cancellation
+            </PolicyTermButton>
+            ,{" "}
+            <PolicyTermButton onOpen={() => onOpenPolicy("rescheduling")}>
+              rescheduling
+            </PolicyTermButton>
+            ,{" "}
+            <PolicyTermButton onOpen={() => onOpenPolicy("payment")}>
+              payment
+            </PolicyTermButton>
+            , and{" "}
+            <PolicyTermButton onOpen={() => onOpenPolicy("incomplete-service")}>
+              incomplete service
+            </PolicyTermButton>{" "}
+            policies.
           </span>
         </label>
       </div>

@@ -177,6 +177,12 @@ export function validateCreateAppointmentInput(
       "photoMarketingConsent",
     );
   }
+  if (record.servicePoliciesConsent !== true) {
+    throw new AppointmentValidationError(
+      "Please confirm you have read and agree to the cancellation, rescheduling, payment, and incomplete service policies.",
+      "servicePoliciesConsent",
+    );
+  }
   const paymentMethodId = readString(
     record,
     "paymentMethodId",

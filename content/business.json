@@ -154,7 +154,7 @@
             "rows": [
               ["48+ hours before appointment", "No fee — reschedule or cancel freely"],
               ["Less than 48 hours", "50% of the scheduled service price"],
-              ["Same-day cancellation", "100% of the scheduled service price"]
+              ["Same-day cancellation or rescheduling", "100% of the scheduled service price"]
             ]
           }
         },
@@ -173,6 +173,10 @@
         {
           "heading": "5. Payment Method on File",
           "body": "A valid payment method is required before you can reserve an appointment. After you choose your appointment date and time, you will add or select which saved card to use for that visit. You are not charged when you book. Payment is settled after your appointment. Late cancellations and no-shows may be charged to the selected card according to the policy above."
+        },
+        {
+          "heading": "6. When a Service Cannot Be Completed",
+          "body": "Your dog's comfort and safety always come first. If we determine during the appointment that a service cannot be completed — due to stress, health concerns, severe matting close to the skin, or other conditions discovered on the day — we will stop and discuss options with you immediately.\n\nBecause the appointment time has already been reserved exclusively for you, you will be charged for the services completed, any required additional care (such as flea treatment or a comfort shave), and a minimum of 50% of the scheduled service price. If more of the reserved time has already been used, the charge will reflect the work performed. Applicable travel fees still apply.\n\nRemaining work may be rescheduled as a new appointment. If we are unable to begin or complete the visit due to a circumstance on our side, there is no charge, and we will reschedule at no penalty."
         }
       ],
       "outro": "Thank you for understanding — these policies allow us to protect the time and care every dog on our schedule deserves, including yours."

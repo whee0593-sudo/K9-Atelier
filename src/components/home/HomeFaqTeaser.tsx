@@ -20,7 +20,7 @@ const faqPreview: Array<{
   },
   {
     q: "What is your cancellation policy?",
-    a: "48+ hours: no fee. Under 48 hours: 50%. Same-day or no-show: 100%.",
+    a: "48+ hours: no fee. Under 48 hours: 50%. Same-day cancel or reschedule, or no-show: 100%.",
   },
 ] as const;
 

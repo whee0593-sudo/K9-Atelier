@@ -61,7 +61,11 @@ export default function FaqPage() {
             <h3 className="font-body text-sm font-semibold uppercase tracking-[0.12em] text-ink">
               {section.heading}
             </h3>
-            <p className="mt-2">{section.body}</p>
+            {section.body.split("\n\n").map((paragraph) => (
+              <p key={paragraph} className="mt-2">
+                {paragraph}
+              </p>
+            ))}
             {table && (
               <div className="mt-3 overflow-hidden border border-gray-line/80">
                 <table className="w-full text-left text-sm">

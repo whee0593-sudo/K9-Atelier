@@ -4,9 +4,11 @@ import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import { business, formatPrice } from "@/lib/business";
 import { bookingSecondaryBtnClass } from "@/components/booking/booking-ui";
 
-type SectionId =
+export type BookingPolicySectionId =
   | "payment"
   | "cancellation"
+  | "rescheduling"
+  | "incomplete-service"
   | "travel"
   | "flea"
   | "special-handling";
@@ -15,16 +17,27 @@ type Props = {
   open: boolean;
   onClose: () => void;
   returnFocusRef?: RefObject<HTMLElement | null>;
-  initialSection?: SectionId;
+  initialSection?: BookingPolicySectionId;
 };
 
-const SECTIONS: Array<{ id: SectionId; number: string; title: string }> = [
-  { id: "payment", number: "01", title: "Payment & Deposits" },
-  { id: "cancellation", number: "02", title: "Cancellation & Rescheduling" },
-  { id: "travel", number: "03", title: "Service Area & Travel" },
-  { id: "flea", number: "04", title: "Flea & Tick Care" },
-  { id: "special-handling", number: "05", title: "Additional Fee" },
+const SECTIONS: Array<{
+  id: BookingPolicySectionId;
+  number: string;
+  title: string;
+}> = [
+  { id: "payment", number: "01", title: "Payment" },
+  { id: "cancellation", number: "02", title: "Cancellation" },
+  { id: "rescheduling", number: "03", title: "Rescheduling" },
+  { id: "incomplete-service", number: "04", title: "Incomplete Service" },
+  { id: "travel", number: "05", title: "Service Area & Travel" },
+  { id: "flea", number: "06", title: "Flea & Tick Care" },
+  { id: "special-handling", number: "07", title: "Additional Fee" },
 ];
+
+const incompleteServiceParagraphs =
+  business.booking.cancellationPolicy.sections
+    .find((section) => section.heading.includes("Cannot Be Completed"))
+    ?.body.split("\n\n") ?? [];
 
 const fleaFee = business.fees.find((fee) => fee.id === "flea-tick-fee");
 const fleaLineItems =
@@ -81,7 +94,7 @@ function AccordionPanel({
   onToggle,
   children,
 }: {
-  id: SectionId;
+  id: BookingPolicySectionId;
   title: string;
   open: boolean;
   onToggle: () => void;
@@ -142,7 +155,7 @@ export function BookingPoliciesModal({
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
-  const [openSection, setOpenSection] = useState<SectionId | null>(
+  const [openSection, setOpenSection] = useState<BookingPolicySectionId | null>(
     initialSection ?? null,
   );
 
@@ -191,7 +204,7 @@ export function BookingPoliciesModal({
 
   if (!open) return null;
 
-  function toggleSection(id: SectionId) {
+  function toggleSection(id: BookingPolicySectionId) {
     setOpenSection((current) => (current === id ? null : id));
   }
 
@@ -249,20 +262,20 @@ export function BookingPoliciesModal({
 
           <AccordionPanel
             id="cancellation"
-            title="Cancellation & Rescheduling"
+            title="Cancellation"
             open={openSection === "cancellation"}
             onToggle={() => toggleSection("cancellation")}
           >
             <div className="space-y-4">
               <p>
                 Because every K9 Atelier appointment is reserved exclusively for
-                one dog, we kindly ask for as much notice as possible if your
-                plans change.
+                one dog, we kindly ask for at least 48 hours&apos; notice to
+                cancel.
               </p>
               <div>
                 <PolicyRow
                   label="48+ Hours"
-                  value="Complimentary cancellation or rescheduling"
+                  value="Complimentary cancellation"
                 />
                 <PolicyRow
                   label="Less Than 48 Hours"
@@ -286,6 +299,56 @@ export function BookingPoliciesModal({
                 Genuine health emergencies involving you or your dog will be
                 handled with reasonable flexibility.
               </p>
+            </div>
+          </AccordionPanel>
+
+          <AccordionPanel
+            id="rescheduling"
+            title="Rescheduling"
+            open={openSection === "rescheduling"}
+            onToggle={() => toggleSection("rescheduling")}
+          >
+            <div className="space-y-4">
+              <p>
+                Changing your appointment date or time uses the same notice
+                windows as cancellation. Fees are based on the original
+                appointment, not the new date you choose.
+              </p>
+              <div>
+                <PolicyRow
+                  label="48+ Hours"
+                  value="Complimentary rescheduling"
+                />
+                <PolicyRow
+                  label="Less Than 48 Hours"
+                  value="50% of the scheduled service price"
+                />
+                <PolicyRow
+                  label="Same-Day Rescheduling"
+                  value="100% of the scheduled service price"
+                />
+              </div>
+              <p>
+                Same-day rescheduling includes moving a visit to another day.
+                The original reserved time cannot be offered to another client.
+              </p>
+              <p>
+                Genuine health emergencies involving you or your dog will be
+                handled with reasonable flexibility.
+              </p>
+            </div>
+          </AccordionPanel>
+
+          <AccordionPanel
+            id="incomplete-service"
+            title="Incomplete Service"
+            open={openSection === "incomplete-service"}
+            onToggle={() => toggleSection("incomplete-service")}
+          >
+            <div className="space-y-4">
+              {incompleteServiceParagraphs.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
             </div>
           </AccordionPanel>
 

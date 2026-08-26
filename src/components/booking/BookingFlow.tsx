@@ -15,7 +15,10 @@ import { getServiceDisplayName } from "@/lib/service-display";
 import type { ServiceAddress, TravelQuote } from "@/lib/travel";
 import type { TimePreference } from "@/lib/booking-schedule";
 import { BookingProgress } from "@/components/booking/BookingProgress";
-import { BookingPoliciesModal } from "@/components/booking/BookingPoliciesModal";
+import {
+  BookingPoliciesModal,
+  type BookingPolicySectionId,
+} from "@/components/booking/BookingPoliciesModal";
 import { PetSelector } from "@/components/booking/PetSelector";
 import {
   BookingExperienceStep,
@@ -53,7 +56,15 @@ export function BookingFlow() {
   const [createdAppointment, setCreatedAppointment] =
     useState<AppointmentRecord | null>(null);
   const [policiesOpen, setPoliciesOpen] = useState(false);
+  const [policiesSection, setPoliciesSection] = useState<
+    BookingPolicySectionId | undefined
+  >();
   const policiesTriggerRef = useRef<HTMLButtonElement>(null);
+
+  function openPolicies(section?: BookingPolicySectionId) {
+    setPoliciesSection(section);
+    setPoliciesOpen(true);
+  }
 
   const bookingSelection: SelectedService | null =
     selectedService && selectedPet
@@ -288,6 +299,7 @@ export function BookingFlow() {
             appointmentDate={appointmentDate}
             appointmentTime={appointmentTime}
             timePreference={timePreference}
+            onOpenPolicy={openPolicies}
             onMakeChange={() => {
               setAppointmentDate(null);
               setAppointmentTime(null);
@@ -309,7 +321,7 @@ export function BookingFlow() {
           <button
             ref={policiesTriggerRef}
             type="button"
-            onClick={() => setPoliciesOpen(true)}
+            onClick={() => openPolicies()}
             className={`${bookingBackLinkClass} mt-3`}
           >
             View Service Policies
@@ -325,8 +337,12 @@ export function BookingFlow() {
 
       <BookingPoliciesModal
         open={policiesOpen}
-        onClose={() => setPoliciesOpen(false)}
+        onClose={() => {
+          setPoliciesOpen(false);
+          setPoliciesSection(undefined);
+        }}
         returnFocusRef={policiesTriggerRef}
+        initialSection={policiesSection}
       />
     </div>
   );
