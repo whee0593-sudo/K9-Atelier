@@ -1,4 +1,3 @@
-import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { Container } from "@/components/luxury/Container";
 import { Eyebrow } from "@/components/luxury/Eyebrow";
 
@@ -22,17 +21,6 @@ export function ServicesHero() {
             <br />
             Serving Jupiter, Palm Beach Gardens &amp; West Palm Beach
           </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <a
-              href="#most-requested"
-              className="inline-flex min-h-[52px] items-center justify-center rounded-sm border border-champagne bg-transparent px-7 text-[10px] font-medium uppercase tracking-[0.16em] text-ink transition hover:border-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne"
-            >
-              Explore Services
-            </a>
-            <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-7 text-[10px] font-medium uppercase tracking-[0.16em] text-ivory transition hover:bg-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne">
-              Request an Appointment
-            </BookServiceLink>
-          </div>
           <p className="font-body mx-auto mt-6 max-w-xl text-xs leading-relaxed text-taupe">
             Starting prices may vary based on coat condition, temperament,
             styling requirements and appointment time.
