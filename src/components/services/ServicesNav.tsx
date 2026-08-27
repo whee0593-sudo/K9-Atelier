@@ -9,13 +9,15 @@ const inactiveClass =
 const activeClass =
   "inline-flex min-h-[56px] w-full items-center justify-center rounded-sm border border-deep-lavender bg-deep-lavender px-3 py-3 text-center font-body text-[11px] font-medium uppercase leading-tight tracking-[0.12em] text-ivory transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne sm:min-h-[60px] sm:px-4 sm:text-[12px]";
 
+type NavHref = (typeof SERVICES_NAV)[number]["href"];
+
 export function ServicesNav() {
-  const [active, setActive] = useState(SERVICES_NAV[0].href);
+  const [active, setActive] = useState<NavHref>(SERVICES_NAV[0].href);
 
   useEffect(() => {
     const updateActive = () => {
       const offset = 200;
-      let current = SERVICES_NAV[0].href;
+      let current: NavHref = SERVICES_NAV[0].href;
       for (const item of SERVICES_NAV) {
         const el = document.getElementById(item.href.slice(1));
         if (!el) continue;
@@ -48,7 +50,7 @@ export function ServicesNav() {
               <li key={item.href}>
                 <a
                   href={item.href}
-                  aria-current={isActive ? "true" : undefined}
+                  aria-current={isActive ? "location" : undefined}
                   className={isActive ? activeClass : inactiveClass}
                   onClick={() => setActive(item.href)}
                 >
