@@ -43,7 +43,7 @@ export function ServiceCard({
   return (
     <article
       id={anchorId}
-      className={`scroll-mt-40 border border-gray-line/80 ${
+      className={`scroll-mt-[15rem] border border-gray-line/80 ${
         quiet ? "bg-ivory/70" : "bg-ivory"
       } p-6 md:p-8`}
     >

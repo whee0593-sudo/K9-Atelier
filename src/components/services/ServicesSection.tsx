@@ -31,8 +31,8 @@ export function ServicesSection({
   showRequestLink = true,
 }: Props) {
   return (
-    <section id={id} className={`scroll-mt-40 ${tones[tone]} py-14 md:py-16`}>
-      {extraId ? <div id={extraId} className="scroll-mt-40" /> : null}
+    <section id={id} className={`scroll-mt-[15rem] ${tones[tone]} py-14 md:py-16`}>
+      {extraId ? <div id={extraId} className="scroll-mt-[15rem]" /> : null}
       <Container>
         <header className="mx-auto max-w-2xl text-center">
           <Eyebrow>{eyebrow}</Eyebrow>

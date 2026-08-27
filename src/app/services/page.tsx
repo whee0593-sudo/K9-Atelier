@@ -108,7 +108,7 @@ export default function ServicesPage() {
         {spaIncludes.length > 0 && (
           <div
             id="spa-wellness"
-            className="mx-auto mb-8 max-w-3xl scroll-mt-40 border border-gray-line/80 bg-ivory/80 px-6 py-5"
+            className="mx-auto mb-8 max-w-3xl scroll-mt-[15rem] border border-gray-line/80 bg-ivory/80 px-6 py-5"
           >
             <p className="font-body text-[11px] font-medium uppercase tracking-[0.14em] text-taupe">
               All spa treatments include
