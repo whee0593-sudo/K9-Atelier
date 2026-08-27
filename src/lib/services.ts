@@ -53,6 +53,7 @@ export type BookableService = {
   categoryNote?: string;
   note?: string;
   requiresServiceId?: string;
+  membersOnly?: boolean;
   bookingPolicy?: BookingPolicy;
 };
 
@@ -133,6 +134,8 @@ export function allBookableServices(): BookableService[] {
         "requiresServiceId" in service
           ? (service.requiresServiceId as string | undefined)
           : undefined,
+      membersOnly:
+        "membersOnly" in service ? Boolean(service.membersOnly) : false,
       bookingPolicy:
         "bookingPolicy" in service
           ? (service.bookingPolicy as BookingPolicy)
@@ -320,9 +323,15 @@ export function getSeniorAddOnFee(weightLbs: number) {
   return tier?.priceFrom ?? null;
 }
 
-export function getBookableCategories() {
+export function getBookableCategories(
+  options: { includeMembersOnly?: boolean } = {},
+) {
   return groupServicesByCategory(
-    allBookableServices().filter((s) => s.bookableAsPrimary),
+    allBookableServices().filter((s) => {
+      if (!s.bookableAsPrimary) return false;
+      if (s.membersOnly && !options.includeMembersOnly) return false;
+      return true;
+    }),
   );
 }
 
@@ -484,11 +493,15 @@ export function getServicePriceEstimate(
   return null;
 }
 
-export function getBookableServicesForPet(weightLbs: number) {
-  return allBookableServices().filter(
-    (service) =>
-      service.bookableAsPrimary && isServiceAvailableForPet(service.id, weightLbs),
-  );
+export function getBookableServicesForPet(
+  weightLbs: number,
+  options: { includeMembersOnly?: boolean } = {},
+) {
+  return allBookableServices().filter((service) => {
+    if (!service.bookableAsPrimary) return false;
+    if (service.membersOnly && !options.includeMembersOnly) return false;
+    return isServiceAvailableForPet(service.id, weightLbs);
+  });
 }
 
 export function groupServicesByCategory(services: BookableService[]) {

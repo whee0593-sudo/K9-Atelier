@@ -4,11 +4,13 @@ import {
   coloringOptionDisplayNote,
   coloringOptionPriceLabel,
   getServiceById,
+  serviceCardAccessLabel,
   serviceCardPriceValue,
   serviceCardSummary,
   serviceDurationLabel,
   serviceStartingPriceLabel,
 } from "./service-page";
+import { getBookableServicesForPet } from "./services";
 
 describe("service page helpers", () => {
   it("keeps card summaries short", () => {
@@ -40,6 +42,23 @@ describe("service page helpers", () => {
     assert.equal(serviceCardPriceValue(hourly!), "$150 / hour");
     assert.equal(serviceCardPriceValue(complimentary!), "Complimentary");
     assert.equal(serviceDurationLabel(complimentary!), "By appointment only");
+    assert.equal(serviceCardAccessLabel(complimentary!), "Members only");
+    assert.equal(complimentary!.membersOnly, true);
+  });
+
+  it("keeps members-only end-of-life care off the public booking list", () => {
+    const publicList = getBookableServicesForPet(20);
+    const memberList = getBookableServicesForPet(20, {
+      includeMembersOnly: true,
+    });
+    assert.equal(
+      publicList.some((service) => service.id === "end-of-life-care"),
+      false,
+    );
+    assert.equal(
+      memberList.some((service) => service.id === "end-of-life-care"),
+      true,
+    );
   });
 
   it("keeps coloring option prices once, with section units when present", () => {

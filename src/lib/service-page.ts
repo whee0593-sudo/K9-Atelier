@@ -84,6 +84,7 @@ export const SERVICES_NAV = [
   { href: "#full-groom", label: "Full Groom" },
   { href: "#spa-rituals", label: "Spa Rituals" },
   { href: "#add-ons", label: "Add-Ons" },
+  { href: "#color-dye", label: "Color Dye" },
   { href: "#specialty-care", label: "Specialty Care" },
   { href: "#fees-policies", label: "Fees & Policies" },
 ] as const;
@@ -139,6 +140,11 @@ export function serviceStartingPriceLabel(service: BookableService) {
     return `From ${formatPrice(min)}`;
   }
   return "";
+}
+
+export function serviceCardAccessLabel(service: BookableService) {
+  if (service.membersOnly) return "Members only";
+  return null;
 }
 
 export function serviceDurationLabel(service: BookableService) {

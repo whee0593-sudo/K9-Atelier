@@ -5,6 +5,7 @@ import { Eyebrow } from "@/components/luxury/Eyebrow";
 
 type Props = {
   id: string;
+  extraId?: string;
   eyebrow: string;
   title: string;
   intro?: string;
@@ -21,6 +22,7 @@ const tones = {
 
 export function ServicesSection({
   id,
+  extraId,
   eyebrow,
   title,
   intro,
@@ -30,6 +32,7 @@ export function ServicesSection({
 }: Props) {
   return (
     <section id={id} className={`scroll-mt-40 ${tones[tone]} py-14 md:py-16`}>
+      {extraId ? <div id={extraId} className="scroll-mt-40" /> : null}
       <Container>
         <header className="mx-auto max-w-2xl text-center">
           <Eyebrow>{eyebrow}</Eyebrow>

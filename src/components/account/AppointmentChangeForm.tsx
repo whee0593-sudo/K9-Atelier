@@ -175,7 +175,9 @@ export function AppointmentChangeForm({
   );
   const selectedAddPet = addablePets.find((pet) => pet.id === addPetId) ?? null;
   const addServices = selectedAddPet
-    ? getBookableServicesForPet(selectedAddPet.weightLbs)
+    ? getBookableServicesForPet(selectedAddPet.weightLbs, {
+        includeMembersOnly: true,
+      })
     : allBookableServices();
 
   const feeTargets =

@@ -27,7 +27,10 @@ export function ServiceSelector({ pet, selected, onSelect }: Props) {
   const [seniorAddOn, setSeniorAddOn] = useState(false);
 
   const primaryServices = useMemo(
-    () => allBookableServices().filter((s) => s.bookableAsPrimary),
+    () =>
+      allBookableServices().filter(
+        (s) => s.bookableAsPrimary && !s.membersOnly,
+      ),
     [],
   );
   const categories = useMemo(

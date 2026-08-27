@@ -44,9 +44,9 @@ export function HomeGentleCare() {
             </h4>
             <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
               Compassionate, low-stress grooming support for dogs in their final
-              stage of life. Complimentary, by appointment only. Dogs over 45 lbs
-              may receive this service even when standard bath/full grooming
-              services are unavailable.
+              stage of life. Complimentary for members, by appointment only.
+              Dogs over 45 lbs may receive this service even when standard
+              bath/full grooming services are unavailable.
             </p>
           </div>
           <Link

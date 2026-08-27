@@ -520,6 +520,8 @@
           "pricingType": "free",
           "priceLabel": "Complimentary",
           "appointmentOnly": true,
+          "membersOnly": true,
+          "note": "Available to existing K9 Atelier members only, by appointment.",
           "availableOver45Lbs": true
         }
       ]

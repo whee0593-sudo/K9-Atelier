@@ -1,11 +1,13 @@
 "use client";
 
 import { useId, useState } from "react";
+import Link from "next/link";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { PriceTiers } from "@/components/services/PriceTiers";
 import { formatPrice } from "@/lib/business";
 import type { BookableService } from "@/lib/services";
 import {
+  serviceCardAccessLabel,
   serviceCardBestFor,
   serviceCardPriceValue,
   serviceCardSummary,
@@ -32,9 +34,11 @@ export function ServiceCard({
   const bestFor = serviceCardBestFor(service);
   const duration = serviceDurationLabel(service);
   const price = serviceCardPriceValue(service);
+  const access = serviceCardAccessLabel(service);
   const priceLabel =
     service.pricingType === "free" ? "Care" : "From";
   const detailsLabel = open ? "Hide Details" : "View Details";
+  const membersOnly = Boolean(service.membersOnly);
 
   return (
     <article
@@ -75,6 +79,14 @@ export function ServiceCard({
             <dd className="font-body mt-1 text-sm text-ink">{duration}</dd>
           </div>
         )}
+        {access && (
+          <div>
+            <dt className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-taupe">
+              Access
+            </dt>
+            <dd className="font-body mt-1 text-sm text-ink">{access}</dd>
+          </div>
+        )}
       </dl>
 
       <div className="mt-6 flex flex-wrap gap-3">
@@ -92,10 +104,18 @@ export function ServiceCard({
         >
           {detailsLabel}
         </button>
-        {!quiet && (
+        {!quiet && !membersOnly && (
           <BookServiceLink className="inline-flex min-h-[48px] items-center justify-center rounded-sm bg-deep-lavender px-5 text-[10px] font-medium uppercase tracking-[0.16em] text-ivory transition hover:bg-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne">
             {featured ? "Request This Service" : requestLabel}
           </BookServiceLink>
+        )}
+        {membersOnly && (
+          <Link
+            href="/login"
+            className="inline-flex min-h-[48px] items-center justify-center rounded-sm border border-gray-line bg-transparent px-5 text-[10px] font-medium uppercase tracking-[0.16em] text-ink transition hover:border-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne"
+          >
+            Member Sign In
+          </Link>
         )}
       </div>
 
@@ -174,7 +194,8 @@ function ServiceDetails({ service }: { service: BookableService }) {
 
       {service.pricingType === "free" && (
         <p className="font-body mt-4 text-sm text-ink">
-          Complimentary · By appointment only
+          Complimentary
+          {service.membersOnly ? " · Members only" : ""} · By appointment only
         </p>
       )}
 

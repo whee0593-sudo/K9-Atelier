@@ -145,8 +145,8 @@ export default function ServicesPage() {
 
       {coloring && (
         <ServicesSection
-          id="specialty-care"
-          eyebrow="Creative Accent Coloring"
+          id="color-dye"
+          eyebrow="Color Dye"
           title="A Playful, Pet-Safe Finish."
           intro={serviceCardSummary(coloring)}
           tone="white"
@@ -156,8 +156,9 @@ export default function ServicesPage() {
       )}
 
       <ServicesSection
-        id="gentle-care"
-        eyebrow="Gentle & End-of-Life Care"
+        id="specialty-care"
+        extraId="gentle-care"
+        eyebrow="Specialty Care"
         title="Comfort, Dignity, and Unhurried Time."
         intro="For dogs who need a slower pace — whether for age, recovery, or a quieter last chapter."
         tone="mist"

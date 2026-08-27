@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   formatServicePrice,
   getBookableServicesForPet,
@@ -14,6 +15,7 @@ import {
 } from "@/lib/service-display";
 import type { PetProfile } from "@/lib/pets";
 import { formatPrice } from "@/lib/business";
+import { createClient } from "@/lib/supabase/client";
 import {
   bookingBackLinkClass,
   bookingCardClass,
@@ -36,7 +38,17 @@ export function BookingExperienceStep({
   onContinue,
   onBack,
 }: Props) {
-  const services = getBookableServicesForPet(pet.weightLbs);
+  const [includeMembersOnly, setIncludeMembersOnly] = useState(false);
+  const services = getBookableServicesForPet(pet.weightLbs, {
+    includeMembersOnly,
+  });
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIncludeMembersOnly(Boolean(user));
+    });
+  }, []);
 
   return (
     <section>
