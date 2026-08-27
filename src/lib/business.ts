@@ -71,7 +71,9 @@ export function getBrandPublicLinks() {
 }
 
 export function formatPrice(amount: number) {
-  return `$${amount}`;
+  const rounded = Math.round(amount * 100) / 100;
+  if (Number.isInteger(rounded)) return `$${rounded}`;
+  return `$${rounded.toFixed(2)}`;
 }
 
 export function formatDuration(min: number, max?: number) {
