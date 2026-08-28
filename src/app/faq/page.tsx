@@ -1,26 +1,12 @@
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { LuxuryButton } from "@/components/luxury/LuxuryButton";
 import { PageShell } from "@/components/luxury/PageShell";
-import { business, getPaymentFaqParagraphs, getServiceAreaFaqParagraphs } from "@/lib/business";
 
 export const metadata = {
   title: "FAQ · K9 Atelier",
   description:
     "Frequently asked questions about K9 Atelier, a Private Mobile Pet Spa — appointments, service area, payment, cancellations, and care policies.",
 };
-
-function capitalize(value: string) {
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-function formatTime(value: string) {
-  const [hStr, mStr] = value.split(":");
-  const hour = Number(hStr);
-  const minute = mStr ?? "00";
-  const period = hour >= 12 ? "PM" : "AM";
-  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
-  return `${hour12}:${minute} ${period}`;
-}
 
 const faqGroups = [
   {
@@ -37,20 +23,64 @@ const faqGroups = [
   },
 ] as const;
 
+const cancellationPolicy = {
+  intro:
+    "Each appointment is reserved exclusively for your dog and includes dedicated travel, preparation, and service time. To help us provide every client with attentive, unrushed care, the following cancellation and rescheduling policy applies.",
+  sections: [
+    {
+      heading: "1. Cancellations & Rescheduling",
+      body: "We kindly request at least 48 hours’ notice when canceling or rescheduling an appointment. This allows us an opportunity to offer the reserved time to another client.",
+      table: {
+        columns: ["Notice Given", "Policy"],
+        rows: [
+          ["48 hours or more before the appointment", "No fee"],
+          [
+            "Between 24 and 48 hours before the appointment",
+            "50% of the scheduled service price",
+          ],
+          [
+            "Less than 24 hours, including same-day cancellation or rescheduling",
+            "100% of the scheduled service price",
+          ],
+        ],
+      },
+    },
+    {
+      heading: "2. No-Shows",
+      body: "If we arrive for your scheduled appointment and cannot reach you, access the property, or receive your dog within 15 minutes of the scheduled time, the appointment will be considered a no-show.\n\nThe full scheduled service price and any applicable travel fee will be charged to the payment method on file.",
+    },
+    {
+      heading: "3. Delayed Access at Appointment Time",
+      body: "Please ensure that you, your dog, and the reserved parking space are available at the scheduled appointment time.\n\nIf access is delayed by more than 15 minutes, we may need to shorten or reschedule the service to avoid affecting the next client. Applicable cancellation or rescheduling fees may apply.",
+    },
+    {
+      heading: "4. Illness or Emergencies",
+      body: "We understand that unexpected health concerns involving you or your dog may arise. Please contact us as soon as possible.\n\nGenuine emergencies will be reviewed with compassion on a case-by-case basis and may be exempt from standard cancellation fees.",
+    },
+    {
+      heading: "5. Payment Method on File",
+      body: "A valid payment method must remain on file and may be charged for applicable cancellation, rescheduling, or no-show fees.",
+    },
+    {
+      heading: "6. When a Service Cannot Be Completed",
+      body: "Your dog’s comfort and safety always come first. If we determine that a service cannot be safely completed because of stress, health concerns, severe matting, behavioral challenges, or an unexpected condition discovered during the appointment, we will pause the service and discuss the available options with you.\n\nCharges will reflect the time reserved, work performed, products used, and any necessary additional care. A minimum charge of 50% of the scheduled service price may apply, together with any previously disclosed travel fee. We will explain all applicable charges before proceeding whenever circumstances allow.\n\nAny remaining service may require a separate appointment. If we cannot begin or complete the service because of an issue on our side, you will not be charged, and the appointment will be rescheduled without penalty.",
+    },
+  ],
+  outro:
+    "Thank you for understanding. These policies allow us to protect the dedicated time and individualized care every dog on our schedule deserves—including yours.",
+};
+
+function FaqParagraphs({ paragraphs }: { paragraphs: string[] }) {
+  return (
+    <div className="space-y-4">
+      {paragraphs.map((paragraph) => (
+        <p key={paragraph}>{paragraph}</p>
+      ))}
+    </div>
+  );
+}
+
 export default function FaqPage() {
-  const { booking, weightPolicy } = business;
-
-  const days = booking.availableDays;
-  const daysLabel =
-    days.length > 1
-      ? `${capitalize(days[0])} – ${capitalize(days[days.length - 1])}`
-      : capitalize(days[0] ?? "");
-  const hoursLabel = `${formatTime(booking.hoursStart)} – ${formatTime(
-    booking.hoursEnd,
-  )}`;
-
-  const cancellationPolicy = booking.cancellationPolicy;
-
   const cancellationAnswer = (
     <div className="space-y-5">
       <p>{cancellationPolicy.intro}</p>
@@ -108,51 +138,91 @@ export default function FaqPage() {
   const faqs: Array<{ q: string; a: React.ReactNode }> = [
     {
       q: "How does mobile grooming work?",
-      a: "We bring a fully equipped, self-contained grooming salon directly to your home. Your dog is groomed one-on-one in a calm, cage-free environment — no drop-off, no waiting room and no long day away from home.",
+      a: "K9 Atelier brings a fully equipped, self-contained private grooming studio directly to your home. Your dog receives uninterrupted, one-on-one care in a calm, cage-free environment—with no car ride, waiting room, or extended stay away from home.",
     },
     {
-      q: "What area do you serve? Is there a travel fee?",
+      q: "What areas do you serve, and is there a travel fee?",
       a: (
-        <div className="space-y-4">
-          {getServiceAreaFaqParagraphs().map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
-          ))}
-        </div>
+        <FaqParagraphs
+          paragraphs={[
+            "K9 Atelier serves West Palm Beach, Palm Beach, Palm Beach Gardens, Jupiter, Jupiter Island, and Tequesta.",
+            "Travel is complimentary within 10 driving miles of our base location. For appointments beyond the complimentary service area, a travel fee of $6.50 applies to each one-way driving mile exceeding the 10-mile radius, calculated using GPS driving distance.",
+            "For example, if your location is 15 driving miles from our base, the travel fee is calculated on the 5 miles beyond the complimentary service area.",
+            "Appointments beyond 20 miles may be considered individually. Please contact us before booking to confirm availability and travel pricing.",
+          ]}
+        />
       ),
     },
     {
       q: "What are your hours, and how do I book?",
-      a: `Appointments are available ${daysLabel}, ${hoursLabel} Eastern, by appointment only. Weekend appointments may be available by request.`,
+      a: (
+        <FaqParagraphs
+          paragraphs={[
+            "Appointments are available Monday through Friday, from 9:00 AM to 4:00 PM Eastern Time. Limited weekend availability may be offered by request.",
+            "To begin, create your pet’s profile, select your preferred date and time from our appointment calendar, and upload your pet’s vaccination records. Once we have reviewed the submitted information, we will send you an email confirming your appointment.",
+            "Please note that selecting a date and time does not guarantee an appointment until you receive our confirmation email.",
+          ]}
+        />
+      ),
     },
     {
       q: "Do you groom dogs over 45 lbs?",
-      a: `Standard bathing, grooming and Spa services are designed for dogs up to ${weightPolicy.maxStandardWeightLbs} lbs. ${weightPolicy.over45Note}`,
+      a: (
+        <FaqParagraphs
+          paragraphs={[
+            "Our Standard Bathing, Grooming, and Spa Services are designed for dogs weighing up to 45 lbs.",
+            "For dogs over 45 lbs, availability is limited to select services, including Hand Stripping without a bath and End-of-Life Comfort Care. Please contact us before booking so we can determine whether we can safely accommodate your dog’s individual needs.",
+          ]}
+        />
+      ),
     },
     {
-      q: "Can I combine a Spa Ritual and Full Groom?",
-      a: "For your dog's comfort, Spa treatments are best scheduled separately from a full haircut/styling appointment.",
+      q: "Can I combine a Spa Ritual with a Full Groom?",
+      a: (
+        <FaqParagraphs
+          paragraphs={[
+            "To protect your dog’s comfort and prevent an overly long appointment, Spa Rituals are generally scheduled separately from a Full Groom.",
+            "If you are interested in both services, we will be happy to recommend the most comfortable treatment plan and schedule for your dog.",
+          ]}
+        />
+      ),
     },
     {
       q: "How does payment work?",
       a: (
-        <div className="space-y-4">
-          {getPaymentFaqParagraphs().map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
-          ))}
-        </div>
+        <FaqParagraphs
+          paragraphs={[
+            "A valid payment method is required to reserve an appointment. When booking, you will add or select the card you would like associated with that visit.",
+            "Your card is not charged at the time of booking. Payment is processed after the appointment is completed. Applicable cancellation, rescheduling, or no-show fees may be charged to the selected card in accordance with our policy.",
+          ]}
+        />
       ),
     },
     {
-      q: "What is your cancellation policy?",
+      q: "What is your cancellation and rescheduling policy?",
       a: cancellationAnswer,
     },
     {
       q: "How should I prepare for my appointment?",
-      a: "Give your dog an opportunity to potty before the appointment and share relevant health, coat, skin, allergy or anxiety information in advance.",
+      a: (
+        <FaqParagraphs
+          paragraphs={[
+            "Please give your dog an opportunity to relieve themselves before the appointment. Before we arrive, kindly share any relevant information regarding your dog’s health, skin and coat condition, allergies, sensitivities, or anxiety.",
+            "We also ask that you reserve a safe, accessible parking space for our mobile spa van. Please ensure that gates are unlocked and any community, security, or property access arrangements have been made before our arrival.",
+          ]}
+        />
+      ),
     },
     {
-      q: "Are grooming and color products pet-safe?",
-      a: "We use premium coat-appropriate products. Creative color products must be non-toxic and specifically intended for animal coats.",
+      q: "Are your grooming and creative color products pet-safe?",
+      a: (
+        <FaqParagraphs
+          paragraphs={[
+            "Yes. We use premium, professional products selected according to each dog’s coat, skin condition, and individual sensitivities.",
+            "All Creative Color products are non-toxic and specifically formulated for use on animals. Please let us know in advance if your dog has any known allergies, sensitivities, or previous reactions to grooming products.",
+          ]}
+        />
+      ),
     },
   ];
 
