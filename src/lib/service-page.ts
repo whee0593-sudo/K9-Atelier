@@ -83,9 +83,9 @@ export const SERVICES_NAV = [
   { href: "#bath-coat", label: "Bath & Coat" },
   { href: "#full-groom", label: "Full Groom" },
   { href: "#spa-rituals", label: "Spa Rituals" },
-  { href: "#add-ons", label: "Add-Ons" },
   { href: "#color-dye", label: "Color Dye" },
   { href: "#specialty-care", label: "Specialty Care" },
+  { href: "#add-ons", label: "Add-Ons" },
   { href: "#fees-policies", label: "Fees & Policies" },
 ] as const;
 

@@ -129,20 +129,6 @@ export default function ServicesPage() {
         </div>
       </ServicesSection>
 
-      <ServicesSection
-        id="add-ons"
-        eyebrow="Add-On Care"
-        title="Small Refinements, When Needed."
-        intro="Added to a bath, show-care, spa, or full grooming appointment as needed."
-        tone="ivory"
-      >
-        <div className="grid gap-6 lg:grid-cols-3">
-          {addOns.map((service) => (
-            <ServiceCard key={service.id} service={service} anchorId={service.id} />
-          ))}
-        </div>
-      </ServicesSection>
-
       {coloring && (
         <ServicesSection
           id="color-dye"
@@ -182,6 +168,20 @@ export default function ServicesPage() {
             Request an Appointment
           </BookServiceLink>
         </p>
+      </ServicesSection>
+
+      <ServicesSection
+        id="add-ons"
+        eyebrow="Add-On Care"
+        title="Small Refinements, When Needed."
+        intro="Added to a bath, show-care, spa, or full grooming appointment as needed."
+        tone="white"
+      >
+        <div className="grid gap-6 lg:grid-cols-3">
+          {addOns.map((service) => (
+            <ServiceCard key={service.id} service={service} anchorId={service.id} />
+          ))}
+        </div>
       </ServicesSection>
 
       <ServicesSection

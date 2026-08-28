@@ -1,11 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import type { User } from "@supabase/supabase-js";
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextResponse, type NextRequest } from "next/server";
 import {
   isRememberMeEnabled,
   REMEMBER_ME_COOKIE,
   withRememberMeCookieOptions,
 } from "@/lib/auth-remember";
+import { nextWithPathname } from "@/lib/request-path";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
 
 type SessionResult = {
@@ -16,7 +17,7 @@ type SessionResult = {
 export async function refreshSupabaseSession(
   request: NextRequest,
 ): Promise<SessionResult> {
-  let response = NextResponse.next({ request });
+  let response = nextWithPathname(request);
 
   const remember = isRememberMeEnabled(
     request.cookies.get(REMEMBER_ME_COOKIE)?.value,
@@ -31,7 +32,7 @@ export async function refreshSupabaseSession(
         cookiesToSet.forEach(({ name, value }) => {
           request.cookies.set(name, value);
         });
-        response = NextResponse.next({ request });
+        response = nextWithPathname(request);
         cookiesToSet.forEach(({ name, value, options }) => {
           response.cookies.set(
             name,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import business from "../content/business.json";
+import { nextWithPathname } from "@/lib/request-path";
 import {
   isPrivacyGateActive,
   isValidSiteAccessCookie,
@@ -86,16 +87,16 @@ export async function middleware(request: NextRequest) {
   const privacyMode = isPrivacyGateActive(business.site?.privacyMode === true);
 
   if (!privacyMode) {
-    return NextResponse.next();
+    return nextWithPathname(request);
   }
 
   const accessCookie = request.cookies.get("k9-site-access")?.value;
   if (await isValidSiteAccessCookie(accessCookie)) {
-    return NextResponse.next();
+    return nextWithPathname(request);
   }
 
   if (isPublicPath(pathname)) {
-    return NextResponse.next();
+    return nextWithPathname(request);
   }
 
   const url = request.nextUrl.clone();

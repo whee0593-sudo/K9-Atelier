@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { calculateTravelFee } from "@/lib/travel";
 import { drivingDistanceMiles, geocodeAddress } from "@/lib/geo";
+import { enforceIpRateLimit } from "@/lib/rate-limit";
 import { getBaseAddressFormatted } from "@/lib/server/base-address";
 
 export async function POST(request: Request) {
+  const limited = enforceIpRateLimit(request, "travelFee");
+  if (limited) return limited;
+
   try {
     const body = (await request.json()) as {
       street?: string;

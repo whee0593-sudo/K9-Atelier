@@ -98,10 +98,12 @@ export function PetScalarFields({
   const noteClass = fieldNoteClass(variant);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [addLater, setAddLater] = useState(false);
 
   async function handleVaccinationFileChange(file: File | null) {
     if (!file || !onVaccinationUpload) return;
     setUploadError(null);
+    setAddLater(false);
     try {
       await onVaccinationUpload(file);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -132,6 +134,15 @@ export function PetScalarFields({
 
         if (field.type === "file") {
           const uploaded = pet.vaccineRecordUploaded;
+          const canUpload =
+            petPersisted && !vaccinationUploading && Boolean(onVaccinationUpload);
+          const addLaterClass = addLater
+            ? variant === "booking"
+              ? "inline-flex min-h-[36px] items-center justify-center rounded-sm border border-deep-lavender bg-dusty-lavender/30 px-3 py-2 text-[10px] font-medium uppercase tracking-[0.14em] text-ink"
+              : "inline-flex items-center justify-center rounded-lg border border-gold bg-lavender-light/60 px-3 py-2 text-xs font-medium text-gold-dark"
+            : variant === "booking"
+              ? "inline-flex min-h-[36px] items-center justify-center rounded-sm border border-champagne bg-transparent px-3 py-2 text-[10px] font-medium uppercase tracking-[0.14em] text-ink transition hover:border-ink"
+              : "inline-flex items-center justify-center rounded-lg border border-lavender/60 bg-cream px-3 py-2 text-xs font-medium text-gold-dark transition hover:border-gold/70";
           return (
             <div key={field.id}>
               <label className={labelClass}>
@@ -154,28 +165,48 @@ export function PetScalarFields({
                       " — please upload a new record"}
                     .
                   </p>
+                ) : addLater ? (
+                  <p className="text-sm text-text-muted">
+                    You can add this later. A current record is required before
+                    booking.
+                  </p>
                 ) : !petPersisted ? (
                   <p className="text-sm text-text-muted">
-                    Save this pet profile before uploading a vaccination record.
+                    Save this pet profile to upload now, or add the record later.
                   </p>
                 ) : (
                   <p className="text-sm text-text-muted">
                     Upload a current rabies or vaccination certificate.
                   </p>
                 )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept={field.accept ?? ".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif"}
-                  disabled={
-                    !petPersisted || vaccinationUploading || !onVaccinationUpload
-                  }
-                  onChange={(event) => {
-                    const file = event.target.files?.[0] ?? null;
-                    void handleVaccinationFileChange(file);
-                  }}
-                  className="mt-3 w-full text-xs text-text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-gold file:px-3 file:py-2 file:text-xs file:font-medium file:text-white disabled:opacity-60"
-                />
+                {!uploaded && (
+                  <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept={
+                        field.accept ?? ".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif"
+                      }
+                      disabled={!canUpload}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0] ?? null;
+                        void handleVaccinationFileChange(file);
+                      }}
+                      className="max-w-full text-xs text-text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-gold file:px-3 file:py-2 file:text-xs file:font-medium file:text-white disabled:opacity-60"
+                    />
+                    <button
+                      type="button"
+                      disabled={vaccinationUploading}
+                      onClick={() => {
+                        setUploadError(null);
+                        setAddLater((current) => !current);
+                      }}
+                      className={addLaterClass}
+                    >
+                      Add later
+                    </button>
+                  </div>
+                )}
                 {vaccinationUploading && (
                   <p className="mt-2 text-xs text-text-muted">Uploading…</p>
                 )}

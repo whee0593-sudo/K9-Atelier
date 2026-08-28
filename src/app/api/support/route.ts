@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { business } from "@/lib/business";
+import { enforceIpRateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import {
   isValidContact,
@@ -79,6 +80,9 @@ function emptyFields(): SupportFields {
 }
 
 export async function POST(request: Request) {
+  const limited = enforceIpRateLimit(request, "support");
+  if (limited) return limited;
+
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) {
     return NextResponse.json(

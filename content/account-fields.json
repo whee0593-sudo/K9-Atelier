@@ -221,7 +221,7 @@
           "label": "Vaccination Records",
           "type": "section-heading",
           "required": false,
-          "note": "Required for each pet before booking."
+          "note": "Required before booking. You may add the record later."
         },
         {
           "id": "vaccineExpiration",
@@ -234,9 +234,9 @@
           "id": "vaccineRecord",
           "label": "Upload Vaccination Record",
           "type": "file",
-          "required": true,
+          "required": false,
           "accept": ".pdf,.jpg,.jpeg,.png,.webp,.heic",
-          "note": "Required. Upload a current rabies or vaccination certificate. Accepted formats: PDF, JPG, PNG, WEBP, HEIC. Max 4 MB."
+          "note": "Upload a current rabies or vaccination certificate, or choose Add later. Needed before booking. Accepted formats: PDF, JPG, PNG, WEBP, HEIC. Max 4 MB."
         }
       ]
     },

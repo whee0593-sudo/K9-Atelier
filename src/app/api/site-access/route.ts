@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { enforceIpRateLimit } from "@/lib/rate-limit";
 import {
   computeSiteAccessToken,
   getSiteAccessPassword,
@@ -13,6 +14,9 @@ function cookieOptions() {
 }
 
 export async function POST(request: Request) {
+  const limited = enforceIpRateLimit(request, "siteAccess");
+  if (limited) return limited;
+
   const password = getSiteAccessPassword();
   if (!password) {
     return NextResponse.json(
