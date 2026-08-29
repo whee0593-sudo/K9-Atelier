@@ -33,7 +33,7 @@ export function LocalBusinessJsonLd() {
     image: `${brand.website}${brand.logo}`,
     email: brand.email,
     telephone: e164Phone(),
-    priceRange: "$$",
+    priceRange: "$90–$350+",
     address: {
       "@type": "PostalAddress",
       addressLocality: serviceArea.publicLocality,
