@@ -22,10 +22,10 @@ export function HomeBookingCta() {
             Request an Appointment
           </BookServiceLink>
           <Link
-            href="/contact"
+            href="/contact?inquiry=grooming-consultation"
             className="inline-flex min-h-[52px] items-center justify-center rounded-sm border border-champagne px-8 text-[11px] font-medium uppercase tracking-[0.16em] text-ink transition hover:border-ink"
           >
-            Email the Atelier
+            Request a Consultation
           </Link>
         </div>
       </Container>

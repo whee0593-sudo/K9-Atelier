@@ -3,6 +3,8 @@ import { business } from "@/lib/business";
 import { enforceIpRateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import {
+  inquiryTypeFromQuery,
+  inquiryTypeLabel,
   isValidContact,
   isValidEmail,
   normalizeContact,
@@ -14,6 +16,8 @@ type SupportFields = {
   message: string;
   topic: string;
   subject: string;
+  inquiryType: string;
+  groomingPreferences: string;
   appointmentId?: string;
   chargeId?: string;
 };
@@ -48,6 +52,8 @@ async function readSupportFields(request: Request): Promise<{
         message: readText(form.get("message")),
         topic: readText(form.get("topic")),
         subject: readText(form.get("subject")),
+        inquiryType: readText(form.get("inquiryType")),
+        groomingPreferences: readText(form.get("groomingPreferences")),
         appointmentId: readText(form.get("appointmentId")) || undefined,
         chargeId: readText(form.get("chargeId")) || undefined,
       },
@@ -67,6 +73,11 @@ async function readSupportFields(request: Request): Promise<{
       message: typeof body.message === "string" ? body.message : "",
       topic: typeof body.topic === "string" ? body.topic : "",
       subject: typeof body.subject === "string" ? body.subject : "",
+      inquiryType: typeof body.inquiryType === "string" ? body.inquiryType : "",
+      groomingPreferences:
+        typeof body.groomingPreferences === "string"
+          ? body.groomingPreferences
+          : "",
       appointmentId:
         typeof body.appointmentId === "string" ? body.appointmentId : undefined,
       chargeId: typeof body.chargeId === "string" ? body.chargeId : undefined,
@@ -76,23 +87,19 @@ async function readSupportFields(request: Request): Promise<{
 }
 
 function emptyFields(): SupportFields {
-  return { contact: "", message: "", topic: "", subject: "" };
+  return {
+    contact: "",
+    message: "",
+    topic: "",
+    subject: "",
+    inquiryType: "",
+    groomingPreferences: "",
+  };
 }
 
 export async function POST(request: Request) {
   const limited = enforceIpRateLimit(request, "support");
   if (limited) return limited;
-
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  if (!apiKey) {
-    return NextResponse.json(
-      {
-        error:
-          "Support email is not configured yet. Please email us directly at penny@k9atelier.com.",
-      },
-      { status: 503 },
-    );
-  }
 
   const parsed = await readSupportFields(request);
   if (parsed.error) {
@@ -101,7 +108,12 @@ export async function POST(request: Request) {
 
   const contact = normalizeContact(parsed.fields.contact);
   const message = parsed.fields.message.trim();
-  const guestSubject = parsed.fields.subject.trim();
+  const inquiryType = inquiryTypeFromQuery(parsed.fields.inquiryType);
+  const inquiryLabel = inquiryTypeLabel(inquiryType);
+  const groomingPreferences = parsed.fields.groomingPreferences.trim();
+  const guestSubject =
+    parsed.fields.subject.trim() ||
+    (inquiryType === "grooming-consultation" ? inquiryLabel : "");
   const isConcern = parsed.fields.topic === "concern";
   const appointmentId = safeRef(parsed.fields.appointmentId);
   const chargeId = safeRef(parsed.fields.chargeId);
@@ -141,6 +153,27 @@ export async function POST(request: Request) {
     );
   }
 
+  if (groomingPreferences.length > 2000) {
+    return NextResponse.json(
+      {
+        error:
+          "Grooming preferences are too long. Please keep them under 2,000 characters.",
+      },
+      { status: 400 },
+    );
+  }
+
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) {
+    return NextResponse.json(
+      {
+        error:
+          "Support email is not configured yet. Please try again later.",
+      },
+      { status: 503 },
+    );
+  }
+
   let customerAccountId: string | null = null;
   try {
     const supabase = await createClient();
@@ -166,7 +199,11 @@ export async function POST(request: Request) {
       : "New message from k9atelier.com/contact",
     "",
     `${contactLabel}: ${contact}`,
+    `Inquiry type: ${inquiryLabel}`,
     guestSubject ? `Subject: ${guestSubject}` : "",
+    groomingPreferences
+      ? `Grooming preferences & coat goals:\n${groomingPreferences}`
+      : "",
     customerAccountId ? `Customer account: ${customerAccountId}` : "",
     appointmentId ? `Related appointment: ${appointmentId}` : "",
     chargeId ? `Related receipt: ${chargeId}` : "",
@@ -215,7 +252,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "We could not send your message right now. Please try again or email us at penny@k9atelier.com.",
+          "We could not send your message right now. Please try again in a few minutes.",
       },
       { status: 502 },
     );

@@ -11,9 +11,9 @@ export const metadata = {
 export default async function ContactPage({
   searchParams,
 }: {
-  searchParams: Promise<{ topic?: string }>;
+  searchParams: Promise<{ topic?: string; inquiry?: string }>;
 }) {
-  const { topic } = await searchParams;
+  const { topic, inquiry } = await searchParams;
   if (topic === "concern") {
     return (
       <PageShell
@@ -41,7 +41,7 @@ export default async function ContactPage({
       intro="Questions about your dog's grooming needs or the K9 Atelier experience? Leave a message and we will get back to you."
     >
       <div className="mx-auto max-w-xl">
-        <ContactBoardForm />
+        <ContactBoardForm initialInquiry={inquiry} />
       </div>
     </PageShell>
   );

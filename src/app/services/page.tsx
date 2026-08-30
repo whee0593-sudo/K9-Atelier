@@ -2,6 +2,7 @@ import { CreativeColoringSection } from "@/components/services/CreativeColoringS
 import { FeesPoliciesSection } from "@/components/services/FeesPoliciesSection";
 import { MobileBookBar } from "@/components/services/MobileBookBar";
 import { ServiceCard } from "@/components/services/ServiceCard";
+import { ConsultationPrompt } from "@/components/services/ConsultationPrompt";
 import { ServicesHero } from "@/components/services/ServicesHero";
 import { ServicesNav } from "@/components/services/ServicesNav";
 import { ServicesSection } from "@/components/services/ServicesSection";
@@ -38,6 +39,7 @@ export default function ServicesPage() {
   return (
     <div className="pb-24 md:pb-0">
       <ServicesHero />
+      <ConsultationPrompt />
       <ServicesNav />
 
       <ServicesSection

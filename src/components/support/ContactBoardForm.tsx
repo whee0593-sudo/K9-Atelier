@@ -6,7 +6,16 @@ import {
   bookingLabelClass,
   bookingPrimaryBtnClass,
 } from "@/components/booking/booking-ui";
-import { isValidContact, MAX_SUPPORT_PHOTOS } from "@/lib/support-contact";
+import {
+  CONTACT_INQUIRY_CONSULTATION,
+  CONTACT_INQUIRY_TYPES,
+  MAX_SUPPORT_PHOTO_BYTES,
+  MAX_SUPPORT_PHOTOS,
+  SUPPORT_PHOTO_ACCEPT,
+  inquiryTypeFromQuery,
+  isAllowedSupportPhoto,
+  isValidContact,
+} from "@/lib/support-contact";
 
 type PhotoDraft = {
   id: string;
@@ -18,10 +27,18 @@ function inputClass() {
   return `${bookingFieldClass} font-body`;
 }
 
-export function ContactBoardForm() {
+export function ContactBoardForm({
+  initialInquiry,
+}: {
+  initialInquiry?: string;
+}) {
+  const [inquiryType, setInquiryType] = useState(
+    inquiryTypeFromQuery(initialInquiry),
+  );
   const [contact, setContact] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+  const [groomingPreferences, setGroomingPreferences] = useState("");
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -29,6 +46,11 @@ export function ContactBoardForm() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photosRef = useRef(photos);
   photosRef.current = photos;
+  const isConsultation = inquiryType === CONTACT_INQUIRY_CONSULTATION;
+
+  useEffect(() => {
+    setInquiryType(inquiryTypeFromQuery(initialInquiry));
+  }, [initialInquiry]);
 
   useEffect(() => {
     return () => {
@@ -54,11 +76,26 @@ export function ContactBoardForm() {
       setError(`You can upload up to ${MAX_SUPPORT_PHOTOS} photos.`);
       return;
     }
-    const accepted = incoming.slice(0, remaining).map((file) => ({
-      id: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
-      file,
-      previewUrl: URL.createObjectURL(file),
-    }));
+
+    const accepted: PhotoDraft[] = [];
+    for (const file of incoming.slice(0, remaining)) {
+      if (!isAllowedSupportPhoto(file)) {
+        setError("Photos must be JPG, JPEG, PNG, or WEBP.");
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+      if (file.size > MAX_SUPPORT_PHOTO_BYTES) {
+        setError("Each photo must be 4 MB or smaller.");
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+      accepted.push({
+        id: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
+        file,
+        previewUrl: URL.createObjectURL(file),
+      });
+    }
+
     replacePhotos([...photos, ...accepted]);
     if (incoming.length > remaining) {
       setError(`You can upload up to ${MAX_SUPPORT_PHOTOS} photos.`);
@@ -82,7 +119,10 @@ export function ContactBoardForm() {
       setError("Please enter a valid email address or phone number.");
       return;
     }
-    if (!subject.trim()) {
+    const resolvedSubject = isConsultation
+      ? "Grooming Consultation"
+      : subject.trim();
+    if (!resolvedSubject) {
       setError("Please enter a subject.");
       return;
     }
@@ -95,8 +135,12 @@ export function ContactBoardForm() {
     try {
       const body = new FormData();
       body.set("contact", contact.trim());
-      body.set("subject", subject.trim());
+      body.set("subject", resolvedSubject);
+      body.set("inquiryType", inquiryType);
       body.set("message", message.trim());
+      if (isConsultation && groomingPreferences.trim()) {
+        body.set("groomingPreferences", groomingPreferences.trim());
+      }
       for (const photo of photos) {
         body.append("photos", photo.file);
       }
@@ -114,6 +158,7 @@ export function ContactBoardForm() {
       setSuccess(true);
       setContact("");
       setSubject("");
+      setGroomingPreferences("");
       setMessage("");
       replacePhotos([]);
     } catch {
@@ -137,6 +182,44 @@ export function ContactBoardForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-8 text-left">
       <div>
+        <label htmlFor="board-inquiry" className={bookingLabelClass}>
+          Inquiry Type
+          <span className="text-champagne"> *</span>
+        </label>
+        <select
+          id="board-inquiry"
+          value={inquiryType}
+          onChange={(event) => {
+            setInquiryType(inquiryTypeFromQuery(event.target.value));
+            setError(null);
+          }}
+          className={inputClass()}
+        >
+          {CONTACT_INQUIRY_TYPES.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {isConsultation ? (
+        <div className="border border-gray-line/80 bg-dusty-lavender/20 px-5 py-5 md:px-6">
+          <p className="font-body text-sm leading-relaxed text-ink">
+            To help me understand your dog’s coat and grooming needs, please
+            include:
+          </p>
+          <ul className="font-body mt-3 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-taupe">
+            <li>A clear, front-facing photo of your dog’s face</li>
+            <li>A full-body photo taken from the side</li>
+            <li>Clear close-up photos showing the coat’s current condition</li>
+            <li>Your grooming preferences or concerns</li>
+            <li>The coat length you would like to maintain between appointments</li>
+          </ul>
+        </div>
+      ) : null}
+
+      <div>
         <label htmlFor="board-contact" className={bookingLabelClass}>
           Email or phone number
           <span className="text-champagne"> *</span>
@@ -158,24 +241,45 @@ export function ContactBoardForm() {
         />
       </div>
 
-      <div>
-        <label htmlFor="board-subject" className={bookingLabelClass}>
-          Subject
-          <span className="text-champagne"> *</span>
-        </label>
-        <input
-          id="board-subject"
-          type="text"
-          maxLength={120}
-          value={subject}
-          onChange={(event) => {
-            setSubject(event.target.value);
-            setError(null);
-          }}
-          placeholder="How can we help?"
-          className={inputClass()}
-        />
-      </div>
+      {isConsultation ? null : (
+        <div>
+          <label htmlFor="board-subject" className={bookingLabelClass}>
+            Subject
+            <span className="text-champagne"> *</span>
+          </label>
+          <input
+            id="board-subject"
+            type="text"
+            maxLength={120}
+            value={subject}
+            onChange={(event) => {
+              setSubject(event.target.value);
+              setError(null);
+            }}
+            placeholder="How can we help?"
+            className={inputClass()}
+          />
+        </div>
+      )}
+
+      {isConsultation ? (
+        <div>
+          <label htmlFor="board-preferences" className={bookingLabelClass}>
+            Grooming Preferences &amp; Coat Goals
+          </label>
+          <textarea
+            id="board-preferences"
+            rows={5}
+            value={groomingPreferences}
+            onChange={(event) => {
+              setGroomingPreferences(event.target.value);
+              setError(null);
+            }}
+            placeholder="Tell me about your preferred style, any coat or skin concerns, and the coat length you would like to maintain."
+            className={`${inputClass()} min-h-[8rem] py-4 resize-y`}
+          />
+        </div>
+      ) : null}
 
       <div>
         <label htmlFor="board-message" className={bookingLabelClass}>
@@ -184,26 +288,32 @@ export function ContactBoardForm() {
         </label>
         <textarea
           id="board-message"
-          rows={10}
+          rows={isConsultation ? 6 : 10}
           value={message}
           onChange={(event) => {
             setMessage(event.target.value);
             setError(null);
           }}
-          placeholder="Write your note here."
-          className={`${inputClass()} min-h-[12rem] py-4 resize-y`}
+          placeholder={
+            isConsultation
+              ? "Share your dog’s name, breed, and anything else I should know."
+              : "Write your note here."
+          }
+          className={`${inputClass()} min-h-[10rem] py-4 resize-y`}
         />
       </div>
 
       <div>
-        <p className={bookingLabelClass}>Photos</p>
+        <p className={bookingLabelClass}>Upload Photos</p>
         <p className="font-body mt-1 text-xs text-taupe">
-          Optional · up to {MAX_SUPPORT_PHOTOS} photos · JPG, PNG, WEBP, or HEIC
-          · 4 MB each
+          {isConsultation
+            ? "Please upload clear front-facing, side-profile, and close-up coat photos."
+            : "Optional photos to help us understand your question."}{" "}
+          Up to {MAX_SUPPORT_PHOTOS} photos · JPG, JPEG, PNG, or WEBP · 4 MB each
         </p>
         <div className="mt-3 rounded-sm border border-dashed border-gray-line bg-ivory px-4 py-5">
           {photos.length > 0 ? (
-            <ul className="mb-4 grid grid-cols-3 gap-3">
+            <ul className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {photos.map((photo) => (
                 <li key={photo.id} className="relative">
                   <img
@@ -211,6 +321,9 @@ export function ContactBoardForm() {
                     alt={photo.file.name}
                     className="h-24 w-full rounded-sm object-cover"
                   />
+                  <p className="font-body mt-1 truncate text-[11px] text-taupe">
+                    {photo.file.name}
+                  </p>
                   <button
                     type="button"
                     onClick={() => removePhoto(photo.id)}
@@ -223,14 +336,14 @@ export function ContactBoardForm() {
             </ul>
           ) : null}
           {photos.length < MAX_SUPPORT_PHOTOS ? (
-            <label className="font-body block cursor-pointer text-center text-sm text-taupe">
+            <label className="font-body block min-h-11 cursor-pointer text-center text-sm text-taupe">
               <span className="underline decoration-champagne/70 underline-offset-4 hover:text-deep-lavender">
                 {photos.length === 0 ? "Add photos" : "Add another photo"}
               </span>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif"
+                accept={SUPPORT_PHOTO_ACCEPT}
                 multiple
                 className="sr-only"
                 onChange={(event) => handlePhotosSelected(event.target.files)}

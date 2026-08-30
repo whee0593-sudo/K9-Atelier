@@ -40,7 +40,7 @@ export async function parseSupportPhotos(
     if (!mime || mime === "application/pdf") {
       return {
         photos: [],
-        error: "Photos must be JPG, PNG, WEBP, or HEIC.",
+        error: "Photos must be JPG, JPEG, PNG, or WEBP.",
       };
     }
     photos.push({
