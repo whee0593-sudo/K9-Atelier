@@ -9,7 +9,10 @@ import {
   listUnknownStudioCallers,
   sendStudioIntroSms,
 } from "@/lib/sms/studio-callers";
-import { buildStudioIntroSms } from "@/lib/sms/staff-compose-copy";
+import {
+  buildStudioIntroSms,
+  buildStudioKnownCallerSms,
+} from "@/lib/sms/staff-compose-copy";
 
 export const runtime = "nodejs";
 
@@ -25,6 +28,10 @@ export async function GET() {
     inbox: "inbox" in inbox ? inbox.inbox : [],
     unknownCallers: "callers" in callers ? callers.callers : [],
     introPreview: buildStudioIntroSms(),
+    knownCallerPreview: buildStudioKnownCallerSms({
+      firstName: "Jane",
+      petNames: ["Bella"],
+    }),
   });
 }
 

@@ -1,6 +1,7 @@
 import type { StaffSmsInboxItem } from "@/lib/sms/inbox-copy";
 import {
   buildStudioIntroSms,
+  buildStudioKnownCallerSms,
   staffRecipientSortKey,
   type StaffSmsRecipient,
   type StudioUnknownCaller,
@@ -76,6 +77,12 @@ const previewUnknownCallers: StudioUnknownCaller[] = [
     calledAt: "2026-08-22T13:40:00.000Z",
     introSentAt: null,
   },
+  {
+    phone: "+15615550188",
+    calledAt: "2026-08-22T13:20:00.000Z",
+    introSentAt: "2026-08-22T13:20:05.000Z",
+    label: "Bella · Maya",
+  },
 ];
 
 export function buildPreviewStaffMessages() {
@@ -86,5 +93,9 @@ export function buildPreviewStaffMessages() {
     inbox: previewInbox,
     unknownCallers: previewUnknownCallers,
     introPreview: buildStudioIntroSms(),
+    knownCallerPreview: buildStudioKnownCallerSms({
+      firstName: "Jane",
+      petNames: ["Bella"],
+    }),
   };
 }

@@ -23,6 +23,7 @@ export function AdminMessageComposer({
   const [inbox, setInbox] = useState<StaffSmsInboxItem[]>([]);
   const [unknownCallers, setUnknownCallers] = useState<StudioUnknownCaller[]>([]);
   const [introPreview, setIntroPreview] = useState("");
+  const [knownCallerPreview, setKnownCallerPreview] = useState("");
   const [introPhone, setIntroPhone] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [search, setSearch] = useState("");
@@ -40,6 +41,7 @@ export function AdminMessageComposer({
       setInbox(sample.inbox);
       setUnknownCallers(sample.unknownCallers);
       setIntroPreview(sample.introPreview);
+      setKnownCallerPreview(sample.knownCallerPreview);
       if (!keepCustomer) {
         const first = sample.recipients.find((item) => item.canText);
         if (first) {
@@ -57,6 +59,7 @@ export function AdminMessageComposer({
       inbox?: StaffSmsInboxItem[];
       unknownCallers?: StudioUnknownCaller[];
       introPreview?: string;
+      knownCallerPreview?: string;
       error?: string;
     };
     if (!response.ok) {
@@ -67,6 +70,7 @@ export function AdminMessageComposer({
     setInbox(body.inbox ?? []);
     setUnknownCallers(body.unknownCallers ?? []);
     if (body.introPreview) setIntroPreview(body.introPreview);
+    if (body.knownCallerPreview) setKnownCallerPreview(body.knownCallerPreview);
     if (!keepCustomer) {
       const first = list.find((item) => item.canText);
       if (first) {
@@ -191,13 +195,13 @@ export function AdminMessageComposer({
       });
       const body = (await response.json()) as { error?: string };
       if (!response.ok) {
-        setError(body.error ?? "Could not send the website text.");
+        setError(body.error ?? "Could not send the missed-call text.");
         return;
       }
       setIntroPhone("");
       await load();
     } catch {
-      setError("Could not send the website text.");
+      setError("Could not send the missed-call text.");
     } finally {
       setSendingIntro(null);
     }
@@ -206,10 +210,11 @@ export function AdminMessageComposer({
   return (
     <div className="space-y-8">
       <section className="rounded-2xl border border-lavender/30 bg-cream p-6">
-        <h3 className="font-medium text-gold-dark">Unknown callers</h3>
+        <h3 className="font-medium text-gold-dark">Recent callers</h3>
         <p className="mt-1 text-sm text-text-muted">
-          Send the website, booking link, and contact form to a number that
-          called the studio.
+          Texts send automatically when a call is missed. Unknown numbers get
+          the website and booking links. Known guests get a shorter
+          reply-and-book text. You can still resend or type a number.
         </p>
         <form
           className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end"
@@ -238,13 +243,32 @@ export function AdminMessageComposer({
           >
             {sendingIntro === introPhone.trim()
               ? "Sending…"
-              : "Send website text"}
+              : "Send missed-call text"}
           </button>
         </form>
-        {introPreview ? (
-          <p className="mt-4 whitespace-pre-wrap text-xs text-text-muted">
-            {introPreview}
-          </p>
+        {introPreview || knownCallerPreview ? (
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {introPreview ? (
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.12em] text-text-muted">
+                  Unknown caller
+                </p>
+                <p className="mt-2 whitespace-pre-wrap text-xs text-text-muted">
+                  {introPreview}
+                </p>
+              </div>
+            ) : null}
+            {knownCallerPreview ? (
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.12em] text-text-muted">
+                  Known guest
+                </p>
+                <p className="mt-2 whitespace-pre-wrap text-xs text-text-muted">
+                  {knownCallerPreview}
+                </p>
+              </div>
+            ) : null}
+          </div>
         ) : null}
         {error ? (
           <p className="mt-3 text-sm text-red-700" role="alert">
@@ -253,7 +277,7 @@ export function AdminMessageComposer({
         ) : null}
         {unknownCallers.length === 0 ? (
           <p className="mt-4 text-sm text-text-muted">
-            Unknown numbers that call the studio will appear here.
+            Numbers that call the studio will appear here.
           </p>
         ) : (
           <ul className="mt-5 space-y-3">
@@ -267,11 +291,14 @@ export function AdminMessageComposer({
                     href={`tel:${caller.phone}`}
                     className="font-medium text-text underline-offset-2 hover:underline"
                   >
-                    {caller.phone}
+                    {caller.label || caller.phone}
                   </a>
+                  {caller.label ? (
+                    <p className="mt-1 text-xs text-text-muted">{caller.phone}</p>
+                  ) : null}
                   <p className="mt-1 text-xs text-text-muted">
                     Called {new Date(caller.calledAt).toLocaleString()}
-                    {caller.introSentAt ? " · website text sent" : ""}
+                    {caller.introSentAt ? " · text sent" : ""}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -288,7 +315,7 @@ export function AdminMessageComposer({
                   >
                     {sendingIntro === caller.phone
                       ? "Sending…"
-                      : "Send website text"}
+                      : "Send text"}
                   </button>
                 </div>
               </li>

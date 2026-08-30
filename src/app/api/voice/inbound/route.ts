@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { siteUrl } from "@/lib/email/resend";
 import { lookupCustomerByPhone } from "@/lib/sms/customer-by-phone";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
 import { isValidTwilioSignature } from "@/lib/sms/twilio-signature";
@@ -87,5 +88,12 @@ export async function POST(request: Request) {
     console.error("incoming call SMS failed:", error);
   });
 
-  return twiml(buildForwardCallTwiml(staffPhone, whisperUrl, studioCallerId));
+  return twiml(
+    buildForwardCallTwiml(
+      staffPhone,
+      whisperUrl,
+      studioCallerId,
+      siteUrl("/api/voice/dial-status"),
+    ),
+  );
 }

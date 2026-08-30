@@ -8,9 +8,10 @@ export default function AdminMessagesPage() {
         Contact Customer
       </h2>
       <p className="mt-2 text-sm text-text-muted">
-        Send a text from the studio number. Unknown callers appear here so you
-        can call back or send the booking and contact links. Replies are
-        forwarded to your phone.
+        Send a text from the studio number. If a studio call is missed, a text
+        goes out automatically: unknown numbers get the website links, known
+        guests get a shorter reply-and-book text. Replies are forwarded to your
+        phone.
       </p>
       <p className="mt-2">
         <Link

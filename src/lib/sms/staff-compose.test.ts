@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   buildStaffCustomerSms,
+  buildStudioCallerSms,
   buildStudioIntroSms,
+  buildStudioKnownCallerSms,
   formatStaffRecipientLabel,
   matchesStaffRecipientSearch,
   staffRecipientSortKey,
@@ -61,6 +63,42 @@ describe("staff customer SMS", () => {
         "",
         "Reply STOP to opt out.",
       ].join("\n"),
+    );
+    assert.equal(buildStudioCallerSms(null), body);
+  });
+
+  it("greets a known guest by name and skips the inquiry form", () => {
+    const body = buildStudioKnownCallerSms({
+      firstName: "Jane",
+      petNames: ["Bella"],
+    });
+    assert.equal(
+      body,
+      [
+        "K9 ATELIER: Hi Jane — thank you for calling. We're taking care of a guest and unable to answer at the moment.",
+        "",
+        "You can reserve or manage Bella's appointment here:",
+        "https://k9atelier.com/book",
+        "",
+        "Or reply to this text and we'll get back to you as soon as we're available.",
+        "",
+        "Reply STOP to opt out.",
+      ].join("\n"),
+    );
+    assert.equal(
+      buildStudioCallerSms({ firstName: "Jane", petNames: ["Bella"] }),
+      body,
+    );
+    assert.match(
+      buildStudioKnownCallerSms({
+        firstName: "Alex",
+        petNames: ["Maple", "Otto"],
+      }),
+      /Maple and Otto's appointments/,
+    );
+    assert.match(
+      buildStudioKnownCallerSms({ firstName: "", petNames: [] }),
+      /^K9 ATELIER: Thank you for calling\./,
     );
   });
 

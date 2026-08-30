@@ -5,6 +5,7 @@ import {
   buildIncomingCallSms,
   buildWhisperSay,
   callerLabel,
+  shouldSendMissedCallSms,
 } from "./inbound";
 
 const known = {
@@ -49,5 +50,25 @@ describe("inbound studio voice", () => {
     assert.match(xml, /callerId="\+15615933335"/);
     assert.match(xml, /<Number url="https:\/\/k9atelier.com\/api\/voice\/whisper\?say=hi&amp;exp=1&amp;sig=abc">\+15615550999<\/Number>/);
     assert.match(xml, /We could not reach K9 Atelier/);
+  });
+
+  it("asks Twilio to report the dial result when an action URL is set", () => {
+    const xml = buildForwardCallTwiml(
+      "+15615550999",
+      "https://k9atelier.com/api/voice/whisper?say=hi&exp=1&sig=abc",
+      "+15615933335",
+      "https://k9atelier.com/api/voice/dial-status",
+    );
+    assert.match(xml, /action="https:\/\/k9atelier.com\/api\/voice\/dial-status"/);
+    assert.doesNotMatch(xml, /We could not reach K9 Atelier/);
+  });
+
+  it("sends the missed-call text only when the staff line is not answered", () => {
+    assert.equal(shouldSendMissedCallSms("no-answer"), true);
+    assert.equal(shouldSendMissedCallSms("busy"), true);
+    assert.equal(shouldSendMissedCallSms("failed"), true);
+    assert.equal(shouldSendMissedCallSms("canceled"), true);
+    assert.equal(shouldSendMissedCallSms("completed"), false);
+    assert.equal(shouldSendMissedCallSms("answered"), false);
   });
 });

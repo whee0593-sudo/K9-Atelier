@@ -83,12 +83,26 @@ export function buildWhisperTwiml(say: string) {
   return `<?xml version="1.0" encoding="UTF-8"?><Response><Say>${escapeXml(say)}</Say></Response>`;
 }
 
+export const MISSED_CALL_FALLBACK_SAY =
+  "We could not reach K9 Atelier. Please text this number or email penny@k9atelier.com.";
+
+export function shouldSendMissedCallSms(dialCallStatus: string) {
+  return ["busy", "no-answer", "failed", "canceled"].includes(
+    dialCallStatus.trim().toLowerCase(),
+  );
+}
+
 export function buildForwardCallTwiml(
   staffPhone: string,
   whisperUrl: string,
   studioCallerId: string,
+  actionUrl?: string,
 ) {
-  return `<?xml version="1.0" encoding="UTF-8"?><Response><Dial callerId="${escapeXml(studioCallerId)}" timeout="25" answerOnBridge="true"><Number url="${escapeXml(whisperUrl)}">${escapeXml(staffPhone)}</Number></Dial><Say>We could not reach K9 Atelier. Please text this number or email penny@k9atelier.com.</Say></Response>`;
+  const action = actionUrl ? ` action="${escapeXml(actionUrl)}"` : "";
+  const fallback = actionUrl
+    ? ""
+    : `<Say>${escapeXml(MISSED_CALL_FALLBACK_SAY)}</Say>`;
+  return `<?xml version="1.0" encoding="UTF-8"?><Response><Dial${action} callerId="${escapeXml(studioCallerId)}" timeout="25" answerOnBridge="true"><Number url="${escapeXml(whisperUrl)}">${escapeXml(staffPhone)}</Number></Dial>${fallback}</Response>`;
 }
 
 export function isStaffCallingStudio(from: string) {

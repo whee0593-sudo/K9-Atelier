@@ -25,10 +25,50 @@ export function buildStudioIntroSms() {
   ].join("\n");
 }
 
+export function buildStudioKnownCallerSms(input: {
+  firstName?: string | null;
+  petNames?: string[] | null;
+}) {
+  const first = input.firstName?.trim() || "";
+  const greeting = first
+    ? `Hi ${first} — thank you for calling.`
+    : "Thank you for calling.";
+  const pets = (input.petNames ?? []).map((name) => name.trim()).filter(Boolean);
+  const bookLine =
+    pets.length === 1
+      ? `You can reserve or manage ${pets[0]}'s appointment here:`
+      : pets.length === 2
+        ? `You can reserve or manage ${pets[0]} and ${pets[1]}'s appointments here:`
+        : "You can reserve or manage your appointment here:";
+
+  return [
+    `K9 ATELIER: ${greeting} We're taking care of a guest and unable to answer at the moment.`,
+    "",
+    bookLine,
+    publicUrl("/book"),
+    "",
+    "Or reply to this text and we'll get back to you as soon as we're available.",
+    "",
+    SMS_OPT_OUT,
+  ].join("\n");
+}
+
+export function buildStudioCallerSms(
+  customer?: {
+    firstName?: string | null;
+    petNames?: string[] | null;
+  } | null,
+) {
+  return customer
+    ? buildStudioKnownCallerSms(customer)
+    : buildStudioIntroSms();
+}
+
 export type StudioUnknownCaller = {
   phone: string;
   calledAt: string;
   introSentAt: string | null;
+  label?: string;
 };
 
 export type StaffSmsRecipient = {
