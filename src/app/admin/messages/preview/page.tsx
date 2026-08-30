@@ -10,7 +10,7 @@ export default function ContactCustomerPreviewPage() {
         Contact Customer
       </h2>
       <p className="mt-2 text-sm text-text-muted">
-        Missed-call texts send automatically. Search by pet, first name, last
+        Incoming-call texts send automatically. Search by pet, first name, last
         name, or phone to send a custom text.
       </p>
       <div className="mt-8">

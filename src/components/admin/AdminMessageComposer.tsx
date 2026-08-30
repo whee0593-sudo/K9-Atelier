@@ -212,9 +212,9 @@ export function AdminMessageComposer({
       <section className="rounded-2xl border border-lavender/30 bg-cream p-6">
         <h3 className="font-medium text-gold-dark">Recent callers</h3>
         <p className="mt-1 text-sm text-text-muted">
-          Texts send automatically when a call is missed. Unknown numbers get
-          the website and booking links. Known guests get a shorter
-          reply-and-book text. You can still resend or type a number.
+          Texts send automatically when someone calls. Unknown numbers get the
+          website and booking links. Known guests get a shorter reply-and-book
+          text. You can still resend or type a number.
         </p>
         <form
           className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end"

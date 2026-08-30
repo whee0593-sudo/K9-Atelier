@@ -54,12 +54,20 @@ export async function POST(request: Request) {
   const from = params.From ?? "";
   const status = params.DialCallStatus ?? "";
 
-  if (shouldSendMissedCallSms(status) && !isStaffCallingStudio(from)) {
+  if (!isStaffCallingStudio(from)) {
     const phone = normalizePhoneToE164(from) ?? from;
     const customer = await lookupCustomerByPhone(from);
-    void deliverStudioCallerSms({ phone, customer }).catch((error: unknown) => {
-      console.error("missed-call SMS failed:", error);
-    });
+    try {
+      const result = await deliverStudioCallerSms({ phone, customer });
+      if ("error" in result) {
+        console.error("caller SMS failed:", result.error, phone);
+      }
+    } catch (error) {
+      console.error("caller SMS failed:", error);
+    }
+  }
+
+  if (shouldSendMissedCallSms(status)) {
     return twiml(buildVoiceErrorTwiml(MISSED_CALL_FALLBACK_SAY));
   }
 

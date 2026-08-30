@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { siteUrl } from "@/lib/email/resend";
 import { lookupCustomerByPhone } from "@/lib/sms/customer-by-phone";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
@@ -12,7 +12,10 @@ import {
   isStaffCallingStudio,
 } from "@/lib/voice/inbound";
 import { buildVoiceErrorTwiml } from "@/lib/voice/bridge";
-import { recordStudioInboundCall } from "@/lib/sms/studio-callers";
+import {
+  deliverStudioCallerSms,
+  recordStudioInboundCall,
+} from "@/lib/sms/studio-callers";
 import { getStaffVoicePhone, getTwilioVoiceFromNumber } from "@/lib/voice/config";
 
 export const runtime = "nodejs";
@@ -78,14 +81,24 @@ export async function POST(request: Request) {
   const caller = { phone, customer };
   const whisperUrl = buildWhisperUrl(buildWhisperSay(caller));
 
-  void recordStudioInboundCall({ phone, customer }).catch((error: unknown) => {
-    console.error("record inbound call failed:", error);
-  });
-  void sendSms({
-    to: staffPhone,
-    body: buildIncomingCallSms(caller),
-  }).catch((error: unknown) => {
-    console.error("incoming call SMS failed:", error);
+  after(async () => {
+    try {
+      await recordStudioInboundCall({ phone, customer });
+      const result = await deliverStudioCallerSms({ phone, customer });
+      if ("error" in result) {
+        console.error("incoming caller SMS failed:", result.error);
+      }
+    } catch (error) {
+      console.error("incoming caller SMS failed:", error);
+    }
+    try {
+      await sendSms({
+        to: staffPhone,
+        body: buildIncomingCallSms(caller),
+      });
+    } catch (error) {
+      console.error("incoming call SMS failed:", error);
+    }
   });
 
   return twiml(
