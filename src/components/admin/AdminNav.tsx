@@ -8,6 +8,7 @@ const links = [
   { href: "/admin/vaccinations", label: "Vaccination Review" },
   { href: "/admin/appointments", label: "Calendar" },
   { href: "/admin/finance", label: "Finance" },
+  { href: "/admin/referrals", label: "Referrals" },
   { href: "/admin/messages", label: "Contact Customer" },
   { href: "/admin/pets", label: "Customers & Pets" },
   { href: "/admin/profile", label: "My Admin Profile" },

@@ -21,6 +21,10 @@ const faqGroups = [
     title: "Policies",
     ids: [5, 6],
   },
+  {
+    title: "Referral Rewards",
+    ids: [9],
+  },
 ] as const;
 
 const cancellationPolicy = {
@@ -220,6 +224,18 @@ export default function FaqPage() {
           paragraphs={[
             "Yes. We use premium, professional products selected according to each dog’s coat, skin condition, and individual sensitivities.",
             "All Creative Color products are non-toxic and specifically formulated for use on animals. Please let us know in advance if your dog has any known allergies, sensitivities, or previous reactions to grooming products.",
+          ]}
+        />
+      ),
+    },
+    {
+      q: "How do Referral Rewards work?",
+      a: (
+        <FaqParagraphs
+          paragraphs={[
+            "Each of your dogs has a personalized referral code. When a new client household uses that code, they receive 10% off eligible service charges on their first completed appointment. After that visit is completed and paid, you receive Referral Credit equal to their savings.",
+            "Referral Credit accumulates and can be applied, in full or in part, toward eligible service charges on a future appointment. Travel fees, special handling fees, and gratuities are excluded, and Referral Credit cannot be combined with other promotions.",
+            "You can view your codes, share links, and available balance in your account. Full program rules are at k9atelier.com/referrals.",
           ]}
         />
       ),

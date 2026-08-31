@@ -35,7 +35,11 @@ import Link from "next/link";
 import { bookingBackLinkClass } from "@/components/booking/booking-ui";
 import { reportBookAppointmentConversion } from "@/lib/google-ads";
 
-export function BookingFlow() {
+export function BookingFlow({
+  initialReferralCode = "",
+}: {
+  initialReferralCode?: string;
+}) {
   const [selectedPet, setSelectedPet] = useState<PetProfile | null>(null);
   const [selectedService, setSelectedService] = useState<BookableService | null>(
     null,
@@ -310,6 +314,7 @@ export function BookingFlow() {
               setReserved(true);
               reportBookAppointmentConversion(appointment.id);
             }}
+            initialReferralCode={initialReferralCode}
           />
         )}
 

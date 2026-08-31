@@ -11,6 +11,8 @@ export async function POST(request: Request) {
     tipAmount?: number;
     paymentMethodId?: string;
     useNewCard?: boolean;
+    referralMode?: "full" | "custom" | "none";
+    referralCustomDollars?: number;
   };
 
   try {
@@ -30,6 +32,8 @@ export async function POST(request: Request) {
     tipAmount: Number(body.tipAmount ?? 0),
     paymentMethodId: body.paymentMethodId,
     useNewCard: Boolean(body.useNewCard),
+    referralMode: body.referralMode,
+    referralCustomDollars: body.referralCustomDollars,
   });
 
   if ("error" in result) {

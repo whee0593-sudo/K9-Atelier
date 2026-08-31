@@ -256,6 +256,13 @@
       ]
     },
     {
+      "id": "referrals",
+      "path": "/account/referrals",
+      "title": "Referral Rewards",
+      "description": "Your pet referral codes, share links, and available Referral Credit.",
+      "fields": []
+    },
+    {
       "id": "messages",
       "path": "/account/messages",
       "title": "Messages from K9 Atelier",

@@ -60,6 +60,7 @@ type Props = {
   onOpenPolicy: (section: BookingPolicySectionId) => void;
   onMakeChange: () => void;
   onReserved: (appointment: AppointmentRecord) => void;
+  initialReferralCode?: string;
 };
 
 function estimateAddOnTotal(
@@ -115,9 +116,38 @@ export function BookingReviewStep({
   onOpenPolicy,
   onMakeChange,
   onReserved,
+  initialReferralCode = "",
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [referralCode, setReferralCode] = useState(initialReferralCode);
+  const [referralStatus, setReferralStatus] = useState<
+    "idle" | "valid" | "invalid"
+  >("idle");
+  const [showReferralHelp, setShowReferralHelp] = useState(
+    Boolean(initialReferralCode.trim()),
+  );
+
+  useEffect(() => {
+    const code = initialReferralCode.trim();
+    if (!code) return;
+    void fetch(`/api/referrals/validate?code=${encodeURIComponent(code)}`, {
+      credentials: "include",
+    })
+      .then(async (response) => {
+        const body = (await response.json()) as {
+          valid?: boolean;
+          message?: string;
+        };
+        if (body.valid) {
+          setReferralStatus("valid");
+          return;
+        }
+        setReferralStatus("invalid");
+        if (body.message) setError(body.message);
+      })
+      .catch(() => undefined);
+  }, [initialReferralCode]);
   const [phone, setPhone] = useState("");
   const [smsConsent, setSmsConsent] = useState(false);
   const [photoMarketingConsent, setPhotoMarketingConsent] = useState(false);
@@ -280,6 +310,7 @@ export function BookingReviewStep({
         smsConsent: true,
         photoMarketingConsent: true,
         servicePoliciesConsent: true,
+        referralCode: referralCode.trim() || undefined,
       });
       onReserved(appointment);
     } catch (submitError) {
@@ -381,6 +412,81 @@ export function BookingReviewStep({
             card you select below.
           </p>
         </div>
+      </div>
+
+      <div className={`${bookingNoticeClass} mt-6 space-y-4`}>
+        <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+          Referral Code
+        </p>
+        <label className={bookingLabelClass} htmlFor="referral-code">
+          Have a friend’s referral code?
+        </label>
+        <input
+          id="referral-code"
+          type="text"
+          autoComplete="off"
+          value={referralCode}
+          onChange={(event) => {
+            setReferralCode(event.target.value.toUpperCase());
+            setReferralStatus("idle");
+          }}
+          onBlur={() => {
+            const code = referralCode.trim();
+            if (!code) {
+              setReferralStatus("idle");
+              return;
+            }
+            void fetch(`/api/referrals/validate?code=${encodeURIComponent(code)}`, {
+              credentials: "include",
+            })
+              .then(async (response) => {
+                const body = (await response.json()) as {
+                  valid?: boolean;
+                  message?: string;
+                };
+                if (body.valid) {
+                  setReferralStatus("valid");
+                  setError(null);
+                  return;
+                }
+                setReferralStatus("invalid");
+                if (body.message) setError(body.message);
+              })
+              .catch(() => {
+                setReferralStatus("idle");
+              });
+          }}
+          className={bookingFieldClass}
+          placeholder="PRINCE-PENNY-S"
+        />
+        {referralStatus === "valid" ? (
+          <p className="font-body text-sm text-ink">
+            Referral code applied. The 10% new-client savings is calculated after
+            the first completed visit.
+          </p>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => setShowReferralHelp((open) => !open)}
+          className={bookingBackLinkClass}
+        >
+          How Referral Rewards Work
+        </button>
+        {showReferralHelp ? (
+          <div className="font-body space-y-2 text-sm leading-relaxed text-taupe">
+            <p>
+              New client households receive 10% off eligible service charges on
+              their first completed appointment.
+            </p>
+            <p>
+              After the appointment is completed and paid, the referring client
+              receives an equal amount in Referral Credit.
+            </p>
+            <Link href="/referrals" className="text-ink underline">
+              View full Referral Rewards rules
+            </Link>
+          </div>
+        ) : null}
       </div>
 
       <div className={`${bookingNoticeClass} mt-6 space-y-4`}>

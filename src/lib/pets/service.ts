@@ -65,7 +65,18 @@ export async function createPet(
     return { error: "server" };
   }
 
-  return { pet: (await attachVaccinationSummaries([mapPetRowToRecord(data as PetRow)]))[0] };
+  const pet = (await attachVaccinationSummaries([mapPetRowToRecord(data as PetRow)]))[0];
+  try {
+    const { ensurePetReferralCode } = await import("@/lib/referrals/service");
+    await ensurePetReferralCode({
+      petId: pet.id,
+      petName: pet.name,
+      ownerCustomerId: user.id,
+    });
+  } catch (error) {
+    console.error("createPet referral code failed:", error);
+  }
+  return { pet };
 }
 
 export async function updatePet(

@@ -42,6 +42,16 @@ export default async function AdminDashboardPage() {
           </p>
         </Link>
         <Link
+          href="/admin/referrals"
+          className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
+        >
+          <h3 className="font-medium text-gold-dark">Referrals</h3>
+          <p className="mt-2 text-sm text-text-muted">
+            Referral codes, household relationships, available credit, and
+            reward adjustments after refunds or review.
+          </p>
+        </Link>
+        <Link
           href="/admin/messages"
           className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
         >

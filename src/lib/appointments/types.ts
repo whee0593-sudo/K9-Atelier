@@ -27,6 +27,7 @@ export type AppointmentWriteInput = {
   estimatedTotal: number;
   paymentMethodId: string;
   customerPhone: string;
+  referralCode?: string;
 };
 
 export type AppointmentRecord = {

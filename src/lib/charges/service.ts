@@ -31,6 +31,18 @@ import {
   sendAfterVisitThankYouSms,
   sendChargeReceiptEmail,
 } from "@/lib/charges/receipts";
+import { householdVisitKey } from "@/lib/referrals/address";
+import { centsToDollars } from "@/lib/referrals/eligible";
+import {
+  buildCollectQuote,
+  attachReservationPaymentIntent,
+  confirmReferralDebit,
+  getCollectReferralState,
+  issueReferralRewardForPaidCharge,
+  reserveReferralCredit,
+  reverseReferralDebit,
+  writeReferralAudit,
+} from "@/lib/referrals/service";
 
 type ChargeRow = {
   id: string;
@@ -146,6 +158,14 @@ export async function getCollectContext(
       paidCharges: (charges ?? []).map((row) => mapCharge(row as ChargeRow)),
       stripeConfigured: isStripeConfigured(),
       stripePublishableKey: getStripePublishableKey(),
+      referral: await getCollectReferralState({
+        customerId: appointment.customerId,
+        appointmentId,
+        appointmentDate: appointment.appointmentDate,
+        addressStreet: appointment.addressStreet,
+        addressZip: appointment.addressZip,
+        kind: "service",
+      }),
     },
   };
 }
@@ -208,15 +228,35 @@ export async function createAppointmentCharge(
     return { error: "conflict", message: "Enter a valid tip." };
   }
 
-  const subtotal = Math.round(sumLineItems(lineItems) * 100) / 100;
-  const total = Math.round((subtotal + tipAmount) * 100) / 100;
-  const cents = dollarsToCents(total);
-  if (cents < 50) {
-    return { error: "conflict", message: "The total must be at least $0.50." };
-  }
-
   const appointment = await fetchAppointmentAdminRecord(input.appointmentId);
   if (!appointment) return { error: "not_found" };
+
+  const referralState = await getCollectReferralState({
+    customerId: appointment.customerId,
+    appointmentId: input.appointmentId,
+    appointmentDate: appointment.appointmentDate,
+    addressStreet: appointment.addressStreet,
+    addressZip: appointment.addressZip,
+    kind: input.kind,
+  });
+  const quote = buildCollectQuote({
+    lineItems,
+    tipAmount,
+    availableCreditCents: referralState.availableCreditCents,
+    mode: input.kind === "service" ? (input.referralMode ?? "none") : "none",
+    customDollars: input.referralCustomDollars,
+    applyNewClientDiscount:
+      input.kind === "service" && referralState.applyNewClientDiscount,
+  });
+
+  const subtotal = Math.round(sumLineItems(lineItems) * 100) / 100;
+  const newClientDiscount = centsToDollars(quote.discountCents);
+  const referralCreditApplied = centsToDollars(quote.creditCents);
+  const total = centsToDollars(quote.dueCents);
+  const cents = quote.dueCents;
+  if (cents > 0 && cents < 50) {
+    return { error: "conflict", message: "The total must be at least $0.50." };
+  }
 
   const admin = createAdminClient();
   const { data: paid } = await admin
@@ -232,16 +272,21 @@ export async function createAppointmentCharge(
   }
 
   const stripe = getStripe();
-  if (!stripe || !isStripeConfigured()) return { error: "misconfigured" };
+  if (cents > 0 && (!stripe || !isStripeConfigured())) {
+    return { error: "misconfigured" };
+  }
 
-  const stripeCustomerId = await getOrCreateStripeCustomerId(
-    appointment.customerId,
-    appointment.customerEmail,
-  );
-  if (!stripeCustomerId) return { error: "server" };
+  let stripeCustomerId: string | null = null;
+  if (cents > 0) {
+    stripeCustomerId = await getOrCreateStripeCustomerId(
+      appointment.customerId,
+      appointment.customerEmail,
+    );
+    if (!stripeCustomerId) return { error: "server" };
+  }
 
   let stripePaymentMethodId: string | undefined;
-  if (!input.useNewCard) {
+  if (cents > 0 && !input.useNewCard) {
     if (!input.paymentMethodId) {
       return { error: "conflict", message: "Select a saved card." };
     }
@@ -267,6 +312,8 @@ export async function createAppointmentCharge(
       subtotal,
       tip_amount: tipAmount,
       total,
+      new_client_discount: newClientDiscount,
+      referral_credit_applied: referralCreditApplied,
       created_by: session.user.id,
       payment_method_id: input.useNewCard ? null : input.paymentMethodId,
     })
@@ -277,6 +324,43 @@ export async function createAppointmentCharge(
 
   if (insertError || !inserted) {
     console.error("createAppointmentCharge insert failed:", insertError?.message);
+    return { error: "server" };
+  }
+
+  if (quote.creditCents > 0) {
+    const reserved = await reserveReferralCredit({
+      customerId: appointment.customerId,
+      chargeId: inserted.id,
+      appointmentId: input.appointmentId,
+      amountCents: quote.creditCents,
+      adminUserId: session.user.id,
+    });
+    if (!reserved.ok) {
+      await admin
+        .from("appointment_charges")
+        .update({ status: "failed" })
+        .eq("id", inserted.id);
+      return {
+        error: "conflict",
+        message: "That referral credit is no longer available.",
+      };
+    }
+  }
+
+  if (cents === 0) {
+    const charge = await markChargePaid(
+      inserted.id,
+      input.useNewCard ? null : input.paymentMethodId ?? null,
+    );
+    return { charge: charge ?? mapCharge(inserted as ChargeRow) };
+  }
+
+  if (!stripe || !stripeCustomerId) {
+    await reverseReferralDebit(inserted.id);
+    await admin
+      .from("appointment_charges")
+      .update({ status: "failed" })
+      .eq("id", inserted.id);
     return { error: "server" };
   }
 
@@ -313,6 +397,7 @@ export async function createAppointmentCharge(
       .from("appointment_charges")
       .update({ stripe_payment_intent_id: paymentIntent.id })
       .eq("id", inserted.id);
+    await attachReservationPaymentIntent(inserted.id, paymentIntent.id);
 
     if (paymentIntent.status === "succeeded") {
       const charge = await markChargePaid(
@@ -338,6 +423,7 @@ export async function createAppointmentCharge(
       };
     }
 
+    await reverseReferralDebit(inserted.id);
     await admin
       .from("appointment_charges")
       .update({ status: "failed" })
@@ -345,6 +431,7 @@ export async function createAppointmentCharge(
     return { error: "declined", message: "This card could not be charged." };
   } catch (error) {
     console.error("createAppointmentCharge stripe failed:", error);
+    await reverseReferralDebit(inserted.id);
     await admin
       .from("appointment_charges")
       .update({ status: "failed" })
@@ -476,6 +563,19 @@ async function markChargePaid(
   }
 
   const charge = mapCharge(data as ChargeRow);
+  await confirmReferralDebit(chargeId);
+  try {
+    const issued = await issueReferralRewardForPaidCharge(chargeId);
+    if (issued.status === "needs_recovery") {
+      console.error(
+        "issueReferralRewardForPaidCharge needs recovery:",
+        issued.reason,
+        chargeId,
+      );
+    }
+  } catch (issueError) {
+    console.error("issueReferralRewardForPaidCharge failed:", issueError);
+  }
   try {
     const appointment = await fetchAppointmentAdminRecord(charge.appointmentId);
     if (appointment) {
@@ -614,6 +714,58 @@ export async function refundAppointmentCharge(
 
   if (updateError) {
     console.error("refundAppointmentCharge save failed:", updateError.message);
+  }
+
+  const { data: appointment } = await admin
+    .from("appointments")
+    .select("id, customer_id, appointment_date, address_street, address_zip")
+    .eq("id", row.appointment_id)
+    .maybeSingle();
+  const visitKey = appointment
+    ? householdVisitKey({
+        customerId: appointment.customer_id as string,
+        appointmentDate: appointment.appointment_date as string,
+        addressStreet: appointment.address_street as string,
+        addressZip: appointment.address_zip as string,
+      })
+    : null;
+  const [{ data: byCharge }, { data: byVisit }] = await Promise.all([
+    admin
+      .from("referral_reward_sources")
+      .select("id, status, referrer_customer_id")
+      .eq("source_charge_id", chargeId),
+    visitKey
+      ? admin
+          .from("referral_reward_sources")
+          .select("id, status, referrer_customer_id")
+          .eq("visit_key", visitKey)
+      : Promise.resolve({ data: [] as Array<{
+          id: string;
+          status: string;
+          referrer_customer_id: string;
+        }> }),
+  ]);
+  const sources = [
+    ...(byCharge ?? []),
+    ...(byVisit ?? []).filter(
+      (row) => !(byCharge ?? []).some((chargeRow) => chargeRow.id === row.id),
+    ),
+  ];
+  for (const source of sources ?? []) {
+    if (source.status === "cancelled") continue;
+    await admin
+      .from("referral_reward_sources")
+      .update({ status: "under_review", updated_at: new Date().toISOString() })
+      .eq("id", source.id);
+    await writeReferralAudit({
+      adminUserId: session.user.id,
+      action: "reward_under_review_after_refund",
+      rewardSourceId: source.id as string,
+      customerId: source.referrer_customer_id as string,
+      previousValue: { status: source.status },
+      newValue: { status: "under_review", refunded: nextRefunded },
+      reason: "A related visit charge was refunded.",
+    });
   }
 
   return {

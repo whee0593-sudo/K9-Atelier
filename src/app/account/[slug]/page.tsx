@@ -5,6 +5,7 @@ import { AccountFieldsForm } from "@/components/account/AccountFieldsForm";
 import { CustomerProfileSection } from "@/components/account/CustomerProfileForm";
 import { PaymentMethodsManager } from "@/components/account/PaymentMethodsManager";
 import { PetProfilesManager } from "@/components/account/PetProfilesManager";
+import { ReferralRewardsPanel } from "@/components/account/ReferralRewardsPanel";
 import { getAccountSection } from "@/lib/account-fields";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -17,6 +18,7 @@ const SECTION_IDS = [
   "messages",
   "bookings",
   "appointments",
+  "referrals",
 ] as const;
 
 export function generateStaticParams() {
@@ -42,6 +44,8 @@ export default async function AccountSectionPage({ params }: Props) {
           <CustomerBookingsList />
         ) : slug === "payment" ? (
           <PaymentMethodsManager />
+        ) : slug === "referrals" ? (
+          <ReferralRewardsPanel />
         ) : slug === "profile" ? (
           <CustomerProfileSection />
         ) : slug === "addresses" ? (

@@ -17,6 +17,7 @@ const footerLinks = [
   { href: "/reviews", label: "Reviews" },
   { href: "/about", label: "About" },
   { href: "/faq", label: "FAQ" },
+  { href: "/referrals", label: "Referral Rewards" },
   { href: "/contact", label: "Contact" },
 ] as const;
 

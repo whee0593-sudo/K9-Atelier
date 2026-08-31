@@ -87,5 +87,10 @@ export function buildPreviewCollectContext(
     paidCharges: paidCharge ? [paidCharge] : [],
     stripeConfigured: true,
     stripePublishableKey: "",
+    referral: {
+      availableCreditCents: 10000,
+      applyNewClientDiscount: false,
+      canUseCredit: true,
+    },
   };
 }

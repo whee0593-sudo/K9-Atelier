@@ -225,5 +225,9 @@ export function validateCreateAppointmentInput(
     estimatedTotal,
     paymentMethodId,
     customerPhone,
+    referralCode:
+      typeof record.referralCode === "string"
+        ? record.referralCode.trim()
+        : undefined,
   };
 }

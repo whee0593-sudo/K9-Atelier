@@ -2,7 +2,14 @@ import { BookPageGate } from "@/components/booking/BookPageGate";
 import { BookingFlow } from "@/components/booking/BookingFlow";
 import { Container } from "@/components/luxury/Container";
 
-export default function BookPage() {
+type Props = {
+  searchParams: Promise<{ ref?: string }>;
+};
+
+export default async function BookPage({ searchParams }: Props) {
+  const { ref } = await searchParams;
+  const initialReferralCode = (ref ?? "").trim();
+
   return (
     <Container className="py-14 md:py-20">
       <header className="mx-auto max-w-3xl text-center">
@@ -20,7 +27,7 @@ export default function BookPage() {
 
       <BookPageGate>
         <div className="mx-auto mt-10 max-w-2xl">
-          <BookingFlow />
+          <BookingFlow initialReferralCode={initialReferralCode} />
         </div>
       </BookPageGate>
     </Container>

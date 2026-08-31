@@ -6,6 +6,7 @@ import {
   getServicePriceEstimate,
 } from "@/lib/services";
 import { getServiceDisplayName } from "@/lib/service-display";
+import { resolveReferralCategory } from "@/lib/referrals/eligible";
 import type { ChargeLineItem } from "@/lib/charges/types";
 
 export { catalogChargeItems, catalogChargeGroups } from "@/lib/charges/catalog";
@@ -27,6 +28,7 @@ export function buildDefaultLineItems(
     label: getServiceDisplayName(appointment.serviceId, appointment.serviceName),
     amount: Number(primaryPrice ?? appointment.estimatedTotal ?? 0),
     catalogId: appointment.serviceId,
+    referralCategory: "eligible_service",
   });
 
   for (const addOnId of appointment.addOnIds) {
@@ -42,6 +44,7 @@ export function buildDefaultLineItems(
         : addOnId,
       amount: Number(estimate?.from ?? 0),
       catalogId: addOnId,
+      referralCategory: "eligible_service",
     });
   }
 
@@ -51,6 +54,7 @@ export function buildDefaultLineItems(
       label: "Travel fee",
       amount: Number(appointment.travelFee),
       catalogId: "travel-fee",
+      referralCategory: "travel_fee",
     });
   }
 
@@ -64,6 +68,7 @@ export function buildNoShowLineItems(appointment: AppointmentRecord): ChargeLine
       label: "No-show fee",
       amount: Number(appointment.estimatedTotal ?? 0),
       catalogId: "no-show",
+      referralCategory: "other_ineligible",
     },
   ];
 }
@@ -87,6 +92,18 @@ export function sanitizeLineItems(items: unknown): ChargeLineItem[] | null {
       amount: Math.round(amount * 100) / 100,
       catalogId:
         typeof record.catalogId === "string" ? record.catalogId : undefined,
+      referralCategory: resolveReferralCategory({
+        catalogId:
+          typeof record.catalogId === "string" ? record.catalogId : undefined,
+        referralCategory:
+          record.referralCategory === "eligible_service" ||
+          record.referralCategory === "travel_fee" ||
+          record.referralCategory === "special_handling" ||
+          record.referralCategory === "gratuity" ||
+          record.referralCategory === "other_ineligible"
+            ? record.referralCategory
+            : undefined,
+      }),
     });
   }
   return sanitized;

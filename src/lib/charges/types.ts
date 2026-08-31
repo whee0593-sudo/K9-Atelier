@@ -5,11 +5,19 @@ export type ChargeKind = "service" | "no_show" | "cancellation";
 export type ChargeStatus = "pending" | "paid" | "failed";
 export type ReceiptChannel = "sms" | "email";
 
+export type ReferralChargeCategory =
+  | "eligible_service"
+  | "travel_fee"
+  | "special_handling"
+  | "gratuity"
+  | "other_ineligible";
+
 export type ChargeLineItem = {
   id: string;
   label: string;
   amount: number;
   catalogId?: string;
+  referralCategory?: ReferralChargeCategory;
 };
 
 export type CatalogChargeItem = {
@@ -50,6 +58,11 @@ export type CollectContext = {
   paidCharges: AppointmentChargeRecord[];
   stripeConfigured: boolean;
   stripePublishableKey: string;
+  referral?: {
+    availableCreditCents: number;
+    applyNewClientDiscount: boolean;
+    canUseCredit: boolean;
+  };
 };
 
 export type CreateChargeInput = {
@@ -59,4 +72,6 @@ export type CreateChargeInput = {
   tipAmount: number;
   paymentMethodId?: string;
   useNewCard?: boolean;
+  referralMode?: "full" | "custom" | "none";
+  referralCustomDollars?: number;
 };

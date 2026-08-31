@@ -23,6 +23,7 @@ const PUBLIC_PATHS = [
   "/support",
   "/privacy",
   "/terms",
+  "/referrals",
   "/api/support",
   "/api/notify",
   "/api/cron",

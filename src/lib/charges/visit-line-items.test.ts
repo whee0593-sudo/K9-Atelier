@@ -43,7 +43,12 @@ describe("visit line items", () => {
       items,
     ) as Record<string, unknown>;
     assert.equal(merged["creative-accent-coloring"], "Lavender");
-    assert.deepEqual(readStoredVisitLineItems(merged), items);
+    assert.deepEqual(readStoredVisitLineItems(merged), [
+      {
+        ...items[0],
+        referralCategory: "eligible_service",
+      },
+    ]);
     assert.equal(
       stringAddOnOptions(merged)[VISIT_LINE_ITEMS_KEY],
       undefined,

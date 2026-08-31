@@ -16,6 +16,7 @@ import {
 import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
 import { mapPetRowToRecord } from "@/lib/pets/map";
 import type { PetRow } from "@/lib/pets/types";
+import { AppointmentValidationError } from "@/lib/appointments/validation";
 import {
   vaccinationBookingNeedsAdminConfirmation,
   vaccinationReadyToBook,
@@ -174,6 +175,19 @@ export async function createAppointment(
     return { error: "server" };
   }
 
+  if (input.referralCode?.trim()) {
+    const { validateReferralCodeForCustomer } = await import(
+      "@/lib/referrals/service"
+    );
+    const referral = await validateReferralCodeForCustomer(
+      user.id,
+      input.referralCode,
+    );
+    if (!referral.valid) {
+      throw new AppointmentValidationError(referral.message, "referralCode");
+    }
+  }
+
   const status = vaccinationBookingNeedsAdminConfirmation(vaccinationStatus)
     ? "pending_confirmation"
     : "confirmed";
@@ -217,6 +231,15 @@ export async function createAppointment(
   }
 
   const appointment = mapAppointmentRowToRecord(data as AppointmentRow);
+
+  if (input.referralCode?.trim()) {
+    const { attachReferralOnBooking } = await import("@/lib/referrals/service");
+    await attachReferralOnBooking({
+      referredCustomerId: user.id,
+      appointmentId: appointment.id,
+      code: input.referralCode,
+    });
+  }
 
   try {
     const contact =

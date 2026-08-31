@@ -11,6 +11,12 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatChargeMoney, sumLineItems } from "@/lib/charges/money";
 import {
+  centsToDollars,
+  quoteReferralApplication,
+  type ReferralApplyMode,
+} from "@/lib/referrals/eligible";
+import type { ReferralChargeCategory } from "@/lib/charges/types";
+import {
   hourlyAmountFromTimes,
   hourlyRateForCatalogId,
 } from "@/lib/charges/hourly";
@@ -91,6 +97,8 @@ export function CollectCheckout({
   );
   const [chargedMethodId, setChargedMethodId] = useState<string | null>(null);
   const [receiptSent, setReceiptSent] = useState(false);
+  const [referralMode, setReferralMode] = useState<ReferralApplyMode>("none");
+  const [referralCustom, setReferralCustom] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -195,7 +203,17 @@ export function CollectCheckout({
       : tipMode === "custom"
         ? Math.max(0, Number(customTip) || 0)
         : Math.round(subtotal * (Number(tipMode) / 100) * 100) / 100;
-  const total = Math.round((subtotal + tipAmount) * 100) / 100;
+  const referralQuote = quoteReferralApplication({
+    lineItems,
+    tipAmount,
+    availableCreditCents: context?.referral?.availableCreditCents ?? 0,
+    mode: kind === "service" ? referralMode : "none",
+    customDollars: Number(referralCustom) || 0,
+    applyNewClientDiscount: Boolean(
+      kind === "service" && context?.referral?.applyNewClientDiscount,
+    ),
+  });
+  const total = centsToDollars(referralQuote.dueCents);
   const alreadyPaid = Boolean(paidCharge || context?.paidKinds.includes(kind));
 
   useEffect(() => {
@@ -234,6 +252,12 @@ export function CollectCheckout({
         label: catalog.name,
         amount: catalog.suggestedAmount ?? 0,
         catalogId: catalog.id,
+        referralCategory:
+          catalog.id === "travel-fee"
+            ? "travel_fee"
+            : catalog.id === "behavior-fee" || catalog.id === "flea-tick-fee"
+              ? "special_handling"
+              : "eligible_service",
       },
     ]);
   }
@@ -241,7 +265,12 @@ export function CollectCheckout({
   function addCustomItem() {
     setLineItems((current) => [
       ...current,
-      { id: newLineId(), label: "Additional care", amount: 0 },
+      {
+        id: newLineId(),
+        label: "Additional care",
+        amount: 0,
+        referralCategory: "other_ineligible",
+      },
     ]);
   }
 
@@ -281,6 +310,8 @@ export function CollectCheckout({
           tipAmount,
           paymentMethodId: useNewCard ? undefined : selectedMethodId,
           useNewCard,
+          referralMode: kind === "service" ? referralMode : "none",
+          referralCustomDollars: Number(referralCustom) || 0,
         }),
       });
       const body = (await response.json()) as {
@@ -519,8 +550,27 @@ export function CollectCheckout({
                           amount: Math.max(0, Number(event.target.value) || 0),
                         })
                       }
+                    className="mt-1 w-full rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm text-ink"
+                  />
+                  </label>
+                  <label className="font-body text-xs text-taupe">
+                    Referral
+                    <select
+                      value={item.referralCategory ?? "other_ineligible"}
+                      onChange={(event) =>
+                        updateItem(item.id, {
+                          referralCategory: event.target
+                            .value as ReferralChargeCategory,
+                        })
+                      }
                       className="mt-1 w-full rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm text-ink"
-                    />
+                    >
+                      <option value="eligible_service">Eligible service</option>
+                      <option value="travel_fee">Travel fee</option>
+                      <option value="special_handling">Special handling</option>
+                      <option value="gratuity">Gratuity</option>
+                      <option value="other_ineligible">Not eligible</option>
+                    </select>
                   </label>
                   <button
                     type="button"
@@ -638,6 +688,9 @@ export function CollectCheckout({
           customTip={customTip}
           tipAmount={tipAmount}
           total={total}
+          referralQuote={referralQuote}
+          referralMode={referralMode}
+          referralCustom={referralCustom}
           methods={methods}
           selectedMethodId={selectedMethodId}
           useNewCard={useNewCard}
@@ -646,6 +699,8 @@ export function CollectCheckout({
           chargeId={chargeId}
           onTipMode={setTipMode}
           onCustomTip={setCustomTip}
+          onReferralMode={setReferralMode}
+          onReferralCustom={setReferralCustom}
           onSelectMethod={(id) => {
             setSelectedMethodId(id);
             setUseNewCard(false);
@@ -703,6 +758,9 @@ function PayStep({
   customTip,
   tipAmount,
   total,
+  referralQuote,
+  referralMode,
+  referralCustom,
   methods,
   selectedMethodId,
   useNewCard,
@@ -711,6 +769,8 @@ function PayStep({
   chargeId,
   onTipMode,
   onCustomTip,
+  onReferralMode,
+  onReferralCustom,
   onSelectMethod,
   onUseNewCard,
   onBack,
@@ -726,6 +786,9 @@ function PayStep({
   customTip: string;
   tipAmount: number;
   total: number;
+  referralQuote: ReturnType<typeof quoteReferralApplication>;
+  referralMode: ReferralApplyMode;
+  referralCustom: string;
   methods: PaymentMethodRecord[];
   selectedMethodId: string | null;
   useNewCard: boolean;
@@ -734,6 +797,8 @@ function PayStep({
   chargeId: string | null;
   onTipMode: (value: "15" | "18" | "20" | "custom") => void;
   onCustomTip: (value: string) => void;
+  onReferralMode: (value: ReferralApplyMode) => void;
+  onReferralCustom: (value: string) => void;
   onSelectMethod: (id: string) => void;
   onUseNewCard: () => void;
   onBack: () => void;
@@ -815,8 +880,97 @@ function PayStep({
       <p className="font-body mt-2 text-sm text-taupe">
         Tip {formatChargeMoney(tipAmount)}
       </p>
+
+      <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+        Available referral credit
+      </p>
+      <p className="font-body mt-2 text-sm text-ink">
+        You have {formatChargeMoney(centsToDollars(referralQuote.availableCreditCents))} in
+        referral credit.
+      </p>
+      {context.referral?.applyNewClientDiscount ? (
+        <p className="font-body mt-2 text-sm text-taupe">
+          First-visit 10% is applied to eligible services. Referral credit cannot
+          be combined with that discount.
+        </p>
+      ) : context.referral?.canUseCredit ? (
+        <div className="mt-3 space-y-2">
+          {(
+            [
+              ["none", "Do not apply referral credit"],
+              ["full", "Apply full available balance"],
+              ["custom", "Apply a custom amount"],
+            ] as const
+          ).map(([value, label]) => (
+            <label
+              key={value}
+              className="flex items-center gap-3 rounded-2xl border border-lavender/40 bg-cream px-4 py-3 text-sm"
+            >
+              <input
+                type="radio"
+                name="referral-credit"
+                checked={referralMode === value}
+                onChange={() => onReferralMode(value)}
+              />
+              {label}
+            </label>
+          ))}
+          {referralMode === "custom" ? (
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={referralCustom}
+              onChange={(event) => onReferralCustom(event.target.value)}
+              className="w-full rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm"
+              placeholder="Enter amount"
+            />
+          ) : null}
+        </div>
+      ) : (
+        <p className="font-body mt-2 text-sm text-taupe">
+          No referral credit is available for this bill.
+        </p>
+      )}
+
+      <ul className="font-body mt-6 space-y-2 text-sm text-taupe">
+        <li className="flex justify-between gap-4">
+          <span>Original amount</span>
+          <span>{formatChargeMoney(centsToDollars(referralQuote.originalCents))}</span>
+        </li>
+        <li className="flex justify-between gap-4">
+          <span>Eligible services</span>
+          <span>{formatChargeMoney(centsToDollars(referralQuote.eligibleCents))}</span>
+        </li>
+        <li className="flex justify-between gap-4">
+          <span>Travel, handling & other excluded fees</span>
+          <span>{formatChargeMoney(centsToDollars(referralQuote.excludedCents))}</span>
+        </li>
+        <li className="flex justify-between gap-4">
+          <span>Tip</span>
+          <span>{formatChargeMoney(centsToDollars(referralQuote.tipCents))}</span>
+        </li>
+        {referralQuote.discountCents > 0 ? (
+          <li className="flex justify-between gap-4 text-ink">
+            <span>New client 10%</span>
+            <span>-{formatChargeMoney(centsToDollars(referralQuote.discountCents))}</span>
+          </li>
+        ) : null}
+        <li className="flex justify-between gap-4 text-ink">
+          <span>Referral credit applied</span>
+          <span>-{formatChargeMoney(centsToDollars(referralQuote.creditCents))}</span>
+        </li>
+      </ul>
       <p className="font-display mt-6 text-4xl text-ink">
         {formatChargeMoney(total)}
+      </p>
+      <p className="font-body mt-3 text-xs text-taupe">
+        Referral Credit applies to eligible service charges only. Travel fees,
+        special handling fees and gratuities are excluded. Referral Credit cannot
+        be combined with other promotional offers.{" "}
+        <a href="/referrals" className="underline">
+          View Referral Terms
+        </a>
       </p>
 
       <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
