@@ -12,32 +12,35 @@ const timeline = [
   {
     year: "2010",
     title: "The Journey Begins",
-    body: "Penny begins her professional grooming career.",
+    body: "Penny begins her professional grooming career and builds a strong foundation in grooming technique, coat care, and finishing.",
   },
   {
     year: "2014",
     title: "Education & Craft",
-    body: "Teaching Asian-fusion style grooming and Show grooming at a professional grooming academy in Shanghai, China.",
+    body: "Penny becomes an instructor at a professional grooming academy in Shanghai, teaching Asian Fusion styling and show grooming.",
   },
   {
     year: "2014–2019",
     title: "Competition Grooming",
-    body: "Competition experience including Pomeranians, Poodles and Shih Tzus.",
+    body: "Through professional grooming competitions, Penny develops her experience working with Pomeranians, Poodles, and Shih Tzus while continuing to refine her technique and attention to detail.",
   },
   {
     year: "2019",
     title: "Best in Show",
-    body: "The highest honor of her grooming competition career.",
+    body: "Penny receives Best in Show, the highest honor of her competitive grooming career.",
   },
   {
     year: "2020",
     title: "A New Chapter",
-    body: "Penny moves to the United States with her young son and begins rebuilding her career around the same principles of precision, patience and craft.",
+    body: "Penny moves to the United States with her infant son, beginning a new chapter while continuing her commitment to thoughtful, skilled grooming.",
   },
   {
-    year: "Today",
+    year: "TODAY",
     title: "K9 Atelier · Palm Beach",
-    body: "A cage-free Private Mobile Pet Spa built around technical expertise, individual attention and genuine care.",
+    body: [
+      "K9 Atelier is a private, cage-free mobile pet spa offering calm, one-on-one grooming appointments in Palm Beach.",
+      "Each appointment is tailored to the individual dog, with careful attention to comfort, coat condition, skin health, and a well-balanced finish.",
+    ],
   },
 ] as const;
 
@@ -55,13 +58,13 @@ export default function AboutPage() {
       intro={
         <>
           <p>
-            The name &ldquo;Atelier&rdquo; was not chosen by accident. In its
-            truest sense, an atelier is a workshop of craftsmanship — a place
-            where skill is refined relentlessly, where every detail matters, and
-            where good enough is never quite enough.
+            The name &ldquo;Atelier&rdquo; reflects the care and craftsmanship
+            behind our work. It is a place where skills are refined, details are
+            considered, and each result is approached with intention.
           </p>
           <p className="mt-4">
-            That philosophy sits at the heart of K9 Atelier.
+            This philosophy continues to guide every K9 Atelier appointment
+            today.
           </p>
         </>
       }
@@ -77,9 +80,16 @@ export default function AboutPage() {
             </p>
             <div>
               <h2 className="font-display text-2xl text-ink">{item.title}</h2>
-              <p className="font-body mt-3 text-base leading-relaxed text-taupe">
-                {item.body}
-              </p>
+              {(Array.isArray(item.body) ? item.body : [item.body]).map(
+                (paragraph) => (
+                  <p
+                    key={paragraph}
+                    className="font-body mt-3 text-base leading-relaxed text-taupe first:mt-3"
+                  >
+                    {paragraph}
+                  </p>
+                ),
+              )}
             </div>
           </article>
         ))}
