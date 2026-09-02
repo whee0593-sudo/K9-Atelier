@@ -42,9 +42,9 @@ function formatLongDate(iso: string) {
 }
 
 function statusLabel(status: AdminAppointmentRecord["status"]) {
-  if (status === "pending_confirmation") return "Pending";
+  if (status === "pending_confirmation") return "Pending Review";
   if (status === "cancelled") return "Cancelled";
-  return "Booked";
+  return "Confirmed";
 }
 
 export function AdminCalendar({ preview = false }: { preview?: boolean }) {

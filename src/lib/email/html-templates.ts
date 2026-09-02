@@ -151,12 +151,9 @@ export function buildStaffNewAppointmentEmail(
   appointment: AppointmentRecord,
   customer: CustomerContact,
 ) {
-  const pending = appointment.status === "pending_confirmation";
   const needsVaccinationReview =
     appointment.vaccinationStatusAtBooking === "needs_review";
-  const subject = pending
-    ? `[K9 Atelier] Appointment request — ${appointment.petName}`
-    : `[K9 Atelier] New confirmed appointment — ${appointment.petName}`;
+  const subject = "New Appointment Booked";
 
   const customerLabel = customer.name
     ? `${customer.name} (${customer.email})`
@@ -195,27 +192,21 @@ export function buildStaffNewAppointmentEmail(
     });
   }
 
-  const introHtml =
-    pending && needsVaccinationReview
-      ? `<p style="margin:0 0 16px; font-size:15px;"><strong>Action needed:</strong> A new appointment request is waiting for staff review — vaccination not yet on file.</p>`
-      : pending
-        ? `<p style="margin:0 0 16px; font-size:15px;"><strong>Action needed:</strong> A new appointment request is waiting for staff review.</p>`
-        : `<p style="margin:0 0 16px; font-size:15px;">A new appointment was booked and <strong style="color:#B08D57;">confirmed automatically</strong> (vaccination already on file).</p>`;
-
-  const ctaLabel = pending ? "REVIEW IN ADMIN" : "VIEW IN ADMIN";
+  const introHtml = needsVaccinationReview
+    ? `<p style="margin:0 0 16px; font-size:15px;">A new appointment has been booked.</p><p style="margin:0 0 16px; font-size:15px;"><strong>Note:</strong> Vaccination record requires staff review.</p>`
+    : `<p style="margin:0 0 16px; font-size:15px;">A new appointment has been booked.</p>`;
 
   const text = [
-    pending
-      ? needsVaccinationReview
-        ? "Action needed: A new appointment request is waiting for staff review — vaccination not yet on file."
-        : "Action needed: A new appointment request is waiting for staff review."
-      : "A new appointment was booked and confirmed automatically (vaccination already on file).",
+    "A new appointment has been booked.",
+    ...(needsVaccinationReview
+      ? ["", "Note: Vaccination record requires staff review."]
+      : []),
     "",
     `Customer: ${customerLabel}`,
     "",
     appointmentPlainDetails(appointment),
     "",
-    `${pending ? "Review" : "View"} in admin: ${siteUrl("/admin/appointments")}`,
+    `View appointment details: ${siteUrl("/admin/appointments")}`,
   ].join("\n");
 
   return buildStaffNotificationEmail(
@@ -225,7 +216,7 @@ export function buildStaffNewAppointmentEmail(
       rows,
       cta: {
         href: siteUrl("/admin/appointments"),
-        label: ctaLabel,
+        label: "View Appointment Details",
       },
     },
     text,
@@ -268,13 +259,13 @@ export function buildCustomerAppointmentSubmittedEmail(
   appointment: AppointmentRecord,
   customer: CustomerContact,
 ) {
-  const subject = `We received ${appointment.petName}'s appointment request`;
+  const subject = `${appointment.petName}'s appointment is booked`;
   const greetingName = customer.name ?? "Client";
-  const introParagraph = `We have received your request for ${appointment.petName}'s appointment.`;
+  const introParagraph = `Your appointment for ${appointment.petName} is booked.`;
   const estimateDisclaimer =
     "An estimate, subject to coat condition and temperament on the day.";
   const closingParagraph =
-    "Your appointment will be confirmed shortly. We will be in touch.";
+    "If anything in your booking needs attention, K9 Atelier will contact you. We look forward to seeing you.";
 
   const text = [
     `Dear ${greetingName},`,
@@ -310,34 +301,41 @@ export function buildCustomerAppointmentSubmittedEmail(
 }
 
 export function buildCustomerAppointmentDeclinedEmail(
-  appointment: AppointmentRecord,
+  _appointment: AppointmentRecord,
   customer: CustomerContact,
 ) {
-  const subject = `Update on ${appointment.petName}'s appointment request`;
+  const subject = "An Update Regarding Your Appointment";
   const greetingName = customer.name ?? "Client";
-  const dateLabel = formatAppointmentDateLabel(appointment.appointmentDate);
-  const declineParagraph = `Thank you for your interest in K9 Atelier. We are unable to confirm ${appointment.petName}'s appointment request for ${dateLabel} at ${appointment.appointmentTime}.`;
-  const followUpParagraph =
-    "Please reply to this email should you wish to arrange another time.";
+  const openingParagraph =
+    "We're sorry, but we're unable to accommodate your appointment as scheduled.";
+  const guidanceParagraph =
+    "You may book another available date at your convenience. If you would prefer assistance, please contact us and we will be glad to help.";
+  const closingParagraph = "Thank you for your understanding.";
 
   const text = [
     `Dear ${greetingName},`,
     "",
-    declineParagraph,
+    openingParagraph,
     "",
-    followUpParagraph,
+    guidanceParagraph,
     "",
-    `Book again: ${siteUrl("/book")}`,
+    closingParagraph,
+    "",
+    `Book another available date: ${siteUrl("/book")}`,
   ].join("\n");
 
   return buildCustomerSimpleLetterEmail(
     {
       subject,
       greetingName,
-      bodyParagraphs: [declineParagraph, followUpParagraph],
+      bodyParagraphs: [
+        openingParagraph,
+        guidanceParagraph,
+        closingParagraph,
+      ],
       cta: {
         href: siteUrl("/book"),
-        label: "BOOK AGAIN",
+        label: "BOOK AN APPOINTMENT",
       },
     },
     text,

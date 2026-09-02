@@ -73,14 +73,14 @@ export function buildAppointmentSubmittedSms(
   details: BookingConfirmationDetails,
 ): string {
   const name = smsGreetingName(details);
-  return `Hi ${name}! We received your K9 Atelier request for ${details.petName} on ${details.dateLabel} between ${details.timeLabel}. We'll confirm shortly. ${SMS_OPT_OUT}`;
+  return `Hi ${name}! Your K9 Atelier appointment for ${details.petName} is booked for ${details.dateLabel} between ${details.timeLabel}. If anything needs attention, we'll contact you. ${SMS_OPT_OUT}`;
 }
 
 export function buildAppointmentDeclinedSms(
   details: BookingConfirmationDetails,
 ): string {
   const name = smsGreetingName(details);
-  return `Hi ${name}, we weren't able to confirm ${details.petName}'s K9 Atelier appointment for ${details.dateLabel} at ${details.timeLabel}. Please reply to our email to choose another time. ${SMS_OPT_OUT}`;
+  return `Hi ${name}, we're unable to accommodate ${details.petName}'s K9 Atelier appointment as scheduled. You may book another available date, or contact us for assistance. ${SMS_OPT_OUT}`;
 }
 
 export function buildAppointmentReminderSms(

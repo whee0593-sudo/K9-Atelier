@@ -7,19 +7,19 @@ export function HomeBookingCta() {
     <section className="border-b border-gray-line/60 py-16 md:py-24">
       <Container className="text-center">
         <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
-          Request an Appointment
+          Book an Appointment
         </p>
         <h2 className="font-display mx-auto mt-5 max-w-3xl text-[2.5rem] leading-[1.08] text-ink md:text-5xl">
-          A Private Appointment Starts With a Conversation.
+          A Private Spa Experience, Reserved for Your Dog.
         </h2>
         <p className="font-body mx-auto mt-5 max-w-2xl text-base leading-relaxed text-taupe">
-          Reserve a calm, one-on-one grooming experience for your dog. You
-          add a card after choosing your date and time — you will not be
-          charged when you book.
+          Book a calm, one-on-one grooming experience at a date and time that
+          works for you. Add a card to complete your booking—you will not be
+          charged at the time of booking.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[11px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink">
-            Request an Appointment
+            Book an Appointment
           </BookServiceLink>
           <Link
             href="/contact?inquiry=grooming-consultation"

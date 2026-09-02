@@ -30,7 +30,7 @@ export default async function AccountLayout({
 
       <div className="mb-6 flex justify-end">
         <BookServiceLink className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-gold px-6 py-3 text-sm font-medium text-white transition hover:bg-gold-dark">
-          Book Service
+          Book an Appointment
         </BookServiceLink>
       </div>
 

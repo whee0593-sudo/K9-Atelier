@@ -26,7 +26,7 @@ export function ServiceCard({
   service,
   featured = false,
   quiet = false,
-  requestLabel = "Request This Service",
+  requestLabel = "Book an Appointment",
   anchorId,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -106,7 +106,7 @@ export function ServiceCard({
         </button>
         {!quiet && !membersOnly && (
           <BookServiceLink className="inline-flex min-h-[48px] items-center justify-center rounded-sm bg-deep-lavender px-5 text-[10px] font-medium uppercase tracking-[0.16em] text-ivory transition hover:bg-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne">
-            {featured ? "Request This Service" : requestLabel}
+            {featured ? "Book an Appointment" : requestLabel}
           </BookServiceLink>
         )}
         {membersOnly && (

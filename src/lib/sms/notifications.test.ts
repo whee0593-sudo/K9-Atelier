@@ -37,7 +37,7 @@ describe("appointment SMS copy", () => {
     const submitted = buildAppointmentSubmittedSms(details);
     const reminder = buildAppointmentReminderSms(details);
     const enRoute = buildAppointmentEnRouteSms(details);
-    assert.match(submitted, /We received your K9 Atelier request/);
+    assert.match(submitted, /appointment for Bella is booked/);
     assert.match(reminder, /appointment is today/);
     assert.match(enRoute, /We're on the way/);
   });

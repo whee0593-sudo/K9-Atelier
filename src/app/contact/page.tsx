@@ -33,12 +33,12 @@ export default async function ContactPage({
       eyebrow="Get in Touch"
       title={
         <>
-          A Private Appointment
+          A Thoughtful Experience
           <br />
-          Starts With a Conversation.
+          Begins With Understanding.
         </>
       }
-      intro="Questions about your dog's grooming needs or the K9 Atelier experience? Leave a message and we will get back to you."
+      intro="Every dog is different. If you are unsure which service is most appropriate, we invite you to get in touch before booking."
     >
       <div className="mx-auto max-w-xl">
         <ContactBoardForm initialInquiry={inquiry} />

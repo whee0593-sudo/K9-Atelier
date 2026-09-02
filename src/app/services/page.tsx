@@ -161,13 +161,13 @@ export default function ServicesPage() {
               service={endOfLife}
               quiet
               anchorId={endOfLife.id}
-              requestLabel="Request an Appointment"
+              requestLabel="Book an Appointment"
             />
           )}
         </div>
         <p className="mt-8 text-center">
           <BookServiceLink className="font-body inline-flex min-h-[44px] items-center text-[10px] font-medium uppercase tracking-[0.16em] text-taupe transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne">
-            Request an Appointment
+            Book an Appointment
           </BookServiceLink>
         </p>
       </ServicesSection>
@@ -210,7 +210,7 @@ export default function ServicesPage() {
             charged when you book.
           </p>
           <BookServiceLink className="mt-8 inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[10px] font-medium uppercase tracking-[0.16em] text-ivory transition hover:bg-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne">
-            Request an Appointment
+            Book an Appointment
           </BookServiceLink>
         </div>
       </section>

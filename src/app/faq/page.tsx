@@ -163,8 +163,8 @@ export default function FaqPage() {
         <FaqParagraphs
           paragraphs={[
             "Appointments are available Monday through Friday, from 9:00 AM to 4:00 PM Eastern Time. Limited weekend availability may be offered by request.",
-            "To begin, create your pet’s profile, select your preferred date and time from our appointment calendar, and upload your pet’s vaccination records. Once we have reviewed the submitted information, we will send you an email confirming your appointment.",
-            "Please note that selecting a date and time does not guarantee an appointment until you receive our confirmation email.",
+            "To begin, create your pet’s profile, select your preferred date and time from our appointment calendar, upload vaccination records, and add a card to complete your booking. You will not be charged at the time of booking.",
+            "Your appointment is booked when you finish checkout. If anything in your booking needs attention, K9 Atelier will contact you after your appointment is placed.",
           ]}
         />
       ),
@@ -281,7 +281,7 @@ export default function FaqPage() {
 
       <div className="mt-14 flex flex-col items-center justify-center gap-4 sm:flex-row">
         <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[10px] font-medium uppercase tracking-[0.16em] text-ivory transition hover:bg-ink">
-          Request an Appointment
+          Book an Appointment
         </BookServiceLink>
         <LuxuryButton href="/contact" variant="secondary">
           Email the Atelier

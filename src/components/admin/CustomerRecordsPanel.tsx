@@ -143,9 +143,9 @@ function formatHistoryDate(iso: string) {
 }
 
 function appointmentStatusLabel(status: string) {
-  if (status === "pending_confirmation") return "Pending";
+  if (status === "pending_confirmation") return "Pending Review";
   if (status === "cancelled") return "Cancelled";
-  return "Booked";
+  return "Confirmed";
 }
 
 function CustomerHistory({ customerId, open }: { customerId: string; open: boolean }) {

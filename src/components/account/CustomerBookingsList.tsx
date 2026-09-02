@@ -31,11 +31,9 @@ function AppointmentCard({ appointment }: { appointment: AppointmentRecord }) {
         </div>
         <span
           className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
-            appointment.status === "pending_confirmation"
-              ? "bg-red-50 text-red-700"
-              : appointment.status === "confirmed"
-                ? "bg-lavender-light text-gold-dark"
-                : "bg-lavender-light/60 text-text-muted"
+            appointment.status === "cancelled"
+              ? "bg-lavender-light/60 text-text-muted"
+              : "bg-lavender-light text-gold-dark"
           }`}
         >
           {appointmentStatusLabel(appointment.status)}

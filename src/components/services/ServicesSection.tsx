@@ -49,7 +49,7 @@ export function ServicesSection({
         {showRequestLink && (
           <p className="mt-10 text-center">
             <BookServiceLink className="font-body inline-flex min-h-[44px] items-center text-[10px] font-medium uppercase tracking-[0.16em] text-taupe transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne">
-              Request This Service
+              Book an Appointment
             </BookServiceLink>
           </p>
         )}

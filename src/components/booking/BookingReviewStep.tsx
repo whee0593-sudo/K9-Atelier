@@ -575,12 +575,12 @@ export function BookingReviewStep({
 
       {pendingVaccinationReview && (
         <p
-          className="font-body mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-relaxed text-red-800"
+          className="font-body mt-6 rounded-xl border border-champagne/50 bg-dusty-lavender/20 px-4 py-3 text-sm leading-relaxed text-ink"
           role="status"
         >
-          {pet.name}&apos;s vaccination record is pending staff review. You may
-          submit this appointment request now, but it will not be confirmed until
-          our team approves the vaccination record.
+          {pet.name}&apos;s vaccination record is still under review. You can
+          complete this booking now. If anything needs attention, K9 Atelier
+          will contact you after your appointment is placed.
         </p>
       )}
 
@@ -689,7 +689,7 @@ export function BookingReviewStep({
         {loading
           ? "Saving…"
           : pendingVaccinationReview
-            ? "Submit Appointment Request"
+            ? "Book Appointment"
             : "Reserve Appointment"}
       </button>
 
@@ -719,32 +719,17 @@ export function BookingConfirmationView({
   address: ServiceAddress;
   appointmentStatus?: AppointmentRecord["status"];
 }) {
-  const pendingConfirmation =
-    appointmentStatus === "pending_confirmation" ||
-    (appointmentStatus == null &&
-      vaccinationBookingNeedsAdminConfirmation(pet.vaccinationBookingStatus));
+  void appointmentStatus;
 
   return (
     <section className="text-center">
       <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
-        {pendingConfirmation
-          ? "Request Received"
-          : "Your Appointment Is Reserved"}
+        Your Appointment Is Booked
       </p>
       <h2 className="font-display mt-5 text-4xl text-ink md:text-5xl">
-        {pendingConfirmation ? (
-          <>
-            We&apos;re Reviewing
-            <br />
-            {pet.name}&apos;s Request.
-          </>
-        ) : (
-          <>
-            We Look Forward
-            <br />
-            to Welcoming {pet.name}.
-          </>
-        )}
+        We Look Forward
+        <br />
+        to Welcoming {pet.name}.
       </h2>
 
       <div className={`${bookingNoticeClass} mx-auto mt-10 max-w-lg text-left`}>
@@ -755,18 +740,11 @@ export function BookingConfirmationView({
         <p className="mt-2 text-sm text-taupe">
           {formatServiceAddress(address)}
         </p>
-        {pendingConfirmation ? (
-          <p className="mt-6 text-sm leading-relaxed text-red-800">
-            Your appointment request has been received. It will remain pending
-            until our team confirms the appointment. We will contact you once
-            your appointment is confirmed.
-          </p>
-        ) : (
-          <p className="mt-6 text-xs text-taupe">
-            Your appointment has been reserved exclusively for {pet.name}. We
-            will email and text updates to this reservation.
-          </p>
-        )}
+        <p className="mt-6 text-sm leading-relaxed text-taupe">
+          Your appointment is booked. If anything in your booking needs
+          attention, K9 Atelier will contact you. We will email and text updates
+          about this visit.
+        </p>
       </div>
 
       <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">

@@ -16,7 +16,7 @@ export default async function AdminAppointmentsPage() {
         <h2 className="text-2xl font-semibold text-gold-dark">Appointments</h2>
         <div className="mt-8 rounded-2xl border border-lavender/30 bg-cream p-6">
           <p className="text-sm text-text">
-            Staff access is required to review appointment requests.
+            Staff access is required to manage appointments.
           </p>
           <Link
             href="/login?next=/admin/appointments"
@@ -35,8 +35,8 @@ export default async function AdminAppointmentsPage() {
         Calendar & Appointments
       </h2>
       <p className="mt-2 text-sm text-text-muted">
-        Open any day on the calendar to see who is booked. Confirm new
-        requests, lock each day to a service area, and text today&apos;s
+        Open any day on the calendar to see who is booked. Review new
+        appointments, lock each day to a service area, and text today&apos;s
         clients in drive order.
       </p>
       <AppointmentReviewPanel />
