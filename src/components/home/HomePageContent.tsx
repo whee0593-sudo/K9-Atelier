@@ -4,6 +4,7 @@ import { HomeBookingCta } from "./HomeBookingCta";
 import { HomeExperience } from "./HomeExperience";
 import { HomeExpertise } from "./HomeExpertise";
 import { HomeFaqTeaser } from "./HomeFaqTeaser";
+import { HomeFirstVisit } from "./HomeFirstVisit";
 import { HomeGentleCare } from "./HomeGentleCare";
 import { HomeHero } from "./HomeHero";
 import { HomeReviews } from "./HomeReviews";
@@ -17,6 +18,7 @@ export function HomePageContent() {
       <HomeExperience />
       <HomeExpertise />
       <HomeSignatureServices />
+      <HomeFirstVisit />
       <HomeSpaWellness />
       <HomeArtistry />
       <HomeReviews />
