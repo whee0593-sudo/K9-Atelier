@@ -236,7 +236,7 @@
           "type": "file",
           "required": false,
           "accept": ".pdf,.jpg,.jpeg,.png,.webp,.heic",
-          "note": "Upload a current rabies or vaccination certificate, or choose Add later. Needed before booking. Accepted formats: PDF, JPG, PNG, WEBP, HEIC. Max 4 MB."
+          "note": "Upload a current rabies certificate or vaccination record, or choose Add later. Needed before booking. Accepted formats: PDF, JPG, PNG, WEBP, HEIC. Max 4 MB."
         }
       ]
     },

@@ -6,6 +6,7 @@ import {
   buildAppointmentDeclinedSms,
   buildAppointmentEnRouteSms,
   buildAppointmentReminderSms,
+  buildAppointmentStaffCancelledSms,
   buildAppointmentSubmittedSms,
   buildBookingConfirmationSms,
   type BookingConfirmationDetails,
@@ -78,6 +79,16 @@ export async function sendAppointmentDeclinedSms(
   return sendCustomerSms(
     customer.phone,
     buildAppointmentDeclinedSms(detailsForSms(appointment, customer)),
+  );
+}
+
+export async function sendAppointmentStaffCancelledSms(
+  appointment: AppointmentRecord,
+  customer: CustomerContact,
+) {
+  return sendCustomerSms(
+    customer.phone,
+    buildAppointmentStaffCancelledSms(detailsForSms(appointment, customer)),
   );
 }
 

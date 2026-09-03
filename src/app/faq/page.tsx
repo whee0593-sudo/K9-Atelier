@@ -163,8 +163,8 @@ export default function FaqPage() {
         <FaqParagraphs
           paragraphs={[
             "Appointments are available Monday through Friday, from 9:00 AM to 4:00 PM Eastern Time. Limited weekend availability may be offered by request.",
-            "To begin, create your pet’s profile, select your preferred date and time from our appointment calendar, upload vaccination records, and add a card to complete your booking. You will not be charged at the time of booking.",
-            "Your appointment is booked when you finish checkout. If anything in your booking needs attention, K9 Atelier will contact you after your appointment is placed.",
+            "To begin, create your pet’s profile, select an available date and time, and add a card on file. A current rabies certificate or vaccination record is required. If your dog’s record needs to be reviewed, we will notify you once your appointment is confirmed.",
+            "You will not be charged at the time of booking.",
           ]}
         />
       ),

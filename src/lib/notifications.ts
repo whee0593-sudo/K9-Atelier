@@ -59,28 +59,26 @@ function smsGreetingName(details: BookingConfirmationDetails) {
 export function buildBookingConfirmationSms(
   details: BookingConfirmationDetails,
 ): string {
-  const price = details.priceLabel ?? "TBD";
-  const name = smsGreetingName(details);
-
-  if (isNewClient(details)) {
-    return `Hi ${name}! Welcome to K9 Atelier. Your first appointment for ${details.petName} is confirmed for ${details.dateLabel} between ${details.timeLabel}. Est. Total: ${price}. Payment is settled after your visit. We can't wait to meet ${details.petName}! ${SMS_OPT_OUT}`;
-  }
-
-  return `Hi ${name}! This confirms your K9 Atelier appointment for ${details.petName} on ${details.dateLabel} between ${details.timeLabel}. Service: ${details.serviceName} | Est. Total: ${price}. We'll text you when we're on the way. Need to reschedule? Please give us 48 hrs notice. ${SMS_OPT_OUT}`;
+  return `Your K9 Atelier appointment is confirmed for ${details.dateLabel} between ${details.timeLabel}. ${SMS_OPT_OUT}`;
 }
 
 export function buildAppointmentSubmittedSms(
   details: BookingConfirmationDetails,
 ): string {
-  const name = smsGreetingName(details);
-  return `Hi ${name}! Your K9 Atelier appointment for ${details.petName} is booked for ${details.dateLabel} between ${details.timeLabel}. If anything needs attention, we'll contact you. ${SMS_OPT_OUT}`;
+  return `K9 Atelier has received your dog’s vaccination record. Your selected appointment is pending review. We will notify you once it is confirmed. ${SMS_OPT_OUT}`;
 }
 
 export function buildAppointmentDeclinedSms(
   details: BookingConfirmationDetails,
 ): string {
   const name = smsGreetingName(details);
-  return `Hi ${name}, we're unable to accommodate ${details.petName}'s K9 Atelier appointment as scheduled. You may book another available date, or contact us for assistance. ${SMS_OPT_OUT}`;
+  return `Hi ${name}, we’re unable to confirm your selected K9 Atelier appointment. You may select another available date through our booking page, or contact us for assistance. ${SMS_OPT_OUT}`;
+}
+
+export function buildAppointmentStaffCancelledSms(
+  details: BookingConfirmationDetails,
+): string {
+  return `K9 Atelier: We’re sorry, but we’re unable to accommodate your appointment on ${details.dateLabel} between ${details.timeLabel}. You may book another available date, or contact us for assistance. ${SMS_OPT_OUT}`;
 }
 
 export function buildAppointmentReminderSms(
@@ -156,17 +154,14 @@ export function buildBookingConfirmationEmail(
   details: BookingConfirmationDetails,
 ): { subject: string; body: string } {
   const greetingName = details.customerName ?? "there";
-  const dash = "—";
+  const subject = "Your Appointment Is Confirmed";
 
   if (!isNewClient(details)) {
-    const subject = `Your K9 Atelier appointment for ${details.petName} is confirmed ✓`;
     const lines = [
       `Hi ${greetingName},`,
       "",
-      `Your appointment for ${details.petName} is confirmed. Here are the details:`,
+      `Your appointment for ${details.petName} is confirmed for ${details.dateLabel} between ${details.timeLabel}.`,
       "",
-      `Date: ${details.dateLabel}`,
-      `Time: ${details.timeLabel}`,
       `Service: ${details.serviceName}`,
       details.addressLabel ? `Location: ${details.addressLabel}` : null,
       details.durationLabel
@@ -187,11 +182,10 @@ export function buildBookingConfirmationEmail(
     return { subject, body: lines.filter((l) => l !== null).join("\n") };
   }
 
-  const subject = "Welcome to K9 Atelier — Your Appointment is Confirmed ✓";
   const lines = [
     `Hi ${greetingName},`,
     "",
-    `Welcome to K9 Atelier! We're so glad you've chosen us, and we're looking forward to caring for ${details.petName} soon.`,
+    `Welcome to K9 Atelier. Your appointment for ${details.petName} is confirmed for ${details.dateLabel} between ${details.timeLabel}.`,
     "",
     "Here are your appointment details:",
     "",
@@ -217,8 +211,6 @@ export function buildBookingConfirmationEmail(
     "",
     "Need to Reschedule?",
     `We kindly ask for at least 48 hours' notice for any changes. You can reply directly to this email or contact us at ${contactMethod()}.`,
-    "",
-    `We can't wait to meet ${details.petName} and welcome you both to the K9 Atelier family!`,
     "",
     "Warmly,",
     details.signoffName ?? business.brand.name,

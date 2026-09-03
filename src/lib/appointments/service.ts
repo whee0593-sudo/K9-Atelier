@@ -353,6 +353,7 @@ export async function setAppointmentStatus(
           { ...appointmentBeforeUpdate, status },
           contact,
           status,
+          appointmentBeforeUpdate.status,
         );
       } catch (emailError) {
         console.error("setAppointmentStatus email failed:", emailError);
@@ -413,6 +414,7 @@ export async function listAdminAppointmentsOnDate(
     .from("appointments")
     .select(ADMIN_TODAY_APPOINTMENT_SELECT)
     .eq("appointment_date", date)
+    .neq("status", "cancelled")
     .order("scheduled_start", { ascending: true })
     .order("appointment_time", { ascending: true });
 

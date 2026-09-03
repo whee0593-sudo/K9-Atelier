@@ -47,7 +47,14 @@ function statusLabel(status: AdminAppointmentRecord["status"]) {
   return "Confirmed";
 }
 
-export function AdminCalendar({ preview = false }: { preview?: boolean }) {
+export function AdminCalendar({
+  preview = false,
+  onAppointmentsChanged,
+}: {
+  preview?: boolean;
+  /** Fired after an operational change (for example cancelling a confirmed visit). */
+  onAppointmentsChanged?: () => void;
+}) {
   const [month, setMonth] = useState(() =>
     preview
       ? PREVIEW_CALENDAR_MONTH
@@ -68,6 +75,7 @@ export function AdminCalendar({ preview = false }: { preview?: boolean }) {
   const [loadingMonth, setLoadingMonth] = useState(true);
   const [loadingDay, setLoadingDay] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dayVersion, setDayVersion] = useState(0);
 
   const loadMonth = useCallback(async (nextMonth: string) => {
     setLoadingMonth(true);
@@ -154,7 +162,13 @@ export function AdminCalendar({ preview = false }: { preview?: boolean }) {
     return () => {
       cancelled = true;
     };
-  }, [preview, selectedDate]);
+  }, [preview, selectedDate, dayVersion]);
+
+  function refreshSelectedDay() {
+    setDayVersion((current) => current + 1);
+    void loadMonth(month);
+    onAppointmentsChanged?.();
+  }
 
   const leadingBlanks = useMemo(() => {
     if (days.length === 0) return 0;
@@ -317,6 +331,7 @@ export function AdminCalendar({ preview = false }: { preview?: boolean }) {
                     appointment={appointment}
                     paidKinds={paidKinds[appointment.id] ?? []}
                     preview={preview}
+                    onCancelled={refreshSelectedDay}
                   />
                 </div>
               </li>

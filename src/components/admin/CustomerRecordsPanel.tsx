@@ -212,7 +212,15 @@ function CustomerHistory({ customerId, open }: { customerId: string; open: boole
                 </div>
                 <p className="mt-1 text-text-muted">
                   {appointment.petName} · {appointment.serviceName} ·{" "}
-                  {appointmentStatusLabel(appointment.status)}
+                  <span
+                    className={
+                      appointment.status === "cancelled"
+                        ? "text-text-muted"
+                        : "text-gold-dark"
+                    }
+                  >
+                    {appointmentStatusLabel(appointment.status)}
+                  </span>
                 </p>
                 <p className="mt-1 text-xs text-gold-dark">
                   {formatStaffVisitTiming(

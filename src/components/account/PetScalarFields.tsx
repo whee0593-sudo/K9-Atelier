@@ -176,7 +176,7 @@ export function PetScalarFields({
                   </p>
                 ) : (
                   <p className="text-sm text-text-muted">
-                    Upload a current rabies or vaccination certificate.
+                    Upload a current rabies certificate or vaccination record.
                   </p>
                 )}
                 {!uploaded && (

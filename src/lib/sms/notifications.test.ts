@@ -19,17 +19,17 @@ const details = {
 };
 
 describe("appointment SMS copy", () => {
-  it("uses welcome wording for first-visit clients", () => {
+  it("confirms appointments with date and time", () => {
     const body = buildBookingConfirmationSms({ ...details, isNewClient: true });
-    assert.match(body, /Welcome to K9 Atelier/);
-    assert.match(body, /Payment is settled after your visit/);
-    assert.equal(body.includes("deposit"), false);
+    assert.match(body, /Your K9 Atelier appointment is confirmed for/);
+    assert.match(body, /Tuesday, August 18, 2026/);
+    assert.match(body, /between 10–11 AM/);
     assert.match(body, /Reply STOP to opt out/);
   });
 
-  it("omits deposit wording for returning clients", () => {
+  it("keeps confirmed SMS concise for returning clients", () => {
     const body = buildBookingConfirmationSms({ ...details, isNewClient: false });
-    assert.match(body, /This confirms your K9 Atelier appointment/);
+    assert.match(body, /Your K9 Atelier appointment is confirmed for/);
     assert.equal(body.includes("deposit"), false);
   });
 
@@ -37,7 +37,8 @@ describe("appointment SMS copy", () => {
     const submitted = buildAppointmentSubmittedSms(details);
     const reminder = buildAppointmentReminderSms(details);
     const enRoute = buildAppointmentEnRouteSms(details);
-    assert.match(submitted, /appointment for Bella is booked/);
+    assert.match(submitted, /vaccination record/);
+    assert.match(submitted, /pending review/);
     assert.match(reminder, /appointment is today/);
     assert.match(enRoute, /We're on the way/);
   });

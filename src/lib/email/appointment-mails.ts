@@ -6,6 +6,7 @@ import {
   buildCustomerAddDogEmail,
   buildCustomerAppointmentConfirmedEmail,
   buildCustomerAppointmentDeclinedEmail,
+  buildCustomerAppointmentStaffCancelledEmail,
   buildCustomerAppointmentSubmittedEmail,
   buildCustomerCancelEmail,
   buildCustomerRemoveDogEmail,
@@ -14,9 +15,11 @@ import {
 } from "@/lib/email/html-templates";
 import { sendEmail } from "@/lib/email/resend";
 import type { CustomerContact } from "@/lib/email/appointment-context";
+import { resolveStaffStatusNoticeKind } from "@/lib/appointments/staff-status-notice";
 import {
   sendAppointmentConfirmedSms,
   sendAppointmentDeclinedSms,
+  sendAppointmentStaffCancelledSms,
   sendAppointmentSubmittedSms,
 } from "@/lib/sms/appointment-sms";
 
@@ -81,6 +84,24 @@ export async function notifyCustomerAppointmentDeclined(
     html: email.html,
   });
   await sendAppointmentDeclinedSms(appointment, customer);
+}
+
+export async function notifyCustomerAppointmentStaffCancelled(
+  appointment: AppointmentRecord,
+  customer: CustomerContact,
+) {
+  const email = buildCustomerAppointmentStaffCancelledEmail(
+    appointment,
+    customer,
+  );
+
+  await sendEmail({
+    to: customer.email,
+    subject: email.subject,
+    text: email.text,
+    html: email.html,
+  });
+  await sendAppointmentStaffCancelledSms(appointment, customer);
 }
 
 export async function notifyCustomerAppointmentChange(
@@ -158,9 +179,17 @@ export async function sendAppointmentStatusEmails(
   appointment: AppointmentRecord,
   customer: CustomerContact,
   status: "confirmed" | "cancelled",
+  previousStatus?: AppointmentRecord["status"],
 ) {
-  if (status === "confirmed") {
+  const kind = resolveStaffStatusNoticeKind(status, previousStatus);
+
+  if (kind === "confirmed") {
     await notifyCustomerAppointmentConfirmed(appointment, customer);
+    return;
+  }
+
+  if (kind === "staff_cancelled") {
+    await notifyCustomerAppointmentStaffCancelled(appointment, customer);
     return;
   }
 

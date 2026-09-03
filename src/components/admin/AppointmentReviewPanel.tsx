@@ -217,7 +217,9 @@ export function AppointmentReviewPanel() {
         </p>
       ) : null}
 
-      <AdminCalendar />
+      <AdminCalendar
+        onAppointmentsChanged={() => void loadAppointments({ silent: true })}
+      />
 
       <section>
         <h3 className="text-lg font-medium text-gold-dark">Route days</h3>
@@ -512,6 +514,7 @@ export function AppointmentReviewPanel() {
                     <AppointmentActionLinks
                       appointment={appointment}
                       paidKinds={paidKinds[appointment.id] ?? []}
+                      onCancelled={() => void loadAppointments({ silent: true })}
                     />
                   </div>
                 </li>

@@ -95,9 +95,9 @@ export function mapAppointmentRowToAdminRecord(
 export function appointmentStatusLabel(status: AppointmentRecord["status"]) {
   switch (status) {
     case "pending_confirmation":
-      return "Booked";
+      return "Pending Vaccination Review";
     case "confirmed":
-      return "Booked";
+      return "Confirmed";
     case "cancelled":
       return "Cancelled";
   }

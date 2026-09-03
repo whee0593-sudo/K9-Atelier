@@ -579,8 +579,8 @@ export function BookingReviewStep({
           role="status"
         >
           {pet.name}&apos;s vaccination record is still under review. You can
-          complete this booking now. If anything needs attention, K9 Atelier
-          will contact you after your appointment is placed.
+          submit this appointment now. We will notify you once the vaccination
+          record is reviewed and your appointment is confirmed.
         </p>
       )}
 
@@ -689,7 +689,7 @@ export function BookingReviewStep({
         {loading
           ? "Saving…"
           : pendingVaccinationReview
-            ? "Book Appointment"
+            ? "Submit for Review"
             : "Reserve Appointment"}
       </button>
 
@@ -719,12 +719,14 @@ export function BookingConfirmationView({
   address: ServiceAddress;
   appointmentStatus?: AppointmentRecord["status"];
 }) {
-  void appointmentStatus;
+  const pendingReview = appointmentStatus === "pending_confirmation";
 
   return (
     <section className="text-center">
       <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
-        Your Appointment Is Booked
+        {pendingReview
+          ? "Vaccination Record Received"
+          : "Your Appointment Is Confirmed"}
       </p>
       <h2 className="font-display mt-5 text-4xl text-ink md:text-5xl">
         We Look Forward
@@ -741,9 +743,9 @@ export function BookingConfirmationView({
           {formatServiceAddress(address)}
         </p>
         <p className="mt-6 text-sm leading-relaxed text-taupe">
-          Your appointment is booked. If anything in your booking needs
-          attention, K9 Atelier will contact you. We will email and text updates
-          about this visit.
+          {pendingReview
+            ? "Your selected appointment is pending while we review your dog’s vaccination record. We will notify you as soon as your appointment is confirmed."
+            : "Your appointment has been reserved. You can view the details at any time in your account."}
         </p>
       </div>
 
