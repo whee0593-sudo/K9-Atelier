@@ -13,9 +13,10 @@ export function HomeBookingCta() {
           A Private Spa Experience, Reserved for Your Dog.
         </h2>
         <p className="font-body mx-auto mt-5 max-w-2xl text-base leading-relaxed text-taupe">
-          Book a calm, one-on-one grooming experience at a date and time that
-          works for you. Add a card to complete your booking—you will not be
-          charged at the time of booking.
+          Select an available date and time, upload a current vaccination
+          record, and add a card on file. If the record needs review, we’ll
+          notify you when your appointment is confirmed. Your card will not be
+          charged when you book.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[11px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink">
