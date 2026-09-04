@@ -166,7 +166,7 @@ export default function ServicesPage() {
           )}
         </div>
         <p className="mt-8 text-center">
-          <BookServiceLink className="font-body inline-flex min-h-[44px] items-center text-[10px] font-medium uppercase tracking-[0.16em] text-taupe transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne">
+          <BookServiceLink className="font-body inline-flex min-h-[48px] items-center justify-center rounded-sm border border-champagne bg-transparent px-8 text-[10px] font-medium uppercase tracking-[0.16em] text-ink transition hover:border-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne">
             Book an Appointment
           </BookServiceLink>
         </p>
