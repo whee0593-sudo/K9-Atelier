@@ -3,12 +3,14 @@ BEGIN;
 CREATE TABLE IF NOT EXISTS public.service_day_closures (
   service_date date PRIMARY KEY,
   closed_all_day boolean NOT NULL DEFAULT false,
-  closed_morning boolean NOT NULL DEFAULT false,
-  closed_afternoon boolean NOT NULL DEFAULT false,
+  closed_hours integer[] NOT NULL DEFAULT '{}'::integer[],
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT service_day_closures_has_block CHECK (
-    closed_all_day OR closed_morning OR closed_afternoon
+    closed_all_day OR cardinality(closed_hours) > 0
+  ),
+  CONSTRAINT service_day_closures_hours_range CHECK (
+    closed_hours <@ ARRAY[9,10,11,12,13,14,15]
   )
 );
 

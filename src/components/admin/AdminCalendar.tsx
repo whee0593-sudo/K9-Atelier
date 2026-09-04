@@ -226,7 +226,11 @@ export function AdminCalendar({
               <div key={`blank-${index}`} className="min-h-16 bg-lavender-light/20" />
             ))}
             {days.map((day) => {
-              const muted = day.isPast || day.isFull || Boolean(day.closure?.closedAllDay);
+              const muted =
+                day.isPast ||
+                day.isFull ||
+                Boolean(day.closure?.closedAllDay) ||
+                Boolean(day.closure?.closedHours.length);
               const selected = selectedDate === day.date;
               return (
                 <button

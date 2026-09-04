@@ -12,7 +12,10 @@ import type { ChargeKind } from "@/lib/charges/types";
 import { formatServiceAddress } from "@/lib/travel";
 
 import type { DayClosureRecord } from "@/lib/appointments/closures";
-import { closureMode } from "@/lib/appointments/closures";
+import {
+  formatHourLabel,
+  listClosureHourOptions,
+} from "@/lib/appointments/closures";
 
 type ScheduleDay = {
   date: string;
@@ -187,26 +190,17 @@ export function AppointmentReviewPanel() {
 
   async function setDayClosure(
     date: string,
-    mode: "open" | "day" | "morning" | "afternoon",
+    input: { clear?: boolean; closedAllDay?: boolean; closedHours?: number[] },
   ) {
     setBusyId(`closure-${date}`);
     setError(null);
 
     try {
-      const payload =
-        mode === "open"
-          ? { date, clear: true }
-          : {
-              date,
-              closedAllDay: mode === "day",
-              closedMorning: mode === "day" || mode === "morning",
-              closedAfternoon: mode === "day" || mode === "afternoon",
-            };
       const response = await fetch("/api/admin/closures", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ date, ...input }),
       });
       const body = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -220,6 +214,21 @@ export function AppointmentReviewPanel() {
     } finally {
       setBusyId(null);
     }
+  }
+
+  function toggleClosedHour(day: ScheduleDay, hour: number) {
+    const current = new Set(day.closure?.closedHours ?? []);
+    if (current.has(hour)) current.delete(hour);
+    else current.add(hour);
+    const closedHours = [...current].sort((a, b) => a - b);
+    if (closedHours.length === 0) {
+      void setDayClosure(day.date, { clear: true });
+      return;
+    }
+    void setDayClosure(day.date, {
+      closedAllDay: false,
+      closedHours,
+    });
   }
 
   if (loading) {
@@ -269,9 +278,9 @@ export function AppointmentReviewPanel() {
         <h3 className="text-lg font-medium text-gold-dark">Route days</h3>
         <p className="mt-1 text-sm text-text-muted">
           Lock a day to one area, or leave it on Auto so the first booking that
-          day sets the neighborhood. Close a full day or only morning /
-          afternoon when you are unavailable — existing appointments stay on
-          the calendar.
+          day sets the neighborhood. Close the full day or individual start
+          hours when you are unavailable — existing appointments stay on the
+          calendar.
         </p>
         {schedule.length === 0 ? (
           <p className="mt-4 text-sm text-text-muted">
@@ -290,65 +299,106 @@ export function AppointmentReviewPanel() {
                     : day.source === "weekly"
                       ? "Weekly default"
                       : "Open";
+              const closedHours = new Set(day.closure?.closedHours ?? []);
               return (
                 <li
                   key={day.date}
-                  className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 px-4 py-3"
                 >
-                  <div>
-                    <p className="text-sm font-medium text-gold-dark">
-                      {formatShortDate(day.date)}
-                    </p>
-                    <p className="mt-1 text-xs text-text-muted">
-                      {sourceLabel}
-                      {day.appointmentCount > 0
-                        ? ` · ${day.appointmentCount} booked`
-                        : " · no bookings"}
-                    </p>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gold-dark">
+                        {formatShortDate(day.date)}
+                      </p>
+                      <p className="mt-1 text-xs text-text-muted">
+                        {sourceLabel}
+                        {day.appointmentCount > 0
+                          ? ` · ${day.appointmentCount} booked`
+                          : " · no bookings"}
+                        {day.closure?.closedAllDay ? " · closed" : ""}
+                      </p>
+                    </div>
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[16rem]">
+                      <label className="sr-only" htmlFor={`zone-${day.date}`}>
+                        Service area for {formatShortDate(day.date)}
+                      </label>
+                      <select
+                        id={`zone-${day.date}`}
+                        disabled={busyZone || busyClosure}
+                        value={day.source === "open" ? "auto" : day.zoneId}
+                        onChange={(event) =>
+                          void setDayZone(day.date, event.target.value)
+                        }
+                        className="rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm text-text"
+                      >
+                        {zones.map((zone) => (
+                          <option key={zone.id} value={zone.id}>
+                            {zone.label}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={busyZone || busyClosure}
+                          onClick={() =>
+                            void setDayClosure(day.date, {
+                              closedAllDay: true,
+                            })
+                          }
+                          className={`rounded-full px-3 py-1 text-xs font-medium ${
+                            day.closure?.closedAllDay
+                              ? "bg-gold-dark text-white"
+                              : "bg-lavender-light text-gold-dark"
+                          }`}
+                        >
+                          Close day
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busyZone || busyClosure || !day.closure}
+                          onClick={() =>
+                            void setDayClosure(day.date, { clear: true })
+                          }
+                          className="rounded-full bg-white px-3 py-1 text-xs font-medium text-text-muted ring-1 ring-lavender/40"
+                        >
+                          Open day
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[16rem]">
-                    <label className="sr-only" htmlFor={`zone-${day.date}`}>
-                      Service area for {formatShortDate(day.date)}
-                    </label>
-                    <select
-                      id={`zone-${day.date}`}
-                      disabled={busyZone || busyClosure}
-                      value={day.source === "open" ? "auto" : day.zoneId}
-                      onChange={(event) =>
-                        void setDayZone(day.date, event.target.value)
-                      }
-                      className="rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm text-text"
-                    >
-                      {zones.map((zone) => (
-                        <option key={zone.id} value={zone.id}>
-                          {zone.label}
-                        </option>
-                      ))}
-                    </select>
-                    <label className="sr-only" htmlFor={`closure-${day.date}`}>
-                      Availability for {formatShortDate(day.date)}
-                    </label>
-                    <select
-                      id={`closure-${day.date}`}
-                      disabled={busyZone || busyClosure}
-                      value={closureMode(day.closure)}
-                      onChange={(event) =>
-                        void setDayClosure(
-                          day.date,
-                          event.target.value as
-                            | "open"
-                            | "day"
-                            | "morning"
-                            | "afternoon",
-                        )
-                      }
-                      className="rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm text-text"
-                    >
-                      <option value="open">Open for booking</option>
-                      <option value="day">Close full day</option>
-                      <option value="morning">Close morning only</option>
-                      <option value="afternoon">Close afternoon only</option>
-                    </select>
+                  <div className="flex flex-wrap gap-2">
+                    {listClosureHourOptions().map((hour) => {
+                      const closed =
+                        Boolean(day.closure?.closedAllDay) ||
+                        closedHours.has(hour);
+                      return (
+                        <button
+                          key={hour}
+                          type="button"
+                          disabled={busyZone || busyClosure}
+                          onClick={() => {
+                            if (day.closure?.closedAllDay) {
+                              void setDayClosure(day.date, {
+                                closedAllDay: false,
+                                closedHours: listClosureHourOptions().filter(
+                                  (value) => value !== hour,
+                                ),
+                              });
+                              return;
+                            }
+                            toggleClosedHour(day, hour);
+                          }}
+                          className={`rounded-full px-3 py-1 text-xs font-medium ${
+                            closed
+                              ? "bg-gold-dark/90 text-white"
+                              : "bg-white text-text ring-1 ring-lavender/40"
+                          }`}
+                        >
+                          {formatHourLabel(hour)}
+                        </button>
+                      );
+                    })}
                   </div>
                 </li>
               );

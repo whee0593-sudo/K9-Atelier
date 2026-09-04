@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getStaffSession } from "@/lib/staff/auth";
 import { mapStaffServiceError, staffJsonError } from "@/lib/staff/api-errors";
 import { setStaffDayClosure } from "@/lib/appointments/schedule";
+import { listClosureHourOptions } from "@/lib/appointments/closures";
 import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
 
 export async function POST(request: Request) {
@@ -12,8 +13,7 @@ export async function POST(request: Request) {
     date?: string;
     clear?: boolean;
     closedAllDay?: boolean;
-    closedMorning?: boolean;
-    closedAfternoon?: boolean;
+    closedHours?: number[];
   };
   try {
     body = (await request.json()) as typeof body;
@@ -30,12 +30,19 @@ export async function POST(request: Request) {
     return staffJsonError("That date is outside the booking calendar.", 400);
   }
 
+  const allowed = new Set(listClosureHourOptions());
+  const closedHours = Array.isArray(body.closedHours)
+    ? body.closedHours.filter(
+        (hour): hour is number =>
+          Number.isInteger(hour) && allowed.has(hour),
+      )
+    : [];
+
   const result = body.clear
     ? await setStaffDayClosure(date, { clear: true })
     : await setStaffDayClosure(date, {
         closedAllDay: Boolean(body.closedAllDay),
-        closedMorning: Boolean(body.closedMorning),
-        closedAfternoon: Boolean(body.closedAfternoon),
+        closedHours,
       });
 
   if ("error" in result) {

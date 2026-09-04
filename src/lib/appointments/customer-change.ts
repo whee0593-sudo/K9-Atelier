@@ -91,6 +91,7 @@ export type ApplyAppointmentChangeInput = {
   action: AppointmentChangeAction;
   date?: string;
   timePreference?: TimePreference;
+  slotStartMinutes?: number;
   petId?: string;
   serviceId?: string;
   removeAppointmentId?: string;
@@ -458,8 +459,16 @@ export async function applyAppointmentChange(
   if ("error" in charged) return charged;
 
   if (input.action === "reschedule") {
-    if (!input.date || !input.timePreference) return { error: "conflict" };
-    const moved = await rescheduleRows(targetRows, input.date, input.timePreference);
+    if (
+      !input.date ||
+      (input.slotStartMinutes == null && !input.timePreference)
+    ) {
+      return { error: "conflict" };
+    }
+    const slotStartMinutes =
+      input.slotStartMinutes ??
+      (input.timePreference === "afternoon" ? 12 * 60 : 9 * 60);
+    const moved = await rescheduleRows(targetRows, input.date, slotStartMinutes);
     if ("error" in moved) return moved;
     await sendChangeConfirmationEmail({
       action: "reschedule",
@@ -540,7 +549,7 @@ async function sendChangeConfirmationEmail({
 async function rescheduleRows(
   rows: ChangeRow[],
   date: string,
-  preference: TimePreference,
+  slotStartMinutes: number,
 ): Promise<
   | { appointments: AppointmentRecord[] }
   | { error: "server" | "slot_unavailable" }
@@ -564,7 +573,7 @@ async function rescheduleRows(
       point: { lat: row.address_lat, lon: row.address_lon },
       zip: row.address_zip,
       durationMinutes,
-      preference,
+      slotStartMinutes,
       base,
     });
     if ("error" in assignment) {
@@ -580,7 +589,7 @@ async function rescheduleRows(
         appointment_date: date,
         appointment_time: assignment.insertion.appointmentTime,
         scheduled_start: assignment.insertion.scheduledStart,
-        time_preference: preference,
+        time_preference: assignment.insertion.usedPreference,
       })
       .eq("id", row.id)
       .select(CHANGE_SELECT)
@@ -655,14 +664,18 @@ async function addDogToVisit(
   const base = await getBaseGeoPoint();
   if (!base) return { error: "server" as const };
 
-  const preference =
-    visit.time_preference === "afternoon" ? "afternoon" : "morning";
+  const slotStartMinutes =
+    typeof visit.scheduled_start === "number"
+      ? visit.scheduled_start
+      : visit.time_preference === "afternoon"
+        ? 12 * 60
+        : 9 * 60;
   const assignment = await assignArrivalWindow({
     date: visit.appointment_date,
     point: { lat: visit.address_lat, lon: visit.address_lon },
     zip: visit.address_zip,
     durationMinutes: estimateServiceDurationMinutes(service.id, pet.weightLbs, []),
-    preference,
+    slotStartMinutes,
     base,
   });
   if ("error" in assignment) {
@@ -693,7 +706,7 @@ async function addDogToVisit(
       appointment_date: visit.appointment_date,
       appointment_time: assignment.insertion.appointmentTime,
       scheduled_start: assignment.insertion.scheduledStart,
-      time_preference: preference,
+      time_preference: assignment.insertion.usedPreference,
       address_lat: visit.address_lat,
       address_lon: visit.address_lon,
       timezone: business.booking.timezone,

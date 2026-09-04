@@ -57,6 +57,7 @@ type Props = {
   appointmentDate: string;
   appointmentTime: string;
   timePreference?: TimePreference | null;
+  slotStartMinutes?: number | null;
   onOpenPolicy: (section: BookingPolicySectionId) => void;
   onMakeChange: () => void;
   onReserved: (appointment: AppointmentRecord) => void;
@@ -113,6 +114,7 @@ export function BookingReviewStep({
   appointmentDate,
   appointmentTime,
   timePreference,
+  slotStartMinutes,
   onOpenPolicy,
   onMakeChange,
   onReserved,
@@ -276,7 +278,7 @@ export function BookingReviewStep({
     }
 
     if (
-      !timePreference ||
+      slotStartMinutes == null ||
       travelQuote.lat == null ||
       travelQuote.lon == null
     ) {
@@ -301,6 +303,7 @@ export function BookingReviewStep({
         travelFee: travelQuote.fee,
         appointmentDate,
         appointmentTime,
+        slotStartMinutes,
         timePreference: timePreference ?? undefined,
         addressLat: travelQuote.lat,
         addressLon: travelQuote.lon,
@@ -358,7 +361,7 @@ export function BookingReviewStep({
             {appointmentDate} · {appointmentTime}
           </p>
           <p className="font-body mt-2 text-xs text-taupe">
-            Arrival window assigned to fit that day&apos;s route.
+            Estimated arrival for our mobile route — timing may vary slightly.
           </p>
           <p className="font-body mt-2 text-sm text-taupe">
             {formatServiceAddress(address)}

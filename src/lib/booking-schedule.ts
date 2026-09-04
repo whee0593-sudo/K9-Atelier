@@ -127,6 +127,21 @@ export function formatArrivalWindow(startMinutes: number, durationMinutes: numbe
   return `${start.text} ${start.ampm} – ${end.text} ${end.ampm}`;
 }
 
+/** On-the-hour starts from opening until the last full hour before close. */
+export function listHourlyStartMinutes() {
+  const { hoursStart, hoursEnd } = getDayBounds();
+  const starts: number[] = [];
+  for (let m = hoursStart; m < hoursEnd; m += 60) {
+    starts.push(m);
+  }
+  return starts;
+}
+
+export function preferenceFromStart(startMinutes: number): TimePreference {
+  const { morningEndsAt } = getDayBounds();
+  return startMinutes < morningEndsAt ? "morning" : "afternoon";
+}
+
 export function isMorningStart(startMinutes: number, morningEndsAt: number) {
   return startMinutes < morningEndsAt;
 }
@@ -228,6 +243,94 @@ function extraMilesForInsert(
     (nextPoint ? haversineMiles(incoming, nextPoint) : 0);
   const removed = nextPoint ? haversineMiles(prevPoint, nextPoint) : 0;
   return Math.max(0, added - removed);
+}
+
+function collectExactStartCandidates(
+  base: GeoPoint,
+  stops: RouteStop[],
+  incoming: GeoPoint,
+  durationMinutes: number,
+  requestedStart: number,
+): InsertionCandidate[] {
+  const bounds = getDayBounds();
+  const sorted = [...stops].sort((a, b) => a.scheduledStart - b.scheduledStart);
+  const candidates: InsertionCandidate[] = [];
+
+  for (let index = 0; index <= sorted.length; index += 1) {
+    const prev = sorted[index - 1];
+    const next = sorted[index];
+    const prevPoint = prev ? stopPoint(prev, base) : base;
+    const nextPoint = next ? stopPoint(next, base) : null;
+
+    const earliestRaw =
+      index === 0
+        ? bounds.hoursStart
+        : (prev?.scheduledStart ?? bounds.hoursStart) +
+          (prev?.durationMinutes ?? 0) +
+          travelMinutesBetween(prevPoint, incoming, bounds.travelBufferMinutes);
+    const earliest = snapUp(earliestRaw);
+
+    const latestFinish = next
+      ? next.scheduledStart -
+        travelMinutesBetween(incoming, nextPoint ?? incoming, bounds.travelBufferMinutes)
+      : bounds.hoursEnd;
+    const latestStart = latestFinish - durationMinutes;
+    if (earliest > latestStart) continue;
+    if (requestedStart < earliest || requestedStart > latestStart) continue;
+    if (requestedStart + durationMinutes > bounds.hoursEnd) continue;
+
+    candidates.push({
+      scheduledStart: requestedStart,
+      extraMiles: extraMilesForInsert(base, sorted, index, incoming),
+      usedPreference: preferenceFromStart(requestedStart),
+    });
+  }
+
+  return candidates;
+}
+
+export function findRouteInsertionAtHour(
+  base: GeoPoint,
+  stops: RouteStop[],
+  incoming: GeoPoint,
+  durationMinutes: number,
+  requestedStart: number,
+): InsertResult | null {
+  const bounds = getDayBounds();
+  if (stops.length >= bounds.maxAppointmentsPerDay) return null;
+  if (durationMinutes > bounds.hoursEnd - bounds.hoursStart) return null;
+  if (!listHourlyStartMinutes().includes(requestedStart)) return null;
+
+  const pool = collectExactStartCandidates(
+    base,
+    stops,
+    incoming,
+    durationMinutes,
+    requestedStart,
+  );
+  if (pool.length === 0) return null;
+
+  pool.sort((a, b) => a.extraMiles - b.extraMiles || a.scheduledStart - b.scheduledStart);
+  const best = pool[0]!;
+  return {
+    scheduledStart: best.scheduledStart,
+    durationMinutes,
+    appointmentTime: formatArrivalWindow(best.scheduledStart, durationMinutes),
+    usedPreference: best.usedPreference,
+  };
+}
+
+export function listAvailableHourStarts(
+  base: GeoPoint,
+  stops: RouteStop[],
+  incoming: GeoPoint,
+  durationMinutes: number,
+) {
+  return listHourlyStartMinutes().filter(
+    (start) =>
+      findRouteInsertionAtHour(base, stops, incoming, durationMinutes, start) !=
+      null,
+  );
 }
 
 function collectInsertions(

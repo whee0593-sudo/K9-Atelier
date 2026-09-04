@@ -145,7 +145,7 @@ export async function createAppointment(
     point,
     zip: input.address.zip,
     durationMinutes,
-    preference: input.timePreference,
+    slotStartMinutes: input.slotStartMinutes,
     base,
   });
   if ("error" in assignment) {

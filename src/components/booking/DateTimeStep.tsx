@@ -8,7 +8,7 @@ import {
   toDateValue,
 } from "@/lib/booking-slots";
 import { business } from "@/lib/business";
-import type { TimePreference } from "@/lib/booking-schedule";
+import { formatHourLabel } from "@/lib/appointments/closures";
 import styles from "./datetime-step.module.css";
 
 const playfair = Playfair_Display({
@@ -49,18 +49,17 @@ const MONTHS = [
 export type AvailabilityDay = {
   date: string;
   available: boolean;
-  morning: boolean;
-  afternoon: boolean;
+  slots: number[];
 };
 
 type Props = {
   initialDate?: string | null;
-  initialPreference?: TimePreference | null;
+  initialSlotStartMinutes?: number | null;
   days: AvailabilityDay[];
   loading?: boolean;
   assigning?: boolean;
   error?: string | null;
-  onConfirmed: (date: string, preference: TimePreference) => void;
+  onConfirmed: (date: string, slotStartMinutes: number) => void;
   onBack: () => void;
 };
 
@@ -74,7 +73,7 @@ function isSameDay(a: Date, b: Date) {
 
 export function DateTimeStep({
   initialDate,
-  initialPreference,
+  initialSlotStartMinutes,
   days,
   loading = false,
   assigning = false,
@@ -97,14 +96,15 @@ export function DateTimeStep({
   });
 
   const [selectedDate, setSelectedDate] = useState(initialDate ?? "");
-  const [preference, setPreference] = useState<TimePreference | "">(
-    initialPreference ?? "",
+  const [slotStart, setSlotStart] = useState<number | null>(
+    initialSlotStartMinutes ?? null,
   );
 
   const selectedDateObj = selectedDate ? parseDateValue(selectedDate) : null;
   const selectedAvailability = selectedDate
     ? availability.get(selectedDate)
     : undefined;
+  const openSlots = selectedAvailability?.slots ?? [];
 
   const calendarDays = useMemo(() => {
     const year = viewDate.getFullYear();
@@ -134,8 +134,9 @@ export function DateTimeStep({
     const value = toDateValue(date);
     setSelectedDate(value);
     const next = availability.get(value);
-    if (preference === "morning" && !next?.morning) setPreference("");
-    if (preference === "afternoon" && !next?.afternoon) setPreference("");
+    if (slotStart != null && !next?.slots.includes(slotStart)) {
+      setSlotStart(null);
+    }
   }
 
   function goPrevMonth() {
@@ -154,11 +155,10 @@ export function DateTimeStep({
 
   const canContinue =
     Boolean(selectedDate) &&
-    (preference === "morning" || preference === "afternoon") &&
+    slotStart != null &&
+    openSlots.includes(slotStart) &&
     !assigning &&
-    !loading &&
-    ((preference === "morning" && selectedAvailability?.morning) ||
-      (preference === "afternoon" && selectedAvailability?.afternoon));
+    !loading;
 
   return (
     <div
@@ -189,7 +189,8 @@ export function DateTimeStep({
 
         <h1 className={styles.title}>Select Date &amp; Time</h1>
         <p className={styles.routeNote}>
-          Arrival windows are assigned to fit that day&apos;s route.
+          Choose an available start hour. Arrival is estimated for our mobile
+          route and may vary slightly.
         </p>
 
         <div className={styles.monthNav}>
@@ -251,34 +252,33 @@ export function DateTimeStep({
 
         <div className={styles.rule} />
 
-        <p className={styles.sectionLabel}>Time of Day</p>
+        <p className={styles.sectionLabel}>Start Time</p>
         <div className={styles.times}>
-          {(
-            [
-              ["morning", "Morning"],
-              ["afternoon", "Afternoon"],
-            ] as const
-          ).map(([id, label]) => {
-            const open =
-              id === "morning"
-                ? Boolean(selectedAvailability?.morning)
-                : Boolean(selectedAvailability?.afternoon);
-            const selected = preference === id;
-
-            return (
-              <button
-                key={id}
-                type="button"
-                disabled={!open}
-                onClick={() => setPreference(id)}
-                className={`${styles.timeButton} ${
-                  selected ? styles.timeButtonSelected : ""
-                }`}
-              >
-                <span className={styles.timeLabel}>{label}</span>
-              </button>
-            );
-          })}
+          {openSlots.length === 0 ? (
+            <p className={styles.routeNote}>
+              {selectedDate
+                ? "No start times remain on this day."
+                : "Select a date to see available hours."}
+            </p>
+          ) : (
+            openSlots.map((start) => {
+              const selected = slotStart === start;
+              return (
+                <button
+                  key={start}
+                  type="button"
+                  onClick={() => setSlotStart(start)}
+                  className={`${styles.timeButton} ${
+                    selected ? styles.timeButtonSelected : ""
+                  }`}
+                >
+                  <span className={styles.timeLabel}>
+                    {formatHourLabel(Math.floor(start / 60))}
+                  </span>
+                </button>
+              );
+            })
+          )}
         </div>
 
         {error ? <p className={styles.errorNote}>{error}</p> : null}
@@ -288,12 +288,12 @@ export function DateTimeStep({
             type="button"
             disabled={!canContinue}
             onClick={() => {
-              if (preference !== "morning" && preference !== "afternoon") return;
-              onConfirmed(selectedDate, preference);
+              if (slotStart == null) return;
+              onConfirmed(selectedDate, slotStart);
             }}
             className={styles.continueBtn}
           >
-            {assigning ? "Assigning window…" : "Continue"}
+            {assigning ? "Reserving time…" : "Continue"}
           </button>
           <button type="button" onClick={onBack} className={styles.backLink}>
             Back

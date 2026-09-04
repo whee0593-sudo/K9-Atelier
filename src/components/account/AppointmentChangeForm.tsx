@@ -18,7 +18,6 @@ import {
   type AppointmentChangeAction,
 } from "@/lib/appointments/change-policy";
 import { formatPrice } from "@/lib/business";
-import type { TimePreference } from "@/lib/booking-schedule";
 import { useCustomerPets } from "@/lib/pets/use-customer-pets";
 import { allBookableServices, formatServicePrice, getBookableServicesForPet } from "@/lib/services";
 import { formatServiceAddress } from "@/lib/travel";
@@ -68,7 +67,7 @@ export function AppointmentChangeForm({
   const [addPetId, setAddPetId] = useState("");
   const [addServiceId, setAddServiceId] = useState("");
   const [nextDate, setNextDate] = useState<string | null>(null);
-  const [nextPreference, setNextPreference] = useState<TimePreference | null>(
+  const [nextSlotStartMinutes, setNextSlotStartMinutes] = useState<number | null>(
     null,
   );
   const [days, setDays] = useState<AvailabilityDay[]>([]);
@@ -199,7 +198,7 @@ export function AppointmentChangeForm({
 
   const canConfirm = useMemo(() => {
     if (!action) return false;
-    if (action === "reschedule") return Boolean(nextDate && nextPreference);
+    if (action === "reschedule") return Boolean(nextDate && nextSlotStartMinutes != null);
     if (action === "add_dog") return Boolean(addPetId && addServiceId);
     if (action === "remove_dog") {
       return appointments.length > 1 && Boolean(removeId);
@@ -211,7 +210,7 @@ export function AppointmentChangeForm({
     addServiceId,
     appointments.length,
     nextDate,
-    nextPreference,
+    nextSlotStartMinutes,
     removeId,
   ]);
 
@@ -233,7 +232,7 @@ export function AppointmentChangeForm({
           body: JSON.stringify({
             action,
             date: nextDate,
-            timePreference: nextPreference,
+            slotStartMinutes: nextSlotStartMinutes,
             petId: addPetId,
             serviceId: addServiceId,
             removeAppointmentId: removeId,
@@ -320,7 +319,7 @@ export function AppointmentChangeForm({
                 setAction(item);
                 setError(null);
                 setNextDate(null);
-                setNextPreference(null);
+                setNextSlotStartMinutes(null);
               }}
               className={
                 action === item
@@ -338,9 +337,9 @@ export function AppointmentChangeForm({
           days={days}
           loading={availabilityLoading}
           error={error}
-          onConfirmed={(date, preference) => {
+          onConfirmed={(date, slotStartMinutes) => {
             setNextDate(date);
-            setNextPreference(preference);
+            setNextSlotStartMinutes(slotStartMinutes);
             setError(null);
           }}
           onBack={() => setAction(null)}
@@ -417,7 +416,11 @@ export function AppointmentChangeForm({
           {action === "reschedule" && nextDate ? (
             <p className="text-sm text-text">
               New time: {formatShortDate(nextDate)}
-              {nextPreference ? ` · ${nextPreference}` : ""}
+              {nextSlotStartMinutes != null
+                ? ` · ${Math.floor(nextSlotStartMinutes / 60) % 12 || 12}:00 ${
+                    nextSlotStartMinutes >= 12 * 60 ? "PM" : "AM"
+                  }`
+                : ""}
             </p>
           ) : null}
           {fee > 0 ? (

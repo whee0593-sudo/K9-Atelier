@@ -28,7 +28,7 @@ type Props = {
   initialAddress?: ServiceAddress | null;
   initialQuote?: TravelQuote | null;
   initialDate?: string | null;
-  initialPreference?: TimePreference | null;
+  initialSlotStartMinutes?: number | null;
   onBack: () => void;
   onComplete: (
     address: ServiceAddress,
@@ -36,6 +36,7 @@ type Props = {
     date: string,
     time: string,
     preference: TimePreference,
+    slotStartMinutes: number,
   ) => void;
 };
 
@@ -46,7 +47,7 @@ export function BookingLocationTimeStep({
   initialAddress,
   initialQuote,
   initialDate,
-  initialPreference,
+  initialSlotStartMinutes,
   onBack,
   onComplete,
 }: Props) {
@@ -149,7 +150,7 @@ export function BookingLocationTimeStep({
     setPhase("schedule");
   }
 
-  async function handleDateConfirmed(date: string, preference: TimePreference) {
+  async function handleDateConfirmed(date: string, slotStartMinutes: number) {
     if (!quote || quote.lat == null || quote.lon == null) return;
     setAssigning(true);
     setScheduleError(null);
@@ -166,16 +167,17 @@ export function BookingLocationTimeStep({
           weightLbs: pet.weightLbs,
           addOnIds,
           date,
-          timePreference: preference,
+          slotStartMinutes,
         }),
       });
       const data = (await res.json()) as {
         error?: string;
         appointmentTime?: string;
         usedPreference?: TimePreference;
+        slotStartMinutes?: number;
       };
       if (!res.ok || !data.appointmentTime) {
-        setScheduleError(data.error ?? "Could not assign an arrival window.");
+        setScheduleError(data.error ?? "Could not reserve that start time.");
         return;
       }
       onComplete(
@@ -188,10 +190,11 @@ export function BookingLocationTimeStep({
         quote,
         date,
         data.appointmentTime,
-        data.usedPreference ?? preference,
+        data.usedPreference ?? "morning",
+        data.slotStartMinutes ?? slotStartMinutes,
       );
     } catch {
-      setScheduleError("Could not assign an arrival window.");
+      setScheduleError("Could not reserve that start time.");
     } finally {
       setAssigning(false);
     }
@@ -210,13 +213,13 @@ export function BookingLocationTimeStep({
           Available private appointments for {pet.name}.
         </h2>
         <p className="font-body mt-4 text-sm text-taupe">
-          Monday–Friday · 9:00 AM–4:00 PM Eastern · We assign your arrival
-          window to fit that day&apos;s route.
+          Monday–Friday · 9:00 AM–4:00 PM Eastern · Choose an available start
+          hour. Arrival is estimated for our mobile route and may vary slightly.
         </p>
         <div className="mt-8">
           <DateTimeStep
             initialDate={initialDate}
-            initialPreference={initialPreference}
+            initialSlotStartMinutes={initialSlotStartMinutes}
             days={days}
             loading={availabilityLoading}
             assigning={assigning}

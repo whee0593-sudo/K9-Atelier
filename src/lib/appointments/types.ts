@@ -21,6 +21,8 @@ export type AppointmentWriteInput = {
   travelFee: number;
   appointmentDate: string;
   appointmentTime: string;
+  /** On-the-hour start in minutes from midnight (e.g. 540 = 9:00 AM). */
+  slotStartMinutes: number;
   timePreference: "morning" | "afternoon";
   addressLat: number;
   addressLon: number;

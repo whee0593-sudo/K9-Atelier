@@ -1,92 +1,112 @@
-import type { TimePreference } from "@/lib/booking-schedule";
+import { business } from "@/lib/business";
 
 export type DayClosureRecord = {
   serviceDate: string;
   closedAllDay: boolean;
-  closedMorning: boolean;
-  closedAfternoon: boolean;
+  /** Clock hours (e.g. 9–15) whose on-the-hour starts are closed. */
+  closedHours: number[];
 };
 
 export type DayClosureInput = {
   closedAllDay?: boolean;
-  closedMorning?: boolean;
-  closedAfternoon?: boolean;
+  closedHours?: number[];
 };
 
 export type AvailabilityFlags = {
   available: boolean;
-  morning: boolean;
-  afternoon: boolean;
+  slots: number[];
 };
+
+function parseHour(value: string) {
+  return Number(value.split(":")[0]);
+}
+
+/** Bookable on-the-hour starts as clock hours, matching the studio day. */
+export function listClosureHourOptions() {
+  const startHour = parseHour(business.booking.hoursStart);
+  const endHour = parseHour(business.booking.hoursEnd);
+  const hours: number[] = [];
+  for (let hour = startHour; hour < endHour; hour += 1) {
+    hours.push(hour);
+  }
+  return hours;
+}
+
+const ALLOWED_HOURS = () => new Set(listClosureHourOptions());
+
+function normalizeHours(hours: number[] | undefined): number[] {
+  if (!Array.isArray(hours)) return [];
+  const allowed = ALLOWED_HOURS();
+  const unique = new Set<number>();
+  for (const hour of hours) {
+    if (!Number.isInteger(hour) || !allowed.has(hour)) continue;
+    unique.add(hour);
+  }
+  return [...unique].sort((a, b) => a - b);
+}
 
 /** Normalize staff input into a stored closure, or null when the day is open. */
 export function normalizeDayClosure(
   input: DayClosureInput,
 ): Omit<DayClosureRecord, "serviceDate"> | null {
-  let closedAllDay = Boolean(input.closedAllDay);
-  let closedMorning = Boolean(input.closedMorning);
-  let closedAfternoon = Boolean(input.closedAfternoon);
+  const options = listClosureHourOptions();
+  const closedAllDay = Boolean(input.closedAllDay);
+  const closedHours = closedAllDay ? [...options] : normalizeHours(input.closedHours);
 
-  if (closedAllDay) {
-    closedMorning = true;
-    closedAfternoon = true;
-  } else if (closedMorning && closedAfternoon) {
-    closedAllDay = true;
-  }
-
-  if (!closedAllDay && !closedMorning && !closedAfternoon) {
+  if (!closedAllDay && closedHours.length === 0) {
     return null;
   }
 
-  return { closedAllDay, closedMorning, closedAfternoon };
-}
+  const allHoursClosed =
+    closedHours.length >= options.length &&
+    options.every((hour) => closedHours.includes(hour));
 
-export function applyClosureToAvailability(
-  flags: AvailabilityFlags,
-  closure: DayClosureRecord | null | undefined,
-): AvailabilityFlags {
-  if (!closure) return flags;
-
-  if (closure.closedAllDay) {
-    return { available: false, morning: false, afternoon: false };
-  }
-
-  const morning = flags.morning && !closure.closedMorning;
-  const afternoon = flags.afternoon && !closure.closedAfternoon;
   return {
-    available: morning || afternoon,
-    morning,
-    afternoon,
+    closedAllDay: closedAllDay || allHoursClosed,
+    closedHours: closedAllDay || allHoursClosed ? [...options] : closedHours,
   };
 }
 
-export function isPreferenceClosed(
+export function applyClosureToSlots(
+  slots: number[],
   closure: DayClosureRecord | null | undefined,
-  preference: TimePreference,
+): AvailabilityFlags {
+  if (!closure) {
+    return { available: slots.length > 0, slots };
+  }
+  if (closure.closedAllDay) {
+    return { available: false, slots: [] };
+  }
+  const blocked = new Set(closure.closedHours);
+  const open = slots.filter((start) => !blocked.has(Math.floor(start / 60)));
+  return { available: open.length > 0, slots: open };
+}
+
+export function isSlotClosed(
+  closure: DayClosureRecord | null | undefined,
+  startMinutes: number,
 ): boolean {
   if (!closure) return false;
   if (closure.closedAllDay) return true;
-  if (preference === "morning") return closure.closedMorning;
-  return closure.closedAfternoon;
-}
-
-export function closureMode(
-  closure: DayClosureRecord | null | undefined,
-): "open" | "day" | "morning" | "afternoon" {
-  if (!closure) return "open";
-  if (closure.closedAllDay) return "day";
-  if (closure.closedMorning && !closure.closedAfternoon) return "morning";
-  if (closure.closedAfternoon && !closure.closedMorning) return "afternoon";
-  if (closure.closedMorning && closure.closedAfternoon) return "day";
-  return "open";
+  return closure.closedHours.includes(Math.floor(startMinutes / 60));
 }
 
 export function closureShortLabel(
   closure: DayClosureRecord | null | undefined,
 ): string | null {
-  const mode = closureMode(closure);
-  if (mode === "day") return "Closed";
-  if (mode === "morning") return "AM closed";
-  if (mode === "afternoon") return "PM closed";
+  if (!closure) return null;
+  if (closure.closedAllDay) return "Closed";
+  if (closure.closedHours.length === 1) {
+    return `${formatHourLabel(closure.closedHours[0]!)} closed`;
+  }
+  if (closure.closedHours.length > 1) {
+    return `${closure.closedHours.length} hrs closed`;
+  }
   return null;
+}
+
+export function formatHourLabel(hour: number) {
+  const suffix = hour >= 12 ? "PM" : "AM";
+  const display = hour % 12 === 0 ? 12 : hour % 12;
+  return `${display}:00 ${suffix}`;
 }

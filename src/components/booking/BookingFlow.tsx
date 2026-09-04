@@ -56,6 +56,7 @@ export function BookingFlow({
   const [timePreference, setTimePreference] = useState<TimePreference | null>(
     null,
   );
+  const [slotStartMinutes, setSlotStartMinutes] = useState<number | null>(null);
   const [reserved, setReserved] = useState(false);
   const [createdAppointment, setCreatedAppointment] =
     useState<AppointmentRecord | null>(null);
@@ -94,6 +95,7 @@ export function BookingFlow({
     setAppointmentDate(null);
     setAppointmentTime(null);
     setTimePreference(null);
+    setSlotStartMinutes(null);
     setShowCreativePairing(false);
   }
 
@@ -106,6 +108,7 @@ export function BookingFlow({
     setAppointmentDate(null);
     setAppointmentTime(null);
     setTimePreference(null);
+    setSlotStartMinutes(null);
   }
 
   function handlePetSelect(pet: PetProfile) {
@@ -272,14 +275,15 @@ export function BookingFlow({
           initialAddress={address}
           initialQuote={travelQuote}
           initialDate={appointmentDate}
-          initialPreference={timePreference}
+          initialSlotStartMinutes={slotStartMinutes}
           onBack={() => setCareOptionsConfirmed(false)}
-          onComplete={(addr, quote, date, time, preference) => {
+          onComplete={(addr, quote, date, time, preference, slotStart) => {
             setAddress(addr);
             setTravelQuote(quote);
             setAppointmentDate(date);
             setAppointmentTime(time);
             setTimePreference(preference);
+            setSlotStartMinutes(slotStart);
           }}
         />
       )}
@@ -291,7 +295,8 @@ export function BookingFlow({
         address &&
         travelQuote &&
         appointmentDate &&
-        appointmentTime && (
+        appointmentTime &&
+        slotStartMinutes != null && (
           <BookingReviewStep
             pet={selectedPet}
             service={selectedService}
@@ -303,11 +308,13 @@ export function BookingFlow({
             appointmentDate={appointmentDate}
             appointmentTime={appointmentTime}
             timePreference={timePreference}
+            slotStartMinutes={slotStartMinutes}
             onOpenPolicy={openPolicies}
             onMakeChange={() => {
               setAppointmentDate(null);
               setAppointmentTime(null);
               setTimePreference(null);
+              setSlotStartMinutes(null);
             }}
             onReserved={(appointment) => {
               setCreatedAppointment(appointment);

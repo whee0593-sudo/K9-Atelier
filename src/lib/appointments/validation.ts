@@ -1,6 +1,10 @@
 import { business } from "@/lib/business";
 import type { AppointmentWriteInput } from "@/lib/appointments/types";
 import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
+import {
+  listHourlyStartMinutes,
+  preferenceFromStart,
+} from "@/lib/booking-schedule";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
 
 export class AppointmentValidationError extends Error {
@@ -101,18 +105,23 @@ export function validateCreateAppointmentInput(
     );
   }
 
-  const timePreferenceRaw = readString(
-    record,
-    "timePreference",
-    "Time of day",
-    20,
-  );
-  if (timePreferenceRaw !== "morning" && timePreferenceRaw !== "afternoon") {
+  const slotStartRaw = record.slotStartMinutes;
+  const slotStartMinutes =
+    typeof slotStartRaw === "number"
+      ? slotStartRaw
+      : typeof slotStartRaw === "string"
+        ? Number(slotStartRaw)
+        : NaN;
+  if (
+    !Number.isInteger(slotStartMinutes) ||
+    !listHourlyStartMinutes().includes(slotStartMinutes)
+  ) {
     throw new AppointmentValidationError(
-      "Please choose morning or afternoon.",
-      "timePreference",
+      "Please choose an available start time.",
+      "slotStartMinutes",
     );
   }
+  const timePreferenceRaw = preferenceFromStart(slotStartMinutes);
 
   const addressLat = readNumber(record, "addressLat", "Address location", -90);
   const addressLon = readNumber(record, "addressLon", "Address location", -180);
@@ -219,6 +228,7 @@ export function validateCreateAppointmentInput(
     travelFee,
     appointmentDate,
     appointmentTime,
+    slotStartMinutes,
     timePreference: timePreferenceRaw,
     addressLat,
     addressLon,

@@ -3,9 +3,11 @@ import { describe, it } from "node:test";
 import {
   addressAllowedForPlan,
   findRouteInsertion,
+  findRouteInsertionAtHour,
   formatArrivalWindow,
   haversineMiles,
   inferZoneIdFromZip,
+  listAvailableHourStarts,
   preferenceAvailability,
 } from "@/lib/booking-schedule";
 
@@ -66,6 +68,33 @@ describe("booking schedule", () => {
       westPalm,
     );
     assert.equal(allowed, false);
+  });
+
+  it("lists on-the-hour starts and places an exact hour booking", () => {
+    const slots = listAvailableHourStarts(base, [], jupiter, 65);
+    assert.ok(slots.includes(9 * 60));
+    assert.equal(slots.includes(15 * 60), false);
+
+    const first = findRouteInsertionAtHour(base, [], jupiter, 65, 9 * 60);
+    assert.ok(first);
+    assert.equal(first.scheduledStart, 9 * 60);
+
+    const afterFirst = listAvailableHourStarts(
+      base,
+      [
+        {
+          lat: jupiter.lat,
+          lon: jupiter.lon,
+          scheduledStart: 9 * 60,
+          durationMinutes: 65,
+        },
+      ],
+      jupiter,
+      65,
+    );
+    assert.equal(afterFirst.includes(9 * 60), false);
+    assert.equal(afterFirst.includes(10 * 60), false);
+    assert.ok(afterFirst.includes(11 * 60));
   });
 
   it("reports morning and afternoon independently", () => {

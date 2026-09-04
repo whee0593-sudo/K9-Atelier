@@ -1,10 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  applyClosureToAvailability,
-  closureMode,
+  applyClosureToSlots,
   closureShortLabel,
-  isPreferenceClosed,
+  isSlotClosed,
   normalizeDayClosure,
 } from "@/lib/appointments/closures";
 
@@ -14,127 +13,89 @@ describe("normalizeDayClosure", () => {
     assert.equal(
       normalizeDayClosure({
         closedAllDay: false,
-        closedMorning: false,
-        closedAfternoon: false,
+        closedHours: [],
       }),
       null,
     );
   });
 
-  it("expands a full-day close across both halves", () => {
-    assert.deepEqual(normalizeDayClosure({ closedAllDay: true }), {
-      closedAllDay: true,
-      closedMorning: true,
-      closedAfternoon: true,
-    });
+  it("expands a full-day close across every start hour", () => {
+    const normalized = normalizeDayClosure({ closedAllDay: true });
+    assert.equal(normalized?.closedAllDay, true);
+    assert.ok((normalized?.closedHours.length ?? 0) >= 7);
   });
 
-  it("promotes both halves to a full-day close", () => {
-    assert.deepEqual(
-      normalizeDayClosure({ closedMorning: true, closedAfternoon: true }),
-      {
-        closedAllDay: true,
-        closedMorning: true,
-        closedAfternoon: true,
-      },
-    );
-  });
-
-  it("keeps a single half-day close", () => {
-    assert.deepEqual(normalizeDayClosure({ closedMorning: true }), {
+  it("keeps selected hours only", () => {
+    assert.deepEqual(normalizeDayClosure({ closedHours: [9, 11] }), {
       closedAllDay: false,
-      closedMorning: true,
-      closedAfternoon: false,
+      closedHours: [9, 11],
     });
   });
 });
 
-describe("applyClosureToAvailability", () => {
-  const open = { available: true, morning: true, afternoon: true };
+describe("applyClosureToSlots", () => {
+  const slots = [9 * 60, 10 * 60, 11 * 60, 13 * 60];
 
-  it("leaves flags unchanged when there is no closure", () => {
-    assert.deepEqual(applyClosureToAvailability(open, null), open);
+  it("leaves slots unchanged when there is no closure", () => {
+    assert.deepEqual(applyClosureToSlots(slots, null), {
+      available: true,
+      slots,
+    });
   });
 
   it("blocks the whole day when closedAllDay is set", () => {
     assert.deepEqual(
-      applyClosureToAvailability(open, {
+      applyClosureToSlots(slots, {
         serviceDate: "2026-10-01",
         closedAllDay: true,
-        closedMorning: true,
-        closedAfternoon: true,
+        closedHours: [9, 10, 11, 12, 13, 14, 15],
       }),
-      { available: false, morning: false, afternoon: false },
+      { available: false, slots: [] },
     );
   });
 
-  it("blocks only the closed half-day", () => {
+  it("blocks only closed hours", () => {
     assert.deepEqual(
-      applyClosureToAvailability(open, {
+      applyClosureToSlots(slots, {
         serviceDate: "2026-10-01",
         closedAllDay: false,
-        closedMorning: true,
-        closedAfternoon: false,
+        closedHours: [9, 11],
       }),
-      { available: true, morning: false, afternoon: true },
+      { available: true, slots: [10 * 60, 13 * 60] },
     );
   });
 });
 
-describe("isPreferenceClosed", () => {
-  it("rejects morning bookings on a morning closure", () => {
+describe("isSlotClosed", () => {
+  it("rejects a closed hour start", () => {
     const closure = {
       serviceDate: "2026-10-01",
       closedAllDay: false,
-      closedMorning: true,
-      closedAfternoon: false,
+      closedHours: [10],
     };
-    assert.equal(isPreferenceClosed(closure, "morning"), true);
-    assert.equal(isPreferenceClosed(closure, "afternoon"), false);
-  });
-
-  it("rejects any preference on a full-day closure", () => {
-    const closure = {
-      serviceDate: "2026-10-01",
-      closedAllDay: true,
-      closedMorning: true,
-      closedAfternoon: true,
-    };
-    assert.equal(isPreferenceClosed(closure, "morning"), true);
-    assert.equal(isPreferenceClosed(closure, "afternoon"), true);
+    assert.equal(isSlotClosed(closure, 10 * 60), true);
+    assert.equal(isSlotClosed(closure, 11 * 60), false);
   });
 });
 
 describe("closure labels", () => {
-  it("maps modes and short labels for the admin calendar", () => {
-    assert.equal(closureMode(null), "open");
+  it("maps short labels for the admin calendar", () => {
     assert.equal(closureShortLabel(null), null);
     assert.equal(
-      closureMode({
+      closureShortLabel({
         serviceDate: "2026-10-01",
         closedAllDay: true,
-        closedMorning: true,
-        closedAfternoon: true,
+        closedHours: [9, 10, 11, 12, 13, 14, 15],
       }),
-      "day",
+      "Closed",
     );
     assert.equal(
       closureShortLabel({
         serviceDate: "2026-10-01",
         closedAllDay: false,
-        closedMorning: true,
-        closedAfternoon: false,
+        closedHours: [9],
       }),
-      "AM closed",
-    );
-    assert.equal(
-      closureShortLabel({
-        serviceDate: "2026-10-01",
-        closedAllDay: false,
-        closedMorning: false,
-        closedAfternoon: true,
-      }),
-      "PM closed",
+      "9:00 AM closed",
     );
   });
 });

@@ -385,14 +385,21 @@ export function estimateServiceDurationMinutes(
 ) {
   const service = allBookableServices().find((item) => item.id === serviceId);
   const tier = service ? getTierForPet(service, weightLbs) : null;
-  let minutes =
+  const min =
     tier?.durationMin ?? service?.durationMin ?? service?.durationMax ?? 60;
+  const max =
+    tier?.durationMax ?? service?.durationMax ?? tier?.durationMin ?? service?.durationMin ?? min;
+  let minutes = Math.round((min + max) / 2);
 
   for (const addOnId of addOnIds) {
     const addOn = getAddOnService(addOnId);
     if (!addOn) continue;
     const addOnTier = getTierForPet(addOn, weightLbs);
-    minutes += addOnTier?.durationMin ?? addOn.durationMin ?? 0;
+    const addOnMin =
+      addOnTier?.durationMin ?? addOn.durationMin ?? addOn.durationMax ?? 0;
+    const addOnMax =
+      addOnTier?.durationMax ?? addOn.durationMax ?? addOn.durationMin ?? addOnMin;
+    minutes += Math.round((addOnMin + addOnMax) / 2);
   }
 
   return Math.max(30, minutes);

@@ -397,7 +397,7 @@ export function buildCustomerConfirmedEmailHtml(content: CustomerConfirmedEmailC
         ${paymentSection}
         ${customerConfirmedSection(
           "What to expect",
-          `<p style="margin:0; font-size:13px; color:#5A5347;">Our mobile grooming studio will arrive within your scheduled window. A brief health and coat check takes place before we begin, and we will keep you informed throughout.</p>`,
+          `<p style="margin:0; font-size:13px; color:#5A5347;">Our mobile grooming studio will arrive near your scheduled start time. Because this is a mobile service, arrival is estimated and may vary slightly with traffic and the day’s route. A brief health and coat check takes place before we begin, and we will keep you informed throughout.</p>`,
         )}
         ${customerConfirmedSection(
           "In preparation",

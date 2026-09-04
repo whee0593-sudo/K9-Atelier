@@ -9,7 +9,7 @@ import {
   quoteAppointmentChange,
 } from "@/lib/appointments/customer-change";
 import type { AppointmentChangeAction } from "@/lib/appointments/change-policy";
-import type { TimePreference } from "@/lib/booking-schedule";
+import { listHourlyStartMinutes } from "@/lib/booking-schedule";
 
 const ACTIONS: AppointmentChangeAction[] = [
   "reschedule",
@@ -64,6 +64,7 @@ export async function POST(
     const body = (await request.json()) as {
       action?: unknown;
       date?: unknown;
+      slotStartMinutes?: unknown;
       timePreference?: unknown;
       petId?: unknown;
       serviceId?: unknown;
@@ -74,14 +75,21 @@ export async function POST(
       return appointmentJsonError("Choose a change to confirm.", 400);
     }
 
+    const slotStartMinutes =
+      typeof body.slotStartMinutes === "number" &&
+      listHourlyStartMinutes().includes(body.slotStartMinutes)
+        ? body.slotStartMinutes
+        : body.timePreference === "afternoon"
+          ? 12 * 60
+          : body.timePreference === "morning"
+            ? 9 * 60
+            : undefined;
+
     const result = await applyAppointmentChange({
       appointmentId,
       action,
       date: typeof body.date === "string" ? body.date : undefined,
-      timePreference:
-        body.timePreference === "morning" || body.timePreference === "afternoon"
-          ? (body.timePreference as TimePreference)
-          : undefined,
+      slotStartMinutes,
       petId: typeof body.petId === "string" ? body.petId : undefined,
       serviceId: typeof body.serviceId === "string" ? body.serviceId : undefined,
       removeAppointmentId:

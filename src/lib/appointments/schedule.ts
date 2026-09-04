@@ -6,22 +6,22 @@ import { geocodeBaseAddress } from "@/lib/geo";
 import {
   addressAllowedForPlan,
   existingStopsConflictWithZone,
-  findRouteInsertion,
+  findRouteInsertionAtHour,
   getRoutingConfig,
+  listAvailableHourStarts,
   listCalendarDates,
   planFromFirstStop,
-  preferenceAvailability,
+  preferenceFromStart,
   resolveEffectivePlan,
   zoneLabel,
   type DayPlanRecord,
   type GeoPoint,
   type RouteStop,
-  type TimePreference,
 } from "@/lib/booking-schedule";
 import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
 import {
-  applyClosureToAvailability,
-  isPreferenceClosed,
+  applyClosureToSlots,
+  isSlotClosed,
   normalizeDayClosure,
   type DayClosureInput,
   type DayClosureRecord,
@@ -98,14 +98,14 @@ export async function loadDayPlans(
 function mapClosureRow(row: {
   service_date: string;
   closed_all_day: boolean;
-  closed_morning: boolean;
-  closed_afternoon: boolean;
+  closed_hours: number[] | null;
 }): DayClosureRecord {
   return {
     serviceDate: row.service_date,
     closedAllDay: Boolean(row.closed_all_day),
-    closedMorning: Boolean(row.closed_morning),
-    closedAfternoon: Boolean(row.closed_afternoon),
+    closedHours: Array.isArray(row.closed_hours)
+      ? row.closed_hours.filter((hour): hour is number => Number.isInteger(hour))
+      : [],
   };
 }
 
@@ -118,7 +118,7 @@ export async function loadDayClosures(
 
   const { data, error } = await admin
     .from("service_day_closures")
-    .select("service_date, closed_all_day, closed_morning, closed_afternoon")
+    .select("service_date, closed_all_day, closed_hours")
     .gte("service_date", fromDate)
     .lte("service_date", toDate);
 
@@ -148,8 +148,7 @@ export async function upsertDayClosure(
     {
       service_date: date,
       closed_all_day: normalized.closedAllDay,
-      closed_morning: normalized.closedMorning,
-      closed_afternoon: normalized.closedAfternoon,
+      closed_hours: normalized.closedHours,
     },
     { onConflict: "service_date" },
   );
@@ -188,8 +187,7 @@ export async function setStaffDayClosure(
   }
   return upsertDayClosure(date, {
     closedAllDay: input.closedAllDay,
-    closedMorning: input.closedMorning,
-    closedAfternoon: input.closedAfternoon,
+    closedHours: input.closedHours,
   });
 }
 
@@ -328,8 +326,7 @@ export async function getAvailabilityForAddress(input: {
       days: Array<{
         date: string;
         available: boolean;
-        morning: boolean;
-        afternoon: boolean;
+        slots: number[];
       }>;
     }
   | ScheduleError
@@ -354,15 +351,14 @@ export async function getAvailabilityForAddress(input: {
       days.push({
         date,
         available: false,
-        morning: false,
-        afternoon: false,
+        slots: [] as number[],
       });
       continue;
     }
 
     const closure = closuresResult.closures.get(date) ?? null;
     if (closure?.closedAllDay) {
-      days.push({ date, available: false, morning: false, afternoon: false });
+      days.push({ date, available: false, slots: [] as number[] });
       continue;
     }
 
@@ -374,35 +370,27 @@ export async function getAvailabilityForAddress(input: {
     const plan = resolveEffectivePlan(date, plansResult.plans.get(date) ?? null);
     const inZone = addressAllowedForPlan(plan, input.zip, input.point);
     if (!inZone) {
-      days.push({ date, available: false, morning: false, afternoon: false });
+      days.push({ date, available: false, slots: [] as number[] });
       continue;
     }
 
     const max = getRoutingConfig().maxAppointmentsPerDay;
     if (occupied.bookedCount >= max) {
-      days.push({ date, available: false, morning: false, afternoon: false });
+      days.push({ date, available: false, slots: [] as number[] });
       continue;
     }
 
-    const flags = preferenceAvailability(
+    const openSlots = listAvailableHourStarts(
       input.base,
       occupied.stops,
       input.point,
       input.durationMinutes,
     );
-    const gated = applyClosureToAvailability(
-      {
-        available: flags.morning || flags.afternoon,
-        morning: flags.morning,
-        afternoon: flags.afternoon,
-      },
-      closure,
-    );
+    const gated = applyClosureToSlots(openSlots, closure);
     days.push({
       date,
       available: gated.available,
-      morning: gated.morning,
-      afternoon: gated.afternoon,
+      slots: gated.slots,
     });
   }
 
@@ -414,10 +402,10 @@ export async function assignArrivalWindow(input: {
   point: GeoPoint;
   zip: string;
   durationMinutes: number;
-  preference: TimePreference;
+  slotStartMinutes: number;
   base: GeoPoint;
 }): Promise<
-  | { insertion: NonNullable<ReturnType<typeof findRouteInsertion>> }
+  | { insertion: NonNullable<ReturnType<typeof findRouteInsertionAtHour>> }
   | ScheduleError
   | { error: "slot_unavailable" }
 > {
@@ -433,7 +421,7 @@ export async function assignArrivalWindow(input: {
   if ("error" in closuresResult) return closuresResult;
 
   const closure = closuresResult.closures.get(input.date) ?? null;
-  if (isPreferenceClosed(closure, input.preference)) {
+  if (isSlotClosed(closure, input.slotStartMinutes)) {
     return { error: "slot_unavailable" as const };
   }
 
@@ -450,12 +438,12 @@ export async function assignArrivalWindow(input: {
     return { error: "slot_unavailable" as const };
   }
 
-  const insertion = findRouteInsertion(
+  const insertion = findRouteInsertionAtHour(
     input.base,
     occupied.stops,
     input.point,
     input.durationMinutes,
-    input.preference,
+    input.slotStartMinutes,
   );
   if (!insertion) return { error: "slot_unavailable" as const };
 

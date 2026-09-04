@@ -6,7 +6,7 @@ import {
   getAvailabilityForAddress,
   getBaseGeoPoint,
 } from "@/lib/appointments/schedule";
-import type { TimePreference } from "@/lib/booking-schedule";
+import { listHourlyStartMinutes } from "@/lib/booking-schedule";
 import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
 
 function readPoint(url: URL) {
@@ -57,7 +57,7 @@ export async function GET(request: Request) {
   if ("error" in result) {
     return NextResponse.json(
       { error: "Could not load available dates." },
-      { status: result.error === "misconfigured" ? 500 : 500 },
+      { status: 500 },
     );
   }
 
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
     weightLbs?: number;
     addOnIds?: string[];
     date?: string;
-    timePreference?: string;
+    slotStartMinutes?: number;
   };
   try {
     body = (await request.json()) as typeof body;
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
   const zip = body.zip?.trim() ?? "";
   const serviceId = body.serviceId?.trim() ?? "";
   const date = body.date?.trim() ?? "";
-  const preference = body.timePreference;
+  const slotStartMinutes = body.slotStartMinutes;
   const weightLbs = body.weightLbs;
   const addOnIds = Array.isArray(body.addOnIds)
     ? body.addOnIds.filter((id): id is string => typeof id === "string")
@@ -104,11 +104,12 @@ export async function POST(request: Request) {
     !zip ||
     !serviceId ||
     !date ||
-    (preference !== "morning" && preference !== "afternoon") ||
+    typeof slotStartMinutes !== "number" ||
+    !listHourlyStartMinutes().includes(slotStartMinutes) ||
     typeof weightLbs !== "number"
   ) {
     return NextResponse.json(
-      { error: "Date, time of day, and address are required." },
+      { error: "Date, start time, and address are required." },
       { status: 400 },
     );
   }
@@ -133,7 +134,7 @@ export async function POST(request: Request) {
     point,
     zip,
     durationMinutes: estimateServiceDurationMinutes(serviceId, weightLbs, addOnIds),
-    preference: preference as TimePreference,
+    slotStartMinutes,
     base,
   });
 
@@ -142,7 +143,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "That day is fully booked or no longer available for this address. Please choose another date.",
+            "That start time is fully booked or no longer available for this address. Please choose another time.",
         },
         { status: 409 },
       );
@@ -156,6 +157,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     appointmentTime: result.insertion.appointmentTime,
     scheduledStart: result.insertion.scheduledStart,
+    slotStartMinutes: result.insertion.scheduledStart,
     usedPreference: result.insertion.usedPreference,
   });
 }
