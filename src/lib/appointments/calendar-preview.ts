@@ -85,6 +85,8 @@ export function buildPreviewCalendarMonth(month: string): {
       isPast: date < today,
       isFull: appointmentCount >= 4,
       isToday: date === today,
+      closure: null,
+      closureLabel: null,
     });
   }
 

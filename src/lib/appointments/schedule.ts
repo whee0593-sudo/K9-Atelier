@@ -19,10 +19,19 @@ import {
   type TimePreference,
 } from "@/lib/booking-schedule";
 import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
+import {
+  applyClosureToAvailability,
+  isPreferenceClosed,
+  normalizeDayClosure,
+  type DayClosureInput,
+  type DayClosureRecord,
+} from "@/lib/appointments/closures";
 
 export type OccupiedAppointment = RouteStop & {
   zip: string | null;
 };
+
+export type { DayClosureRecord };
 
 type ScheduleError = { error: "misconfigured" | "server" };
 type OccupiedDay = { stops: OccupiedAppointment[]; bookedCount: number };
@@ -84,6 +93,104 @@ export async function loadDayPlans(
     plans.set(row.service_date, mapPlanRow(row));
   }
   return { plans };
+}
+
+function mapClosureRow(row: {
+  service_date: string;
+  closed_all_day: boolean;
+  closed_morning: boolean;
+  closed_afternoon: boolean;
+}): DayClosureRecord {
+  return {
+    serviceDate: row.service_date,
+    closedAllDay: Boolean(row.closed_all_day),
+    closedMorning: Boolean(row.closed_morning),
+    closedAfternoon: Boolean(row.closed_afternoon),
+  };
+}
+
+export async function loadDayClosures(
+  fromDate: string,
+  toDate: string,
+): Promise<{ closures: Map<string, DayClosureRecord> } | ScheduleError> {
+  const admin = requireAdminClient();
+  if (!admin) return { error: "misconfigured" as const };
+
+  const { data, error } = await admin
+    .from("service_day_closures")
+    .select("service_date, closed_all_day, closed_morning, closed_afternoon")
+    .gte("service_date", fromDate)
+    .lte("service_date", toDate);
+
+  if (error) {
+    console.error("loadDayClosures failed:", error.message);
+    return { error: "server" as const };
+  }
+
+  const closures = new Map<string, DayClosureRecord>();
+  for (const row of data ?? []) {
+    closures.set(row.service_date, mapClosureRow(row));
+  }
+  return { closures };
+}
+
+export async function upsertDayClosure(
+  date: string,
+  input: DayClosureInput,
+): Promise<{ ok: true } | ScheduleError> {
+  const normalized = normalizeDayClosure(input);
+  if (!normalized) return deleteDayClosure(date);
+
+  const admin = requireAdminClient();
+  if (!admin) return { error: "misconfigured" as const };
+
+  const { error } = await admin.from("service_day_closures").upsert(
+    {
+      service_date: date,
+      closed_all_day: normalized.closedAllDay,
+      closed_morning: normalized.closedMorning,
+      closed_afternoon: normalized.closedAfternoon,
+    },
+    { onConflict: "service_date" },
+  );
+
+  if (error) {
+    console.error("upsertDayClosure failed:", error.message);
+    return { error: "server" as const };
+  }
+  return { ok: true };
+}
+
+export async function deleteDayClosure(
+  date: string,
+): Promise<{ ok: true } | ScheduleError> {
+  const admin = requireAdminClient();
+  if (!admin) return { error: "misconfigured" as const };
+
+  const { error } = await admin
+    .from("service_day_closures")
+    .delete()
+    .eq("service_date", date);
+
+  if (error) {
+    console.error("deleteDayClosure failed:", error.message);
+    return { error: "server" as const };
+  }
+  return { ok: true };
+}
+
+export async function setStaffDayClosure(
+  date: string,
+  input: DayClosureInput & { clear?: boolean },
+): Promise<{ ok: true } | ScheduleError> {
+  if (input.clear) {
+    return deleteDayClosure(date);
+  }
+  return upsertDayClosure(date, {
+    closedAllDay: input.closedAllDay,
+    closedMorning: input.closedMorning,
+    closedAfternoon: input.closedAfternoon,
+  });
 }
 
 type OccupiedRow = {
@@ -232,12 +339,14 @@ export async function getAvailabilityForAddress(input: {
 
   const fromDate = dates[0]!;
   const toDate = dates[dates.length - 1]!;
-  const [plansResult, occupiedResult] = await Promise.all([
+  const [plansResult, occupiedResult, closuresResult] = await Promise.all([
     loadDayPlans(fromDate, toDate),
     loadOccupiedStopsByDate(fromDate, toDate),
+    loadDayClosures(fromDate, toDate),
   ]);
   if ("error" in plansResult) return plansResult;
   if ("error" in occupiedResult) return occupiedResult;
+  if ("error" in closuresResult) return closuresResult;
 
   const days = [];
   for (const date of dates) {
@@ -248,6 +357,12 @@ export async function getAvailabilityForAddress(input: {
         morning: false,
         afternoon: false,
       });
+      continue;
+    }
+
+    const closure = closuresResult.closures.get(date) ?? null;
+    if (closure?.closedAllDay) {
+      days.push({ date, available: false, morning: false, afternoon: false });
       continue;
     }
 
@@ -275,11 +390,19 @@ export async function getAvailabilityForAddress(input: {
       input.point,
       input.durationMinutes,
     );
+    const gated = applyClosureToAvailability(
+      {
+        available: flags.morning || flags.afternoon,
+        morning: flags.morning,
+        afternoon: flags.afternoon,
+      },
+      closure,
+    );
     days.push({
       date,
-      available: flags.morning || flags.afternoon,
-      morning: flags.morning,
-      afternoon: flags.afternoon,
+      available: gated.available,
+      morning: gated.morning,
+      afternoon: gated.afternoon,
     });
   }
 
@@ -302,8 +425,17 @@ export async function assignArrivalWindow(input: {
     return { error: "slot_unavailable" as const };
   }
 
-  const plansResult = await loadDayPlans(input.date, input.date);
+  const [plansResult, closuresResult] = await Promise.all([
+    loadDayPlans(input.date, input.date),
+    loadDayClosures(input.date, input.date),
+  ]);
   if ("error" in plansResult) return plansResult;
+  if ("error" in closuresResult) return closuresResult;
+
+  const closure = closuresResult.closures.get(input.date) ?? null;
+  if (isPreferenceClosed(closure, input.preference)) {
+    return { error: "slot_unavailable" as const };
+  }
 
   const occupied = await loadOccupiedStops(input.date);
   if ("error" in occupied) return occupied;
@@ -336,6 +468,7 @@ export type AdminScheduleDay = {
   zoneLabel: string;
   source: "staff" | "auto" | "weekly" | "open";
   appointmentCount: number;
+  closure: DayClosureRecord | null;
 };
 
 export async function listAdminScheduleDays(): Promise<
@@ -346,17 +479,20 @@ export async function listAdminScheduleDays(): Promise<
 
   const fromDate = dates[0]!;
   const toDate = dates[dates.length - 1]!;
-  const [plansResult, occupiedResult] = await Promise.all([
+  const [plansResult, occupiedResult, closuresResult] = await Promise.all([
     loadDayPlans(fromDate, toDate),
     loadOccupiedStopsByDate(fromDate, toDate),
+    loadDayClosures(fromDate, toDate),
   ]);
   if ("error" in plansResult) return plansResult;
   if ("error" in occupiedResult) return occupiedResult;
+  if ("error" in closuresResult) return closuresResult;
 
   const days: AdminScheduleDay[] = dates.map((date) => {
     const stored = plansResult.plans.get(date) ?? null;
     const plan = resolveEffectivePlan(date, stored);
     const occupied = occupiedResult.byDate.get(date);
+    const closure = closuresResult.closures.get(date) ?? null;
     if (!plan) {
       return {
         date,
@@ -364,6 +500,7 @@ export async function listAdminScheduleDays(): Promise<
         zoneLabel: "Auto — first booking locks the area",
         source: "open",
         appointmentCount: occupied?.bookedCount ?? 0,
+        closure,
       };
     }
     return {
@@ -372,6 +509,7 @@ export async function listAdminScheduleDays(): Promise<
       zoneLabel: zoneLabel(plan.zoneId),
       source: plan.source,
       appointmentCount: occupied?.bookedCount ?? 0,
+      closure,
     };
   });
 

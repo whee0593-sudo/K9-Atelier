@@ -36,8 +36,8 @@ export default async function AdminAppointmentsPage() {
       </h2>
       <p className="mt-2 text-sm text-text-muted">
         Open any day on the calendar to see who is booked. Review new
-        appointments, lock each day to a service area, and text today&apos;s
-        clients in drive order.
+        appointments, lock each day to a service area, close a day or half-day
+        when needed, and text today&apos;s clients in drive order.
       </p>
       <AppointmentReviewPanel />
     </div>

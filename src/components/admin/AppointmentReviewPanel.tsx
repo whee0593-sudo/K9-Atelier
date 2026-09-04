@@ -11,12 +11,16 @@ import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import type { ChargeKind } from "@/lib/charges/types";
 import { formatServiceAddress } from "@/lib/travel";
 
+import type { DayClosureRecord } from "@/lib/appointments/closures";
+import { closureMode } from "@/lib/appointments/closures";
+
 type ScheduleDay = {
   date: string;
   zoneId: string;
   zoneLabel: string;
   source: "staff" | "auto" | "weekly" | "open";
   appointmentCount: number;
+  closure: DayClosureRecord | null;
 };
 
 type ZoneOption = { id: string; label: string };
@@ -44,6 +48,7 @@ export function AppointmentReviewPanel() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [calendarNonce, setCalendarNonce] = useState(0);
 
   const loadAppointments = useCallback(async (options?: { silent?: boolean }) => {
     if (!options?.silent) setLoading(true);
@@ -172,8 +177,46 @@ export function AppointmentReviewPanel() {
         return;
       }
       await loadAppointments({ silent: true });
+      setCalendarNonce((current) => current + 1);
     } catch {
       setError("Could not update that day's area.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function setDayClosure(
+    date: string,
+    mode: "open" | "day" | "morning" | "afternoon",
+  ) {
+    setBusyId(`closure-${date}`);
+    setError(null);
+
+    try {
+      const payload =
+        mode === "open"
+          ? { date, clear: true }
+          : {
+              date,
+              closedAllDay: mode === "day",
+              closedMorning: mode === "day" || mode === "morning",
+              closedAfternoon: mode === "day" || mode === "afternoon",
+            };
+      const response = await fetch("/api/admin/closures", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setError(body.error ?? "Could not update that day's availability.");
+        return;
+      }
+      await loadAppointments({ silent: true });
+      setCalendarNonce((current) => current + 1);
+    } catch {
+      setError("Could not update that day's availability.");
     } finally {
       setBusyId(null);
     }
@@ -219,13 +262,16 @@ export function AppointmentReviewPanel() {
 
       <AdminCalendar
         onAppointmentsChanged={() => void loadAppointments({ silent: true })}
+        reloadToken={calendarNonce}
       />
 
       <section>
         <h3 className="text-lg font-medium text-gold-dark">Route days</h3>
         <p className="mt-1 text-sm text-text-muted">
           Lock a day to one area, or leave it on Auto so the first booking that
-          day sets the neighborhood.
+          day sets the neighborhood. Close a full day or only morning /
+          afternoon when you are unavailable — existing appointments stay on
+          the calendar.
         </p>
         {schedule.length === 0 ? (
           <p className="mt-4 text-sm text-text-muted">
@@ -234,7 +280,8 @@ export function AppointmentReviewPanel() {
         ) : (
           <ul className="mt-4 divide-y divide-lavender/30 overflow-hidden rounded-2xl border border-lavender/30 bg-cream">
             {schedule.slice(0, 10).map((day) => {
-              const busy = busyId === day.date;
+              const busyZone = busyId === day.date;
+              const busyClosure = busyId === `closure-${day.date}`;
               const sourceLabel =
                 day.source === "staff"
                   ? "Staff"
@@ -259,24 +306,50 @@ export function AppointmentReviewPanel() {
                         : " · no bookings"}
                     </p>
                   </div>
-                  <label className="sr-only" htmlFor={`zone-${day.date}`}>
-                    Service area for {formatShortDate(day.date)}
-                  </label>
-                  <select
-                    id={`zone-${day.date}`}
-                    disabled={busy}
-                    value={day.source === "open" ? "auto" : day.zoneId}
-                    onChange={(event) =>
-                      void setDayZone(day.date, event.target.value)
-                    }
-                    className="rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm text-text"
-                  >
-                    {zones.map((zone) => (
-                      <option key={zone.id} value={zone.id}>
-                        {zone.label}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[16rem]">
+                    <label className="sr-only" htmlFor={`zone-${day.date}`}>
+                      Service area for {formatShortDate(day.date)}
+                    </label>
+                    <select
+                      id={`zone-${day.date}`}
+                      disabled={busyZone || busyClosure}
+                      value={day.source === "open" ? "auto" : day.zoneId}
+                      onChange={(event) =>
+                        void setDayZone(day.date, event.target.value)
+                      }
+                      className="rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm text-text"
+                    >
+                      {zones.map((zone) => (
+                        <option key={zone.id} value={zone.id}>
+                          {zone.label}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="sr-only" htmlFor={`closure-${day.date}`}>
+                      Availability for {formatShortDate(day.date)}
+                    </label>
+                    <select
+                      id={`closure-${day.date}`}
+                      disabled={busyZone || busyClosure}
+                      value={closureMode(day.closure)}
+                      onChange={(event) =>
+                        void setDayClosure(
+                          day.date,
+                          event.target.value as
+                            | "open"
+                            | "day"
+                            | "morning"
+                            | "afternoon",
+                        )
+                      }
+                      className="rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm text-text"
+                    >
+                      <option value="open">Open for booking</option>
+                      <option value="day">Close full day</option>
+                      <option value="morning">Close morning only</option>
+                      <option value="afternoon">Close afternoon only</option>
+                    </select>
+                  </div>
                 </li>
               );
             })}

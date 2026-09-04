@@ -50,10 +50,13 @@ function statusLabel(status: AdminAppointmentRecord["status"]) {
 export function AdminCalendar({
   preview = false,
   onAppointmentsChanged,
+  reloadToken = 0,
 }: {
   preview?: boolean;
   /** Fired after an operational change (for example cancelling a confirmed visit). */
   onAppointmentsChanged?: () => void;
+  /** Bump to reload the month grid (for example after closing a day). */
+  reloadToken?: number;
 }) {
   const [month, setMonth] = useState(() =>
     preview
@@ -123,7 +126,7 @@ export function AdminCalendar({
 
   useEffect(() => {
     void loadMonth(month);
-  }, [loadMonth, month]);
+  }, [loadMonth, month, reloadToken]);
 
   useEffect(() => {
     if (!selectedDate) return;
@@ -223,7 +226,7 @@ export function AdminCalendar({
               <div key={`blank-${index}`} className="min-h-16 bg-lavender-light/20" />
             ))}
             {days.map((day) => {
-              const muted = day.isPast || day.isFull;
+              const muted = day.isPast || day.isFull || Boolean(day.closure?.closedAllDay);
               const selected = selectedDate === day.date;
               return (
                 <button
@@ -241,6 +244,11 @@ export function AdminCalendar({
                   >
                     {Number(day.date.slice(-2))}
                   </span>
+                  {day.closureLabel ? (
+                    <span className="mt-1 block text-[10px] font-medium uppercase tracking-wide text-gold-dark">
+                      {day.closureLabel}
+                    </span>
+                  ) : null}
                   {day.appointmentCount > 0 ? (
                     <span className="mt-1 block text-[11px]">
                       {day.appointmentCount} booked

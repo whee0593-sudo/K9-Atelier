@@ -2,6 +2,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getStaffSession } from "@/lib/staff/auth";
 import { getRoutingConfig } from "@/lib/booking-schedule";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
+import {
+  closureShortLabel,
+  type DayClosureRecord,
+} from "@/lib/appointments/closures";
+import { loadDayClosures } from "@/lib/appointments/schedule";
 
 export type AdminCalendarDay = {
   date: string;
@@ -9,6 +14,8 @@ export type AdminCalendarDay = {
   isPast: boolean;
   isFull: boolean;
   isToday: boolean;
+  closure: DayClosureRecord | null;
+  closureLabel: string | null;
 };
 
 function lastDayOfMonth(year: number, monthIndex: number) {
@@ -56,17 +63,23 @@ export async function listAdminCalendarMonth(
     counts.set(date, (counts.get(date) ?? 0) + 1);
   }
 
+  const closuresResult = await loadDayClosures(fromDate, toDate);
+  if ("error" in closuresResult) return { error: "server" };
+
   const days: AdminCalendarDay[] = [];
   const last = lastDayOfMonth(year, monthIndex);
   for (let day = 1; day <= last; day += 1) {
     const date = `${month}-${String(day).padStart(2, "0")}`;
     const appointmentCount = counts.get(date) ?? 0;
+    const closure = closuresResult.closures.get(date) ?? null;
     days.push({
       date,
       appointmentCount,
       isPast: date < today,
       isFull: appointmentCount >= maxPerDay,
       isToday: date === today,
+      closure,
+      closureLabel: closureShortLabel(closure),
     });
   }
 
