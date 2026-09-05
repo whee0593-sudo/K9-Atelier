@@ -3,20 +3,16 @@ import { SectionIntro } from "@/components/luxury/SectionIntro";
 
 const pillars = [
   {
-    title: "Private",
-    body: "One-on-one appointments",
-  },
-  {
-    title: "Cage-Free",
-    body: "A calm, uninterrupted environment",
-  },
-  {
     title: "Unhurried",
     body: "Care guided by the dog, not the clock",
   },
   {
     title: "Expert",
     body: "Award-winning professional grooming",
+  },
+  {
+    title: "Save Your Time",
+    body: "We come to you — no travel, no waiting rooms.",
   },
 ] as const;
 
