@@ -18,7 +18,10 @@ const normalize = (value = "") => value.toLowerCase().replace(/[^a-z0-9]+/g, " "
 
 export async function getGoogleReviews(): Promise<GoogleReviewItem[]> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-  if (!apiKey) return [];
+  if (!apiKey) {
+    console.error("Google Places review sync: GOOGLE_PLACES_API_KEY is missing");
+    return [];
+  }
 
   const textQuery = `${businessData.brand.searchName} ${businessData.brand.phone} ${businessData.serviceArea.publicLocality} ${businessData.serviceArea.publicRegion}`;
 
@@ -31,13 +34,26 @@ export async function getGoogleReviews(): Promise<GoogleReviewItem[]> {
         "X-Goog-FieldMask": "places.displayName,places.googleMapsUri,places.reviews",
       },
       body: JSON.stringify({ textQuery, maxResultCount: 5 }),
-      next: { revalidate: 21600 },
+      cache: "no-store",
     });
 
-    if (!response.ok) return [];
+    if (!response.ok) {
+      const detail = await response.text();
+      console.error(`Google Places review sync: request failed (${response.status}) ${detail.slice(0, 800)}`);
+      return [];
+    }
+
     const data = (await response.json()) as SearchResponse;
+    const names = (data.places ?? []).map((candidate) => candidate.displayName?.text).filter(Boolean);
     const place = data.places?.find((candidate) => normalize(candidate.displayName?.text).startsWith("k9 atelier"));
-    if (!place?.reviews?.length) return [];
+    if (!place) {
+      console.error(`Google Places review sync: K9 Atelier not found. Candidates: ${names.join(" | ") || "none"}`);
+      return [];
+    }
+    if (!place.reviews?.length) {
+      console.error(`Google Places review sync: matched ${place.displayName?.text || "K9 Atelier"}, but Google returned no reviews`);
+      return [];
+    }
 
     return place.reviews.flatMap((review) => {
       const quote = review.text?.text || review.originalText?.text;
@@ -54,7 +70,8 @@ export async function getGoogleReviews(): Promise<GoogleReviewItem[]> {
         googleMapsUri: review.googleMapsUri || place.googleMapsUri,
       }];
     });
-  } catch {
+  } catch (error) {
+    console.error("Google Places review sync: unexpected error", error);
     return [];
   }
 }
