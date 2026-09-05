@@ -1,11 +1,23 @@
 import { Container } from "@/components/luxury/Container";
 import { SectionIntro } from "@/components/luxury/SectionIntro";
 
-const stats = [
-  { label: "Professional Grooming", value: "Since 2010" },
-  { label: "Best in Show", value: "2019" },
-  { label: "Private", value: "One-on-One" },
-  { label: "Cage-Free", value: "By Design" },
+const pillars = [
+  {
+    title: "Private",
+    body: "One-on-one appointments",
+  },
+  {
+    title: "Cage-Free",
+    body: "A calm, uninterrupted environment",
+  },
+  {
+    title: "Unhurried",
+    body: "Care guided by the dog, not the clock",
+  },
+  {
+    title: "Expert",
+    body: "Award-winning professional grooming",
+  },
 ] as const;
 
 export function HomeExpertise() {
@@ -41,21 +53,18 @@ export function HomeExpertise() {
           }
         />
 
-        <div className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((item) => (
-            <div
-              key={item.label}
-              className="border-t border-champagne/60 pt-6 text-center"
-            >
-              <p className="font-body text-[11px] font-medium uppercase tracking-[0.2em] text-taupe">
-                {item.label}
+        <ul className="mx-auto mt-12 max-w-xl list-none divide-y divide-gray-line/70 p-0 md:mt-14">
+          {pillars.map((item) => (
+            <li key={item.title} className="py-6 first:pt-0 last:pb-0 md:py-7">
+              <p className="font-body text-[12px] font-semibold uppercase tracking-[0.18em] text-ink">
+                {item.title}
               </p>
-              <p className="font-display mt-3 text-3xl text-ink md:text-4xl">
-                {item.value}
+              <p className="font-body mt-2 text-[14px] leading-[1.7] text-taupe md:text-sm md:leading-relaxed">
+                {item.body}
               </p>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </Container>
     </section>
   );
