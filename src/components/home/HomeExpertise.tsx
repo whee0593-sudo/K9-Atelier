@@ -11,8 +11,8 @@ const pillars = [
     body: "Award-winning professional grooming",
   },
   {
-    title: "Save Your Time",
-    body: "We come to you — no travel, no waiting rooms",
+    title: "At Your Door",
+    body: "No salon drop-offs or waiting",
   },
   {
     title: "Gentle Care",
