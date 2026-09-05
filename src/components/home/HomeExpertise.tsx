@@ -14,6 +14,10 @@ const pillars = [
     title: "Save Your Time",
     body: "We come to you — no travel, no waiting rooms",
   },
+  {
+    title: "Gentle Care",
+    body: "Since 2010",
+  },
 ] as const;
 
 export function HomeExpertise() {
