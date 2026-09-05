@@ -12,7 +12,7 @@ const pillars = [
   },
   {
     title: "Save Your Time",
-    body: "We come to you — no travel, no waiting rooms.",
+    body: "We come to you — no travel, no waiting rooms",
   },
 ] as const;
 
