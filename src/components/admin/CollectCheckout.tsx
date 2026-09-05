@@ -1034,12 +1034,7 @@ function PayStep({
         >
           {referralCodeMessage}
         </p>
-      ) : (
-        <p className="font-body mt-2 text-xs text-taupe">
-          Optional. Use this if the household did not enter a referral code when
-          booking. New-client 10% applies only on a first paid visit.
-        </p>
-      )}
+      ) : null}
 
       <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
         Available referral credit
