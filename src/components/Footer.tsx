@@ -11,7 +11,6 @@ import {
 import { Container } from "@/components/luxury/Container";
 
 const footerLinks = [
-  { href: "/#experience", label: "The Atelier" },
   { href: "/services", label: "Services" },
   { href: "/reviews", label: "Reviews" },
   { href: "/about", label: "About" },

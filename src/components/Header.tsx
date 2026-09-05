@@ -9,7 +9,6 @@ import { Container } from "@/components/luxury/Container";
 import { CustomerAuthLink } from "@/components/auth/CustomerAuthLink";
 
 const navItems = [
-  { href: "/#experience", label: "The Atelier" },
   { href: "/services", label: "Services" },
   { href: "/reviews", label: "Reviews" },
   { href: "/about", label: "About" },
