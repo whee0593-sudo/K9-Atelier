@@ -99,6 +99,13 @@ export function CollectCheckout({
   const [receiptSent, setReceiptSent] = useState(false);
   const [referralMode, setReferralMode] = useState<ReferralApplyMode>("none");
   const [referralCustom, setReferralCustom] = useState("");
+  const [referralCode, setReferralCode] = useState("");
+  const [referralCodeStatus, setReferralCodeStatus] = useState<
+    "idle" | "applied" | "invalid"
+  >("idle");
+  const [referralCodeMessage, setReferralCodeMessage] = useState<string | null>(
+    null,
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -129,6 +136,12 @@ export function CollectCheckout({
       setPaidCharge(previewPaid);
       if (previewPaid) setChargeId(previewPaid.id);
       if (previewPaid) setChargedMethodId(body.selectedPaymentMethodId);
+      const existingCode = body.referral?.referralCode?.trim() ?? "";
+      setReferralCode(existingCode);
+      setReferralCodeStatus(existingCode ? "applied" : "idle");
+      setReferralCodeMessage(
+        existingCode ? "Referral code already on file for this household." : null,
+      );
       setLoading(false);
       return;
     }
@@ -162,6 +175,12 @@ export function CollectCheckout({
         (body.paidCharges ?? []).find((charge) => charge.kind === kind) ?? null;
       setPaidCharge(loadedPaid);
       if (loadedPaid) setChargeId(loadedPaid.id);
+      const existingCode = body.referral?.referralCode?.trim() ?? "";
+      setReferralCode(existingCode);
+      setReferralCodeStatus(existingCode ? "applied" : "idle");
+      setReferralCodeMessage(
+        existingCode ? "Referral code already on file for this household." : null,
+      );
     } catch {
       setError("Could not load this appointment.");
     } finally {
@@ -274,6 +293,80 @@ export function CollectCheckout({
     ]);
   }
 
+  async function applyReferralCode(codeInput?: string) {
+    const code = (codeInput ?? referralCode).trim();
+    if (!code) {
+      setReferralCodeStatus("idle");
+      setReferralCodeMessage(null);
+      return;
+    }
+    if (!context) return;
+
+    if (preview) {
+      setContext({
+        ...context,
+        referral: {
+          availableCreditCents: context.referral?.availableCreditCents ?? 0,
+          applyNewClientDiscount: true,
+          canUseCredit: false,
+          referralCode: code.toUpperCase(),
+        },
+      });
+      setReferralCode(code.toUpperCase());
+      setReferralCodeStatus("applied");
+      setReferralCodeMessage(
+        "Referral code applied. First-visit 10% will be calculated on eligible services.",
+      );
+      setReferralMode("none");
+      setError(null);
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/admin/collect/${appointmentId}/referral`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
+        },
+      );
+      const body = (await response.json()) as {
+        error?: string;
+        message?: string;
+        referral?: NonNullable<CollectContext["referral"]>;
+      };
+      if (!response.ok || !body.referral) {
+        setReferralCodeStatus("invalid");
+        setReferralCodeMessage(body.error ?? "Could not apply this referral code.");
+        setError(body.error ?? "Could not apply this referral code.");
+        return;
+      }
+      setContext({
+        ...context,
+        referral: body.referral,
+      });
+      setReferralCode(body.referral.referralCode ?? code.toUpperCase());
+      setReferralCodeStatus("applied");
+      setReferralCodeMessage(
+        body.message ??
+          "Referral code applied. First-visit 10% will be calculated on eligible services.",
+      );
+      if (body.referral.applyNewClientDiscount) {
+        setReferralMode("none");
+      }
+    } catch {
+      setReferralCodeStatus("invalid");
+      setReferralCodeMessage("Could not apply this referral code.");
+      setError("Could not apply this referral code.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function startPayment() {
     if (!context) return;
     if (preview) {
@@ -312,6 +405,8 @@ export function CollectCheckout({
           useNewCard,
           referralMode: kind === "service" ? referralMode : "none",
           referralCustomDollars: Number(referralCustom) || 0,
+          referralCode:
+            kind === "service" ? referralCode.trim() || undefined : undefined,
         }),
       });
       const body = (await response.json()) as {
@@ -691,6 +786,9 @@ export function CollectCheckout({
           referralQuote={referralQuote}
           referralMode={referralMode}
           referralCustom={referralCustom}
+          referralCode={referralCode}
+          referralCodeStatus={referralCodeStatus}
+          referralCodeMessage={referralCodeMessage}
           methods={methods}
           selectedMethodId={selectedMethodId}
           useNewCard={useNewCard}
@@ -701,6 +799,12 @@ export function CollectCheckout({
           onCustomTip={setCustomTip}
           onReferralMode={setReferralMode}
           onReferralCustom={setReferralCustom}
+          onReferralCodeChange={(value) => {
+            setReferralCode(value.toUpperCase());
+            setReferralCodeStatus("idle");
+            setReferralCodeMessage(null);
+          }}
+          onApplyReferralCode={() => void applyReferralCode()}
           onSelectMethod={(id) => {
             setSelectedMethodId(id);
             setUseNewCard(false);
@@ -761,6 +865,9 @@ function PayStep({
   referralQuote,
   referralMode,
   referralCustom,
+  referralCode,
+  referralCodeStatus,
+  referralCodeMessage,
   methods,
   selectedMethodId,
   useNewCard,
@@ -771,6 +878,8 @@ function PayStep({
   onCustomTip,
   onReferralMode,
   onReferralCustom,
+  onReferralCodeChange,
+  onApplyReferralCode,
   onSelectMethod,
   onUseNewCard,
   onBack,
@@ -789,6 +898,9 @@ function PayStep({
   referralQuote: ReturnType<typeof quoteReferralApplication>;
   referralMode: ReferralApplyMode;
   referralCustom: string;
+  referralCode: string;
+  referralCodeStatus: "idle" | "applied" | "invalid";
+  referralCodeMessage: string | null;
   methods: PaymentMethodRecord[];
   selectedMethodId: string | null;
   useNewCard: boolean;
@@ -799,6 +911,8 @@ function PayStep({
   onCustomTip: (value: string) => void;
   onReferralMode: (value: ReferralApplyMode) => void;
   onReferralCustom: (value: string) => void;
+  onReferralCodeChange: (value: string) => void;
+  onApplyReferralCode: () => void;
   onSelectMethod: (id: string) => void;
   onUseNewCard: () => void;
   onBack: () => void;
@@ -880,6 +994,52 @@ function PayStep({
       <p className="font-body mt-2 text-sm text-taupe">
         Tip {formatChargeMoney(tipAmount)}
       </p>
+
+      <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+        Referral code
+      </p>
+      <label className="font-body mt-2 block text-sm text-ink" htmlFor="collect-referral-code">
+        Have a friend&apos;s referral code?
+      </label>
+      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <input
+          id="collect-referral-code"
+          type="text"
+          autoComplete="off"
+          value={referralCode}
+          disabled={busy || referralCodeStatus === "applied"}
+          onChange={(event) => onReferralCodeChange(event.target.value)}
+          onBlur={() => {
+            if (referralCode.trim() && referralCodeStatus !== "applied") {
+              onApplyReferralCode();
+            }
+          }}
+          className="w-full rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm uppercase tracking-[0.08em] text-ink disabled:opacity-70"
+          placeholder="PRINCE-PENNY-S"
+        />
+        <button
+          type="button"
+          disabled={busy || !referralCode.trim() || referralCodeStatus === "applied"}
+          onClick={onApplyReferralCode}
+          className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-sm border border-champagne px-4 text-[10px] font-medium uppercase tracking-[0.14em] text-ink disabled:opacity-50"
+        >
+          {referralCodeStatus === "applied" ? "Applied" : "Apply code"}
+        </button>
+      </div>
+      {referralCodeMessage ? (
+        <p
+          className={`font-body mt-2 text-sm ${
+            referralCodeStatus === "invalid" ? "text-red-800" : "text-ink"
+          }`}
+        >
+          {referralCodeMessage}
+        </p>
+      ) : (
+        <p className="font-body mt-2 text-xs text-taupe">
+          Optional. Use this if the household did not enter a referral code when
+          booking. New-client 10% applies only on a first paid visit.
+        </p>
+      )}
 
       <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
         Available referral credit

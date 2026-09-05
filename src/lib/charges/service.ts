@@ -35,6 +35,7 @@ import { householdVisitKey } from "@/lib/referrals/address";
 import { centsToDollars } from "@/lib/referrals/eligible";
 import {
   buildCollectQuote,
+  attachReferralOnBooking,
   attachReservationPaymentIntent,
   confirmReferralDebit,
   getCollectReferralState,
@@ -230,6 +231,17 @@ export async function createAppointmentCharge(
 
   const appointment = await fetchAppointmentAdminRecord(input.appointmentId);
   if (!appointment) return { error: "not_found" };
+
+  if (input.kind === "service" && input.referralCode?.trim()) {
+    const attached = await attachReferralOnBooking({
+      referredCustomerId: appointment.customerId,
+      appointmentId: input.appointmentId,
+      code: input.referralCode,
+    });
+    if (!attached.ok) {
+      return { error: "conflict", message: attached.message };
+    }
+  }
 
   const referralState = await getCollectReferralState({
     customerId: appointment.customerId,

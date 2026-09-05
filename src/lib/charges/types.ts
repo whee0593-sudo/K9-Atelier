@@ -62,6 +62,7 @@ export type CollectContext = {
     availableCreditCents: number;
     applyNewClientDiscount: boolean;
     canUseCredit: boolean;
+    referralCode?: string | null;
   };
 };
 
@@ -74,4 +75,5 @@ export type CreateChargeInput = {
   useNewCard?: boolean;
   referralMode?: "full" | "custom" | "none";
   referralCustomDollars?: number;
+  referralCode?: string;
 };

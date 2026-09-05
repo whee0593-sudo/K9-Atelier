@@ -13,6 +13,7 @@ export async function POST(request: Request) {
     useNewCard?: boolean;
     referralMode?: "full" | "custom" | "none";
     referralCustomDollars?: number;
+    referralCode?: string;
   };
 
   try {
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
     useNewCard: Boolean(body.useNewCard),
     referralMode: body.referralMode,
     referralCustomDollars: body.referralCustomDollars,
+    referralCode: body.referralCode,
   });
 
   if ("error" in result) {

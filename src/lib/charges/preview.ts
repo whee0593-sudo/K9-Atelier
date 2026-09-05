@@ -91,6 +91,7 @@ export function buildPreviewCollectContext(
       availableCreditCents: 10000,
       applyNewClientDiscount: false,
       canUseCredit: true,
+      referralCode: null,
     },
   };
 }

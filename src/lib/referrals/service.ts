@@ -553,6 +553,13 @@ export async function availableReferralCreditCents(customerId: string) {
   return Number(data ?? 0);
 }
 
+export type CollectReferralState = {
+  availableCreditCents: number;
+  applyNewClientDiscount: boolean;
+  canUseCredit: boolean;
+  referralCode: string | null;
+};
+
 export async function getCollectReferralState(input: {
   customerId: string;
   appointmentId: string;
@@ -560,23 +567,47 @@ export async function getCollectReferralState(input: {
   addressStreet: string;
   addressZip: string;
   kind: "service" | "no_show" | "cancellation";
-}) {
+}): Promise<CollectReferralState> {
   const availableCreditCents = await availableReferralCreditCents(input.customerId);
   if (input.kind !== "service") {
     return {
       availableCreditCents,
       applyNewClientDiscount: false,
       canUseCredit: availableCreditCents > 0,
+      referralCode: null,
     };
   }
 
   const admin = createAdminClient();
-  const { data: relationship } = await admin
-    .from("referral_relationships")
-    .select("id, status, referrer_customer_id")
-    .eq("referred_customer_id", input.customerId)
-    .in("status", ["pending", "completed"])
-    .maybeSingle();
+  const [{ data: relationship }, { data: appointment }] = await Promise.all([
+    admin
+      .from("referral_relationships")
+      .select("id, status, referrer_customer_id, referral_code_id")
+      .eq("referred_customer_id", input.customerId)
+      .in("status", ["pending", "completed", "under_review"])
+      .maybeSingle(),
+    admin
+      .from("appointments")
+      .select("referral_code")
+      .eq("id", input.appointmentId)
+      .maybeSingle(),
+  ]);
+
+  let referralCode =
+    typeof appointment?.referral_code === "string" && appointment.referral_code.trim()
+      ? (appointment.referral_code as string).trim()
+      : null;
+
+  if (!referralCode && relationship?.referral_code_id) {
+    const { data: codeRow } = await admin
+      .from("pet_referral_codes")
+      .select("referral_code")
+      .eq("id", relationship.referral_code_id as string)
+      .maybeSingle();
+    if (typeof codeRow?.referral_code === "string") {
+      referralCode = codeRow.referral_code;
+    }
+  }
 
   const household = await evaluateReferredHousehold({
     referredCustomerId: input.customerId,
@@ -609,6 +640,45 @@ export async function getCollectReferralState(input: {
     availableCreditCents,
     applyNewClientDiscount,
     canUseCredit: availableCreditCents > 0 && !applyNewClientDiscount,
+    referralCode,
+  };
+}
+
+export async function applyReferralCodeForCollect(input: {
+  customerId: string;
+  appointmentId: string;
+  appointmentDate: string;
+  addressStreet: string;
+  addressZip: string;
+  code: string;
+}): Promise<
+  | { ok: true; referral: CollectReferralState; message?: string }
+  | { ok: false; message: string }
+> {
+  const attached = await attachReferralOnBooking({
+    referredCustomerId: input.customerId,
+    appointmentId: input.appointmentId,
+    code: input.code,
+  });
+  if (!attached.ok) {
+    return { ok: false, message: attached.message };
+  }
+
+  const referral = await getCollectReferralState({
+    customerId: input.customerId,
+    appointmentId: input.appointmentId,
+    appointmentDate: input.appointmentDate,
+    addressStreet: input.addressStreet,
+    addressZip: input.addressZip,
+    kind: "service",
+  });
+
+  return {
+    ok: true,
+    referral,
+    message: attached.applied
+      ? "Referral code applied for this household."
+      : undefined,
   };
 }
 
