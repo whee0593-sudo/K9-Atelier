@@ -13,7 +13,7 @@ const services = [
   {
     title: "The Atelier Groom",
     body: "A complete grooming experience finished with a bespoke haircut tailored to your dog's coat, lifestyle and individual expression.",
-    price: "From $150",
+    price: "From $140",
     href: "/services#atelier-full-groom",
     cta: "Discover",
   },

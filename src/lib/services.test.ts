@@ -9,15 +9,15 @@ import {
 } from "./services";
 
 const FULL_GROOM_MATRIX = [
-  ["under15", "short-light", 150],
-  ["under15", "medium-standard", 165],
-  ["under15", "long-full", 180],
-  ["15to30", "short-light", 170],
-  ["15to30", "medium-standard", 185],
-  ["15to30", "long-full", 200],
-  ["31to45", "short-light", 190],
-  ["31to45", "medium-standard", 205],
-  ["31to45", "long-full", 220],
+  ["under15", "short-light", 140],
+  ["under15", "medium-standard", 155],
+  ["under15", "long-full", 170],
+  ["15to30", "short-light", 160],
+  ["15to30", "medium-standard", 175],
+  ["15to30", "long-full", 190],
+  ["31to45", "short-light", 180],
+  ["31to45", "medium-standard", 195],
+  ["31to45", "long-full", 210],
 ] as const;
 
 describe("weight tier boundaries", () => {
@@ -71,11 +71,11 @@ describe("full groom coat-type pricing", () => {
   it("does not guess Medium / Standard when coat type is missing", () => {
     const groom = getServiceById("custom-full-haircut");
     assert.ok(groom);
-    assert.equal(getCoatTypePriceForPet(groom, 12), 150);
-    assert.equal(getCoatTypePriceForPet(groom, 20), 170);
-    assert.equal(getCoatTypePriceForPet(groom, 40), 190);
-    assert.equal(getServicePriceEstimate(groom, 20)?.from, 170);
-    assert.notEqual(getServicePriceEstimate(groom, 20)?.from, 185);
+    assert.equal(getCoatTypePriceForPet(groom, 12), 140);
+    assert.equal(getCoatTypePriceForPet(groom, 20), 160);
+    assert.equal(getCoatTypePriceForPet(groom, 40), 180);
+    assert.equal(getServicePriceEstimate(groom, 20)?.from, 160);
+    assert.notEqual(getServicePriceEstimate(groom, 20)?.from, 175);
     assert.equal(getCoatTypePriceForPet(groom, 20, "not-a-coat"), null);
     assert.equal(
       getServicePriceEstimate(groom, 20, undefined, "not-a-coat"),
@@ -83,13 +83,14 @@ describe("full groom coat-type pricing", () => {
     );
   });
 
-  it("no longer uses the old $150 / $190 / $230 weight-only groom prices", () => {
+  it("no longer uses the previous Full Groom starting prices", () => {
     const groom = getServiceById("custom-full-haircut");
     assert.ok(groom);
-    assert.equal(getTierForPet(groom, 20)?.priceFrom, 170);
-    assert.equal(getTierForPet(groom, 40)?.priceFrom, 190);
-    assert.notEqual(getServicePriceEstimate(groom, 20)?.from, 190);
-    assert.notEqual(getServicePriceEstimate(groom, 40)?.from, 230);
+    assert.equal(getTierForPet(groom, 20)?.priceFrom, 160);
+    assert.equal(getTierForPet(groom, 40)?.priceFrom, 180);
+    assert.notEqual(getServicePriceEstimate(groom, 12)?.from, 150);
+    assert.notEqual(getServicePriceEstimate(groom, 20)?.from, 170);
+    assert.notEqual(getServicePriceEstimate(groom, 40)?.from, 190);
   });
 });
 

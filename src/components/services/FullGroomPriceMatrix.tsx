@@ -1,4 +1,4 @@
-import { business, formatPrice } from "@/lib/business";
+import { business, formatDuration, formatPrice } from "@/lib/business";
 import type { BookableService } from "@/lib/services";
 
 type Props = {
@@ -11,22 +11,80 @@ export function FullGroomPriceMatrix({ service }: Props) {
 
   const coatTypes = business.coatTypes;
   const weightTiers = business.weightTiers;
+  const durationByWeight = Object.fromEntries(
+    (service.tiers ?? []).map((tier) => [
+      tier.weightTier,
+      tier.durationMin != null
+        ? formatDuration(tier.durationMin, tier.durationMax)
+        : null,
+    ]),
+  );
 
   return (
-    <div className="mt-6">
-      {service.coatTypeNote && (
-        <p className="font-body text-sm leading-relaxed text-taupe">
-          {service.coatTypeNote}
-        </p>
-      )}
+    <div className="mt-5">
+      <div className="hidden overflow-hidden border border-gray-line/80 md:block">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-dusty-lavender/35">
+            <tr>
+              <th className="px-4 py-3 font-body text-[11px] font-medium uppercase tracking-[0.12em] text-taupe">
+                Weight
+              </th>
+              {coatTypes.map((coat) => (
+                <th
+                  key={coat.id}
+                  className="px-4 py-3 font-body text-[11px] font-medium uppercase tracking-[0.12em] text-taupe"
+                >
+                  {coat.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {weightTiers.map((weight) => (
+              <tr key={weight.id} className="border-t border-gray-line/60">
+                <td className="px-4 py-3 align-top text-ink">
+                  <span className="block">
+                    {formatWeightLabel(weight.label)}
+                  </span>
+                  {durationByWeight[weight.id] && (
+                    <span className="font-body mt-1 block text-[12px] text-taupe">
+                      {durationByWeight[weight.id]}
+                    </span>
+                  )}
+                </td>
+                {coatTypes.map((coat) => {
+                  const price = prices.find(
+                    (entry) =>
+                      entry.weightTier === weight.id &&
+                      entry.coatType === coat.id,
+                  );
+                  return (
+                    <td key={coat.id} className="px-4 py-3 text-ink">
+                      {price ? `From ${formatPrice(price.priceFrom)}` : "—"}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-      <div className="mt-5 space-y-8">
+      <div className="grid gap-3 md:hidden">
         {weightTiers.map((weight) => (
-          <div key={weight.id}>
-            <p className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
+          <div
+            key={weight.id}
+            className="border border-gray-line/80 bg-ivory px-4 py-4"
+          >
+            <p className="font-body text-[11px] font-medium uppercase tracking-[0.12em] text-taupe">
               {formatWeightLabel(weight.label)}
             </p>
-            <div className="mt-3 grid gap-3 md:grid-cols-3 md:gap-4">
+            {durationByWeight[weight.id] && (
+              <p className="font-body mt-1 text-sm text-taupe">
+                {durationByWeight[weight.id]}
+              </p>
+            )}
+            <dl className="mt-3 space-y-2">
               {coatTypes.map((coat) => {
                 const price = prices.find(
                   (entry) =>
@@ -36,26 +94,24 @@ export function FullGroomPriceMatrix({ service }: Props) {
                 return (
                   <div
                     key={coat.id}
-                    className="border border-gray-line/70 bg-ivory px-4 py-4 md:px-5 md:py-5"
+                    className="flex items-baseline justify-between gap-3"
                   >
-                    <p className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe">
+                    <dt className="font-body text-[11px] uppercase tracking-[0.1em] text-taupe">
                       {coat.label}
-                    </p>
-                    <p className="font-display mt-2 text-xl text-ink md:text-[1.35rem]">
-                      {price
-                        ? `From ${formatPrice(price.priceFrom)}`
-                        : "—"}
-                    </p>
+                    </dt>
+                    <dd className="font-body text-sm text-ink">
+                      {price ? `From ${formatPrice(price.priceFrom)}` : "—"}
+                    </dd>
                   </div>
                 );
               })}
-            </div>
+            </dl>
           </div>
         ))}
       </div>
 
       {service.pricingNote && (
-        <p className="font-body mt-6 text-[12px] leading-relaxed text-taupe/90">
+        <p className="font-body mt-4 text-[12px] leading-relaxed text-taupe/90">
           {service.pricingNote}
         </p>
       )}
