@@ -27,6 +27,12 @@ export type ServiceTier = {
   durationMax?: number;
 };
 
+export type CoatTypePrice = {
+  weightTier: string;
+  coatType: string;
+  priceFrom: number;
+};
+
 export type BookableService = {
   id: string;
   name: string;
@@ -35,6 +41,9 @@ export type BookableService = {
   categoryName: string;
   pricingType: string;
   tiers?: ServiceTier[];
+  coatTypePrices?: CoatTypePrice[];
+  pricingNote?: string;
+  coatTypeNote?: string;
   hourlyRate?: number;
   durationMin?: number;
   durationMax?: number;
@@ -111,6 +120,10 @@ export function allBookableServices(): BookableService[] {
       categoryName: category.name,
       pricingType: service.pricingType,
       tiers: "tiers" in service ? service.tiers : undefined,
+      coatTypePrices:
+        "coatTypePrices" in service ? service.coatTypePrices : undefined,
+      pricingNote: "pricingNote" in service ? service.pricingNote : undefined,
+      coatTypeNote: "coatTypeNote" in service ? service.coatTypeNote : undefined,
       hourlyRate: "hourlyRate" in service ? service.hourlyRate : undefined,
       durationMin: "durationMin" in service ? service.durationMin : undefined,
       durationMax: "durationMax" in service ? service.durationMax : undefined,
@@ -179,15 +192,56 @@ export function getTierForPet(
   return service.tiers.find((t) => t.weightTier === tierId) ?? null;
 }
 
+export function coatTypeLabel(coatTypeId: string) {
+  return business.coatTypes.find((item) => item.id === coatTypeId)?.label ?? coatTypeId;
+}
+
+export function hasCoatTypePricing(service: BookableService) {
+  return Boolean(service.coatTypePrices?.length);
+}
+
+/**
+ * Full Groom (and any coat-priced service) lookup.
+ * When coatType is omitted, returns the starting (lowest) price for that weight.
+ * Does not infer coat type from breed or default to Medium / Standard.
+ */
+export function getCoatTypePriceForPet(
+  service: BookableService,
+  weightLbs: number,
+  coatType?: string | null,
+): number | null {
+  if (
+    !service.coatTypePrices?.length ||
+    weightLbs > business.weightPolicy.maxStandardWeightLbs
+  ) {
+    return null;
+  }
+  const tierId = weightTierForPet(weightLbs);
+  const forWeight = service.coatTypePrices.filter(
+    (entry) => entry.weightTier === tierId,
+  );
+  if (!forWeight.length) return null;
+  if (coatType) {
+    return (
+      forWeight.find((entry) => entry.coatType === coatType)?.priceFrom ?? null
+    );
+  }
+  return Math.min(...forWeight.map((entry) => entry.priceFrom));
+}
+
 export function formatServicePrice(
   service: BookableService,
   weightLbs: number,
   optionName?: string,
 ) {
   if (service.pricingType === "tiered") {
+    const coatPrice = hasCoatTypePricing(service)
+      ? getCoatTypePriceForPet(service, weightLbs)
+      : null;
     const tier = getTierForPet(service, weightLbs);
-    if (!tier) return "Not available for this weight";
-    return `From ${formatPrice(tier.priceFrom)} · ${formatDuration(tier.durationMin ?? 0, tier.durationMax)}`;
+    const priceFrom = coatPrice ?? tier?.priceFrom;
+    if (priceFrom == null) return "Not available for this weight";
+    return `From ${formatPrice(priceFrom)} · ${formatDuration(tier?.durationMin ?? 0, tier?.durationMax)}`;
   }
 
   if (service.pricingType === "hourly" && service.hourlyRate) {
@@ -406,6 +460,10 @@ export function estimateServiceDurationMinutes(
 }
 
 export function formatServicePriceFrom(service: BookableService) {
+  if (service.pricingType === "tiered" && service.coatTypePrices?.length) {
+    const min = Math.min(...service.coatTypePrices.map((t) => t.priceFrom));
+    return `From ${formatPrice(min)}`;
+  }
   if (service.pricingType === "tiered" && service.tiers?.length) {
     const min = Math.min(...service.tiers.map((t) => t.priceFrom));
     return `From ${formatPrice(min)}`;
@@ -452,9 +510,20 @@ export function getServicePriceEstimate(
   service: BookableService,
   weightLbs: number,
   optionName?: string,
+  coatType?: string | null,
 ) {
   if (service.pricingType === "tiered") {
     const tier = getTierForPet(service, weightLbs);
+    if (hasCoatTypePricing(service)) {
+      const from = getCoatTypePriceForPet(service, weightLbs, coatType);
+      if (from == null) return null;
+      return {
+        from,
+        durationLabel: tier
+          ? formatDuration(tier.durationMin ?? 0, tier.durationMax)
+          : undefined,
+      };
+    }
     if (!tier) return null;
     return {
       from: tier.priceFrom,

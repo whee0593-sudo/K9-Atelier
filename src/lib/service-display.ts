@@ -37,8 +37,7 @@ export const SERVICE_DISPLAY_DESCRIPTIONS: Record<string, string> = {
     "Professional coat care when matting requires additional time.",
   "senior-comfort-care":
     "Additional time and adapted handling for comfort and an unhurried pace.",
-  "mini-trim":
-    "A focused tidy around the eyes, feet, and sanitary area.",
+  "mini-trim": "Eyes, feet & sanitary areas only.",
 };
 
 export const CATEGORY_DISPLAY_NAMES: Record<string, string> = {

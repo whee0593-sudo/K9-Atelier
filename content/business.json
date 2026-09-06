@@ -50,6 +50,20 @@
       "labelZh": "31 lbs – 45 lbs"
     }
   ],
+  "coatTypes": [
+    {
+      "id": "short-light",
+      "label": "Short / Light Coat"
+    },
+    {
+      "id": "medium-standard",
+      "label": "Medium / Standard Coat"
+    },
+    {
+      "id": "long-full",
+      "label": "Long / Full Coat"
+    }
+  ],
   "serviceArea": {
     "freeRadiusMiles": 10,
     "travelFeePerMile": 6.5,
@@ -345,10 +359,23 @@
           "nameZh": "高端定制全套造型精剪",
           "description": "Full-service personalized grooming experience. Includes everything in the Signature Bath & Care, followed by a customized whole-body groom styled to your preferences (e.g., teddy bear head, custom length, or breed standard).",
           "pricingType": "tiered",
+          "pricingNote": "Starting prices are based on weight and coat type. Final pricing may vary based on coat density, condition, requested style, temperament, and additional grooming time required.",
+          "coatTypeNote": "Coat type reflects length, density, and overall grooming workload — not breed alone.",
           "tiers": [
             { "weightTier": "under15", "priceFrom": 150, "durationMin": 75, "durationMax": 90 },
-            { "weightTier": "15to30", "priceFrom": 190, "durationMin": 90, "durationMax": 105 },
-            { "weightTier": "31to45", "priceFrom": 230, "durationMin": 105, "durationMax": 120 }
+            { "weightTier": "15to30", "priceFrom": 170, "durationMin": 90, "durationMax": 105 },
+            { "weightTier": "31to45", "priceFrom": 190, "durationMin": 105, "durationMax": 120 }
+          ],
+          "coatTypePrices": [
+            { "weightTier": "under15", "coatType": "short-light", "priceFrom": 150 },
+            { "weightTier": "under15", "coatType": "medium-standard", "priceFrom": 165 },
+            { "weightTier": "under15", "coatType": "long-full", "priceFrom": 180 },
+            { "weightTier": "15to30", "coatType": "short-light", "priceFrom": 170 },
+            { "weightTier": "15to30", "coatType": "medium-standard", "priceFrom": 185 },
+            { "weightTier": "15to30", "coatType": "long-full", "priceFrom": 200 },
+            { "weightTier": "31to45", "coatType": "short-light", "priceFrom": 190 },
+            { "weightTier": "31to45", "coatType": "medium-standard", "priceFrom": 205 },
+            { "weightTier": "31to45", "coatType": "long-full", "priceFrom": 220 }
           ]
         },
         {
@@ -417,15 +444,20 @@
           "id": "mini-trim",
           "name": "Mini Trim",
           "nameZh": "局部精修",
-          "description": "A focused tidy of the three areas that need the most frequent attention: around the eyes, the feet, and the sanitary region. Already included with full grooming and spa treatments.",
-          "note": "Available as an add-on with Signature Bath & Care or Show Care for Long Coats. Full grooming and spa treatments already include this tidy.",
+          "description": "Eyes, feet & sanitary areas only.",
+          "note": "Available as an add-on with Signature Bath & Care or Show Care for Long Coats. Full grooming and spa treatments already include this tidy. Does not include a full face, body, or outline trim.",
           "includes": [
             "Eye-area trim",
             "Feet outline and paw pad trim",
             "Sanitary trim"
           ],
           "pricingType": "add_on",
-          "flatRate": 50
+          "flatRate": 30,
+          "tiers": [
+            { "weightTier": "under15", "priceFrom": 30 },
+            { "weightTier": "15to30", "priceFrom": 35 },
+            { "weightTier": "31to45", "priceFrom": 40 }
+          ]
         }
       ]
     },

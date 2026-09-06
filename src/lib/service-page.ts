@@ -54,8 +54,7 @@ const CARD_SUMMARIES: Record<string, string> = {
     "A deep undercoat treatment to release trapped hair and reduce shedding after the bath.",
   "senior-comfort-care":
     "Low-stress, adapted care for senior or medically fragile dogs who need a slower, gentler appointment.",
-  "mini-trim":
-    "A focused tidy of the eyes, feet, and sanitary area between fuller grooming visits.",
+  "mini-trim": "Eyes, feet & sanitary areas only.",
   "creative-accent-coloring":
     "Pet-safe, semi-permanent accent color designed specifically for animal coats.",
   "end-of-life-care":
@@ -133,6 +132,10 @@ export function serviceStartingPriceLabel(service: BookableService) {
   }
   if (service.pricingType === "add_on" && service.tiers?.length) {
     const min = Math.min(...service.tiers.map((tier) => tier.priceFrom));
+    return `From ${formatPrice(min)}`;
+  }
+  if (service.pricingType === "tiered" && service.coatTypePrices?.length) {
+    const min = Math.min(...service.coatTypePrices.map((tier) => tier.priceFrom));
     return `From ${formatPrice(min)}`;
   }
   if (service.pricingType === "tiered" && service.tiers?.length) {
