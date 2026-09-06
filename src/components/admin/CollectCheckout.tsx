@@ -617,7 +617,7 @@ export function CollectCheckout({
                   <HourlyVisitTimer
                     appointmentId={appointmentId}
                     preview={preview}
-                    rate={hourlyRateForCatalogId(item.catalogId) ?? 150}
+                    rate={hourlyRateForCatalogId(item.catalogId) ?? 160}
                     startedAt={serviceStartedAt}
                     endedAt={serviceEndedAt}
                     timeZone={appointment.timezone}

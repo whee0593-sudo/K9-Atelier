@@ -358,7 +358,7 @@
           "description": "Specialized coat preservation for wire-haired breeds (such as Terriers and Schnauzers). Preserves rich coat color, harsh texture, and natural skin protection by manually removing blown coat. Charged at an hourly rate due to the intense precision and time required.",
           "note": "If a bath is desired immediately after hand stripping, please add a Signature Bath & Care service to your booking.",
           "pricingType": "hourly",
-          "hourlyRate": 150,
+          "hourlyRate": 160,
           "durationMin": 60,
           "durationMax": 90,
           "durationNote": "1 – 1.5 hours (varies by coat texture & coverage)",

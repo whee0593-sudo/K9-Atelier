@@ -80,7 +80,7 @@ The longer a dog's coat grows, the harder it becomes for natural oils and nutrie
 
 | 项目 | 详情 |
 |------|------|
-| 收费 | **$120 / 小时** |
+| 收费 | **$160 / 小时** |
 | 预估时长 | 1.5 – 3 小时（视毛质及覆盖范围） |
 
 **Amelia Description:**

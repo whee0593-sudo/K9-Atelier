@@ -25,7 +25,7 @@ describe("service page helpers", () => {
     const hourly = getServiceById("hand-stripping");
     const addOn = getServiceById("dematting-brush-out");
     assert.equal(serviceStartingPriceLabel(bath!), "From $90");
-    assert.equal(serviceStartingPriceLabel(hourly!), "From $150 / hour");
+    assert.equal(serviceStartingPriceLabel(hourly!), "From $160 / hour");
     assert.equal(serviceStartingPriceLabel(addOn!), "From $30 / 15 min");
   });
 
@@ -39,7 +39,7 @@ describe("service page helpers", () => {
     const hourly = getServiceById("hand-stripping");
     const complimentary = getServiceById("end-of-life-care");
     assert.equal(serviceCardPriceValue(bath!), "$90");
-    assert.equal(serviceCardPriceValue(hourly!), "$150 / hour");
+    assert.equal(serviceCardPriceValue(hourly!), "$160 / hour");
     assert.equal(serviceCardPriceValue(complimentary!), "Complimentary");
     assert.equal(serviceDurationLabel(complimentary!), "By appointment only");
     assert.equal(serviceCardAccessLabel(complimentary!), "Members only");
