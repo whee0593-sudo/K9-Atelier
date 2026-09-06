@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
+import { FullGroomPriceMatrix } from "@/components/services/FullGroomPriceMatrix";
 import { PriceTiers } from "@/components/services/PriceTiers";
 import { formatPrice } from "@/lib/business";
 import type { BookableService } from "@/lib/services";
@@ -164,8 +165,11 @@ function ServiceDetails({ service }: { service: BookableService }) {
         </div>
       )}
 
-      {service.tiers && service.pricingType === "tiered" && (
-        <PriceTiers tiers={service.tiers} />
+      {service.pricingType === "tiered" && service.coatTypePrices?.length ? (
+        <FullGroomPriceMatrix service={service} />
+      ) : (
+        service.tiers &&
+        service.pricingType === "tiered" && <PriceTiers tiers={service.tiers} />
       )}
 
       {service.pricingType === "hourly" && service.hourlyRate != null && (
@@ -174,23 +178,23 @@ function ServiceDetails({ service }: { service: BookableService }) {
         </p>
       )}
 
-      {service.pricingType === "add_on" && service.tiers && (
-        <PriceTiers
-          tiers={service.tiers}
-          priceOnly
-          feeSuffix="added to the base service"
-        />
-      )}
-
       {service.pricingType === "add_on" &&
-        service.flatRate != null &&
-        !service.tiers && (
-          <p className="font-body mt-4 text-sm text-ink">
-            {service.durationMin != null
-              ? `From ${formatPrice(service.flatRate)} / ${service.durationMin} min`
-              : `From ${formatPrice(service.flatRate)}`}
-          </p>
+        service.tiers &&
+        service.flatRate == null && (
+          <PriceTiers
+            tiers={service.tiers}
+            priceOnly
+            feeSuffix="added to the base service"
+          />
         )}
+
+      {service.pricingType === "add_on" && service.flatRate != null && (
+        <p className="font-body mt-4 text-sm text-ink">
+          {service.durationMin != null
+            ? `From ${formatPrice(service.flatRate)} / ${service.durationMin} min`
+            : `From ${formatPrice(service.flatRate)}`}
+        </p>
+      )}
 
       {service.pricingType === "free" && (
         <p className="font-body mt-4 text-sm text-ink">

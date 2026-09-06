@@ -27,6 +27,11 @@ describe("service page helpers", () => {
     assert.equal(serviceStartingPriceLabel(bath!), "From $90");
     assert.equal(serviceStartingPriceLabel(hourly!), "From $160 / hour");
     assert.equal(serviceStartingPriceLabel(addOn!), "From $30 / 15 min");
+    const groom = getServiceById("custom-full-haircut");
+    const mini = getServiceById("mini-trim");
+    assert.equal(serviceStartingPriceLabel(groom!), "From $150");
+    assert.equal(serviceStartingPriceLabel(mini!), "From $30");
+    assert.equal(serviceCardSummary(mini!), "Eyes, feet & sanitary areas only.");
   });
 
   it("reports duration ranges from weight tiers", () => {
