@@ -39,7 +39,7 @@ const CARD_SUMMARIES: Record<string, string> = {
   "custom-full-haircut":
     "A complete grooming experience finished with a custom haircut tailored to coat, lifestyle, and expression.",
   "long-coat-show-care":
-    "Weekly wash-and-care for every coat, keeping a silky, show-ready finish between appointments.",
+    "Weekly bath-and-care maintenance.",
   "hand-stripping":
     "Traditional hand stripping for wire-coated breeds, preserving harsh texture, color, and natural coat protection.",
   "dead-sea-mud-bath":

@@ -21,7 +21,7 @@ export const SERVICE_DISPLAY_DESCRIPTIONS: Record<string, string> = {
   "custom-full-haircut":
     "Complete grooming with bespoke haircut and finishing.",
   "long-coat-show-care":
-    "A weekly wash, condition, and finish that restores moisture and keeps the coat soft, tangle-resistant, and beautifully maintained.",
+    "Weekly bath-and-care maintenance.",
   "hand-stripping":
     "Traditional coat preservation for wire-haired breeds.",
   "dead-sea-mud-bath":
