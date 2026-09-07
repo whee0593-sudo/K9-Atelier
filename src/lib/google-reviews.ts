@@ -58,6 +58,7 @@ export async function getGoogleReviews(): Promise<GoogleReviewItem[]> {
       body: JSON.stringify({
         textQuery,
         pageSize: 10,
+        includePureServiceAreaBusinesses: true,
       }),
       cache: "no-store",
     });
