@@ -64,7 +64,7 @@ const CARD_SUMMARIES: Record<string, string> = {
 const CARD_BEST_FOR: Record<string, string> = {
   "signature-bath-care": "Regular coat maintenance",
   "custom-full-haircut": "A complete haircut and style",
-  "long-coat-show-care": "Any dog on a weekly schedule",
+  "long-coat-show-care": "Skin and coat kept in perfect condition",
   "hand-stripping": "Wire-coated Terriers and Schnauzers",
   "dead-sea-mud-bath": "Heavy double coats and high-shedding breeds",
   "aromatherapy-oil-bath": "Dry, dull, or tangle-prone coats",

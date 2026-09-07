@@ -51,9 +51,9 @@ A weekly wash-and-care ritual for every coat — designed to keep skin comfortab
 
 A coat stays healthier when it is washed, conditioned, and finished on a regular weekly rhythm. Weekly Show Care is a meticulous, multi-step process using coat-specific professional-grade shampoo and conditioner formulated for your dog's texture, restoring moisture and strength from root to tip so the coat stays soft, tangle-resistant, and beautifully maintained.
 
-**Best suited for:** Any dog — short, medium, or full coat — kept on a weekly grooming schedule.
+**Best suited for:** Dogs whose skin and coat are expected to always stay in their most perfect condition.
 
-**Best for:** Any dog kept on a weekly grooming schedule, when consistent hygiene, skin comfort, and a show-ready finish are the priority.
+**Best for:** Dogs whose skin and coat are expected to always stay in their most perfect condition.
 
 **Includes:**
 - Pre-Bath Detangling: Careful line-brushing to prevent matting before washing
