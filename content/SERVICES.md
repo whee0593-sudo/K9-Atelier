@@ -47,8 +47,6 @@ Full-service personalized grooming experience. Includes everything in the Signat
 
 ### 3. Weekly Show Care · 每周赛级护理
 
-A weekly wash-and-care ritual for every coat — designed to keep skin comfortable, prevent matting, and maintain a silky, show-ready finish week after week.
-
 A coat stays healthier when it is washed, conditioned, and finished on a regular weekly rhythm. Weekly Show Care is a meticulous, multi-step process using coat-specific professional-grade shampoo and conditioner formulated for your dog's texture, restoring moisture and strength from root to tip so the coat stays soft, tangle-resistant, and beautifully maintained.
 
 **Best suited for:** Dogs whose skin and coat are expected to always stay in their most perfect condition.
