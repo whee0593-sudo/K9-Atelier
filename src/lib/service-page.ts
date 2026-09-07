@@ -39,7 +39,7 @@ const CARD_SUMMARIES: Record<string, string> = {
   "custom-full-haircut":
     "A complete grooming experience finished with a custom haircut tailored to coat, lifestyle, and expression.",
   "long-coat-show-care":
-    "Weekly maintenance for full-coat breeds, preserving length and preventing matting between appointments.",
+    "Weekly wash-and-care for every coat, keeping a silky, show-ready finish between appointments.",
   "hand-stripping":
     "Traditional hand stripping for wire-coated breeds, preserving harsh texture, color, and natural coat protection.",
   "dead-sea-mud-bath":
@@ -64,7 +64,7 @@ const CARD_SUMMARIES: Record<string, string> = {
 const CARD_BEST_FOR: Record<string, string> = {
   "signature-bath-care": "Regular coat maintenance",
   "custom-full-haircut": "A complete haircut and style",
-  "long-coat-show-care": "Full-coat breeds on a weekly schedule",
+  "long-coat-show-care": "Any dog on a weekly schedule",
   "hand-stripping": "Wire-coated Terriers and Schnauzers",
   "dead-sea-mud-bath": "Heavy double coats and high-shedding breeds",
   "aromatherapy-oil-bath": "Dry, dull, or tangle-prone coats",

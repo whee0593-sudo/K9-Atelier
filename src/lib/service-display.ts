@@ -2,7 +2,7 @@
 export const SERVICE_DISPLAY_NAMES: Record<string, string> = {
   "signature-bath-care": "The Signature Bath",
   "custom-full-haircut": "The Atelier Full Groom",
-  "long-coat-show-care": "Show Care for Long Coats",
+  "long-coat-show-care": "Weekly Show Care",
   "hand-stripping": "Hand-Stripping Specialty",
   "dead-sea-mud-bath": "Dead Sea Mineral Ritual",
   "aromatherapy-oil-bath": "Lavender & Chamomile Bath Ritual",
@@ -21,7 +21,7 @@ export const SERVICE_DISPLAY_DESCRIPTIONS: Record<string, string> = {
   "custom-full-haircut":
     "Complete grooming with bespoke haircut and finishing.",
   "long-coat-show-care":
-    "A weekly wash-and-care ritual for full-coat breeds — preserving length, preventing matting, and keeping a silky, show-ready finish.",
+    "A weekly wash-and-care ritual for every coat — preventing matting and keeping a silky, show-ready finish.",
   "hand-stripping":
     "Traditional coat preservation for wire-haired breeds.",
   "dead-sea-mud-bath":
@@ -59,7 +59,12 @@ export function getCatalogItemDisplayLabel(
   fallback: string,
 ) {
   if (catalogId) return getServiceDisplayName(catalogId, fallback);
-  if (fallback === "Long Coat Show Care") return "Show Care for Long Coats";
+  if (
+    fallback === "Long Coat Show Care" ||
+    fallback === "Show Care for Long Coats"
+  ) {
+    return "Weekly Show Care";
+  }
   return fallback;
 }
 
