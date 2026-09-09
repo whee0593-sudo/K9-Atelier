@@ -1,25 +1,34 @@
 import { GalleryWall } from "@/components/gallery/GalleryWall";
+import { Eyebrow } from "@/components/luxury/Eyebrow";
+import { GALLERY_WALL } from "@/lib/gallery-wall";
 
 export const metadata = {
   title: "Gallery · K9 Atelier",
-  description: "A gallery of K9 Atelier grooming artistry and signature finishes.",
-  robots: { index: false, follow: false },
+  description:
+    "Explore the K9 Atelier grooming gallery featuring signature pet styling, show-inspired finishes, creative grooming, and tailored coat work in Palm Beach County.",
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function GalleryPage() {
   return (
-    <main className="bg-[#0d110b] text-[#f3eee5]">
-      <section className="mx-auto max-w-5xl px-6 pb-8 pt-16 text-center sm:pb-12 sm:pt-24">
-        <p className="mb-4 text-[11px] uppercase tracking-[0.32em] text-[#b99d69]">K9 Atelier</p>
-        <h1 className="font-serif text-4xl font-light tracking-[0.04em] sm:text-6xl">The Gallery</h1>
-        <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-[#d8d0c4]/75 sm:text-base">
-          A collection of signature finishes, show care, and creative grooming artistry.
+    <div
+      className="w-full overflow-x-clip pb-12 md:pb-16"
+      style={{ backgroundColor: GALLERY_WALL.background }}
+    >
+      <header className="mx-auto max-w-3xl px-6 pb-10 pt-14 text-center md:pb-14 md:pt-20">
+        <Eyebrow className="text-champagne">The Artistry</Eyebrow>
+        <h1 className="font-display mt-5 text-[2.5rem] leading-[1.08] font-medium text-ivory md:text-5xl">
+          A Study in Coat &amp; Form
+        </h1>
+        <p className="font-body mx-auto mt-6 max-w-2xl text-base leading-relaxed text-[#c8bca9]/80 md:text-[17px]">
+          A collection of signature grooms, show-inspired finishes, and
+          individual expressions — each shaped around the dog in front of me.
         </p>
-      </section>
+      </header>
       <GalleryWall />
-      <p className="mx-auto max-w-3xl px-6 py-10 text-center text-[11px] uppercase tracking-[0.22em] text-[#c8bca9]/55 sm:py-14">
-        Select a portrait to view the work in detail
-      </p>
-    </main>
+    </div>
   );
 }
