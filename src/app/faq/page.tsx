@@ -18,6 +18,10 @@ const faqGroups = [
     ids: [3, 4, 8],
   },
   {
+    title: "The Work",
+    ids: [10],
+  },
+  {
     title: "Policies",
     ids: [5, 6],
   },
@@ -236,6 +240,17 @@ export default function FaqPage() {
             "Each of your dogs has a personalized referral code. When a new client household uses that code, they receive 10% off eligible service charges on their first completed appointment. After that visit is completed and paid, you receive Referral Credit equal to their savings.",
             "Referral Credit accumulates and can be applied, in full or in part, toward eligible service charges on a future appointment. Travel fees, special handling fees, and gratuities are excluded, and Referral Credit cannot be combined with other promotions.",
             "You can view your codes, share links, and available balance in your account. Full program rules are at k9atelier.com/referrals.",
+          ]}
+        />
+      ),
+    },
+    {
+      q: "Are all the photos on this website your real work?",
+      a: (
+        <FaqParagraphs
+          paragraphs={[
+            "Yes. Every dog featured on this website was groomed and styled by me, and all original photos were taken by me.",
+            "For a clean and consistent presentation, some images have been digitally edited to remove distracting backgrounds and standardize the setting. The grooming results shown are my own work.",
           ]}
         />
       ),
