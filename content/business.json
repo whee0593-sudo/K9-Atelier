@@ -249,7 +249,7 @@
     {
       "id": "bath-show-spa",
       "name": "Bath, Show Care & Spa",
-      "nameZh": "洗护、长毛赛级护理与水疗",
+      "nameZh": "洗护、每周赛级护理与水疗",
       "spaTreatments": {
         "note": "Spa treatments include a full wellness bath experience paired with a soothing whole-body massage. To avoid over-tiring your pet, we recommend booking Spa treatments separately from full haircut/styling appointments.",
         "includesAll": [
@@ -287,14 +287,14 @@
         },
         {
           "id": "long-coat-show-care",
-          "name": "Show Care for Long Coats",
-          "nameZh": "长毛赛级护理",
-          "description": "A specialized weekly wash-and-care ritual for full-coat breeds — designed to preserve length, prevent matting, and maintain a silky, show-ready finish week after week.\n\nThe longer a dog's coat grows, the harder it becomes for natural oils and nutrients to travel all the way from root to tip. Without that nourishment reaching the ends, hair becomes dry, brittle, and far more prone to tangling and matting. Show Care for Long Coats is built around this exact challenge — a meticulous, multi-step process using coat-specific professional-grade shampoo and conditioner formulated to restore moisture and strength along the full length of the coat, keeping it soft, tangle-resistant, and beautifully maintained.",
-          "bestFor": "Full-coat breeds maintained on a weekly grooming schedule, where preserving length and preventing matting is a priority — including Shih Tzu, Yorkshire Terrier, Maltese, Cavalier King Charles Spaniel, or any dog being kept at full coat length.",
+          "name": "Weekly Show Care",
+          "nameZh": "每周赛级护理",
+          "description": "A coat stays healthier when it is washed, conditioned, and finished on a regular weekly rhythm. Weekly Show Care is a meticulous, multi-step process using coat-specific professional-grade shampoo and conditioner formulated for your dog's texture, restoring moisture and strength from root to tip so the coat stays soft, tangle-resistant, and beautifully maintained.",
+          "bestFor": "Dogs whose skin and coat are expected to always stay in their most perfect condition.",
           "includes": [
             "Pre-Bath Detangling: Careful line-brushing to prevent matting before washing",
-            "Multi-Step Coat Wash: Layered application of specialized shampoo and deep conditioner suited to full-coat texture",
-            "Hand Blow-Dry & Straightening: Directional drying to preserve length and maximize shine",
+            "Multi-Step Coat Wash: Layered application of specialized shampoo and deep conditioner suited to your dog's coat",
+            "Hand Blow-Dry & Finishing: Directional drying to maximize shine and a smooth, even finish",
             "Full Line-Brush Finish: Section-by-section brush-out for a smooth, tangle-free result",
             "Nail Care: Clipping and smooth electric filing with dremel",
             "Ear Care: Specialized ear cleaning with protective cotton ball placement",
@@ -445,7 +445,7 @@
           "name": "Mini Trim",
           "nameZh": "局部精修",
           "description": "Eyes, feet & sanitary areas only.",
-          "note": "Available as an add-on with Signature Bath & Care or Show Care for Long Coats. Full grooming and spa treatments already include this tidy. Does not include a full face, body, or outline trim.",
+          "note": "Available as an add-on with Signature Bath & Care or Weekly Show Care. Full grooming and spa treatments already include this tidy. Does not include a full face, body, or outline trim.",
           "includes": [
             "Eye-area trim",
             "Feet outline and paw pad trim",
