@@ -2,6 +2,7 @@
  * Museum gallery wall.
  * Each framed PNG is centered on its matching number on the wall image.
  * Photos are not cropped, masked, or rewritten.
+ * Wall portraits are transparent-background framed PNGs so the museum wall shows through.
  */
 
 export const GALLERY_WALL = {
