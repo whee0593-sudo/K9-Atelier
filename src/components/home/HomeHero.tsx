@@ -25,8 +25,8 @@ export function HomeHero() {
             <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[11px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink">
               Book an Appointment
             </BookServiceLink>
-            <LuxuryButton href="/#experience" variant="secondary">
-              Discover the Experience
+            <LuxuryButton href="/services" variant="secondary">
+              View Services
             </LuxuryButton>
           </div>
           <div className="font-body mt-8 max-w-xl space-y-3 text-[11px] font-medium uppercase leading-relaxed tracking-[0.12em] text-taupe sm:text-[12px] sm:tracking-[0.16em]">
