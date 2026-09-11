@@ -7,5 +7,8 @@ export async function GET() {
   if ("error" in result) {
     return mapStaffServiceError(result.error);
   }
-  return NextResponse.json({ customers: result.customers });
+  return NextResponse.json({
+    admins: result.admins,
+    customers: result.customers,
+  });
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CustomerRecordsPanel } from "@/components/admin/CustomerRecordsPanel";
 
 export default async function AdminPetsPage({
@@ -8,10 +9,21 @@ export default async function AdminPetsPage({
   const query = await searchParams;
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-gold-dark">Customers & Pets</h2>
+      <h2 className="text-2xl font-semibold text-gold-dark">
+        Registered Accounts
+      </h2>
       <p className="mt-2 text-sm text-text-muted">
-        Edit owner profiles, pet records, and internal service notes. Open a
-        customer to see past appointment dates and paid orders.
+        Administrators are listed first, then customers. The owner can freeze
+        or delete any account except their own. Other admins can still edit
+        customer profiles and pets.
+      </p>
+      <p className="mt-2">
+        <Link
+          href="/admin/pets/preview"
+          className="text-sm font-medium text-gold-dark hover:underline"
+        >
+          Open preview
+        </Link>
       </p>
       <div className="mt-8">
         <CustomerRecordsPanel focusCustomerId={query.customer} />
