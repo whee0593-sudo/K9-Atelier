@@ -26,30 +26,39 @@ function sampleCustomer(
     },
     pets: [],
     paymentMethods: [],
+    kind: "customer",
+    frozen: false,
     canDelete: true,
+    canFreeze: true,
     ...rest,
   };
 }
 
+const noop = () => undefined;
+
 describe("CustomerRecordCard actions", () => {
-  it("shows Delete for regular customers", () => {
+  it("shows Freeze and Delete for accounts the owner can manage", () => {
     const html = renderToStaticMarkup(
       <CustomerRecordCard
         customer={sampleCustomer()}
-        onProfileSaved={() => undefined}
-        onPetSaved={() => undefined}
-        onDeleted={() => undefined}
+        onProfileSaved={noop}
+        onPetSaved={noop}
+        onDeleted={noop}
+        onFrozenChange={noop}
       />,
     );
     assert.match(html, />Delete</);
+    assert.match(html, />Freeze</);
     assert.match(html, /Ada Lovelace/);
   });
 
-  it("hides Delete for protected staff accounts", () => {
+  it("hides access actions on the owner account", () => {
     const html = renderToStaticMarkup(
       <CustomerRecordCard
         customer={sampleCustomer({
+          kind: "admin",
           canDelete: false,
+          canFreeze: false,
           profile: {
             id: "22222222-2222-4222-8222-222222222222",
             email: "penny@k9atelier.com",
@@ -62,12 +71,28 @@ describe("CustomerRecordCard actions", () => {
             emergencyContactRelationship: "",
           },
         })}
-        onProfileSaved={() => undefined}
-        onPetSaved={() => undefined}
-        onDeleted={() => undefined}
+        onProfileSaved={noop}
+        onPetSaved={noop}
+        onDeleted={noop}
+        onFrozenChange={noop}
       />,
     );
     assert.doesNotMatch(html, />Delete</);
-    assert.match(html, /penny@k9atelier.com/);
+    assert.doesNotMatch(html, />Freeze</);
+    assert.match(html, /Owner/);
+  });
+
+  it("shows Unfreeze when the account is already frozen", () => {
+    const html = renderToStaticMarkup(
+      <CustomerRecordCard
+        customer={sampleCustomer({ frozen: true })}
+        onProfileSaved={noop}
+        onPetSaved={noop}
+        onDeleted={noop}
+        onFrozenChange={noop}
+      />,
+    );
+    assert.match(html, />Unfreeze</);
+    assert.match(html, /Frozen/);
   });
 });

@@ -37,6 +37,15 @@ export default async function LoginPage({ searchParams }: Props) {
             your phone, request a new reset and enter the 6-digit code.
           </p>
         )}
+        {error === "frozen" && (
+          <p
+            className="font-body mx-auto mt-6 max-w-md text-sm text-red-700"
+            role="alert"
+          >
+            Your account has been frozen. Please contact the administrator at
+            penny@k9atelier.com
+          </p>
+        )}
 
         <CustomerLoginActions
           next={next}

@@ -7,7 +7,11 @@ import { mapPetRecordToUiProfile, mapPetProfileToWriteInput } from "@/lib/pets/m
 import { normalizePetProfile, type PetProfile } from "@/lib/pets";
 import type { CustomerProfile } from "@/lib/profiles/types";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
-import { customerDeleteConfirmMessage } from "@/lib/profiles/delete-guard";
+import {
+  customerDeleteConfirmMessage,
+  customerFreezeConfirmMessage,
+} from "@/lib/profiles/delete-guard";
+import { isOwnerEmail } from "@/lib/staff/owner";
 import { formatPaymentMethodLabel } from "@/lib/payments/types";
 import type { StaffCustomerHistory } from "@/lib/charges/history";
 import { formatChargeMoney } from "@/lib/charges/money";
@@ -17,7 +21,11 @@ import { CallCustomerButton } from "@/components/admin/CallCustomerButton";
 
 type LoadState =
   | { status: "loading" }
-  | { status: "ready"; customers: StaffCustomerRecord[] }
+  | {
+      status: "ready";
+      admins: StaffCustomerRecord[];
+      customers: StaffCustomerRecord[];
+    }
   | { status: "error"; message: string; authRequired?: boolean };
 
 function customerLabel(profile: CustomerProfile) {
@@ -25,21 +33,31 @@ function customerLabel(profile: CustomerProfile) {
   return name || profile.email;
 }
 
-function DeleteCustomerButton({
-  deleting,
-  onDelete,
+function AccountActionButton({
+  label,
+  busyLabel,
+  busy,
+  danger = false,
+  onClick,
 }: {
-  deleting: boolean;
-  onDelete: () => void;
+  label: string;
+  busyLabel: string;
+  busy: boolean;
+  danger?: boolean;
+  onClick: () => void;
 }) {
   return (
     <button
       type="button"
-      onClick={onDelete}
-      disabled={deleting}
-      className="rounded-xl border border-lavender/40 px-3 py-2 text-sm text-text-muted hover:border-red-300 hover:text-red-800 disabled:opacity-60"
+      onClick={onClick}
+      disabled={busy}
+      className={`rounded-xl border px-3 py-2 text-sm disabled:opacity-60 ${
+        danger
+          ? "border-lavender/40 text-text-muted hover:border-red-300 hover:text-red-800"
+          : "border-lavender/40 text-text-muted hover:border-gold/40 hover:text-text"
+      }`}
     >
-      {deleting ? "Deleting…" : "Delete"}
+      {busy ? busyLabel : label}
     </button>
   );
 }
@@ -301,6 +319,7 @@ export function CustomerRecordCard({
   onProfileSaved,
   onPetSaved,
   onDeleted,
+  onFrozenChange,
 }: {
   customer: StaffCustomerRecord;
   startOpen?: boolean;
@@ -308,10 +327,16 @@ export function CustomerRecordCard({
   onProfileSaved: (profile: CustomerProfile) => void;
   onPetSaved: (pet: StaffCustomerRecord["pets"][number]) => void;
   onDeleted: (customerId: string) => void;
+  onFrozenChange: (customerId: string, frozen: boolean) => void;
 }) {
   const [open, setOpen] = useState(Boolean(startOpen));
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [busyAction, setBusyAction] = useState<"delete" | "freeze" | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const roleLabel = isOwnerEmail(customer.profile.email)
+    ? "Owner"
+    : customer.kind === "admin"
+      ? "Administrator"
+      : "Customer";
 
   async function handleDelete() {
     const label = customerLabel(customer.profile);
@@ -322,8 +347,8 @@ export function CustomerRecordCard({
       return;
     }
 
-    setDeleting(true);
-    setDeleteError(null);
+    setBusyAction("delete");
+    setActionError(null);
     try {
       const response = await fetch(`/api/admin/customers/${customer.profile.id}`, {
         method: "DELETE",
@@ -331,22 +356,77 @@ export function CustomerRecordCard({
       });
       const body = (await response.json()) as { error?: string };
       if (!response.ok) {
-        throw new Error(body.error ?? "Could not delete this customer.");
+        throw new Error(body.error ?? "Could not delete this account.");
       }
       onDeleted(customer.profile.id);
     } catch (error) {
-      setDeleteError(
-        error instanceof Error ? error.message : "Could not delete this customer.",
+      setActionError(
+        error instanceof Error ? error.message : "Could not delete this account.",
       );
     } finally {
-      setDeleting(false);
+      setBusyAction(null);
     }
   }
 
-  function renderDeleteAction() {
-    if (!customer.canDelete) return null;
+  async function handleFreeze() {
+    const label = customerLabel(customer.profile);
+    const nextFrozen = !customer.frozen;
+    if (!window.confirm(customerFreezeConfirmMessage(label, customer.frozen))) {
+      return;
+    }
+
+    if (preview) {
+      onFrozenChange(customer.profile.id, nextFrozen);
+      return;
+    }
+
+    setBusyAction("freeze");
+    setActionError(null);
+    try {
+      const response = await fetch(
+        `/api/admin/customers/${customer.profile.id}/freeze`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ frozen: nextFrozen }),
+        },
+      );
+      const body = (await response.json()) as { error?: string; frozen?: boolean };
+      if (!response.ok) {
+        throw new Error(body.error ?? "Could not update this account.");
+      }
+      onFrozenChange(customer.profile.id, body.frozen ?? nextFrozen);
+    } catch (error) {
+      setActionError(
+        error instanceof Error ? error.message : "Could not update this account.",
+      );
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  function renderOwnerActions() {
     return (
-      <DeleteCustomerButton deleting={deleting} onDelete={() => void handleDelete()} />
+      <>
+        {customer.canFreeze ? (
+          <AccountActionButton
+            label={customer.frozen ? "Unfreeze" : "Freeze"}
+            busyLabel={customer.frozen ? "Unfreezing…" : "Freezing…"}
+            busy={busyAction === "freeze"}
+            onClick={() => void handleFreeze()}
+          />
+        ) : null}
+        {customer.canDelete ? (
+          <AccountActionButton
+            label="Delete"
+            busyLabel="Deleting…"
+            busy={busyAction === "delete"}
+            danger
+            onClick={() => void handleDelete()}
+          />
+        ) : null}
+      </>
     );
   }
 
@@ -360,12 +440,15 @@ export function CustomerRecordCard({
         >
           <p className="font-medium text-text">{customerLabel(customer.profile)}</p>
           <p className="mt-1 text-sm text-text-muted">
+            {roleLabel}
+            {customer.frozen ? " · Frozen" : ""}
+            {" · "}
             {customer.profile.email}
             {customer.profile.phone ? ` · ${customer.profile.phone}` : ""}
           </p>
         </button>
         <div className="flex shrink-0 items-center gap-2">
-          {renderDeleteAction()}
+          {renderOwnerActions()}
           <button
             type="button"
             onClick={() => setOpen((value) => !value)}
@@ -379,9 +462,9 @@ export function CustomerRecordCard({
       </div>
       {open && (
         <div className="space-y-8 border-t border-lavender/30 px-5 py-6">
-          {deleteError ? (
+          {actionError ? (
             <p className="text-sm text-red-800" role="alert">
-              {deleteError}
+              {actionError}
             </p>
           ) : null}
           <section>
@@ -393,7 +476,7 @@ export function CustomerRecordCard({
                   disabled={!customer.profile.phone}
                   preview={preview}
                 />
-                {renderDeleteAction()}
+                {renderOwnerActions()}
               </div>
             </div>
             <div className="mt-4">
@@ -441,16 +524,16 @@ export function CustomerRecordCard({
               </div>
             )}
           </section>
-          {customer.canDelete ? (
+          {customer.canDelete || customer.canFreeze ? (
             <section className="border-t border-lavender/30 pt-6">
               <h3 className="text-base font-medium text-gold-dark">
-                Delete customer
+                Account access
               </h3>
               <p className="mt-2 text-sm text-text-muted">
-                Permanently remove this login, pet profiles, cards on file, and
-                appointment history.
+                Freeze blocks sign-in. Delete permanently removes this login,
+                pet profiles, cards on file, and appointment history.
               </p>
-              <div className="mt-4">{renderDeleteAction()}</div>
+              <div className="mt-4 flex flex-wrap gap-2">{renderOwnerActions()}</div>
             </section>
           ) : null}
         </div>
@@ -472,7 +555,11 @@ export function CustomerRecordsPanel({
 
   const loadCustomers = useCallback(async () => {
     if (preview && previewCustomers) {
-      setLoadState({ status: "ready", customers: previewCustomers });
+      setLoadState({
+        status: "ready",
+        admins: previewCustomers.filter((item) => item.kind === "admin"),
+        customers: previewCustomers.filter((item) => item.kind !== "admin"),
+      });
       return;
     }
     setLoadState({ status: "loading" });
@@ -482,6 +569,7 @@ export function CustomerRecordsPanel({
       });
       const body = (await response.json()) as {
         error?: string;
+        admins?: StaffCustomerRecord[];
         customers?: StaffCustomerRecord[];
       };
 
@@ -504,15 +592,19 @@ export function CustomerRecordsPanel({
       if (!response.ok) {
         setLoadState({
           status: "error",
-          message: body.error ?? "Could not load customer records.",
+          message: body.error ?? "Could not load registered accounts.",
         });
         return;
       }
-      setLoadState({ status: "ready", customers: body.customers ?? [] });
+      setLoadState({
+        status: "ready",
+        admins: body.admins ?? [],
+        customers: body.customers ?? [],
+      });
     } catch {
       setLoadState({
         status: "error",
-        message: "Could not load customer records.",
+        message: "Could not load registered accounts.",
       });
     }
   }, [preview, previewCustomers]);
@@ -522,7 +614,7 @@ export function CustomerRecordsPanel({
   }, [loadCustomers]);
 
   if (loadState.status === "loading") {
-    return <p className="text-sm text-text-muted">Loading customer records…</p>;
+    return <p className="text-sm text-text-muted">Loading registered accounts…</p>;
   }
 
   if (loadState.status === "error") {
@@ -538,56 +630,80 @@ export function CustomerRecordsPanel({
     );
   }
 
-  if (loadState.customers.length === 0) {
-    return <p className="text-sm text-text-muted">No customer accounts yet.</p>;
+  function updateLists(
+    current: Extract<LoadState, { status: "ready" }>,
+    updater: (item: StaffCustomerRecord) => StaffCustomerRecord | null,
+  ): Extract<LoadState, { status: "ready" }> {
+    const apply = (items: StaffCustomerRecord[]) =>
+      items
+        .map(updater)
+        .filter((item): item is StaffCustomerRecord => item !== null);
+    return {
+      status: "ready",
+      admins: apply(current.admins),
+      customers: apply(current.customers),
+    };
+  }
+
+  function renderList(title: string, items: StaffCustomerRecord[], empty: string) {
+    return (
+      <section className="space-y-3">
+        <h3 className="text-lg font-semibold text-gold-dark">{title}</h3>
+        {items.length === 0 ? (
+          <p className="text-sm text-text-muted">{empty}</p>
+        ) : (
+          items.map((customer) => (
+            <CustomerRecordCard
+              key={customer.profile.id}
+              customer={customer}
+              startOpen={customer.profile.id === focusCustomerId}
+              preview={preview}
+              onDeleted={(customerId) => {
+                setLoadState((current) => {
+                  if (current.status !== "ready") return current;
+                  return updateLists(current, (item) =>
+                    item.profile.id === customerId ? null : item,
+                  );
+                });
+              }}
+              onFrozenChange={(customerId, frozen) => {
+                setLoadState((current) => {
+                  if (current.status !== "ready") return current;
+                  return updateLists(current, (item) =>
+                    item.profile.id === customerId ? { ...item, frozen } : item,
+                  );
+                });
+              }}
+              onProfileSaved={(profile) => {
+                setLoadState((current) => {
+                  if (current.status !== "ready") return current;
+                  return updateLists(current, (item) =>
+                    item.profile.id === profile.id ? { ...item, profile } : item,
+                  );
+                });
+              }}
+              onPetSaved={(pet) => {
+                setLoadState((current) => {
+                  if (current.status !== "ready") return current;
+                  return updateLists(current, (item) => ({
+                    ...item,
+                    pets: item.pets.map((existing) =>
+                      existing.id === pet.id ? pet : existing,
+                    ),
+                  }));
+                });
+              }}
+            />
+          ))
+        )}
+      </section>
+    );
   }
 
   return (
-    <div className="space-y-4">
-      {loadState.customers.map((customer) => (
-        <CustomerRecordCard
-          key={customer.profile.id}
-          customer={customer}
-          startOpen={customer.profile.id === focusCustomerId}
-          preview={preview}
-          onDeleted={(customerId) => {
-            setLoadState((current) => {
-              if (current.status !== "ready") return current;
-              return {
-                status: "ready",
-                customers: current.customers.filter(
-                  (item) => item.profile.id !== customerId,
-                ),
-              };
-            });
-          }}
-          onProfileSaved={(profile) => {
-            setLoadState((current) => {
-              if (current.status !== "ready") return current;
-              return {
-                status: "ready",
-                customers: current.customers.map((item) =>
-                  item.profile.id === profile.id ? { ...item, profile } : item,
-                ),
-              };
-            });
-          }}
-          onPetSaved={(pet) => {
-            setLoadState((current) => {
-              if (current.status !== "ready") return current;
-              return {
-                status: "ready",
-                customers: current.customers.map((item) => ({
-                  ...item,
-                  pets: item.pets.map((existing) =>
-                    existing.id === pet.id ? pet : existing,
-                  ),
-                })),
-              };
-            });
-          }}
-        />
-      ))}
+    <div className="space-y-10">
+      {renderList("Administrators", loadState.admins, "No administrator accounts.")}
+      {renderList("Customers", loadState.customers, "No customer accounts yet.")}
     </div>
   );
 }

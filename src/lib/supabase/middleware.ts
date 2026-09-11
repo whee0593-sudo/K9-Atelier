@@ -7,11 +7,13 @@ import {
   withRememberMeCookieOptions,
 } from "@/lib/auth-remember";
 import { nextWithPathname } from "@/lib/request-path";
+import { isFrozenAuthUser } from "@/lib/auth/frozen-account";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
 
 type SessionResult = {
   response: NextResponse;
   user: User | null;
+  frozen: boolean;
 };
 
 export async function refreshSupabaseSession(
@@ -48,7 +50,12 @@ export async function refreshSupabaseSession(
     data: { user },
   } = await supabase.auth.getUser();
 
-  return { response, user };
+  if (isFrozenAuthUser(user)) {
+    await supabase.auth.signOut();
+    return { response, user: null, frozen: true };
+  }
+
+  return { response, user, frozen: false };
 }
 
 export function copySupabaseCookies(

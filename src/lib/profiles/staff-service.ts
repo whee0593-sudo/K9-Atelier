@@ -1,6 +1,7 @@
+import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getStaffSession } from "@/lib/staff/auth";
-import { OWNER_EMAIL, normalizeStaffEmail } from "@/lib/staff/owner";
+import { getOwnerSession, getStaffSession } from "@/lib/staff/auth";
+import { isOwnerEmail, OWNER_EMAIL, normalizeStaffEmail } from "@/lib/staff/owner";
 import {
   createAuthenticatedSupabaseClient,
 } from "@/lib/pets/auth";
@@ -8,8 +9,12 @@ import { mapPetRowToRecord, mapValidatedInputToUpdateRow } from "@/lib/pets/map"
 import type { PetRecord, PetRow, PetWriteInput } from "@/lib/pets/types";
 import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
 import {
-  customerDeleteBlockReason,
-  isProtectedStaffEmail,
+  FREEZE_BAN_DURATION,
+  isFrozenAuthUser,
+} from "@/lib/auth/frozen-account";
+import {
+  isAdminAccountEmail,
+  ownerAccountActionBlockReason,
 } from "@/lib/profiles/delete-guard";
 import {
   mapProfileRow,
@@ -25,11 +30,16 @@ import {
 const PET_SELECT =
   "id, customer_id, name, breed, weight_lbs, date_of_birth, approximate_age_years, sex, temperament_notes, health_comfort_notes, grooming_preferences, archived_at, created_at, updated_at";
 
+export type StaffCustomerKind = "admin" | "customer";
+
 export type StaffCustomerRecord = {
   profile: CustomerProfile;
   pets: Array<PetRecord & { adminServiceNotes: string }>;
   paymentMethods: PaymentMethodRecord[];
+  kind: StaffCustomerKind;
+  frozen: boolean;
   canDelete: boolean;
+  canFreeze: boolean;
 };
 
 type StaffPetEmbed = PetRow & {
@@ -42,18 +52,21 @@ function firstNotes(value: StaffPetEmbed["pet_admin_notes"]) {
 }
 
 export async function listStaffCustomers(): Promise<
-  | { customers: StaffCustomerRecord[] }
+  | { admins: StaffCustomerRecord[]; customers: StaffCustomerRecord[] }
   | { error: "unauthenticated" | "forbidden" | "server" }
 > {
   const session = await getStaffSession();
   if ("error" in session) return session;
 
   const admin = createAdminClient();
-  const staffEmails = await listProtectedStaffEmails(admin);
-  const { data, error } = await admin
-    .from("profiles")
-    .select(
-      `
+  const actorIsOwner = isOwnerEmail(session.user.email);
+  const [staffEmails, authUsers, profilesResult] = await Promise.all([
+    listProtectedStaffEmails(admin),
+    listAuthUsersById(admin),
+    admin
+      .from("profiles")
+      .select(
+        `
       id, email, first_name, last_name, phone, preferred_contact,
       emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
       pets (
@@ -64,16 +77,18 @@ export async function listStaffCustomers(): Promise<
         id, customer_id, stripe_payment_method_id, brand, last4, exp_month, exp_year, is_default
       )
     `,
-    )
-    .order("email", { ascending: true });
+      )
+      .order("email", { ascending: true }),
+  ]);
 
-  if (error) {
-    console.error("listStaffCustomers failed:", error.message);
+  if (profilesResult.error) {
+    console.error("listStaffCustomers failed:", profilesResult.error.message);
     return { error: "server" };
   }
 
+  const admins: StaffCustomerRecord[] = [];
   const customers: StaffCustomerRecord[] = [];
-  for (const row of data ?? []) {
+  for (const row of profilesResult.data ?? []) {
     const profile = mapProfileRow(row as CustomerProfileRow);
     const petRows = ((row.pets ?? []) as StaffPetEmbed[]).filter(
       (pet) => pet.archived_at == null,
@@ -87,24 +102,45 @@ export async function listStaffCustomers(): Promise<
     const paymentMethods = ((row.payment_methods ?? []) as PaymentMethodRow[]).map(
       mapPaymentMethodRow,
     );
-
-    customers.push({
+    const kind: StaffCustomerKind = isAdminAccountEmail(profile.email, staffEmails)
+      ? "admin"
+      : "customer";
+    const actionInput = {
+      actorIsOwner,
+      actorUserId: session.user.id,
+      targetUserId: profile.id,
+      targetEmail: profile.email,
+    };
+    const record: StaffCustomerRecord = {
       profile,
       pets: petRecords.map((pet) => ({
         ...pet,
         adminServiceNotes: notesByPetId.get(pet.id) ?? "",
       })),
       paymentMethods,
-      canDelete: !customerDeleteBlockReason({
-        actorUserId: session.user.id,
-        targetUserId: profile.id,
-        targetEmail: profile.email,
-        targetIsStaff: isProtectedStaffEmail(profile.email, staffEmails),
+      kind,
+      frozen: isFrozenAuthUser(authUsers.get(profile.id) ?? null),
+      canDelete: !ownerAccountActionBlockReason({
+        ...actionInput,
+        action: "delete",
       }),
-    });
+      canFreeze: !ownerAccountActionBlockReason({
+        ...actionInput,
+        action: "freeze",
+      }),
+    };
+    if (kind === "admin") admins.push(record);
+    else customers.push(record);
   }
 
-  return { customers };
+  admins.sort((left, right) => {
+    const leftOwner = isOwnerEmail(left.profile.email) ? 0 : 1;
+    const rightOwner = isOwnerEmail(right.profile.email) ? 0 : 1;
+    if (leftOwner !== rightOwner) return leftOwner - rightOwner;
+    return left.profile.email.localeCompare(right.profile.email);
+  });
+
+  return { admins, customers };
 }
 
 export async function deleteStaffCustomer(customerId: string): Promise<
@@ -114,8 +150,13 @@ export async function deleteStaffCustomer(customerId: string): Promise<
       message?: string;
     }
 > {
-  const session = await getStaffSession();
-  if ("error" in session) return session;
+  const session = await getOwnerSession();
+  if ("error" in session) {
+    if (session.error === "forbidden") {
+      return { error: "forbidden", message: "Only the owner can delete accounts." };
+    }
+    return session;
+  }
 
   const admin = createAdminClient();
   const { data: profile, error: profileError } = await admin
@@ -130,17 +171,18 @@ export async function deleteStaffCustomer(customerId: string): Promise<
   }
   if (!profile) return { error: "not_found" };
 
-  const staffEmails = await listProtectedStaffEmails(admin);
-  const blocked = customerDeleteBlockReason({
+  const blocked = ownerAccountActionBlockReason({
+    action: "delete",
+    actorIsOwner: true,
     actorUserId: session.user.id,
     targetUserId: profile.id,
     targetEmail: profile.email,
-    targetIsStaff: isProtectedStaffEmail(profile.email, staffEmails),
   });
   if (blocked) return { error: "conflict", message: blocked };
 
   const cleaned = await deleteCustomerDependentRows(admin, profile.id);
   if (!cleaned) return { error: "server" };
+  await deleteStaffMembership(admin, profile.id, profile.email);
 
   const { error: deleteUserError } = await admin.auth.admin.deleteUser(profile.id);
   if (deleteUserError) {
@@ -149,6 +191,107 @@ export async function deleteStaffCustomer(customerId: string): Promise<
   }
 
   return { ok: true };
+}
+
+export async function setStaffCustomerFrozen(
+  customerId: string,
+  frozen: boolean,
+): Promise<
+  | { frozen: boolean }
+  | {
+      error: "unauthenticated" | "forbidden" | "not_found" | "conflict" | "server";
+      message?: string;
+    }
+> {
+  const session = await getOwnerSession();
+  if ("error" in session) {
+    if (session.error === "forbidden") {
+      return { error: "forbidden", message: "Only the owner can freeze accounts." };
+    }
+    return session;
+  }
+
+  const admin = createAdminClient();
+  const { data: profile, error: profileError } = await admin
+    .from("profiles")
+    .select("id, email")
+    .eq("id", customerId)
+    .maybeSingle();
+
+  if (profileError) {
+    console.error("setStaffCustomerFrozen profile failed:", profileError.message);
+    return { error: "server" };
+  }
+  if (!profile) return { error: "not_found" };
+
+  const blocked = ownerAccountActionBlockReason({
+    action: "freeze",
+    actorIsOwner: true,
+    actorUserId: session.user.id,
+    targetUserId: profile.id,
+    targetEmail: profile.email,
+  });
+  if (blocked) return { error: "conflict", message: blocked };
+
+  const { data: authUser, error: getUserError } =
+    await admin.auth.admin.getUserById(profile.id);
+  if (getUserError || !authUser.user) {
+    console.error(
+      "setStaffCustomerFrozen getUser failed:",
+      getUserError?.message ?? "missing user",
+    );
+    return { error: "not_found" };
+  }
+
+  const { error: updateError } = await admin.auth.admin.updateUserById(profile.id, {
+    ban_duration: frozen ? FREEZE_BAN_DURATION : "none",
+    app_metadata: {
+      ...authUser.user.app_metadata,
+      frozen,
+    },
+  });
+  if (updateError) {
+    console.error("setStaffCustomerFrozen update failed:", updateError.message);
+    return { error: "server" };
+  }
+
+  return { frozen };
+}
+
+async function listAuthUsersById(
+  admin: ReturnType<typeof createAdminClient>,
+) {
+  const users = new Map<string, User>();
+  for (let page = 1; page <= 20; page += 1) {
+    const { data, error } = await admin.auth.admin.listUsers({
+      page,
+      perPage: 200,
+    });
+    if (error) {
+      console.error("listAuthUsersById failed:", error.message);
+      break;
+    }
+    for (const user of data.users) {
+      users.set(user.id, user);
+    }
+    if (data.users.length < 200) break;
+  }
+  return users;
+}
+
+async function deleteStaffMembership(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  email: string | null,
+) {
+  await admin.schema("private").from("staff_members").delete().eq("user_id", userId);
+  if (email) {
+    await admin
+      .schema("private")
+      .from("staff_invites")
+      .delete()
+      .eq("email_normalized", normalizeStaffEmail(email));
+  }
 }
 
 async function listProtectedStaffEmails(

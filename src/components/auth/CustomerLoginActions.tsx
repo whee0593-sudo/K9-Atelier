@@ -5,6 +5,8 @@ import { RecoveryCodeForm } from "@/components/auth/RecoveryCodeForm";
 import { createImplicitAuthClient } from "@/lib/auth-implicit";
 import { setRememberMePreference } from "@/lib/auth-remember";
 import { createClient } from "@/lib/supabase/client";
+import { ACCOUNT_FROZEN_MESSAGE } from "@/lib/auth/frozen-account";
+import { authErrorMessage } from "@/lib/auth/login-errors";
 import { sanitizeAuthRedirect } from "@/lib/auth-redirect";
 import {
   bookingFieldClass,
@@ -27,18 +29,18 @@ const OTP_MIN_LENGTH = 6;
 const OTP_MAX_LENGTH = 10;
 const MIN_PASSWORD_LENGTH = 8;
 
-function authErrorMessage(message: string) {
-  const lower = message.toLowerCase();
-  if (lower.includes("invalid login")) {
-    return "That email or password is incorrect.";
+async function isEmailFrozen(address: string) {
+  try {
+    const response = await fetch("/api/auth/frozen-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: address }),
+    });
+    const body = (await response.json()) as { frozen?: boolean };
+    return body.frozen === true;
+  } catch {
+    return false;
   }
-  if (lower.includes("already registered") || lower.includes("already been registered")) {
-    return "An account with this email already exists. Sign in, or use the email link if you have not set a password yet.";
-  }
-  if (lower.includes("email not confirmed")) {
-    return "Please confirm your email first. Check your inbox for a confirmation link.";
-  }
-  return message;
 }
 
 export function CustomerLoginActions({
@@ -74,6 +76,11 @@ export function CustomerLoginActions({
     setError(null);
 
     setRememberMePreference(rememberMe);
+    if (await isEmailFrozen(email.trim())) {
+      setLoading(false);
+      setError(ACCOUNT_FROZEN_MESSAGE);
+      return;
+    }
     const supabase = createClient();
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: email.trim(),
@@ -130,6 +137,11 @@ export function CustomerLoginActions({
     setLoading(true);
     setError(null);
 
+    if (await isEmailFrozen(email.trim())) {
+      setLoading(false);
+      setError(ACCOUNT_FROZEN_MESSAGE);
+      return;
+    }
     const supabase = createImplicitAuthClient();
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/auth/reset")}`;
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
@@ -152,6 +164,11 @@ export function CustomerLoginActions({
     setLoading(true);
     setError(null);
 
+    if (await isEmailFrozen(email.trim())) {
+      setLoading(false);
+      setError(ACCOUNT_FROZEN_MESSAGE);
+      return;
+    }
     const supabase = createClient();
     const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`;
     const { error: signInError } = await supabase.auth.signInWithOtp({
@@ -182,6 +199,11 @@ export function CustomerLoginActions({
     }
 
     setRememberMePreference(rememberMe);
+    if (await isEmailFrozen(email.trim())) {
+      setLoading(false);
+      setError(ACCOUNT_FROZEN_MESSAGE);
+      return;
+    }
     const supabase = createClient();
     const { error: verifyError } = await supabase.auth.verifyOtp({
       email: email.trim(),

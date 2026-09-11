@@ -46,8 +46,11 @@ export async function DELETE(_request: Request, context: RouteContext) {
     const customerId = validateCustomerId(rawId);
     const result = await deleteStaffCustomer(customerId);
     if ("error" in result) {
-      if (result.error === "conflict" && result.message) {
-        return staffJsonError(result.message, 409);
+      if (result.message && (result.error === "conflict" || result.error === "forbidden")) {
+        return staffJsonError(
+          result.message,
+          result.error === "conflict" ? 409 : 403,
+        );
       }
       return mapStaffServiceError(result.error);
     }
