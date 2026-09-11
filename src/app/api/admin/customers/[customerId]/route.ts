@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { deleteStaffCustomer } from "@/lib/profiles/staff-service";
 import { updateStaffCustomerProfile } from "@/lib/profiles/service";
 import {
   ProfileValidationError,
@@ -6,7 +7,7 @@ import {
   validateProfileWriteInput,
 } from "@/lib/profiles/validation";
 import { jsonError } from "@/lib/pets/errors";
-import { mapStaffServiceError } from "@/lib/staff/api-errors";
+import { mapStaffServiceError, staffJsonError } from "@/lib/staff/api-errors";
 
 type RouteContext = {
   params: Promise<{ customerId: string }>;
@@ -35,6 +36,27 @@ export async function PATCH(request: Request, context: RouteContext) {
       return jsonError(error.message, 400, error.field);
     }
     console.error("PATCH /api/admin/customers failed:", error);
+    return jsonError("Something went wrong. Please try again.", 500);
+  }
+}
+
+export async function DELETE(_request: Request, context: RouteContext) {
+  try {
+    const { customerId: rawId } = await context.params;
+    const customerId = validateCustomerId(rawId);
+    const result = await deleteStaffCustomer(customerId);
+    if ("error" in result) {
+      if (result.error === "conflict" && result.message) {
+        return staffJsonError(result.message, 409);
+      }
+      return mapStaffServiceError(result.error);
+    }
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    if (error instanceof ProfileValidationError) {
+      return jsonError(error.message, 400, error.field);
+    }
+    console.error("DELETE /api/admin/customers failed:", error);
     return jsonError("Something went wrong. Please try again.", 500);
   }
 }

@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { CustomerProfileForm } from "@/components/account/CustomerProfileForm";
 import { PetProfileFieldsForm } from "@/components/account/PetProfileFieldsForm";
 import { mapPetRecordToUiProfile, mapPetProfileToWriteInput } from "@/lib/pets/map";
 import { normalizePetProfile, type PetProfile } from "@/lib/pets";
 import type { CustomerProfile } from "@/lib/profiles/types";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
+import { customerDeleteConfirmMessage } from "@/lib/profiles/delete-guard";
 import { formatPaymentMethodLabel } from "@/lib/payments/types";
 import type { StaffCustomerHistory } from "@/lib/charges/history";
 import { formatChargeMoney } from "@/lib/charges/money";
@@ -22,6 +23,25 @@ type LoadState =
 function customerLabel(profile: CustomerProfile) {
   const name = `${profile.firstName} ${profile.lastName}`.trim();
   return name || profile.email;
+}
+
+function DeleteCustomerButton({
+  deleting,
+  onDelete,
+}: {
+  deleting: boolean;
+  onDelete: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onDelete}
+      disabled={deleting}
+      className="rounded-xl border border-lavender/40 px-3 py-2 text-sm text-text-muted hover:border-red-300 hover:text-red-800 disabled:opacity-60"
+    >
+      {deleting ? "Deleting…" : "Delete"}
+    </button>
+  );
 }
 
 function StaffPetEditor({
@@ -274,44 +294,107 @@ function CustomerHistory({ customerId, open }: { customerId: string; open: boole
   );
 }
 
-function CustomerCard({
+export function CustomerRecordCard({
   customer,
   startOpen,
+  preview = false,
   onProfileSaved,
   onPetSaved,
+  onDeleted,
 }: {
   customer: StaffCustomerRecord;
   startOpen?: boolean;
+  preview?: boolean;
   onProfileSaved: (profile: CustomerProfile) => void;
   onPetSaved: (pet: StaffCustomerRecord["pets"][number]) => void;
+  onDeleted: (customerId: string) => void;
 }) {
   const [open, setOpen] = useState(Boolean(startOpen));
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function handleDelete() {
+    const label = customerLabel(customer.profile);
+    if (!window.confirm(customerDeleteConfirmMessage(label))) return;
+
+    if (preview) {
+      onDeleted(customer.profile.id);
+      return;
+    }
+
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const response = await fetch(`/api/admin/customers/${customer.profile.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const body = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(body.error ?? "Could not delete this customer.");
+      }
+      onDeleted(customer.profile.id);
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error ? error.message : "Could not delete this customer.",
+      );
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  function renderDeleteAction() {
+    if (!customer.canDelete) return null;
+    return (
+      <DeleteCustomerButton deleting={deleting} onDelete={() => void handleDelete()} />
+    );
+  }
 
   return (
     <article className="rounded-2xl border border-lavender/30 bg-cream">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
-      >
-        <div>
+      <div className="flex items-center justify-between gap-4 px-5 py-4">
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          className="min-w-0 flex-1 text-left"
+        >
           <p className="font-medium text-text">{customerLabel(customer.profile)}</p>
           <p className="mt-1 text-sm text-text-muted">
             {customer.profile.email}
             {customer.profile.phone ? ` · ${customer.profile.phone}` : ""}
           </p>
+        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {renderDeleteAction()}
+          <button
+            type="button"
+            onClick={() => setOpen((value) => !value)}
+            className="min-h-[40px] min-w-[40px] text-sm text-gold-dark"
+            aria-expanded={open}
+            aria-label={open ? "Collapse customer" : "Expand customer"}
+          >
+            {open ? "−" : "+"}
+          </button>
         </div>
-        <span className="text-sm text-gold-dark">{open ? "−" : "+"}</span>
-      </button>
+      </div>
       {open && (
         <div className="space-y-8 border-t border-lavender/30 px-5 py-6">
+          {deleteError ? (
+            <p className="text-sm text-red-800" role="alert">
+              {deleteError}
+            </p>
+          ) : null}
           <section>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-base font-medium text-gold-dark">Owner Profile</h3>
-              <CallCustomerButton
-                customerId={customer.profile.id}
-                disabled={!customer.profile.phone}
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <CallCustomerButton
+                  customerId={customer.profile.id}
+                  disabled={!customer.profile.phone}
+                  preview={preview}
+                />
+                {renderDeleteAction()}
+              </div>
             </div>
             <div className="mt-4">
               <CustomerProfileForm
@@ -358,6 +441,18 @@ function CustomerCard({
               </div>
             )}
           </section>
+          {customer.canDelete ? (
+            <section className="border-t border-lavender/30 pt-6">
+              <h3 className="text-base font-medium text-gold-dark">
+                Delete customer
+              </h3>
+              <p className="mt-2 text-sm text-text-muted">
+                Permanently remove this login, pet profiles, cards on file, and
+                appointment history.
+              </p>
+              <div className="mt-4">{renderDeleteAction()}</div>
+            </section>
+          ) : null}
         </div>
       )}
     </article>
@@ -366,12 +461,20 @@ function CustomerCard({
 
 export function CustomerRecordsPanel({
   focusCustomerId,
+  preview = false,
+  previewCustomers,
 }: {
   focusCustomerId?: string;
+  preview?: boolean;
+  previewCustomers?: StaffCustomerRecord[];
 }) {
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
 
   const loadCustomers = useCallback(async () => {
+    if (preview && previewCustomers) {
+      setLoadState({ status: "ready", customers: previewCustomers });
+      return;
+    }
     setLoadState({ status: "loading" });
     try {
       const response = await fetch("/api/admin/customers", {
@@ -412,7 +515,7 @@ export function CustomerRecordsPanel({
         message: "Could not load customer records.",
       });
     }
-  }, []);
+  }, [preview, previewCustomers]);
 
   useEffect(() => {
     void loadCustomers();
@@ -442,10 +545,22 @@ export function CustomerRecordsPanel({
   return (
     <div className="space-y-4">
       {loadState.customers.map((customer) => (
-        <CustomerCard
+        <CustomerRecordCard
           key={customer.profile.id}
           customer={customer}
           startOpen={customer.profile.id === focusCustomerId}
+          preview={preview}
+          onDeleted={(customerId) => {
+            setLoadState((current) => {
+              if (current.status !== "ready") return current;
+              return {
+                status: "ready",
+                customers: current.customers.filter(
+                  (item) => item.profile.id !== customerId,
+                ),
+              };
+            });
+          }}
           onProfileSaved={(profile) => {
             setLoadState((current) => {
               if (current.status !== "ready") return current;

@@ -1,11 +1,16 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStaffSession } from "@/lib/staff/auth";
+import { OWNER_EMAIL, normalizeStaffEmail } from "@/lib/staff/owner";
 import {
   createAuthenticatedSupabaseClient,
 } from "@/lib/pets/auth";
 import { mapPetRowToRecord, mapValidatedInputToUpdateRow } from "@/lib/pets/map";
 import type { PetRecord, PetRow, PetWriteInput } from "@/lib/pets/types";
 import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
+import {
+  customerDeleteBlockReason,
+  isProtectedStaffEmail,
+} from "@/lib/profiles/delete-guard";
 import {
   mapProfileRow,
   type CustomerProfile,
@@ -24,6 +29,7 @@ export type StaffCustomerRecord = {
   profile: CustomerProfile;
   pets: Array<PetRecord & { adminServiceNotes: string }>;
   paymentMethods: PaymentMethodRecord[];
+  canDelete: boolean;
 };
 
 type StaffPetEmbed = PetRow & {
@@ -43,6 +49,7 @@ export async function listStaffCustomers(): Promise<
   if ("error" in session) return session;
 
   const admin = createAdminClient();
+  const staffEmails = await listProtectedStaffEmails(admin);
   const { data, error } = await admin
     .from("profiles")
     .select(
@@ -88,10 +95,230 @@ export async function listStaffCustomers(): Promise<
         adminServiceNotes: notesByPetId.get(pet.id) ?? "",
       })),
       paymentMethods,
+      canDelete: !customerDeleteBlockReason({
+        actorUserId: session.user.id,
+        targetUserId: profile.id,
+        targetEmail: profile.email,
+        targetIsStaff: isProtectedStaffEmail(profile.email, staffEmails),
+      }),
     });
   }
 
   return { customers };
+}
+
+export async function deleteStaffCustomer(customerId: string): Promise<
+  | { ok: true }
+  | {
+      error: "unauthenticated" | "forbidden" | "not_found" | "conflict" | "server";
+      message?: string;
+    }
+> {
+  const session = await getStaffSession();
+  if ("error" in session) return session;
+
+  const admin = createAdminClient();
+  const { data: profile, error: profileError } = await admin
+    .from("profiles")
+    .select("id, email")
+    .eq("id", customerId)
+    .maybeSingle();
+
+  if (profileError) {
+    console.error("deleteStaffCustomer profile failed:", profileError.message);
+    return { error: "server" };
+  }
+  if (!profile) return { error: "not_found" };
+
+  const staffEmails = await listProtectedStaffEmails(admin);
+  const blocked = customerDeleteBlockReason({
+    actorUserId: session.user.id,
+    targetUserId: profile.id,
+    targetEmail: profile.email,
+    targetIsStaff: isProtectedStaffEmail(profile.email, staffEmails),
+  });
+  if (blocked) return { error: "conflict", message: blocked };
+
+  const cleaned = await deleteCustomerDependentRows(admin, profile.id);
+  if (!cleaned) return { error: "server" };
+
+  const { error: deleteUserError } = await admin.auth.admin.deleteUser(profile.id);
+  if (deleteUserError) {
+    console.error("deleteStaffCustomer auth failed:", deleteUserError.message);
+    return { error: "server" };
+  }
+
+  return { ok: true };
+}
+
+async function listProtectedStaffEmails(
+  admin: ReturnType<typeof createAdminClient>,
+) {
+  const emails = new Set<string>([OWNER_EMAIL]);
+  const [members, invites] = await Promise.all([
+    admin.schema("private").from("staff_members").select("email"),
+    admin.schema("private").from("staff_invites").select("email"),
+  ]);
+
+  for (const row of members.data ?? []) {
+    if (row.email) emails.add(normalizeStaffEmail(row.email));
+  }
+  for (const row of invites.data ?? []) {
+    if (row.email) emails.add(normalizeStaffEmail(row.email));
+  }
+  return emails;
+}
+
+function isMissingTableError(error: { code?: string; message?: string } | null) {
+  if (!error) return false;
+  return (
+    error.code === "PGRST205" ||
+    /schema cache|does not exist|could not find the table/i.test(
+      error.message ?? "",
+    )
+  );
+}
+
+async function ignoreMissingTable(
+  label: string,
+  result: { error: { message: string } | null },
+) {
+  if (result.error && !isMissingTableError(result.error)) {
+    console.error(`deleteStaffCustomer ${label} failed:`, result.error.message);
+    return false;
+  }
+  return true;
+}
+
+async function deleteCustomerDependentRows(
+  admin: ReturnType<typeof createAdminClient>,
+  customerId: string,
+) {
+  const { data: relationships, error: relationshipsError } = await admin
+    .from("referral_relationships")
+    .select("id")
+    .or(
+      `referrer_customer_id.eq.${customerId},referred_customer_id.eq.${customerId}`,
+    );
+  if (relationshipsError && !isMissingTableError(relationshipsError)) {
+    console.error(
+      "deleteStaffCustomer relationships failed:",
+      relationshipsError.message,
+    );
+    return false;
+  }
+
+  const relationshipIds = (relationships ?? []).map((row) => row.id as string);
+  const { data: sources, error: sourcesError } = await admin
+    .from("referral_reward_sources")
+    .select("id")
+    .or(
+      `referrer_customer_id.eq.${customerId},referred_customer_id.eq.${customerId}`,
+    );
+  if (sourcesError && !isMissingTableError(sourcesError)) {
+    console.error("deleteStaffCustomer sources failed:", sourcesError.message);
+    return false;
+  }
+  const sourceIds = (sources ?? []).map((row) => row.id as string);
+
+  if (
+    !(await ignoreMissingTable(
+      "audit by customer",
+      await admin.from("referral_audit_log").delete().eq("customer_id", customerId),
+    ))
+  ) {
+    return false;
+  }
+
+  if (relationshipIds.length > 0) {
+    if (
+      !(await ignoreMissingTable(
+        "audit by relationship",
+        await admin
+          .from("referral_audit_log")
+          .delete()
+          .in("referral_relationship_id", relationshipIds),
+      ))
+    ) {
+      return false;
+    }
+  }
+
+  if (sourceIds.length > 0) {
+    if (
+      !(await ignoreMissingTable(
+        "ledger reversals by source",
+        await admin
+          .from("referral_credit_ledger")
+          .delete()
+          .in("reward_source_id", sourceIds)
+          .eq("entry_type", "reversal"),
+      )) ||
+      !(await ignoreMissingTable(
+        "ledger by source",
+        await admin
+          .from("referral_credit_ledger")
+          .delete()
+          .in("reward_source_id", sourceIds),
+      ))
+    ) {
+      return false;
+    }
+  }
+
+  if (
+    !(await ignoreMissingTable(
+      "ledger reversals",
+      await admin
+        .from("referral_credit_ledger")
+        .delete()
+        .eq("customer_id", customerId)
+        .eq("entry_type", "reversal"),
+    )) ||
+    !(await ignoreMissingTable(
+      "ledger",
+      await admin.from("referral_credit_ledger").delete().eq("customer_id", customerId),
+    ))
+  ) {
+    return false;
+  }
+
+  if (sourceIds.length > 0) {
+    if (
+      !(await ignoreMissingTable(
+        "reward sources",
+        await admin.from("referral_reward_sources").delete().in("id", sourceIds),
+      ))
+    ) {
+      return false;
+    }
+  }
+
+  if (relationshipIds.length > 0) {
+    if (
+      !(await ignoreMissingTable(
+        "relationships",
+        await admin.from("referral_relationships").delete().in("id", relationshipIds),
+      ))
+    ) {
+      return false;
+    }
+  }
+
+  if (
+    !(await ignoreMissingTable(
+      "vaccinations",
+      await admin.from("pet_vaccination_records").delete().eq("customer_id", customerId),
+    )) ||
+    !(await ignoreMissingTable(
+      "appointments",
+      await admin.from("appointments").delete().eq("customer_id", customerId),
+    ))
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 export async function updateStaffPet(
