@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AccountBackLink } from "@/components/account/AccountBackLink";
 import { AccountNav } from "@/components/account/AccountNav";
 import { CustomerSignOutButton } from "@/components/auth/CustomerSignOutButton";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
@@ -22,25 +23,27 @@ export default async function AccountLayout({
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-12">
+    <div className="mx-auto max-w-5xl px-5 py-8 md:px-6 md:py-12">
       <header className="mb-6 flex items-center justify-between gap-4">
         <h1 className="min-w-0 flex-1 pr-2 text-xl font-semibold text-gold-dark">
           {accountConfig.overview.title}
         </h1>
-        <CustomerSignOutButton />
+        <div className="flex shrink-0 items-center gap-3">
+          <BookServiceLink className="hidden min-h-[44px] items-center justify-center rounded-2xl bg-gold px-5 py-2.5 text-sm font-medium text-white transition hover:bg-gold-dark md:inline-flex">
+            Book an Appointment
+          </BookServiceLink>
+          <CustomerSignOutButton />
+        </div>
       </header>
 
-      <div className="mb-6 flex justify-end">
-        <BookServiceLink className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-gold px-6 py-3 text-sm font-medium text-white transition hover:bg-gold-dark">
-          Book an Appointment
-        </BookServiceLink>
-      </div>
-
-      <div className="grid gap-10 md:grid-cols-[220px_1fr]">
-        <aside>
+      <div className="grid gap-8 md:grid-cols-[220px_1fr] md:gap-10">
+        <aside className="hidden md:block">
           <AccountNav />
         </aside>
-        <div>{children}</div>
+        <div>
+          <AccountBackLink />
+          {children}
+        </div>
       </div>
     </div>
   );
