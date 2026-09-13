@@ -10,7 +10,6 @@ Full setup (redirect URLs, checklist): [`../AUTH_SETUP.md`](../AUTH_SETUP.md)
 
 | Template | HTML file | Subject line |
 |----------|-----------|--------------|
-| Magic Link | [`magic-link.html`](./magic-link.html) | `Your K9 Atelier sign-in link` |
 | Confirm signup | [`confirm-signup.html`](./confirm-signup.html) | `Welcome to K9 Atelier — confirm your email` |
 | Reset password | [`reset-password.html`](./reset-password.html) | `Reset your K9 Atelier password` |
 
@@ -23,9 +22,11 @@ Open each `.html` file, copy all contents, paste into the matching Dashboard tem
 | Variable | Purpose |
 |----------|---------|
 | `{{ .ConfirmationURL }}` | Button link — honors app `emailRedirectTo` (correct local port) |
-| `{{ .Token }}` | 6-digit OTP for manual entry on `/login` |
+| `{{ .Token }}` | 6-digit code for the password-reset form (reset template only) |
 
-Do **not** use `{{ .SiteURL }}` alone for the sign-in button in local dev; it ignores the port from `npm run dev`.
+Do **not** use `{{ .SiteURL }}` alone for confirmation or reset buttons in local dev; it ignores the port from `npm run dev`.
+
+The site does not use Magic Link / passwordless email login.
 
 ---
 
@@ -52,9 +53,8 @@ Site URL stays `https://k9atelier.com`.
 
 ## Dashboard checks
 
-- [ ] Magic Link body pasted from `magic-link.html`
 - [ ] Confirm signup body pasted from `confirm-signup.html`
 - [ ] Reset password body pasted from `reset-password.html`
-- [ ] Test email shows **Access My Account** button and **6-digit code**
-- [ ] OTP login works on `/login`
-- [ ] Magic Link opens `/auth/callback` on the same port you used to request login
+- [ ] Confirm-signup email shows **Access My Account**
+- [ ] Reset-password email shows **Set a new password** and a **6-digit code**
+- [ ] Confirmation and reset links open `/auth/callback` or `/auth/reset` on the same port you used to request them

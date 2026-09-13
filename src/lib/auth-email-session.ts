@@ -2,10 +2,8 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 
 const EMAIL_OTP_TYPES = new Set<string>([
-  "email",
   "signup",
   "invite",
-  "magiclink",
   "recovery",
   "email_change",
 ]);
@@ -64,11 +62,11 @@ export async function completeEmailAuthFromUrl() {
   } else if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) lastError = error;
-  } else if (email && token) {
+  } else if (email && token && type) {
     const { error } = await supabase.auth.verifyOtp({
       email,
       token,
-      type: type ?? "email",
+      type,
     });
     if (error) lastError = error;
   } else if (accessToken && refreshToken) {

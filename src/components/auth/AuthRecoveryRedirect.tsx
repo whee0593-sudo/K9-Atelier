@@ -6,7 +6,7 @@ import { hasEmailAuthTokens, isRecoveryAuthLink } from "@/lib/auth-email-session
 
 const AUTH_PAGES = new Set(["/auth/callback", "/auth/reset"]);
 
-/** Recovery / magic-link tokens sometimes land on /login or / with a URL hash. */
+/** Recovery / confirmation tokens sometimes land on /login or / with a URL hash. */
 export function AuthRecoveryRedirect() {
   const pathname = usePathname();
 
