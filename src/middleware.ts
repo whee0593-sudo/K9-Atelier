@@ -26,6 +26,8 @@ const PUBLIC_PATHS = [
   "/referrals",
   "/api/support",
   "/api/notify",
+  "/confirm-account",
+  "/api/confirm-account",
   "/api/auth",
   "/api/cron",
   "/api/sms",

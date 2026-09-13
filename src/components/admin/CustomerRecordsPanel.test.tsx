@@ -49,6 +49,7 @@ describe("CustomerRecordCard actions", () => {
     );
     assert.match(html, />Delete</);
     assert.match(html, />Freeze</);
+    assert.match(html, /Book for customer/);
     assert.match(html, /Ada Lovelace/);
   });
 
@@ -94,5 +95,6 @@ describe("CustomerRecordCard actions", () => {
     );
     assert.match(html, />Unfreeze</);
     assert.match(html, /Frozen/);
+    assert.doesNotMatch(html, /Book for customer/);
   });
 });

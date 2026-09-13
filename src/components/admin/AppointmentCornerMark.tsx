@@ -6,6 +6,7 @@ type Props = {
   status: AppointmentStatus;
   vaccinationStatusAtBooking?: VaccinationBookingStatus | null;
   customerConfirmedAt?: string | null;
+  awaitingCustomerConfirm?: boolean;
 };
 
 export function AppointmentCornerMark(appointment: Props) {

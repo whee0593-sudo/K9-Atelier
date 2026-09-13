@@ -6,6 +6,7 @@ import type {
 import { stringAddOnOptions } from "@/lib/charges/visit-line-items";
 import { getServiceDisplayName } from "@/lib/service-display";
 import type { VaccinationBookingStatus } from "@/lib/vaccinations/types";
+import { isAwaitingCustomerConfirm } from "@/lib/staff/customer-confirm-token";
 
 function firstRelation<T>(value: T | T[] | null | undefined): T | null {
   if (value == null) return null;
@@ -68,6 +69,8 @@ export function mapAppointmentRowToRecord(row: AppointmentRow): AppointmentRecor
     status: row.status,
     confirmedAt: row.confirmed_at,
     customerConfirmedAt: row.customer_confirmed_at ?? null,
+    staffCreated: row.staff_created === true,
+    awaitingCustomerConfirm: isAwaitingCustomerConfirm(row),
     createdAt: row.created_at,
   };
 }
@@ -92,7 +95,11 @@ export function mapAppointmentRowToAdminRecord(
   };
 }
 
-export function appointmentStatusLabel(status: AppointmentRecord["status"]) {
+export function appointmentStatusLabel(
+  status: AppointmentRecord["status"],
+  awaitingCustomerConfirm = false,
+) {
+  if (awaitingCustomerConfirm) return "Awaiting Customer Confirmation";
   switch (status) {
     case "pending_confirmation":
       return "Pending Vaccination Review";

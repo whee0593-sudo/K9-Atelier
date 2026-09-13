@@ -41,9 +41,12 @@ function formatLongDate(iso: string) {
   });
 }
 
-function statusLabel(status: AdminAppointmentRecord["status"]) {
-  if (status === "pending_confirmation") return "Pending Review";
-  if (status === "cancelled") return "Cancelled";
+function statusLabel(appointment: AdminAppointmentRecord) {
+  if (appointment.awaitingCustomerConfirm) {
+    return "Awaiting Customer";
+  }
+  if (appointment.status === "pending_confirmation") return "Pending Review";
+  if (appointment.status === "cancelled") return "Cancelled";
   return "Confirmed";
 }
 
@@ -310,10 +313,13 @@ export function AdminCalendar({
                         appointment.vaccinationStatusAtBooking
                       }
                       customerConfirmedAt={appointment.customerConfirmedAt}
+                      awaitingCustomerConfirm={
+                        appointment.awaitingCustomerConfirm
+                      }
                     />
                     <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
                       {appointment.appointmentTime} ·{" "}
-                      {statusLabel(appointment.status)}
+                      {statusLabel(appointment)}
                     </span>
                   </div>
                 </div>

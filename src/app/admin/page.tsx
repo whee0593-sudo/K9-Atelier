@@ -62,6 +62,16 @@ export default async function AdminDashboardPage() {
           </p>
         </Link>
         <Link
+          href="/admin/book-for-customer"
+          className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
+        >
+          <h3 className="font-medium text-gold-dark">Book for Customer</h3>
+          <p className="mt-2 text-sm text-text-muted">
+            Create a customer account, reserve a visit, and send a confirmation
+            link to their email or phone.
+          </p>
+        </Link>
+        <Link
           href="/admin/pets"
           className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
         >

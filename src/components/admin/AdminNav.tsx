@@ -11,6 +11,7 @@ const links = [
   { href: "/admin/referrals", label: "Referrals" },
   { href: "/admin/messages", label: "Contact Customer" },
   { href: "/admin/pets", label: "Customers & Pets" },
+  { href: "/admin/book-for-customer", label: "Book for Customer" },
   { href: "/admin/profile", label: "My Admin Profile" },
 ];
 

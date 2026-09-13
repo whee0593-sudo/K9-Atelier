@@ -60,6 +60,8 @@ export type AppointmentRecord = {
   confirmedAt: string | null;
   /** Customer replied YES to the 3-day SMS. Separate from staff confirmedAt. */
   customerConfirmedAt: string | null;
+  staffCreated?: boolean;
+  awaitingCustomerConfirm?: boolean;
   createdAt: string;
 };
 
@@ -102,6 +104,9 @@ export type AppointmentRow = {
   status: AppointmentStatus;
   confirmed_at: string | null;
   customer_confirmed_at?: string | null;
+  staff_created?: boolean | null;
+  customer_confirm_token_hash?: string | null;
+  customer_confirm_expires_at?: string | null;
   created_at: string;
   reminder_sms_sent_at?: string | null;
   en_route_sms_sent_at?: string | null;
