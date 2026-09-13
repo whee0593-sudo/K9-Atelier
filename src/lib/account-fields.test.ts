@@ -15,5 +15,9 @@ describe("account sections", () => {
       ),
       false,
     );
+    assert.deepEqual(
+      accountConfig.sections.map((section) => section.id),
+      ["profile", "addresses", "pets", "payment", "referrals", "bookings", "password"],
+    );
   });
 });
