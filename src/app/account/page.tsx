@@ -12,7 +12,7 @@ export default function AccountOverviewPage() {
         <p className="mt-2 text-sm text-text-muted">
           Share your referral code. New client households receive 10% off
           eligible services on their first completed visit, and you earn equal
-          Referral Credit.
+          Referral Credit in this account for every dog to share.
         </p>
         <div className="mt-6">
           <ReferralRewardsPanel />

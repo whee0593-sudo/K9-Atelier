@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildPreviewCollectContext } from "@/lib/charges/preview";
-import { quoteReferralApplication } from "@/lib/referrals/eligible";
+import {
+  quoteReferralApplication,
+  remainingAccountCreditCents,
+} from "@/lib/referrals/eligible";
 
 describe("collect checkout referral code field", () => {
   it("exposes a referralCode slot on the preview collect context", () => {
@@ -45,5 +48,9 @@ describe("collect checkout referral code field", () => {
     });
     assert.equal(withCredit.discountCents, 0);
     assert.equal(withCredit.creditCents > 0, true);
+    assert.equal(
+      remainingAccountCreditCents(10000, withCredit.creditCents),
+      10000 - withCredit.creditCents,
+    );
   });
 });

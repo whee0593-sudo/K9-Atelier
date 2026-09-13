@@ -13,6 +13,7 @@ import { formatChargeMoney, sumLineItems } from "@/lib/charges/money";
 import {
   centsToDollars,
   quoteReferralApplication,
+  remainingAccountCreditCents,
   type ReferralApplyMode,
 } from "@/lib/referrals/eligible";
 import type { ReferralChargeCategory } from "@/lib/charges/types";
@@ -187,6 +188,57 @@ export function CollectCheckout({
       setLoading(false);
     }
   }, [appointmentId, kind, preview, initialStep]);
+
+  function applyRemainingAccountCredit(remainingCreditCents: number) {
+    setContext((current) => {
+      if (!current) return current;
+      const referral = current.referral ?? {
+        availableCreditCents: 0,
+        applyNewClientDiscount: false,
+        canUseCredit: false,
+        referralCode: null,
+      };
+      return {
+        ...current,
+        referral: {
+          ...referral,
+          availableCreditCents: remainingCreditCents,
+          canUseCredit:
+            remainingCreditCents > 0 && !referral.applyNewClientDiscount,
+        },
+      };
+    });
+  }
+
+  async function syncAccountCreditAfterPayment(appliedCents: number) {
+    if (preview) {
+      applyRemainingAccountCredit(
+        remainingAccountCreditCents(
+          context?.referral?.availableCreditCents ?? 0,
+          appliedCents,
+        ),
+      );
+      return;
+    }
+    try {
+      const response = await fetch(`/api/admin/collect/${appointmentId}`, {
+        credentials: "include",
+      });
+      const body = (await response.json()) as CollectContext;
+      if (typeof body.referral?.availableCreditCents === "number") {
+        applyRemainingAccountCredit(body.referral.availableCreditCents);
+        return;
+      }
+    } catch {
+      // Fall back to the local remaining balance if reload fails.
+    }
+    applyRemainingAccountCredit(
+      remainingAccountCreditCents(
+        context?.referral?.availableCreditCents ?? 0,
+        appliedCents,
+      ),
+    );
+  }
 
   useEffect(() => {
     void load();
@@ -386,6 +438,7 @@ export function CollectCheckout({
       setChargeId(nextCharge.id);
       setPaidCharge(nextCharge);
       if (!useNewCard) setChargedMethodId(selectedMethodId);
+      await syncAccountCreditAfterPayment(referralQuote.creditCents);
       setStep("receipt");
       return;
     }
@@ -459,11 +512,13 @@ export function CollectCheckout({
             setError("Payment needs a moment — please try again.");
             return null;
           }
+          await syncAccountCreditAfterPayment(referralQuote.creditCents);
           setStep("receipt");
           return null;
         }
         return body.clientSecret;
       }
+      await syncAccountCreditAfterPayment(referralQuote.creditCents);
       setStep("receipt");
     } catch {
       setError("Could not charge this card.");
@@ -815,7 +870,11 @@ export function CollectCheckout({
           }}
           onBack={() => setStep("review")}
           onPay={() => startPayment()}
-          onPaid={() => setStep("receipt")}
+          onPaid={() => {
+            void syncAccountCreditAfterPayment(referralQuote.creditCents).then(
+              () => setStep("receipt"),
+            );
+          }}
           onError={setError}
           onBusy={setBusy}
         />
@@ -828,6 +887,9 @@ export function CollectCheckout({
             charge={receiptCharge}
             paymentMethodLabel={formatReceiptPaymentMethod(
               methods.find((method) => method.id === chargedMethodId) ?? null,
+            )}
+            remainingReferralCredit={centsToDollars(
+              context.referral?.availableCreditCents ?? 0,
             )}
             websiteUrl={brandLinks?.websiteUrl}
             instagramUrl={brandLinks?.instagramUrl}
@@ -1040,8 +1102,10 @@ function PayStep({
         Available referral credit
       </p>
       <p className="font-body mt-2 text-sm text-ink">
-        You have {formatChargeMoney(centsToDollars(referralQuote.availableCreditCents))} in
-        referral credit.
+        This account has{" "}
+        {formatChargeMoney(centsToDollars(referralQuote.availableCreditCents))} in
+        Referral Credit, shared by every dog on the household. Enter any amount
+        up to this balance at checkout.
       </p>
       {context.referral?.applyNewClientDiscount ? (
         <p className="font-body mt-2 text-sm text-taupe">
@@ -1114,6 +1178,19 @@ function PayStep({
         <li className="flex justify-between gap-4 text-ink">
           <span>Referral credit applied</span>
           <span>-{formatChargeMoney(centsToDollars(referralQuote.creditCents))}</span>
+        </li>
+        <li className="flex justify-between gap-4 text-ink">
+          <span>Account credit remaining</span>
+          <span>
+            {formatChargeMoney(
+              centsToDollars(
+                remainingAccountCreditCents(
+                  referralQuote.availableCreditCents,
+                  referralQuote.creditCents,
+                ),
+              ),
+            )}
+          </span>
         </li>
       </ul>
       <p className="font-display mt-6 text-4xl text-ink">

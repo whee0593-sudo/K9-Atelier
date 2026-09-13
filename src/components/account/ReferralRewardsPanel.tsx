@@ -34,13 +34,18 @@ export function ReferralRewardsPanel() {
 
   useEffect(() => {
     let cancelled = false;
-    void fetch("/api/account/referrals", { credentials: "include" })
-      .then(async (response) => {
+
+    async function load() {
+      try {
+        const response = await fetch("/api/account/referrals", {
+          credentials: "include",
+        });
         const body = (await response.json()) as ReferralView & { error?: string };
-        if (!response.ok) throw new Error(body.error ?? "Could not load referral rewards.");
+        if (!response.ok) {
+          throw new Error(body.error ?? "Could not load referral rewards.");
+        }
         if (!cancelled) setView(body);
-      })
-      .catch((loadError: unknown) => {
+      } catch (loadError: unknown) {
         if (!cancelled) {
           setError(
             loadError instanceof Error
@@ -48,9 +53,19 @@ export function ReferralRewardsPanel() {
               : "Could not load referral rewards.",
           );
         }
-      });
+      }
+    }
+
+    void load();
+    function refresh() {
+      void load();
+    }
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
     return () => {
       cancelled = true;
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
     };
   }, []);
 
@@ -81,9 +96,11 @@ export function ReferralRewardsPanel() {
           ${view.availableLabel}
         </p>
         <p className="mt-3 text-sm leading-relaxed text-text-muted">
-          Share your referral code. After a friend’s first completed and paid
-          visit, you receive Referral Credit equal to their 10% savings. Credit
-          can be applied at checkout after a future appointment.
+          This balance belongs to your account and is shared by every dog on it.
+          After a friend’s first completed and paid visit, you receive Referral
+          Credit equal to their 10% savings. At checkout for any pet, enter an
+          amount to apply. The remaining balance updates as soon as the visit is
+          paid.
         </p>
       </div>
 

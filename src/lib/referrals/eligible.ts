@@ -117,6 +117,13 @@ export function quoteReferralApplication(input: {
   };
 }
 
+export function remainingAccountCreditCents(
+  availableCreditCents: number,
+  appliedCreditCents: number,
+) {
+  return Math.max(0, Math.round(availableCreditCents) - Math.round(appliedCreditCents));
+}
+
 export function centsToDollars(cents: number) {
   return Math.round(cents) / 100;
 }

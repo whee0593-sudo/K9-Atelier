@@ -16,6 +16,7 @@ export function ChargeReceiptLetter({
   appointment,
   charge,
   paymentMethodLabel,
+  remainingReferralCredit,
   receiptNumber,
   websiteUrl,
   instagramUrl,
@@ -24,6 +25,7 @@ export function ChargeReceiptLetter({
   appointment: AdminAppointmentRecord;
   charge: AppointmentChargeRecord;
   paymentMethodLabel?: string | null;
+  remainingReferralCredit?: number | null;
   receiptNumber?: string | null;
   websiteUrl?: string;
   instagramUrl?: string | null;
@@ -123,12 +125,21 @@ export function ChargeReceiptLetter({
             ) : null}
           </section>
 
-          {receiptNumber || paymentDate || paymentMethodLabel ? (
+          {receiptNumber ||
+          paymentDate ||
+          paymentMethodLabel ||
+          remainingReferralCredit != null ? (
             <section className="space-y-2 text-base leading-[1.6] text-[#766F75]">
               {receiptNumber ? <p>Receipt number: {receiptNumber}</p> : null}
               {paymentDate ? <p>Payment date: {paymentDate}</p> : null}
               {paymentMethodLabel ? (
                 <p>Payment method: {paymentMethodLabel}</p>
+              ) : null}
+              {remainingReferralCredit != null ? (
+                <p>
+                  Account Referral Credit remaining:{" "}
+                  {formatChargeMoney(remainingReferralCredit)}
+                </p>
               ) : null}
             </section>
           ) : null}
