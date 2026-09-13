@@ -237,9 +237,9 @@ export default function FaqPage() {
       a: (
         <FaqParagraphs
           paragraphs={[
-            "Each of your dogs has a personalized referral code. When a new client household uses that code, they receive 10% off eligible service charges on their first completed appointment. After that visit is completed and paid, you receive Referral Credit equal to their savings.",
-            "Referral Credit accumulates and can be applied, in full or in part, toward eligible service charges on a future appointment. Travel fees, special handling fees, and gratuities are excluded, and Referral Credit cannot be combined with other promotions.",
-            "You can view your codes, share links, and available balance in your account. Full program rules are at k9atelier.com/referrals.",
+            "Each of your dogs has a personalized referral code. When a new client household uses that code, they receive 10% off eligible service charges on their first completed appointment. After that visit is completed and paid, you receive promotional Referral Credit equal to their savings.",
+            "Referral Credit accumulates and can be applied, in full or in part, toward eligible service charges on a future appointment. Travel fees, special handling fees, and gratuities are excluded. Referral Credit is a promotional service credit only, has no cash value, and cannot be transferred, withdrawn, sold, or exchanged for cash.",
+            "You can view your referral codes, share links, and available Referral Credit in your account. Full program rules are available at k9atelier.com/referrals.",
           ]}
         />
       ),
