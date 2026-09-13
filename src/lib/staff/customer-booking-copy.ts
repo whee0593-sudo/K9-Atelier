@@ -22,7 +22,7 @@ export function buildStaffCreatedBookingEmail(
     ? "K9 Atelier reserved this grooming visit for you. Open the link below to confirm the appointment and create your password so you can manage it online."
     : "K9 Atelier reserved this grooming visit for you. Open the link below to confirm the appointment.";
   const closingParagraph =
-    "You are not charged when you confirm. A card on file is collected later, before or at the visit.";
+    "You are not charged when you confirm. After confirming, open your account to upload a vaccination record and add a card on file.";
 
   const text = [
     `Dear ${greetingName},`,

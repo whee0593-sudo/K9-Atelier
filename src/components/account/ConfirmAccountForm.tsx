@@ -10,6 +10,8 @@ import {
   bookingLabelClass,
   bookingPrimaryBtnClass,
 } from "@/components/booking/booking-ui";
+import { ConfirmAccountNextSteps } from "@/components/account/ConfirmAccountNextSteps";
+import { ACCOUNT_SETUP_PATH, rememberSetupPetId } from "@/lib/account-setup";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 
 type Preview = {
@@ -83,6 +85,7 @@ export function ConfirmAccountForm({ token, preview }: Props) {
     event.preventDefault();
     if (loadState.status !== "ready") return;
     setError(null);
+    const appointment = loadState.preview.appointment;
 
     if (preview) {
       if (loadState.preview.requiresPassword) {
@@ -99,6 +102,7 @@ export function ConfirmAccountForm({ token, preview }: Props) {
         setError("Please confirm this appointment and agree to the service policies.");
         return;
       }
+      rememberSetupPetId(appointment.petId);
       setLoadState({ status: "done" });
       return;
     }
@@ -141,12 +145,14 @@ export function ConfirmAccountForm({ token, preview }: Props) {
           password,
         });
         if (signInError) {
-          window.location.replace("/login?next=/account");
+          rememberSetupPetId(appointment.petId);
+          window.location.replace(`/login?next=${ACCOUNT_SETUP_PATH}`);
           return;
         }
       }
 
-      setLoadState({ status: "done" });
+      rememberSetupPetId(appointment.petId);
+      window.location.replace(ACCOUNT_SETUP_PATH);
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -177,17 +183,10 @@ export function ConfirmAccountForm({ token, preview }: Props) {
 
   if (loadState.status === "done") {
     return (
-      <div className="mt-6">
-        <p className="font-body text-sm leading-relaxed text-ink">
-          Your appointment is confirmed. You are not charged now.
-        </p>
-        <Link
-          href="/account"
-          className={`${bookingPrimaryBtnClass} mt-6`}
-        >
-          Open my account
-        </Link>
-      </div>
+      <ConfirmAccountNextSteps
+        petId={preview?.appointment.petId}
+        petName={preview?.appointment.petName}
+      />
     );
   }
 
