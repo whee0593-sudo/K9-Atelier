@@ -1,7 +1,7 @@
 {
   "overview": {
     "title": "Admin Profile",
-    "description": "K9 Atelier team account for managing customers, service notes, and sending messages or files."
+    "description": "K9 Atelier team account for managing customers, service notes, and sending texts."
   },
   "roles": ["Owner", "Groomer", "Support"],
   "fields": [
