@@ -55,7 +55,7 @@ export default function ReferralsPage() {
             Book an Appointment
           </BookServiceLink>
           <LuxuryButton href="/account/referrals" variant="secondary">
-            View My Referral Codes
+            View My Referral Code
           </LuxuryButton>
         </div>
         <p className="text-center text-sm text-taupe">

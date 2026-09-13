@@ -81,17 +81,17 @@ export function ReferralRewardsPanel() {
           ${view.availableLabel}
         </p>
         <p className="mt-3 text-sm leading-relaxed text-text-muted">
-          Share a pet’s referral code. After a friend’s first completed and paid
+          Share your referral code. After a friend’s first completed and paid
           visit, you receive Referral Credit equal to their 10% savings. Credit
           can be applied at checkout after a future appointment.
         </p>
       </div>
 
       <div>
-        <h3 className="font-medium text-gold-dark">Your referral codes</h3>
+        <h3 className="font-medium text-gold-dark">Your referral code</h3>
         {view.codes.length === 0 ? (
           <p className="mt-3 text-sm text-text-muted">
-            Add a pet profile to receive a personalized referral code.
+            Add a pet profile and a mobile number to receive your referral code.
           </p>
         ) : (
           <ul className="mt-4 space-y-3">

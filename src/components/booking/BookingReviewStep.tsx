@@ -460,7 +460,7 @@ export function BookingReviewStep({
               });
           }}
           className={bookingFieldClass}
-          placeholder="PRINCE-PENNY-S"
+          placeholder="PRINCE0123"
         />
         {referralStatus === "valid" ? (
           <p className="font-body text-sm text-ink">

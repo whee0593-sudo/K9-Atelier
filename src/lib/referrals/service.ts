@@ -16,6 +16,7 @@ import {
 } from "@/lib/referrals/reservation";
 import {
   buildReferralCodeBase,
+  isAccountReferralCodeFormat,
   nextReferralCodeCandidate,
   normalizeReferralCode,
 } from "@/lib/referrals/codes";
@@ -55,65 +56,148 @@ function visitKey(input: {
   });
 }
 
-export async function ensurePetReferralCode(input: {
-  petId: string;
-  petName: string;
-  ownerCustomerId: string;
-}) {
-  if (!hasSupabaseAdminConfig()) return null;
+async function deactivateExtraReferralCodes(
+  customerId: string,
+  keepId?: string,
+) {
   const admin = createAdminClient();
-  const { data: existing } = await admin
+  let query = admin
     .from("pet_referral_codes")
-    .select("id, referral_code")
-    .eq("pet_id", input.petId)
-    .maybeSingle();
-  if (existing?.referral_code) return existing.referral_code as string;
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq("owner_customer_id", customerId)
+    .eq("is_active", true);
+  if (keepId) {
+    query = query.neq("id", keepId);
+  }
+  const { error } = await query;
+  if (error) {
+    console.error("deactivateExtraReferralCodes failed:", error.message);
+  }
+}
 
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("first_name, last_name")
-    .eq("id", input.ownerCustomerId)
-    .maybeSingle();
-
-  const base = buildReferralCodeBase({
-    petName: input.petName,
-    ownerFirstName: profile?.first_name ?? "",
-    ownerLastName: profile?.last_name ?? "",
-  });
-
+async function saveCustomerReferralCode(input: {
+  customerId: string;
+  petId: string;
+  existingId?: string;
+  base: string;
+}) {
+  const admin = createAdminClient();
+  await deactivateExtraReferralCodes(input.customerId, input.existingId);
   for (let attempt = 1; attempt <= 40; attempt += 1) {
-    const code = nextReferralCodeCandidate(base, attempt);
-    const { error } = await admin.from("pet_referral_codes").insert({
+    const code = nextReferralCodeCandidate(input.base, attempt);
+    const payload = {
       pet_id: input.petId,
-      owner_customer_id: input.ownerCustomerId,
+      owner_customer_id: input.customerId,
       referral_code: code,
       referral_code_normalized: normalizeReferralCode(code),
       is_active: true,
-    });
-    if (!error) return code;
-    if (error.code !== "23505") {
-      console.error("ensurePetReferralCode failed:", error.message);
+      updated_at: new Date().toISOString(),
+    };
+    const { data, error } = input.existingId
+      ? await admin
+          .from("pet_referral_codes")
+          .update(payload)
+          .eq("id", input.existingId)
+          .select("id, referral_code")
+          .maybeSingle()
+      : await admin
+          .from("pet_referral_codes")
+          .insert(payload)
+          .select("id, referral_code")
+          .maybeSingle();
+    if (!error && data?.referral_code) {
+      await deactivateExtraReferralCodes(input.customerId, data.id as string);
+      return data.referral_code as string;
+    }
+    if (error?.code === "23505") {
+      const { data: raced } = await admin
+        .from("pet_referral_codes")
+        .select("id, referral_code")
+        .eq("owner_customer_id", input.customerId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (raced?.referral_code && raced.id !== input.existingId) {
+        await deactivateExtraReferralCodes(input.customerId, raced.id as string);
+        return raced.referral_code as string;
+      }
+      continue;
+    }
+    if (error) {
+      console.error("ensureCustomerReferralCode failed:", error.message);
       return null;
     }
   }
   return null;
 }
 
-export async function ensureCustomerReferralCodes(customerId: string) {
-  if (!hasSupabaseAdminConfig()) return;
+export async function ensureCustomerReferralCode(customerId: string) {
+  if (!hasSupabaseAdminConfig()) return null;
   const admin = createAdminClient();
-  const { data: pets } = await admin
+
+  const { data: firstPet } = await admin
     .from("pets")
     .select("id, name")
     .eq("customer_id", customerId)
-    .is("archived_at", null);
-  for (const pet of pets ?? []) {
-    await ensurePetReferralCode({
-      petId: pet.id as string,
-      petName: String(pet.name ?? ""),
-      ownerCustomerId: customerId,
-    });
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (!firstPet) return null;
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("phone")
+    .eq("id", customerId)
+    .maybeSingle();
+  const base = buildReferralCodeBase({
+    petName: String(firstPet.name ?? ""),
+    phone: String(profile?.phone ?? ""),
+  });
+  if (!base) return null;
+
+  const { data: existingActive } = await admin
+    .from("pet_referral_codes")
+    .select("id, referral_code")
+    .eq("owner_customer_id", customerId)
+    .eq("is_active", true)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (
+    existingActive?.referral_code &&
+    isAccountReferralCodeFormat(existingActive.referral_code as string)
+  ) {
+    await deactivateExtraReferralCodes(customerId, existingActive.id as string);
+    return existingActive.referral_code as string;
   }
+
+  const { data: existingForFirstPet } = await admin
+    .from("pet_referral_codes")
+    .select("id")
+    .eq("pet_id", firstPet.id as string)
+    .maybeSingle();
+
+  return saveCustomerReferralCode({
+    customerId,
+    petId: firstPet.id as string,
+    existingId: (existingForFirstPet?.id as string | undefined) ??
+      (existingActive?.id as string | undefined),
+    base,
+  });
+}
+
+export async function ensurePetReferralCode(input: {
+  petId: string;
+  petName: string;
+  ownerCustomerId: string;
+}) {
+  return ensureCustomerReferralCode(input.ownerCustomerId);
+}
+
+export async function ensureCustomerReferralCodes(customerId: string) {
+  await ensureCustomerReferralCode(customerId);
 }
 
 export async function lookupReferralCode(code: string) {
@@ -1056,7 +1140,7 @@ export async function getAccountReferralView(customerId: string) {
   return {
     availableCreditCents,
     availableLabel: centsToDollars(availableCreditCents).toFixed(2),
-    codes: (codes ?? []).map((row) => ({
+    codes: (codes ?? []).slice(0, 1).map((row) => ({
       petName: ownedPetNames.get(row.pet_id as string) ?? "Dog",
       code: row.referral_code as string,
     })),

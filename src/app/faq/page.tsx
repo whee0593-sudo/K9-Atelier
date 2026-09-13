@@ -237,9 +237,9 @@ export default function FaqPage() {
       a: (
         <FaqParagraphs
           paragraphs={[
-            "Each of your dogs has a personalized referral code. When a new client household uses that code, they receive 10% off eligible service charges on their first completed appointment. After that visit is completed and paid, you receive Referral Credit equal to their savings.",
+            "Your account has one referral code, based on your first pet’s name and the last four digits of your mobile number. When a new client household uses that code, they receive 10% off eligible service charges on their first completed appointment. After that visit is completed and paid, you receive Referral Credit equal to their savings.",
             "Referral Credit accumulates and can be applied, in full or in part, toward eligible service charges on a future appointment. Travel fees, special handling fees, and gratuities are excluded, and Referral Credit cannot be combined with other promotions.",
-            "You can view your codes, share links, and available balance in your account. Full program rules are at k9atelier.com/referrals.",
+            "You can view your code, share link, and available balance in your account. Full program rules are at k9atelier.com/referrals.",
           ]}
         />
       ),

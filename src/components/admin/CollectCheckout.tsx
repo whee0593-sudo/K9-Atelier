@@ -1015,7 +1015,7 @@ function PayStep({
             }
           }}
           className="w-full rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm uppercase tracking-[0.08em] text-ink disabled:opacity-70"
-          placeholder="PRINCE-PENNY-S"
+          placeholder="PRINCE0123"
         />
         <button
           type="button"

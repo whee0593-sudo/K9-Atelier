@@ -2,7 +2,7 @@ export const REFERRAL_HEADLINE = "UNLIMITED REFERRALS.";
 export const REFERRAL_TAGLINE = "10% FOR THEM. 10% FOR YOU.";
 
 export const REFERRAL_INTRO = [
-  "Share one of your dog’s personalized K9 Atelier referral codes with a friend.",
+  "Share your K9 Atelier referral code with a friend.",
   "Your friend’s household will receive 10% off eligible service charges on their first completed appointment.",
   "After their appointment is completed and paid, you’ll receive Referral Credit equal to the dollar value of their discount.",
   "Referral Credit accumulates in your account, and you may apply some or all of your available balance toward an eligible appointment.",

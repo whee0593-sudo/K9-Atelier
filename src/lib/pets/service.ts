@@ -67,12 +67,8 @@ export async function createPet(
 
   const pet = (await attachVaccinationSummaries([mapPetRowToRecord(data as PetRow)]))[0];
   try {
-    const { ensurePetReferralCode } = await import("@/lib/referrals/service");
-    await ensurePetReferralCode({
-      petId: pet.id,
-      petName: pet.name,
-      ownerCustomerId: user.id,
-    });
+    const { ensureCustomerReferralCode } = await import("@/lib/referrals/service");
+    await ensureCustomerReferralCode(user.id);
   } catch (error) {
     console.error("createPet referral code failed:", error);
   }

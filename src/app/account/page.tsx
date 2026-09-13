@@ -10,7 +10,7 @@ export default function AccountOverviewPage() {
       <section className="mt-8 rounded-2xl border border-lavender/30 bg-cream p-6 md:p-8">
         <h2 className="font-medium text-gold-dark">Referral Rewards</h2>
         <p className="mt-2 text-sm text-text-muted">
-          Share a pet’s referral code. New client households receive 10% off
+          Share your referral code. New client households receive 10% off
           eligible services on their first completed visit, and you earn equal
           Referral Credit.
         </p>
