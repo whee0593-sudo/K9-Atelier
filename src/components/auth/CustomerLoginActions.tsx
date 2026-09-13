@@ -22,11 +22,9 @@ type Props = {
   startWithSignup?: boolean;
 };
 
-type Mode = "signin" | "signup" | "forgot" | "magic";
-type Step = "form" | "magic-sent" | "check-email";
+type Mode = "signin" | "signup" | "forgot";
+type Step = "form" | "check-email";
 
-const OTP_MIN_LENGTH = 6;
-const OTP_MAX_LENGTH = 10;
 const MIN_PASSWORD_LENGTH = 8;
 
 async function isEmailFrozen(address: string) {
@@ -57,7 +55,6 @@ export function CustomerLoginActions({
   const [step, setStep] = useState<Step>("form");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(false);
@@ -66,7 +63,6 @@ export function CustomerLoginActions({
     setMode(nextMode);
     setStep("form");
     setPassword("");
-    setOtp("");
     setError(null);
   }
 
@@ -159,68 +155,6 @@ export function CustomerLoginActions({
     setStep("check-email");
   }
 
-  async function handleSendLink(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    if (await isEmailFrozen(email.trim())) {
-      setLoading(false);
-      setError(ACCOUNT_FROZEN_MESSAGE);
-      return;
-    }
-    const supabase = createClient();
-    const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`;
-    const { error: signInError } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { emailRedirectTo },
-    });
-
-    setLoading(false);
-
-    if (signInError) {
-      setError(authErrorMessage(signInError.message));
-      return;
-    }
-
-    setStep("magic-sent");
-  }
-
-  async function handleVerifyOtp(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    const code = otp.trim();
-    if (code.length < OTP_MIN_LENGTH || code.length > OTP_MAX_LENGTH) {
-      setLoading(false);
-      setError(`Enter the ${OTP_MIN_LENGTH}-digit code from your email.`);
-      return;
-    }
-
-    setRememberMePreference(rememberMe);
-    if (await isEmailFrozen(email.trim())) {
-      setLoading(false);
-      setError(ACCOUNT_FROZEN_MESSAGE);
-      return;
-    }
-    const supabase = createClient();
-    const { error: verifyError } = await supabase.auth.verifyOtp({
-      email: email.trim(),
-      token: code,
-      type: "email",
-    });
-
-    setLoading(false);
-
-    if (verifyError) {
-      setError(authErrorMessage(verifyError.message));
-      return;
-    }
-
-    window.location.assign(destination);
-  }
-
   const footerLinks = adminFlow ? (
     <p className="font-body text-xs text-taupe">
       Customer account?{" "}
@@ -229,68 +163,6 @@ export function CustomerLoginActions({
       </a>
     </p>
   ) : null;
-
-  if (step === "magic-sent") {
-    return (
-      <div className="mt-10 text-left">
-        <p className="font-body text-sm leading-relaxed text-ink">
-          Check your email for a secure sign-in link sent to{" "}
-          <span className="font-medium">{email.trim()}</span>.
-        </p>
-        <p className="font-body mt-3 text-xs text-taupe">
-          The link expires shortly. You can close this page after signing in.
-        </p>
-
-        <form onSubmit={handleVerifyOtp} className="mt-8 space-y-4">
-          <div>
-            <label htmlFor="login-otp" className={bookingLabelClass}>
-              Have a one-time code instead?
-            </label>
-            <input
-              id="login-otp"
-              name="otp"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              value={otp}
-              onChange={(event) =>
-                setOtp(event.target.value.replace(/\D/g, "").slice(0, OTP_MAX_LENGTH))
-              }
-              className={bookingFieldClass}
-              placeholder={`${OTP_MIN_LENGTH}-digit code from email`}
-              minLength={OTP_MIN_LENGTH}
-              maxLength={OTP_MAX_LENGTH}
-              pattern={`[0-9]{${OTP_MIN_LENGTH},${OTP_MAX_LENGTH}}`}
-            />
-          </div>
-          {error && (
-            <p className="font-body text-sm text-red-700" role="alert">
-              {error}
-            </p>
-          )}
-          <button
-            type="submit"
-            disabled={
-              loading ||
-              otp.trim().length < OTP_MIN_LENGTH ||
-              otp.trim().length > OTP_MAX_LENGTH
-            }
-            className={bookingPrimaryBtnClass}
-          >
-            {loading ? "Verifying…" : "Verify Code"}
-          </button>
-        </form>
-
-        <button
-          type="button"
-          onClick={() => switchMode("signin")}
-          className="font-body mt-4 text-xs text-taupe underline"
-        >
-          Back to password sign in
-        </button>
-      </div>
-    );
-  }
 
   if (step === "check-email") {
     const copy =
@@ -328,18 +200,14 @@ export function CustomerLoginActions({
       ? "Create an account"
       : mode === "forgot"
         ? "Reset password"
-        : mode === "magic"
-          ? "Email a sign-in link"
-          : "Sign in";
+        : "Sign in";
 
   const onSubmit =
     mode === "signup"
       ? handleSignUp
       : mode === "forgot"
         ? handleForgot
-        : mode === "magic"
-          ? handleSendLink
-          : handlePasswordSignIn;
+        : handlePasswordSignIn;
 
   const submitLabel =
     mode === "signup"
@@ -350,13 +218,9 @@ export function CustomerLoginActions({
         ? loading
           ? "Sending…"
           : "Email reset link"
-        : mode === "magic"
-          ? loading
-            ? "Sending…"
-            : "Email me a sign-in link"
-          : loading
-            ? "Signing in…"
-            : "Sign in";
+        : loading
+          ? "Signing in…"
+          : "Sign in";
 
   const showPassword = mode === "signin" || mode === "signup";
 
@@ -418,22 +282,13 @@ export function CustomerLoginActions({
               Remember me
             </span>
           </label>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-x-4">
-            <button
-              type="button"
-              onClick={() => switchMode("forgot")}
-              className="font-body text-left text-xs text-ink underline"
-            >
-              Forgot password?
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode("magic")}
-              className="font-body text-left text-xs text-ink underline"
-            >
-              Email me a sign-in link
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => switchMode("forgot")}
+            className="font-body text-left text-xs text-ink underline"
+          >
+            Forgot password?
+          </button>
         </div>
       ) : null}
 
