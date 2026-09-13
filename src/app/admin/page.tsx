@@ -67,7 +67,8 @@ export default async function AdminDashboardPage() {
         >
           <h3 className="font-medium text-gold-dark">Customers & Pets</h3>
           <p className="mt-2 text-sm text-text-muted">
-            Owner profiles, pets, past appointment dates, and paid orders.
+            Registered admins and customers, pets, and paid orders. The owner
+            can freeze or delete accounts here.
           </p>
         </Link>
         <Link

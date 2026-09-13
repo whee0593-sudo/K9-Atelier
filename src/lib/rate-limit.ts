@@ -6,6 +6,7 @@ export const RATE_LIMITS = {
   siteAccess: { limit: 5, windowMs: 15 * 60 * 1000 },
   support: { limit: 8, windowMs: 10 * 60 * 1000 },
   notify: { limit: 5, windowMs: 10 * 60 * 1000 },
+  frozenCheck: { limit: 20, windowMs: 10 * 60 * 1000 },
   travelFee: { limit: 20, windowMs: 10 * 60 * 1000 },
 } as const;
 

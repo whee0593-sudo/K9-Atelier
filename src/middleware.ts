@@ -26,6 +26,7 @@ const PUBLIC_PATHS = [
   "/referrals",
   "/api/support",
   "/api/notify",
+  "/api/auth",
   "/api/cron",
   "/api/sms",
   "/api/voice",
@@ -49,8 +50,16 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (hasSupabaseConfig()) {
-    const { response: sessionResponse, user } =
+    const { response: sessionResponse, user, frozen } =
       await refreshSupabaseSession(request);
+
+    if (frozen && !pathname.startsWith("/login")) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/login";
+      loginUrl.search = "error=frozen";
+      const redirectResponse = NextResponse.redirect(loginUrl);
+      return copySupabaseCookies(sessionResponse, redirectResponse);
+    }
 
     if (isCustomerProtectedPath(pathname) && !user) {
       const loginUrl = request.nextUrl.clone();
