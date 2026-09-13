@@ -65,6 +65,9 @@ const APPOINTMENT_SELECT = `
   status,
   confirmed_at,
   customer_confirmed_at,
+  staff_created,
+  customer_confirm_token_hash,
+  customer_confirm_expires_at,
   created_at,
   pets ( name, breed )
 `;
@@ -311,9 +314,9 @@ export async function listPendingAdminAppointments(): Promise<
   }
 
   return {
-    appointments: ((data ?? []) as unknown as AppointmentRow[]).map(
-      mapAppointmentRowToAdminRecord,
-    ),
+    appointments: ((data ?? []) as unknown as AppointmentRow[])
+      .map(mapAppointmentRowToAdminRecord)
+      .filter((appointment) => !appointment.awaitingCustomerConfirm),
   };
 }
 

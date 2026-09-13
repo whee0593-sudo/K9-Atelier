@@ -33,6 +33,18 @@ function customerLabel(profile: CustomerProfile) {
   return name || profile.email;
 }
 
+function bookForCustomerHref(profile: CustomerProfile) {
+  const params = new URLSearchParams();
+  if (profile.email) params.set("email", profile.email);
+  if (profile.firstName) params.set("firstName", profile.firstName);
+  if (profile.lastName) params.set("lastName", profile.lastName);
+  if (profile.phone) params.set("phone", profile.phone);
+  const query = params.toString();
+  return query
+    ? `/admin/book-for-customer?${query}`
+    : "/admin/book-for-customer";
+}
+
 function AccountActionButton({
   label,
   busyLabel,
@@ -448,6 +460,14 @@ export function CustomerRecordCard({
           </p>
         </button>
         <div className="flex shrink-0 items-center gap-2">
+          {customer.kind === "customer" && !customer.frozen ? (
+            <a
+              href={bookForCustomerHref(customer.profile)}
+              className="rounded-xl border border-lavender/40 px-3 py-2 text-sm text-text-muted hover:border-gold/40 hover:text-text"
+            >
+              Book for customer
+            </a>
+          ) : null}
           {renderOwnerActions()}
           <button
             type="button"
@@ -471,6 +491,14 @@ export function CustomerRecordCard({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-base font-medium text-gold-dark">Owner Profile</h3>
               <div className="flex flex-wrap items-center gap-2">
+                {customer.kind === "customer" && !customer.frozen ? (
+                  <a
+                    href={bookForCustomerHref(customer.profile)}
+                    className="rounded-xl border border-lavender/40 px-3 py-2 text-sm text-text-muted hover:border-gold/40 hover:text-text"
+                  >
+                    Book for customer
+                  </a>
+                ) : null}
                 <CallCustomerButton
                   customerId={customer.profile.id}
                   disabled={!customer.profile.phone}

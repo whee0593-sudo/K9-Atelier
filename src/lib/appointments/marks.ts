@@ -7,6 +7,7 @@ type MarkInput = {
   status: AppointmentStatus;
   vaccinationStatusAtBooking?: VaccinationBookingStatus | null;
   customerConfirmedAt?: string | null;
+  awaitingCustomerConfirm?: boolean;
 };
 
 const FAILED_VACCINE_STATUSES = new Set<VaccinationBookingStatus>([
@@ -21,6 +22,10 @@ const FAILED_VACCINE_STATUSES = new Set<VaccinationBookingStatus>([
  * Customer YES is a separate confirm mark, only after the booking succeeded.
  */
 export function appointmentCornerMark(appointment: MarkInput): AppointmentCornerKind {
+  if (appointment.awaitingCustomerConfirm) {
+    return null;
+  }
+
   if (appointment.status === "pending_confirmation") {
     return "vaccination_alert";
   }

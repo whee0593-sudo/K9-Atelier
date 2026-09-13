@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PetProfileAgeSummary } from "@/components/account/PetBirthdayFields";
 import { PetProfileFieldsForm } from "@/components/account/PetProfileFieldsForm";
+import { AccountSetupNotice } from "@/components/account/AccountSetupNotice";
 import type { PetProfile } from "@/lib/pets";
 import { petProfileVaccinationLabel } from "@/lib/vaccinations/booking";
 import { useCustomerPets } from "@/lib/pets/use-customer-pets";
+import { petToExpandForSetup } from "@/lib/account-setup";
 
 function createDraftPet(name = "New Pet"): PetProfile {
   return {
@@ -99,7 +101,13 @@ function PetCard({
   );
 }
 
-export function PetProfilesManager() {
+export function PetProfilesManager({
+  setup = false,
+  setupPetId = null,
+}: {
+  setup?: boolean;
+  setupPetId?: string | null;
+} = {}) {
   const {
     pets,
     loading,
@@ -113,9 +121,17 @@ export function PetProfilesManager() {
     isPersistedPetId,
   } = useCustomerPets();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [openedSetupPet, setOpenedSetupPet] = useState(false);
   const [showNewForm, setShowNewForm] = useState(false);
   const [draftPet, setDraftPet] = useState<PetProfile>(() => createDraftPet());
   const [submittingDraft, setSubmittingDraft] = useState(false);
+
+  useEffect(() => {
+    if (!setup || openedSetupPet || loading || pets.length === 0) return;
+    const nextId = petToExpandForSetup(pets, setupPetId);
+    if (nextId) setExpandedId(nextId);
+    setOpenedSetupPet(true);
+  }, [setup, openedSetupPet, loading, pets, setupPetId]);
 
   async function handleAddPet() {
     setSubmittingDraft(true);
@@ -149,6 +165,7 @@ export function PetProfilesManager() {
 
   return (
     <div className="space-y-4">
+      {setup ? <AccountSetupNotice step="pets" /> : null}
       {error && (
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
           {error}

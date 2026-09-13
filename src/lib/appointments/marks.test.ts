@@ -31,6 +31,17 @@ describe("appointment corner marks", () => {
     );
   });
 
+  it("hides the vaccination alert while a staff-created booking waits for the customer", () => {
+    assert.equal(
+      appointmentCornerMark({
+        status: "pending_confirmation",
+        vaccinationStatusAtBooking: "missing",
+        awaitingCustomerConfirm: true,
+      }),
+      null,
+    );
+  });
+
   it("shows confirm only after the booking succeeded and the customer replies YES", () => {
     assert.equal(
       appointmentCornerMark({

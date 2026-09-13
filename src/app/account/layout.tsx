@@ -3,6 +3,7 @@ import { AccountNav } from "@/components/account/AccountNav";
 import { CustomerSignOutButton } from "@/components/auth/CustomerSignOutButton";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { accountConfig } from "@/lib/account-fields";
+import { readRequestPathname } from "@/lib/request-path";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AccountLayout({
@@ -16,7 +17,8 @@ export default async function AccountLayout({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login?next=/account");
+    const pathname = await readRequestPathname("/account");
+    redirect(`/login?next=${pathname}`);
   }
 
   return (

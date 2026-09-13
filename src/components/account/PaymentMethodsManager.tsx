@@ -18,6 +18,7 @@ import {
   formatPaymentMethodLabel,
   type PaymentMethodRecord,
 } from "@/lib/payments/types";
+import { AccountSetupNotice } from "@/components/account/AccountSetupNotice";
 
 const stripePromiseCache = new Map<string, Promise<Stripe | null>>();
 
@@ -135,7 +136,11 @@ function AddCardForm({
   );
 }
 
-export function PaymentMethodsManager() {
+export function PaymentMethodsManager({
+  fromAccountSetup = false,
+}: {
+  fromAccountSetup?: boolean;
+} = {}) {
   const [methods, setMethods] = useState<PaymentMethodRecord[]>([]);
   const [configured, setConfigured] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -210,6 +215,7 @@ export function PaymentMethodsManager() {
 
   return (
     <div className="space-y-4">
+      {fromAccountSetup ? <AccountSetupNotice step="payment" /> : null}
       {error && (
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
           {error}
@@ -225,7 +231,9 @@ export function PaymentMethodsManager() {
 
       {methods.length === 0 && !setup ? (
         <div className="rounded-xl border border-dashed border-lavender/50 bg-lavender-light/30 px-4 py-8 text-center text-sm text-text-muted">
-          No saved cards yet. Add a card before you reserve an appointment.
+          {fromAccountSetup
+            ? "No saved cards yet. Add a card on file. You are not charged now."
+            : "No saved cards yet. Add a card before you reserve an appointment."}
         </div>
       ) : (
         <ul className="space-y-3">
