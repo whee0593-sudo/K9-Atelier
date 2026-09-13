@@ -1,4 +1,7 @@
+import { digitsOnly } from "@/lib/sms/phone";
+
 const CODE_TOKEN = /[^A-Z0-9]+/g;
+const ACCOUNT_CODE_FORMAT = /^[A-Z0-9]*[0-9]{4}(?:-\d+)?$/;
 
 export function normalizeReferralCode(value: string) {
   return value
@@ -13,16 +16,24 @@ export function referralCodeToken(value: string) {
   return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
+export function phoneLastFour(phone: string) {
+  const digits = digitsOnly(phone);
+  if (digits.length < 4) return "";
+  return digits.slice(-4);
+}
+
+export function isAccountReferralCodeFormat(code: string) {
+  return ACCOUNT_CODE_FORMAT.test(normalizeReferralCode(code));
+}
+
 export function buildReferralCodeBase(input: {
   petName: string;
-  ownerFirstName: string;
-  ownerLastName: string;
+  phone: string;
 }) {
-  const pet = referralCodeToken(input.petName);
-  const first = referralCodeToken(input.ownerFirstName);
-  const lastInitial = referralCodeToken(input.ownerLastName).slice(0, 1);
-  const parts = [pet, first, lastInitial].filter(Boolean);
-  return normalizeReferralCode(parts.join("-")) || "K9-GUEST";
+  const last4 = phoneLastFour(input.phone);
+  if (!last4) return "";
+  const pet = referralCodeToken(input.petName) || "K9";
+  return normalizeReferralCode(`${pet}${last4}`);
 }
 
 export function nextReferralCodeCandidate(base: string, attempt: number) {

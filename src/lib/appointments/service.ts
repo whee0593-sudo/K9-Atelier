@@ -178,6 +178,13 @@ export async function createAppointment(
     return { error: "server" };
   }
 
+  try {
+    const { ensureCustomerReferralCode } = await import("@/lib/referrals/service");
+    await ensureCustomerReferralCode(user.id);
+  } catch (error) {
+    console.error("createAppointment referral code failed:", error);
+  }
+
   if (input.referralCode?.trim()) {
     const { validateReferralCodeForCustomer } = await import(
       "@/lib/referrals/service"

@@ -44,6 +44,7 @@ export type AppointmentChargeRecord = {
   receiptChannel: ReceiptChannel | null;
   paidAt: string | null;
   refundedAmount: number;
+  referralCreditApplied?: number;
 };
 
 export type CollectContext = {

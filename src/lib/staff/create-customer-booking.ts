@@ -291,12 +291,8 @@ export async function createStaffCustomerBooking(
     }
 
     try {
-      const { ensurePetReferralCode } = await import("@/lib/referrals/service");
-      await ensurePetReferralCode({
-        petId: petRow.id as string,
-        petName: input.pet.name,
-        ownerCustomerId: userId,
-      });
+      const { ensureCustomerReferralCode } = await import("@/lib/referrals/service");
+      await ensureCustomerReferralCode(userId);
     } catch (error) {
       console.error("createStaffCustomerBooking referral code failed:", error);
     }

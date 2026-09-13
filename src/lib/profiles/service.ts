@@ -67,6 +67,12 @@ export async function updateOwnProfile(
     return { error: "server" };
   }
   if (!data) return { error: "not_found" };
+  try {
+    const { ensureCustomerReferralCode } = await import("@/lib/referrals/service");
+    await ensureCustomerReferralCode(user.id);
+  } catch (error) {
+    console.error("updateOwnProfile referral code failed:", error);
+  }
   return { profile: mapProfileRow(data as CustomerProfileRow) };
 }
 
@@ -93,5 +99,11 @@ export async function updateStaffCustomerProfile(
     return { error: "server" };
   }
   if (!data) return { error: "not_found" };
+  try {
+    const { ensureCustomerReferralCode } = await import("@/lib/referrals/service");
+    await ensureCustomerReferralCode(customerId);
+  } catch (error) {
+    console.error("updateStaffCustomerProfile referral code failed:", error);
+  }
   return { profile: mapProfileRow(data as CustomerProfileRow) };
 }

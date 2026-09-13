@@ -5,6 +5,7 @@ import {
   isEligibleReferralLine,
   newClientDiscountCents,
   quoteReferralApplication,
+  remainingAccountCreditCents,
   resolveReferralCategory,
 } from "./eligible";
 
@@ -96,5 +97,31 @@ describe("referral eligible amounts", () => {
     });
     assert.equal(quote.creditCents, 2000);
     assert.equal(quote.dueCents, 7000);
+    assert.equal(remainingAccountCreditCents(5000, quote.creditCents), 3000);
+  });
+
+  it("keeps leftover credit on the account for any later pet checkout", () => {
+    const firstDog = quoteReferralApplication({
+      lineItems: [bath],
+      tipAmount: 0,
+      availableCreditCents: 5000,
+      mode: "custom",
+      customDollars: 15,
+      applyNewClientDiscount: false,
+    });
+    const leftover = remainingAccountCreditCents(5000, firstDog.creditCents);
+    assert.equal(firstDog.creditCents, 1500);
+    assert.equal(leftover, 3500);
+
+    const secondDog = quoteReferralApplication({
+      lineItems: [bath],
+      tipAmount: 0,
+      availableCreditCents: leftover,
+      mode: "custom",
+      customDollars: 35,
+      applyNewClientDiscount: false,
+    });
+    assert.equal(secondDog.creditCents, 3500);
+    assert.equal(remainingAccountCreditCents(leftover, secondDog.creditCents), 0);
   });
 });

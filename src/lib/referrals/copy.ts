@@ -2,10 +2,10 @@ export const REFERRAL_HEADLINE = "UNLIMITED REFERRALS.";
 export const REFERRAL_TAGLINE = "10% FOR THEM. 10% FOR YOU.";
 
 export const REFERRAL_INTRO = [
-  "Share one of your dog’s personalized K9 Atelier referral codes with a friend.",
+  "Share your K9 Atelier referral code with a friend.",
   "Your friend’s household will receive 10% off eligible service charges on their first completed appointment.",
   "After their appointment is completed and paid, you’ll receive Referral Credit equal to the dollar value of their discount.",
-  "Referral Credit accumulates in your account, and you may apply some or all of your available balance toward an eligible appointment.",
+  "Referral Credit lives in your owner account and is shared by every dog on that account. At checkout for any of them, you may enter an amount up to your available balance. The remaining balance updates as soon as the visit is paid.",
 ];
 
 export const REFERRAL_TERMS = [
@@ -27,7 +27,7 @@ export const REFERRAL_TERMS = [
   },
   {
     title: "5. Accumulated Referral Credit",
-    body: "Referral Credit accumulates in the referring client’s account. Clients may apply some or all of their available Referral Credit toward one eligible appointment.",
+    body: "Referral Credit accumulates in the referring client’s account, not on an individual pet. Every dog on that account shares the same balance, and a custom amount may be applied at checkout for any of them. The remaining balance updates as soon as the appointment is paid.",
   },
   {
     title: "6. Eligible Service Charges Only",

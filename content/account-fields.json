@@ -259,7 +259,7 @@
       "id": "referrals",
       "path": "/account/referrals",
       "title": "Referral Rewards",
-      "description": "Your pet referral codes, share links, and available Referral Credit.",
+      "description": "Your referral code, share link, and available Referral Credit.",
       "fields": []
     },
     {

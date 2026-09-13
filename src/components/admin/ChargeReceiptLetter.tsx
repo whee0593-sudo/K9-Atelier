@@ -16,6 +16,7 @@ export function ChargeReceiptLetter({
   appointment,
   charge,
   paymentMethodLabel,
+  remainingReferralCredit,
   receiptNumber,
   websiteUrl,
   instagramUrl,
@@ -24,6 +25,7 @@ export function ChargeReceiptLetter({
   appointment: AdminAppointmentRecord;
   charge: AppointmentChargeRecord;
   paymentMethodLabel?: string | null;
+  remainingReferralCredit?: number | null;
   receiptNumber?: string | null;
   websiteUrl?: string;
   instagramUrl?: string | null;
@@ -39,7 +41,11 @@ export function ChargeReceiptLetter({
   const paymentStatus = receiptPaymentStatus(charge);
   const phone = business.brand.phone?.trim() || null;
   const showAppointment = Boolean(appointmentDate || appointmentTime);
-  const showService = charge.lineItems.length > 0 || charge.tipAmount > 0;
+  const referralCreditApplied = Number(charge.referralCreditApplied ?? 0);
+  const showService =
+    charge.lineItems.length > 0 ||
+    charge.tipAmount > 0 ||
+    referralCreditApplied > 0;
   const thankYouBody = petName
     ? `We are truly grateful that you have entrusted ${petName}’s care to K9 Atelier.`
     : "We are truly grateful for choosing K9 Atelier.";
@@ -100,6 +106,12 @@ export function ChargeReceiptLetter({
                 {charge.tipAmount > 0 ? (
                   <MoneyRow label="Gratuity" amount={charge.tipAmount} />
                 ) : null}
+                {referralCreditApplied > 0 ? (
+                  <MoneyRow
+                    label="Referral Credit"
+                    amount={-referralCreditApplied}
+                  />
+                ) : null}
               </ul>
             </section>
           ) : null}
@@ -123,12 +135,21 @@ export function ChargeReceiptLetter({
             ) : null}
           </section>
 
-          {receiptNumber || paymentDate || paymentMethodLabel ? (
+          {receiptNumber ||
+          paymentDate ||
+          paymentMethodLabel ||
+          remainingReferralCredit != null ? (
             <section className="space-y-2 text-base leading-[1.6] text-[#766F75]">
               {receiptNumber ? <p>Receipt number: {receiptNumber}</p> : null}
               {paymentDate ? <p>Payment date: {paymentDate}</p> : null}
               {paymentMethodLabel ? (
                 <p>Payment method: {paymentMethodLabel}</p>
+              ) : null}
+              {remainingReferralCredit != null ? (
+                <p>
+                  Account Referral Credit remaining:{" "}
+                  {formatChargeMoney(remainingReferralCredit)}
+                </p>
               ) : null}
             </section>
           ) : null}
