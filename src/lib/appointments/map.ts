@@ -6,7 +6,7 @@ import type {
 import { stringAddOnOptions } from "@/lib/charges/visit-line-items";
 import { getServiceDisplayName } from "@/lib/service-display";
 import type { VaccinationBookingStatus } from "@/lib/vaccinations/types";
-import { isAwaitingCustomerConfirm } from "@/lib/staff/customer-confirm-token";
+import { isAwaitingCustomerConfirm } from "@/lib/staff/customer-confirm-status";
 
 function firstRelation<T>(value: T | T[] | null | undefined): T | null {
   if (value == null) return null;
