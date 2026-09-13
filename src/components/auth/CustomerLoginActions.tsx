@@ -407,7 +407,18 @@ export function CustomerLoginActions({
 
       {mode === "signin" ? (
         <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5">
-          <div className="order-2 flex flex-col gap-2 sm:order-1 sm:flex-row sm:items-center sm:gap-x-4">
+          <label className="flex cursor-pointer items-center gap-3">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(event) => setRememberMe(event.target.checked)}
+              className="h-4 w-4 accent-deep-lavender"
+            />
+            <span className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-taupe">
+              Remember me
+            </span>
+          </label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-x-4">
             <button
               type="button"
               onClick={() => switchMode("forgot")}
@@ -423,17 +434,6 @@ export function CustomerLoginActions({
               Email me a sign-in link
             </button>
           </div>
-          <label className="order-1 flex cursor-pointer items-center gap-3 sm:order-2">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(event) => setRememberMe(event.target.checked)}
-              className="h-4 w-4 accent-deep-lavender"
-            />
-            <span className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-taupe">
-              Remember me
-            </span>
-          </label>
         </div>
       ) : null}
 
