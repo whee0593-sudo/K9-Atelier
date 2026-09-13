@@ -14,6 +14,7 @@ export function buildPreviewCollectContext(
     },
   ];
   const tipAmount = 25.2;
+  const referralCreditApplied = options.paid ? 20 : 0;
   const paidCharge: AppointmentChargeRecord | null = options.paid
     ? {
         id: "preview-charge",
@@ -23,10 +24,11 @@ export function buildPreviewCollectContext(
         lineItems,
         subtotal: 140,
         tipAmount,
-        total: 165.2,
+        total: 145.2,
         receiptChannel: "email",
         paidAt: "2026-07-08T15:10:00.000Z",
         refundedAmount: 0,
+        referralCreditApplied,
       }
     : null;
   return {
@@ -88,9 +90,9 @@ export function buildPreviewCollectContext(
     stripeConfigured: true,
     stripePublishableKey: "",
     referral: {
-      availableCreditCents: 10000,
+      availableCreditCents: options.paid ? 8000 : 10000,
       applyNewClientDiscount: false,
-      canUseCredit: true,
+      canUseCredit: !options.paid,
       referralCode: null,
     },
   };

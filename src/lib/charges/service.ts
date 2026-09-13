@@ -73,6 +73,10 @@ function mapCharge(row: ChargeRow & { refunded_amount?: number | null }): Appoin
     receiptChannel: row.receipt_channel,
     paidAt: row.paid_at,
     refundedAmount: Number(row.refunded_amount ?? 0),
+    referralCreditApplied: Number(
+      (row as ChargeRow & { referral_credit_applied?: number | null })
+        .referral_credit_applied ?? 0,
+    ),
   };
 }
 
@@ -107,7 +111,7 @@ export async function getCollectContext(
   const { data: charges, error: chargeError } = await admin
     .from("appointment_charges")
     .select(
-      "id, appointment_id, kind, status, line_items, subtotal, tip_amount, total, receipt_channel, paid_at, refunded_amount",
+      "id, appointment_id, kind, status, line_items, subtotal, tip_amount, total, receipt_channel, paid_at, refunded_amount, referral_credit_applied",
     )
     .eq("appointment_id", appointmentId)
     .eq("status", "paid");

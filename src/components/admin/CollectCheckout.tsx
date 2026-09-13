@@ -306,6 +306,7 @@ export function CollectCheckout({
           receiptChannel: null,
           paidAt: new Date().toISOString(),
           refundedAmount: 0,
+          referralCreditApplied: centsToDollars(referralQuote.creditCents),
         }
       : null);
 
@@ -434,6 +435,7 @@ export function CollectCheckout({
         receiptChannel: null,
         paidAt: new Date().toISOString(),
         refundedAmount: 0,
+        referralCreditApplied: centsToDollars(referralQuote.creditCents),
       };
       setChargeId(nextCharge.id);
       setPaidCharge(nextCharge);

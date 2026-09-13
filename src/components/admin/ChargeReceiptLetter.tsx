@@ -41,7 +41,11 @@ export function ChargeReceiptLetter({
   const paymentStatus = receiptPaymentStatus(charge);
   const phone = business.brand.phone?.trim() || null;
   const showAppointment = Boolean(appointmentDate || appointmentTime);
-  const showService = charge.lineItems.length > 0 || charge.tipAmount > 0;
+  const referralCreditApplied = Number(charge.referralCreditApplied ?? 0);
+  const showService =
+    charge.lineItems.length > 0 ||
+    charge.tipAmount > 0 ||
+    referralCreditApplied > 0;
   const thankYouBody = petName
     ? `We are truly grateful that you have entrusted ${petName}’s care to K9 Atelier.`
     : "We are truly grateful for choosing K9 Atelier.";
@@ -101,6 +105,12 @@ export function ChargeReceiptLetter({
                 ))}
                 {charge.tipAmount > 0 ? (
                   <MoneyRow label="Gratuity" amount={charge.tipAmount} />
+                ) : null}
+                {referralCreditApplied > 0 ? (
+                  <MoneyRow
+                    label="Referral Credit"
+                    amount={-referralCreditApplied}
+                  />
                 ) : null}
               </ul>
             </section>

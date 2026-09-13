@@ -14,6 +14,13 @@ describe("collect checkout referral code field", () => {
     assert.equal(context.referral?.canUseCredit, true);
   });
 
+  it("shows leftover account credit on the paid preview receipt", () => {
+    const paid = buildPreviewCollectContext({ paid: true });
+    assert.equal(paid.referral?.availableCreditCents, 8000);
+    assert.equal(paid.paidCharges[0]?.referralCreditApplied, 20);
+    assert.equal(paid.paidCharges[0]?.total, 145.2);
+  });
+
   it("keeps new-client discount separate from referral credit on the bill", () => {
     const withDiscount = quoteReferralApplication({
       lineItems: [
