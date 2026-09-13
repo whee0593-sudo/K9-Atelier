@@ -46,17 +46,6 @@ export const ACCOUNT_HUB_MORE_IDS = [
   "password",
 ] as const;
 
-const HUB_HINTS: Record<string, string> = {
-  bookings: "Upcoming and past visits",
-  pets: "Profiles and vaccine records",
-  payment: "Cards on file",
-  profile: "Name and contact details",
-};
-
-export function accountHubHint(sectionId: string) {
-  return HUB_HINTS[sectionId] ?? "";
-}
-
 export function accountHubSections(group: "primary" | "more"): AccountSection[] {
   const ids = group === "primary" ? ACCOUNT_HUB_PRIMARY_IDS : ACCOUNT_HUB_MORE_IDS;
   return ids.flatMap((id) => {

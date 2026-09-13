@@ -1,9 +1,5 @@
 import Link from "next/link";
-import {
-  accountConfig,
-  accountHubHint,
-  accountHubSections,
-} from "@/lib/account-fields";
+import { accountHubSections } from "@/lib/account-fields";
 
 const primaryLinkClass =
   "flex items-center justify-between gap-4 rounded-2xl border border-lavender/30 bg-cream px-5 py-4 transition hover:border-gold/40 hover:bg-lavender-light/30";
@@ -17,13 +13,9 @@ export function AccountHub() {
 
   return (
     <div>
-      <p className="text-sm leading-relaxed text-text-muted md:text-base">
-        {accountConfig.overview.description}
-      </p>
-
       <Link
         href="/book"
-        className="mt-6 inline-flex min-h-[48px] w-full items-center justify-center rounded-2xl bg-gold px-6 py-3 text-sm font-medium text-white transition hover:bg-gold-dark"
+        className="inline-flex min-h-[48px] w-full items-center justify-center rounded-2xl bg-gold px-6 py-3 text-sm font-medium text-white transition hover:bg-gold-dark"
       >
         Book an Appointment
       </Link>
@@ -32,14 +24,7 @@ export function AccountHub() {
         {primary.map((section) => (
           <li key={section.id}>
             <Link href={section.path} className={primaryLinkClass}>
-              <span className="min-w-0">
-                <span className="block font-medium text-gold-dark">
-                  {section.title}
-                </span>
-                <span className="mt-1 block text-sm text-text-muted">
-                  {accountHubHint(section.id)}
-                </span>
-              </span>
+              <span className="font-medium text-gold-dark">{section.title}</span>
               <span aria-hidden className="text-taupe">
                 →
               </span>

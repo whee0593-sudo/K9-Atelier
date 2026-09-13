@@ -4,7 +4,6 @@ import {
   ACCOUNT_HUB_MORE_IDS,
   ACCOUNT_HUB_PRIMARY_IDS,
   accountConfig,
-  accountHubHint,
   accountHubListsEverySection,
   accountHubSections,
 } from "@/lib/account-fields";
@@ -23,7 +22,6 @@ describe("account hub grouping", () => {
       accountHubSections("more").map((section) => section.id),
       [...ACCOUNT_HUB_MORE_IDS],
     );
-    assert.equal(accountHubHint("bookings"), "Upcoming and past visits");
   });
 
   it("does not drop a configured section from either group", () => {
