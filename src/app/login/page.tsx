@@ -55,12 +55,22 @@ export default async function LoginPage({ searchParams }: Props) {
           startWithSignup={mode === "signup"}
         />
 
-        <Link
-          href="/"
-          className="font-body mt-10 inline-block text-[10px] font-medium uppercase tracking-[0.14em] text-taupe transition hover:text-ink"
-        >
-          Return Home
-        </Link>
+        <div className="mt-10 flex items-center justify-center gap-8">
+          <Link
+            href="/"
+            className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe transition hover:text-ink"
+          >
+            Return Home
+          </Link>
+          {adminFlow ? null : (
+            <Link
+              href="/login?next=/admin"
+              className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe transition hover:text-ink"
+            >
+              Staff Login
+            </Link>
+          )}
+        </div>
       </div>
     </Container>
   );
