@@ -14,6 +14,14 @@ export default async function AdminLayout({
   const pathname = await readRequestPathname("/admin");
   const next = pathname.startsWith("/admin") ? pathname : "/admin";
 
+  if (pathname === "/admin/book-for-customer/preview") {
+    return (
+      <AdminChrome banner={<AdminStaffBanner />} showTeam={false}>
+        {children}
+      </AdminChrome>
+    );
+  }
+
   if ("error" in session) {
     if (session.error === "unauthenticated") {
       redirect(`/login?next=${next}`);

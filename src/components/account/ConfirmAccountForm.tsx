@@ -84,6 +84,25 @@ export function ConfirmAccountForm({ token, preview }: Props) {
     if (loadState.status !== "ready") return;
     setError(null);
 
+    if (preview) {
+      if (loadState.preview.requiresPassword) {
+        if (password.length < 8) {
+          setError("Use at least 8 characters.");
+          return;
+        }
+        if (password !== confirm) {
+          setError("Passwords do not match.");
+          return;
+        }
+      }
+      if (!acceptPolicies) {
+        setError("Please confirm this appointment and agree to the service policies.");
+        return;
+      }
+      setLoadState({ status: "done" });
+      return;
+    }
+
     if (loadState.preview.requiresPassword) {
       if (password.length < 8) {
         setError("Use at least 8 characters.");
