@@ -1,0 +1,63 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { GalleryLightbox } from "@/components/gallery/GalleryLightbox";
+import { GalleryWall } from "@/components/gallery/GalleryWall";
+import { GALLERY_WALL_GUIDE_ASSETS } from "@/lib/gallery-wall";
+
+describe("gallery wall markup", () => {
+  it("renders one horizontal museum track instead of masonry", () => {
+    const html = renderToStaticMarkup(<GalleryWall />);
+    assert.match(html, /Selected Work/);
+    assert.match(html, /Competition Archive/);
+    assert.match(html, /Keepsakes/);
+    assert.match(html, /This gallery scrolls horizontally/);
+    assert.match(html, /Drag to explore/);
+    assert.match(html, /Teaching notes and show-day snapshots/);
+    assert.match(html, /2019/);
+    assert.match(html, /BEST IN SHOW/);
+    assert.match(html, /Bichon/);
+    assert.equal(html.includes("Best in Group"), false);
+    assert.equal(html.includes("Pomeranian"), false);
+    assert.equal(html.includes("Credentials"), false);
+    assert.match(html, /gallery-01\.png/);
+    assert.match(html, /gallery-17\.png/);
+    assert.match(html, /competition-04\.jpg/);
+    assert.match(html, /competition-08\.jpg/);
+    assert.equal(html.includes("columns-2"), false);
+    for (const src of GALLERY_WALL_GUIDE_ASSETS) {
+      assert.equal(html.includes(src), false);
+    }
+  });
+});
+
+describe("gallery lightbox markup", () => {
+  it("exposes dialog semantics and the 2019 winner caption", () => {
+    const html = renderToStaticMarkup(
+      <GalleryLightbox
+        activeId="competition-04"
+        onActiveIdChange={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    assert.match(html, /role="dialog"/);
+    assert.match(html, /aria-modal="true"/);
+    assert.match(html, /2019 · Best in Show/);
+    assert.match(html, /Bichon/);
+    assert.match(html, /Previous image/);
+    assert.match(html, /Next image/);
+  });
+
+  it("omits a visible caption for selected work", () => {
+    const html = renderToStaticMarkup(
+      <GalleryLightbox
+        activeId="work-01"
+        onActiveIdChange={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    assert.equal(html.includes("2019 · Best in Show"), false);
+    assert.match(html, /gallery-01\.png/);
+  });
+});
