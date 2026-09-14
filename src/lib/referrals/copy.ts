@@ -4,7 +4,7 @@ export const REFERRAL_TAGLINE = "10% FOR THEM. 10% FOR YOU.";
 export const REFERRAL_INTRO = [
   "Share one of your dog’s personalized K9 Atelier referral codes with a friend.",
   "Your friend’s household will receive 10% off eligible service charges on their first completed appointment.",
-  "After their appointment is completed and paid, you’ll receive Referral Credit equal to the dollar value of their discount.",
+  "After their appointment is completed and paid, you’ll receive promotional Referral Credit equal to the dollar value of their discount.",
   "Referral Credit accumulates in your account, and you may apply some or all of your available balance toward an eligible appointment.",
 ];
 
@@ -23,7 +23,7 @@ export const REFERRAL_TERMS = [
   },
   {
     title: "4. Equal-Value Referral Credit",
-    body: "The referring client receives Referral Credit equal to the dollar value of the referred household’s actual 10% discount.",
+    body: "The referring client receives promotional Referral Credit equal to the dollar value of the referred household’s actual 10% discount.",
   },
   {
     title: "5. Accumulated Referral Credit",
@@ -43,7 +43,7 @@ export const REFERRAL_TERMS = [
   },
   {
     title: "9. No Cash Value",
-    body: "Referral Credit has no cash value and cannot be transferred, withdrawn or exchanged for cash.",
+    body: "Referral Credit is a promotional service credit only. It has no cash value and cannot be transferred, withdrawn, sold, or exchanged for cash. Referral Credit may only be applied toward eligible K9 Atelier service charges.",
   },
   {
     title: "10. Refunds and Reversals",
