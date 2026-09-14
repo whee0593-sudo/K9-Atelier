@@ -108,7 +108,7 @@ export default async function AdminDashboardPage() {
         >
           <h3 className="font-medium text-gold-dark">Preview Customer Account</h3>
           <p className="mt-2 text-sm text-text-muted">
-            See what customers see in their profile and inbox.
+            See what customers see in their account.
           </p>
         </Link>
       </div>
