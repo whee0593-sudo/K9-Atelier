@@ -58,7 +58,7 @@ export function Footer() {
               {getBrandSearchName()}
             </p>
             <p className="font-body mt-3 text-[12px] font-medium leading-relaxed text-taupe">
-              Private, cage-free mobile dog grooming for dogs under 45 lbs.
+              Private, cage-free mobile dog grooming for dogs up to 45 lbs.
             </p>
             <p className="font-body mt-1.5 text-[12px] font-medium leading-relaxed text-taupe">
               Serving Jupiter, Palm Beach Gardens & West Palm Beach.
