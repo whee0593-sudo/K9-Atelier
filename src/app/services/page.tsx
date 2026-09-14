@@ -46,7 +46,7 @@ export default function ServicesPage() {
         id="most-requested"
         eyebrow="Most Requested"
         title="The Appointments Clients Book Most."
-        intro="Three starting points for a calm, one-on-one visit — chosen for coat care, a complete style, or weekly long-coat maintenance."
+        intro="Three starting points for a calm, one-on-one visit — chosen for coat care, a complete style, or weekly show care."
         tone="mist"
       >
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -60,7 +60,7 @@ export default function ServicesPage() {
         id="bath-coat"
         eyebrow="Bath & Coat Care"
         title="Coat Health, Kept Beautiful."
-        intro="Foundational bathing and weekly long-coat care, tailored to texture, length, and how your dog lives."
+        intro="Foundational bathing and weekly show care, tailored to texture, length, and how your dog lives."
         tone="ivory"
       >
         <div className="grid gap-6 lg:grid-cols-2">
