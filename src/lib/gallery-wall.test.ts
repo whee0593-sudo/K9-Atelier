@@ -1,4 +1,6 @@
 ﻿import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { describe, it } from "node:test";
 import {
   COMPETITION_ARCHIVE_ITEMS,
@@ -82,13 +84,15 @@ describe("competition archive data", () => {
     );
   });
 
-  it("points every archive item at the expected public filename", () => {
+  it("points every archive item at a real JPEG in public/", () => {
     for (const [index, item] of COMPETITION_ARCHIVE_ITEMS.entries()) {
       const n = String(index + 1).padStart(2, "0");
       assert.equal(
         item.src,
         `/images/gallery/competition/competition-${n}.jpg`,
       );
+      const file = path.join(process.cwd(), "public", item.src.slice(1));
+      assert.equal(fs.existsSync(file), true, file);
     }
   });
 
@@ -131,6 +135,8 @@ describe("2019 winner metadata", () => {
       (item) => item.id === GALLERY_WINNER_ITEM_ID,
     );
     assert.equal(winner?.id, "competition-04");
+    assert.equal(winner?.width, 960);
+    assert.equal(winner?.height, 801);
     assert.deepEqual(winner?.caption, {
       kicker: "2019",
       title: "Best in Show",

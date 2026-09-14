@@ -323,7 +323,7 @@ export type GalleryLightboxItem = {
 };
 
 /**
- * Intrinsic width/height are provisional until the JPEGs are placed.
+ * Intrinsic width/height match the JPEGs in public/images/gallery/competition/.
  * Frames use object-fit: contain so a mismatched ratio is never stretched.
  * Only competition-04 carries the 2019 Best in Show caption.
  * Other photographs are teaching notes or show-day snapshots — not a résumé.
@@ -333,8 +333,8 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     id: "competition-01",
     src: competitionImageSrc(1),
     alt: "Large group of competitors and groomed dogs gathered on a competition floor",
-    width: 1800,
-    height: 1200,
+    width: 700,
+    height: 433,
     x: 46,
     y: 27.5,
     displayWidth: 19,
@@ -348,9 +348,9 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
   {
     id: "competition-02",
     src: competitionImageSrc(2),
-    alt: "Vertical close-up of a white Bichon Frisé during a teaching or grooming session",
-    width: 1200,
-    height: 1800,
+    alt: "White Bichon Frisé being groomed during a teaching session",
+    width: 1016,
+    height: 1080,
     x: 48,
     y: 76,
     displayWidth: 12.8,
@@ -365,8 +365,8 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     id: "competition-03",
     src: competitionImageSrc(3),
     alt: "A Bichon Frisé being groomed on the competition floor",
-    width: 1800,
-    height: 1350,
+    width: 5760,
+    height: 3840,
     x: 82,
     y: 76.5,
     displayWidth: 19,
@@ -381,8 +381,8 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     id: "competition-04",
     src: competitionImageSrc(4),
     alt: "Penny with a white Bichon Frisé, a large trophy, and three ribbons — 2019 Best in Show",
-    width: 2000,
-    height: 1500,
+    width: 960,
+    height: 801,
     x: 82,
     y: 27,
     displayWidth: 24,
@@ -398,8 +398,8 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     id: "competition-05",
     src: competitionImageSrc(5),
     alt: "A trophy being handed over on the competition floor",
-    width: 1800,
-    height: 1200,
+    width: 960,
+    height: 640,
     x: 122,
     y: 27.5,
     displayWidth: 19.5,
@@ -413,9 +413,9 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
   {
     id: "competition-06",
     src: competitionImageSrc(6),
-    alt: "Formal portrait of Penny with a white dog during a studio session",
-    width: 1200,
-    height: 1600,
+    alt: "Formal studio portrait of Penny with a white poodle",
+    width: 418,
+    height: 406,
     x: 122,
     y: 76,
     displayWidth: 13,
@@ -429,9 +429,9 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
   {
     id: "competition-07",
     src: competitionImageSrc(7),
-    alt: "Close-up of a dark poodle being groomed in the studio",
-    width: 1800,
-    height: 1200,
+    alt: "Close-up of a brown poodle being scissored in the studio",
+    width: 1460,
+    height: 1078,
     x: 160,
     y: 27.5,
     displayWidth: 18.5,
@@ -446,8 +446,8 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     id: "competition-08",
     src: competitionImageSrc(8),
     alt: "Trophy, ribbons, and notes arranged together on a studio table",
-    width: 1800,
-    height: 1200,
+    width: 960,
+    height: 720,
     x: 48,
     y: 52,
     displayWidth: 30,
