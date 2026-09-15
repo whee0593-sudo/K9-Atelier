@@ -24,8 +24,8 @@ export default function GalleryPage() {
           A Study in Coat &amp; Form
         </h1>
         <p className="font-body mx-auto mt-4 max-w-2xl text-[15px] leading-relaxed text-[#c8bca9]/80 md:text-base">
-          A collection of signature grooms, teaching notes, and show-day
-          snapshots — coat, form, and individual expression.
+          A collection of signature grooms — coat, form, and individual
+          expression.
         </p>
       </header>
       <GalleryWall />

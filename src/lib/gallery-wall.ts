@@ -539,44 +539,64 @@ export function galleryCaptionBox(frame: GalleryBox): GalleryBox {
 
 export const SELECTED_WORK_PRIORITY_IDS = new Set([1, 2, 3, 15, 16]);
 
-export const GALLERY_LIGHTBOX_ITEMS: readonly GalleryLightboxItem[] = [
-  ...GALLERY_FRAME_SLOTS.map((slot) => ({
+export const SELECTED_WORK_LIGHTBOX_ITEMS: readonly GalleryLightboxItem[] =
+  GALLERY_FRAME_SLOTS.map((slot) => ({
     id: workLightboxId(slot.id),
     src: slot.photoSrc,
     alt: slot.photoAlt,
     width: slot.photoWidth,
     height: slot.photoHeight,
     caption: SELECTED_WORK_CAPTIONS[slot.id],
-  })),
-  ...COMPETITION_ARCHIVE_ITEMS.map((item) => ({
+  }));
+
+export const COMPETITION_LIGHTBOX_ITEMS: readonly GalleryLightboxItem[] =
+  COMPETITION_ARCHIVE_ITEMS.map((item) => ({
     id: item.id,
     src: item.src,
     alt: item.alt,
     width: item.width,
     height: item.height,
     caption: item.caption,
-  })),
+  }));
+
+/** Visible gallery wall catalog — selected work only. */
+export const GALLERY_LIGHTBOX_ITEMS = SELECTED_WORK_LIGHTBOX_ITEMS;
+
+const ALL_LIGHTBOX_ITEMS: readonly GalleryLightboxItem[] = [
+  ...SELECTED_WORK_LIGHTBOX_ITEMS,
+  ...COMPETITION_LIGHTBOX_ITEMS,
 ];
 
 export function getLightboxItem(id: string) {
-  return GALLERY_LIGHTBOX_ITEMS.find((item) => item.id === id);
+  return ALL_LIGHTBOX_ITEMS.find((item) => item.id === id);
 }
 
-export function getLightboxIndex(id: string) {
-  return GALLERY_LIGHTBOX_ITEMS.findIndex((item) => item.id === id);
+export function lightboxCatalogFor(id: string) {
+  if (COMPETITION_LIGHTBOX_ITEMS.some((item) => item.id === id)) {
+    return COMPETITION_LIGHTBOX_ITEMS;
+  }
+  return SELECTED_WORK_LIGHTBOX_ITEMS;
+}
+
+export function getLightboxIndex(
+  id: string,
+  catalog: readonly GalleryLightboxItem[] = lightboxCatalogFor(id),
+) {
+  return catalog.findIndex((item) => item.id === id);
 }
 
 export function nextLightboxId(id: string) {
-  const index = getLightboxIndex(id);
+  const catalog = lightboxCatalogFor(id);
+  const index = getLightboxIndex(id, catalog);
   const safe = index < 0 ? 0 : index;
-  return GALLERY_LIGHTBOX_ITEMS[(safe + 1) % GALLERY_LIGHTBOX_ITEMS.length].id;
+  return catalog[(safe + 1) % catalog.length].id;
 }
 
 export function prevLightboxId(id: string) {
-  const index = getLightboxIndex(id);
+  const catalog = lightboxCatalogFor(id);
+  const index = getLightboxIndex(id, catalog);
   const safe = index < 0 ? 0 : index;
-  const length = GALLERY_LIGHTBOX_ITEMS.length;
-  return GALLERY_LIGHTBOX_ITEMS[(safe - 1 + length) % length].id;
+  return catalog[(safe - 1 + catalog.length) % catalog.length].id;
 }
 
 export function galleryPointerDistance(dx: number, dy: number) {
