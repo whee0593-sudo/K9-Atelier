@@ -18,6 +18,7 @@ import {
   overlappingGalleryPairs,
   prevLightboxId,
   selectedWorkBoxes,
+  SELECTED_WORK_CAPTIONS,
   shouldDismissDragHint,
   shouldSuppressArtworkOpen,
 } from "./gallery-wall";
@@ -144,6 +145,48 @@ describe("2019 winner metadata", () => {
       assert.notEqual(item.caption?.title, "Best in Show");
       assert.notEqual(item.caption?.kicker, "2019");
     }
+  });
+});
+
+describe("gallery captions", () => {
+  it("gives every selected-work portrait a two-line museum label", () => {
+    for (const slot of GALLERY_FRAME_SLOTS) {
+      const caption = SELECTED_WORK_CAPTIONS[slot.id];
+      assert.ok(caption, `missing caption for work ${slot.id}`);
+      assert.equal(caption.kicker, "SELECTED WORK");
+      assert.ok(caption.detail && caption.detail.length > 0);
+      const lines = lightboxCaptionLines(caption);
+      assert.equal(lines.length, 2);
+      assert.equal(lines[0], "SELECTED WORK");
+      assert.equal(lines[1], caption.detail);
+    }
+  });
+
+  it("gives every lightbox item a two-line caption, unique from the 2019 winner except competition-04", () => {
+    assert.equal(GALLERY_LIGHTBOX_ITEMS.length, 25);
+    for (const item of GALLERY_LIGHTBOX_ITEMS) {
+      assert.ok(item.caption);
+      const lines = lightboxCaptionLines(item.caption);
+      assert.equal(lines[0].length > 0, true, item.id);
+      assert.equal(lines[1].length > 0, true, item.id);
+      if (item.id !== GALLERY_WINNER_ITEM_ID) {
+        assert.notEqual(lines[0], "2019 · Best in Show");
+      }
+    }
+
+    const work = GALLERY_LIGHTBOX_ITEMS.find((item) => item.id === "work-01");
+    assert.deepEqual(lightboxCaptionLines(work?.caption), [
+      "SELECTED WORK",
+      "Braided ears",
+    ]);
+
+    const snapshot = GALLERY_LIGHTBOX_ITEMS.find(
+      (item) => item.id === "competition-05",
+    );
+    assert.deepEqual(lightboxCaptionLines(snapshot?.caption), [
+      "FROM THE RING · Show-day snapshot",
+      "Trophy presentation",
+    ]);
   });
 });
 

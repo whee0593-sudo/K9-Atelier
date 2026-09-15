@@ -2,9 +2,9 @@
 
 import Image from "next/image";
 import React, { useCallback, useEffect, useId, useRef, useState } from "react";
+import { GalleryLightboxCaption } from "@/components/gallery/GalleryCaption";
 import {
   getLightboxItem,
-  lightboxCaptionLines,
   nextLightboxId,
   prevLightboxId,
 } from "@/lib/gallery-wall";
@@ -23,7 +23,6 @@ export function GalleryLightbox({
   const dialogRef = useRef<HTMLDivElement>(null);
   const [imageMissing, setImageMissing] = useState(false);
   const item = getLightboxItem(activeId) ?? getLightboxItem("work-01");
-  const captionLines = lightboxCaptionLines(item?.caption);
 
   const goPrev = useCallback(() => {
     onActiveIdChange(prevLightboxId(activeId));
@@ -115,41 +114,28 @@ export function GalleryLightbox({
       >
         ‹
       </button>
-      {imageMissing ? (
-        <div className="flex h-[min(70vh,28rem)] w-[min(92vw,36rem)] items-center justify-center border border-champagne/20 bg-[#11120a]">
-          <p className="font-body px-6 text-center text-[11px] uppercase tracking-[0.18em] text-ivory/45">
-            Photograph not yet available
-          </p>
-        </div>
-      ) : (
-        <Image
-          src={item.src}
-          alt={item.alt}
-          width={item.width}
-          height={item.height}
-          quality={90}
-          priority
-          sizes="90vw"
-          className="h-auto max-h-[78vh] w-auto max-w-[min(92vw,56rem)] object-contain"
-          onError={() => setImageMissing(true)}
-        />
-      )}
-      {captionLines.length > 0 && (
-        <div className="mt-5 text-center">
-          {captionLines.map((line, index) => (
-            <p
-              key={line}
-              className={
-                index === 0
-                  ? "font-body text-[11px] tracking-[0.16em] text-champagne/75"
-                  : "font-display mt-1 text-[1.05rem] text-ivory/70"
-              }
-            >
-              {line}
+      <figure className="flex max-h-full max-w-full flex-col items-center">
+        {imageMissing ? (
+          <div className="flex h-[min(64vh,28rem)] w-[min(92vw,36rem)] items-center justify-center border border-champagne/20 bg-[#11120a]">
+            <p className="font-body px-6 text-center text-[11px] uppercase tracking-[0.18em] text-ivory/45">
+              Photograph not yet available
             </p>
-          ))}
-        </div>
-      )}
+          </div>
+        ) : (
+          <Image
+            src={item.src}
+            alt={item.alt}
+            width={item.width}
+            height={item.height}
+            quality={90}
+            priority
+            sizes="90vw"
+            className="h-auto max-h-[70vh] w-auto max-w-[min(92vw,56rem)] object-contain"
+            onError={() => setImageMissing(true)}
+          />
+        )}
+        <GalleryLightboxCaption caption={item.caption} />
+      </figure>
       <button
         type="button"
         onClick={goNext}

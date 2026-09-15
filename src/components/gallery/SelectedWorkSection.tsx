@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import React from "react";
+import { GalleryWallCaption } from "@/components/gallery/GalleryCaption";
 import {
   GALLERY_FRAME_SLOTS,
   GALLERY_SECTION_WIDTH_VH,
+  SELECTED_WORK_CAPTIONS,
   SELECTED_WORK_PRIORITY_IDS,
   type GalleryFrameSlot,
   workLightboxId,
@@ -80,6 +82,7 @@ function FramedArtwork({
           className="h-auto w-full bg-transparent object-contain"
         />
       </span>
+      <GalleryWallCaption caption={SELECTED_WORK_CAPTIONS[slot.id] ?? { kicker: "SELECTED WORK", detail: "" }} />
     </button>
   );
 }

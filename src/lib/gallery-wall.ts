@@ -296,6 +296,27 @@ export type GalleryCaption = {
   detail?: string;
 };
 
+/** Lightbox / wall captions for the 17 selected-work portraits. Indexed by slot id. */
+export const SELECTED_WORK_CAPTIONS: Record<number, GalleryCaption> = {
+  1: { kicker: "SELECTED WORK", detail: "Braided ears" },
+  2: { kicker: "SELECTED WORK", detail: "Yorkshire Terrier" },
+  3: { kicker: "SELECTED WORK", detail: "Bichon-style portrait" },
+  4: { kicker: "SELECTED WORK", detail: "Poodle" },
+  5: { kicker: "SELECTED WORK", detail: "Bichon" },
+  6: { kicker: "SELECTED WORK", detail: "Yorkshire Terrier" },
+  7: { kicker: "SELECTED WORK", detail: "Creative color" },
+  8: { kicker: "SELECTED WORK", detail: "Apricot poodle" },
+  9: { kicker: "SELECTED WORK", detail: "Polka-dot bandana" },
+  10: { kicker: "SELECTED WORK", detail: "Pigtails" },
+  11: { kicker: "SELECTED WORK", detail: "Creative color" },
+  12: { kicker: "SELECTED WORK", detail: "Terrier" },
+  13: { kicker: "SELECTED WORK", detail: "Doodle" },
+  14: { kicker: "SELECTED WORK", detail: "Apricot poodle" },
+  15: { kicker: "SELECTED WORK", detail: "Poodle" },
+  16: { kicker: "SELECTED WORK", detail: "Plush white coat" },
+  17: { kicker: "SELECTED WORK", detail: "Coat art" },
+};
+
 export type CompetitionFrameFinish = "gold" | "walnut" | "brass";
 
 export type CompetitionArchiveItem = {
@@ -308,7 +329,7 @@ export type CompetitionArchiveItem = {
   y: number;
   displayWidth: number;
   frame: CompetitionFrameFinish;
-  caption?: GalleryCaption;
+  caption: GalleryCaption;
 };
 
 export type GalleryLightboxItem = {
@@ -317,7 +338,7 @@ export type GalleryLightboxItem = {
   alt: string;
   width: number;
   height: number;
-  caption?: GalleryCaption;
+  caption: GalleryCaption;
 };
 
 /**
@@ -340,6 +361,7 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     caption: {
       kicker: "FROM THE RING",
       title: "Show-day snapshot",
+      detail: "Group portrait",
     },
   },
   {
@@ -355,6 +377,7 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     caption: {
       kicker: "IN THE STUDIO",
       title: "Teaching",
+      detail: "Bichon",
     },
   },
   {
@@ -370,6 +393,7 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     caption: {
       kicker: "FROM THE RING",
       title: "Show-day snapshot",
+      detail: "Bichon",
     },
   },
   {
@@ -401,6 +425,7 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     caption: {
       kicker: "FROM THE RING",
       title: "Show-day snapshot",
+      detail: "Trophy presentation",
     },
   },
   {
@@ -416,6 +441,7 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     caption: {
       kicker: "IN THE STUDIO",
       title: "Teaching",
+      detail: "Poodle",
     },
   },
   {
@@ -431,6 +457,7 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     caption: {
       kicker: "IN THE STUDIO",
       title: "Teaching",
+      detail: "Poodle",
     },
   },
   {
@@ -446,6 +473,7 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     caption: {
       kicker: "FROM THE ARCHIVE",
       title: "Show-day snapshot",
+      detail: "Ribbons and certificates",
     },
   },
 ];
@@ -469,6 +497,7 @@ export const GALLERY_LIGHTBOX_ITEMS: readonly GalleryLightboxItem[] = [
     alt: slot.photoAlt,
     width: slot.photoWidth,
     height: slot.photoHeight,
+    caption: SELECTED_WORK_CAPTIONS[slot.id],
   })),
   ...COMPETITION_ARCHIVE_ITEMS.map((item) => ({
     id: item.id,
@@ -517,10 +546,12 @@ export function shouldDismissDragHint(distancePx: number) {
   return distancePx >= GALLERY_HINT_DISMISS_PX;
 }
 
-export function lightboxCaptionLines(caption?: GalleryCaption) {
-  if (!caption) return [];
+export function lightboxCaptionLines(
+  caption?: GalleryCaption,
+): readonly [string, string] {
+  if (!caption) return ["", ""];
   const primary = [caption.kicker, caption.title].filter(Boolean).join(" · ");
-  return [primary, caption.detail].filter((line): line is string => Boolean(line));
+  return [primary, caption.detail ?? ""];
 }
 
 export type GalleryBox = {
@@ -624,5 +655,5 @@ export function isAwardRésuméCaption(caption?: GalleryCaption) {
   const text = [caption.kicker, caption.title, caption.detail]
     .filter(Boolean)
     .join(" ");
-  return /2014|2017|Best in Group|Pomeranian|Poodle/.test(text);
+  return /\b2014\b|\b2017\b|Best in Group/.test(text);
 }

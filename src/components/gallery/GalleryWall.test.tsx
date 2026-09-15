@@ -26,6 +26,10 @@ describe("gallery wall markup", () => {
     assert.match(html, /gallery-17\.png/);
     assert.match(html, /competition-04\.jpg/);
     assert.match(html, /competition-08\.jpg/);
+    assert.match(html, /SELECTED WORK/);
+    assert.match(html, /Braided ears/);
+    assert.match(html, /FROM THE RING · Show-day snapshot/);
+    assert.match(html, /Trophy presentation/);
     assert.equal(html.includes("columns-2"), false);
     for (const src of GALLERY_WALL_GUIDE_ASSETS) {
       assert.equal(html.includes(src), false);
@@ -46,11 +50,12 @@ describe("gallery lightbox markup", () => {
     assert.match(html, /aria-modal="true"/);
     assert.match(html, /2019 · Best in Show/);
     assert.match(html, /Bichon/);
+    assert.match(html, /k9-gallery-lightbox-caption/);
     assert.match(html, /Previous image/);
     assert.match(html, /Next image/);
   });
 
-  it("omits a visible caption for selected work", () => {
+  it("shows the same two-line caption area for selected work", () => {
     const html = renderToStaticMarkup(
       <GalleryLightbox
         activeId="work-01"
@@ -60,5 +65,8 @@ describe("gallery lightbox markup", () => {
     );
     assert.equal(html.includes("2019 · Best in Show"), false);
     assert.match(html, /gallery-01\.png/);
+    assert.match(html, /k9-gallery-lightbox-caption/);
+    assert.match(html, /SELECTED WORK/);
+    assert.match(html, /Braided ears/);
   });
 });

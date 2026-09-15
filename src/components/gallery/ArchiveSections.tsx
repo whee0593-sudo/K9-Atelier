@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import React, { useState } from "react";
+import { GalleryWallCaption } from "@/components/gallery/GalleryCaption";
 import {
   COMPETITION_ARCHIVE_ITEMS,
   GALLERY_SECTION_WIDTH_VH,
+  GALLERY_WINNER_ITEM_ID,
   GALLERY_WINNER_PLAQUE,
   type CompetitionArchiveItem,
   type CompetitionFrameFinish,
@@ -89,6 +91,9 @@ function ArchiveFrame({
           />
         )}
       </span>
+      {item.id === GALLERY_WINNER_ITEM_ID ? null : (
+        <GalleryWallCaption caption={item.caption} />
+      )}
     </button>
   );
 }
