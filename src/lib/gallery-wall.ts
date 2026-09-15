@@ -42,6 +42,23 @@ export const GALLERY_PLAQUE_SIZE_VH = {
   height: 8.4,
 } as const;
 
+/** Enlarge wall frames as far as neighboring art and captions allow. */
+export const GALLERY_SELECTED_LAYOUT = {
+  scale: 1.32,
+  topShift: -2,
+  bottomShift: 1.8,
+} as const;
+
+export const GALLERY_COMPETITION_LAYOUT = {
+  scale: 1.28,
+  winnerScale: 1.14,
+  winnerY: 24.2,
+  bottomShift: 1.2,
+} as const;
+
+export const GALLERY_CAPTION_OFFSET_VH = 0.55;
+export const GALLERY_CAPTION_HEIGHT_VH = 5.4;
+
 export type GalleryFrameSlot = {
   id: number;
   /** Frame center from the left of the section, in CSS vh units. */
@@ -485,8 +502,40 @@ export const GALLERY_WINNER_PLAQUE = {
   title: "BEST IN SHOW",
   detail: "Bichon",
   x: 82,
-  y: 51,
+  y: 53.4,
 } as const;
+
+export function selectedWorkPlacement(slot: GalleryFrameSlot) {
+  const { scale, topShift, bottomShift } = GALLERY_SELECTED_LAYOUT;
+  return {
+    centerX: slot.centerX,
+    centerY: slot.centerY + (slot.centerY < 50 ? topShift : bottomShift),
+    displayWidth: slot.displayWidth * scale,
+  };
+}
+
+export function competitionPlacement(item: CompetitionArchiveItem) {
+  const { scale, winnerScale, winnerY, bottomShift } =
+    GALLERY_COMPETITION_LAYOUT;
+  const isWinner = item.id === GALLERY_WINNER_ITEM_ID;
+  return {
+    x: item.x,
+    y: isWinner ? winnerY : item.y > 50 ? item.y + bottomShift : item.y,
+    displayWidth: item.displayWidth * (isWinner ? winnerScale : scale),
+  };
+}
+
+export function galleryCaptionBox(frame: GalleryBox): GalleryBox {
+  const width = frame.right - frame.left;
+  const centerX = (frame.left + frame.right) / 2;
+  return {
+    id: `${frame.id}-caption`,
+    left: centerX - width / 2,
+    right: centerX + width / 2,
+    top: frame.bottom + GALLERY_CAPTION_OFFSET_VH,
+    bottom: frame.bottom + GALLERY_CAPTION_OFFSET_VH + GALLERY_CAPTION_HEIGHT_VH,
+  };
+}
 
 export const SELECTED_WORK_PRIORITY_IDS = new Set([1, 2, 3, 15, 16]);
 
@@ -602,31 +651,36 @@ export function galleryBoxesOverlap(
 }
 
 export function selectedWorkBoxes(viewportVh = GALLERY_VIEWPORT_VH) {
-  return GALLERY_FRAME_SLOTS.map((slot) =>
-    galleryArtworkBox({
+  return GALLERY_FRAME_SLOTS.flatMap((slot) => {
+    const place = selectedWorkPlacement(slot);
+    const frame = galleryArtworkBox({
       id: `work-${slot.id}`,
-      centerXVh: slot.centerX,
-      centerYPercent: slot.centerY,
-      widthVh: slot.displayWidth,
+      centerXVh: place.centerX,
+      centerYPercent: place.centerY,
+      widthVh: place.displayWidth,
       photoWidth: slot.photoWidth,
       photoHeight: slot.photoHeight,
       viewportVh,
-    }),
-  );
+    });
+    return [frame, galleryCaptionBox(frame)];
+  });
 }
 
 export function competitionWallBoxes(viewportVh = GALLERY_VIEWPORT_VH) {
-  const frames = COMPETITION_ARCHIVE_ITEMS.map((item) =>
-    galleryArtworkBox({
+  const frames = COMPETITION_ARCHIVE_ITEMS.flatMap((item) => {
+    const place = competitionPlacement(item);
+    const frame = galleryArtworkBox({
       id: item.id,
-      centerXVh: item.x,
-      centerYPercent: item.y,
-      widthVh: item.displayWidth,
+      centerXVh: place.x,
+      centerYPercent: place.y,
+      widthVh: place.displayWidth,
       photoWidth: item.width,
       photoHeight: item.height,
       viewportVh,
-    }),
-  );
+    });
+    if (item.id === GALLERY_WINNER_ITEM_ID) return [frame];
+    return [frame, galleryCaptionBox(frame)];
+  });
   const centerYVh = (GALLERY_WINNER_PLAQUE.y / 100) * viewportVh;
   frames.push({
     id: "winner-plaque",
@@ -638,10 +692,15 @@ export function competitionWallBoxes(viewportVh = GALLERY_VIEWPORT_VH) {
   return frames;
 }
 
+export function isOwnCaptionPair(a: GalleryBox, b: GalleryBox) {
+  return a.id + "-caption" === b.id || b.id + "-caption" === a.id;
+}
+
 export function overlappingGalleryPairs(boxes: readonly GalleryBox[]) {
   const pairs: Array<[string, string]> = [];
   for (let i = 0; i < boxes.length; i += 1) {
     for (let j = i + 1; j < boxes.length; j += 1) {
+      if (isOwnCaptionPair(boxes[i], boxes[j])) continue;
       if (galleryBoxesOverlap(boxes[i], boxes[j])) {
         pairs.push([boxes[i].id, boxes[j].id]);
       }

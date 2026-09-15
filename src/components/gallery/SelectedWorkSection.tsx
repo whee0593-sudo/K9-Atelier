@@ -8,6 +8,7 @@ import {
   GALLERY_SECTION_WIDTH_VH,
   SELECTED_WORK_CAPTIONS,
   SELECTED_WORK_PRIORITY_IDS,
+  selectedWorkPlacement,
   type GalleryFrameSlot,
   workLightboxId,
 } from "@/lib/gallery-wall";
@@ -55,6 +56,7 @@ function FramedArtwork({
   onOpen: (id: string, trigger: HTMLElement) => void;
   priority: boolean;
 }) {
+  const place = selectedWorkPlacement(slot);
   return (
     <button
       type="button"
@@ -62,9 +64,9 @@ function FramedArtwork({
       onClick={(event) => onOpen(workLightboxId(slot.id), event.currentTarget)}
       className="k9-gallery-art group focus:outline-none focus-visible:ring-1 focus-visible:ring-champagne"
       style={{
-        left: `${slot.centerX}vh`,
-        top: `${slot.centerY}%`,
-        width: `${slot.displayWidth}vh`,
+        left: `${place.centerX}vh`,
+        top: `${place.centerY}%`,
+        width: `${place.displayWidth}vh`,
         transform: "translate(-50%, -50%)",
       }}
     >

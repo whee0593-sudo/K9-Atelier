@@ -8,6 +8,7 @@ import {
   GALLERY_SECTION_WIDTH_VH,
   GALLERY_WINNER_ITEM_ID,
   GALLERY_WINNER_PLAQUE,
+  competitionPlacement,
   type CompetitionArchiveItem,
   type CompetitionFrameFinish,
 } from "@/lib/gallery-wall";
@@ -53,6 +54,7 @@ function ArchiveFrame({
   onOpen: (id: string, trigger: HTMLElement) => void;
 }) {
   const [missing, setMissing] = useState(false);
+  const place = competitionPlacement(item);
 
   return (
     <button
@@ -66,9 +68,9 @@ function ArchiveFrame({
       onClick={(event) => onOpen(item.id, event.currentTarget)}
       className="k9-gallery-archive group focus:outline-none focus-visible:ring-1 focus-visible:ring-champagne disabled:cursor-default"
       style={{
-        left: `${item.x}vh`,
-        top: `${item.y}%`,
-        width: `${item.displayWidth}vh`,
+        left: `${place.x}vh`,
+        top: `${place.y}%`,
+        width: `${place.displayWidth}vh`,
         transform: "translate(-50%, -50%)",
       }}
     >

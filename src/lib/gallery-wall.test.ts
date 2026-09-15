@@ -9,6 +9,7 @@ import {
   GALLERY_SECTION_WIDTH_VH,
   GALLERY_WINNER_ITEM_ID,
   competitionWallBoxes,
+  competitionPlacement,
   galleryWallPhotoSrc,
   galleryWallPhotoSrcFromWorkId,
   isAwardRésuméCaption,
@@ -18,6 +19,7 @@ import {
   overlappingGalleryPairs,
   prevLightboxId,
   selectedWorkBoxes,
+  selectedWorkPlacement,
   SELECTED_WORK_CAPTIONS,
   shouldDismissDragHint,
   shouldSuppressArtworkOpen,
@@ -48,6 +50,20 @@ describe("gallery wall slots", () => {
 
   it("keeps selected-work frames from overlapping, including hover scale", () => {
     assert.deepEqual(overlappingGalleryPairs(selectedWorkBoxes()), []);
+  });
+
+  it("enlarges wall frames without colliding with neighboring captions", () => {
+    for (const slot of GALLERY_FRAME_SLOTS) {
+      const place = selectedWorkPlacement(slot);
+      assert.ok(place.displayWidth > slot.displayWidth);
+      assert.ok(place.displayWidth >= slot.displayWidth * 1.3);
+    }
+    const boxes = selectedWorkBoxes();
+    assert.equal(
+      boxes.some((box) => box.id.endsWith("-caption")),
+      true,
+    );
+    assert.deepEqual(overlappingGalleryPairs(boxes), []);
   });
 });
 
@@ -90,6 +106,13 @@ describe("competition archive data", () => {
 
   it("keeps competition frames and the 2019 plaque from overlapping", () => {
     assert.deepEqual(overlappingGalleryPairs(competitionWallBoxes()), []);
+  });
+
+  it("enlarges competition frames except where the 2019 plaque limits the winner", () => {
+    for (const item of COMPETITION_ARCHIVE_ITEMS) {
+      const place = competitionPlacement(item);
+      assert.ok(place.displayWidth > item.displayWidth);
+    }
   });
 });
 
