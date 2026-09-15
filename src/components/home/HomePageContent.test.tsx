@@ -21,6 +21,8 @@ describe("home page content", () => {
 
     assert.match(source, /Ask a Question/);
     assert.match(source, /href="\/contact"/);
+    assert.match(source, /heroCtaClass/);
+    assert.equal(source.includes("variant=\"secondary\""), false);
     assert.equal(source.includes("Discover the Experience"), false);
     assert.equal(source.includes("/#first-visit"), false);
   });
