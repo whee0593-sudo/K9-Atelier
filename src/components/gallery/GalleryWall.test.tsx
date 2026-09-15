@@ -9,14 +9,24 @@ import { GALLERY_WALL_GUIDE_ASSETS } from "@/lib/gallery-wall";
 describe("gallery wall markup", () => {
   it("renders one horizontal museum track instead of masonry", () => {
     const html = renderToStaticMarkup(<GalleryWall />);
-    assert.match(html, /Selected Work/);
+    assert.match(html, /The Work/);
+    assert.match(html, /Selected work by K9 Atelier/);
+    assert.equal(html.includes("Grooms by K9 Atelier"), false);
+    assert.equal(html.includes("A Study in Coat"), false);
+    assert.equal(html.includes("The Craft"), false);
+    assert.equal(
+      html.includes("Awards, teaching moments, and memories from the show ring."),
+      false,
+    );
     assert.equal(html.includes("Competition Archive"), false);
     assert.match(html, /This gallery scrolls horizontally/);
     assert.match(html, /Drag to explore/);
     assert.equal(html.includes("Keepsakes"), false);
     assert.equal(html.includes("Teaching notes and show-day snapshots"), false);
     assert.equal(html.includes("Ribbons and notes from the table"), false);
+    assert.equal(html.includes("2019 Best in Show"), false);
     assert.equal(html.includes("BEST IN SHOW"), false);
+    assert.equal(html.includes("k9-gallery-plaque"), false);
     assert.equal(html.includes("Best in Group"), false);
     assert.equal(html.includes("Pomeranian"), false);
     assert.equal(html.includes("Credentials"), false);
@@ -24,10 +34,9 @@ describe("gallery wall markup", () => {
     assert.match(html, /gallery-17\.png/);
     assert.equal(html.includes("competition-04.jpg"), false);
     assert.equal(html.includes("competition-08.jpg"), false);
-    assert.match(html, /SELECTED WORK/);
-    assert.match(html, /Braided ears/);
-    assert.equal(html.includes("FROM THE RING · Show-day snapshot"), false);
     assert.equal(html.includes("Trophy presentation"), false);
+    assert.equal(html.includes("Group portrait"), false);
+    assert.match(html, /Braided ears/);
     assert.equal(html.includes("columns-2"), false);
     for (const src of GALLERY_WALL_GUIDE_ASSETS) {
       assert.equal(html.includes(src), false);
@@ -46,8 +55,9 @@ describe("gallery lightbox markup", () => {
     );
     assert.match(html, /role="dialog"/);
     assert.match(html, /aria-modal="true"/);
-    assert.match(html, /2019 · Best in Show/);
-    assert.match(html, /Bichon/);
+    assert.match(html, /2019 Best in Show/);
+    assert.equal(html.includes("2019 · Best in Show"), false);
+    assert.equal(html.includes(">Bichon<"), false);
     assert.match(html, /k9-gallery-lightbox-caption/);
     assert.match(html, /Previous image/);
     assert.match(html, /Next image/);

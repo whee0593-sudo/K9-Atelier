@@ -106,11 +106,11 @@ describe("competition archive data", () => {
     }
   });
 
-  it("keeps competition frames and the 2019 plaque from overlapping", () => {
+  it("keeps competition frames and captions from overlapping", () => {
     assert.deepEqual(overlappingGalleryPairs(competitionWallBoxes()), []);
   });
 
-  it("enlarges competition frames except where the 2019 plaque limits the winner", () => {
+  it("enlarges competition frames without colliding with neighboring captions", () => {
     for (const item of COMPETITION_ARCHIVE_ITEMS) {
       const place = competitionPlacement(item);
       assert.ok(place.displayWidth > item.displayWidth);
@@ -160,13 +160,11 @@ describe("2019 winner metadata", () => {
     assert.equal(winner?.width, 960);
     assert.equal(winner?.height, 801);
     assert.deepEqual(winner?.caption, {
-      kicker: "2019",
-      title: "Best in Show",
-      detail: "Bichon",
+      detail: "2019 Best in Show",
     });
     assert.deepEqual(lightboxCaptionLines(winner?.caption), [
-      "2019 · Best in Show",
-      "Bichon",
+      "",
+      "2019 Best in Show",
     ]);
 
     for (const item of COMPETITION_ARCHIVE_ITEMS) {
@@ -200,6 +198,7 @@ describe("gallery captions", () => {
       assert.equal(lines[0].length > 0, true, item.id);
       assert.equal(lines[1].length > 0, true, item.id);
       assert.notEqual(lines[0], "2019 · Best in Show");
+      assert.notEqual(lines[1], "2019 Best in Show");
     }
 
     const work = GALLERY_LIGHTBOX_ITEMS.find((item) => item.id === "work-01");

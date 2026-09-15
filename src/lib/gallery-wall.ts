@@ -37,11 +37,6 @@ export const GALLERY_SECTION_WIDTH_VH = {
   competition: 184,
 } as const;
 
-export const GALLERY_PLAQUE_SIZE_VH = {
-  width: 12,
-  height: 8.4,
-} as const;
-
 /** Enlarge wall frames as far as neighboring art and captions allow. */
 export const GALLERY_SELECTED_LAYOUT = {
   scale: 1.32,
@@ -424,9 +419,7 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     displayWidth: 24,
     frame: "gold",
     caption: {
-      kicker: "2019",
-      title: "Best in Show",
-      detail: "Bichon",
+      detail: "2019 Best in Show",
     },
   },
   {
@@ -496,14 +489,6 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
 ];
 
 export const GALLERY_WINNER_ITEM_ID = "competition-04";
-
-export const GALLERY_WINNER_PLAQUE = {
-  year: "2019",
-  title: "BEST IN SHOW",
-  detail: "Bichon",
-  x: 82,
-  y: 53.4,
-} as const;
 
 export function selectedWorkPlacement(slot: GalleryFrameSlot) {
   const { scale, topShift, bottomShift } = GALLERY_SELECTED_LAYOUT;
@@ -698,16 +683,7 @@ export function competitionWallBoxes(viewportVh = GALLERY_VIEWPORT_VH) {
       photoHeight: item.height,
       viewportVh,
     });
-    if (item.id === GALLERY_WINNER_ITEM_ID) return [frame];
     return [frame, galleryCaptionBox(frame)];
-  });
-  const centerYVh = (GALLERY_WINNER_PLAQUE.y / 100) * viewportVh;
-  frames.push({
-    id: "winner-plaque",
-    left: GALLERY_WINNER_PLAQUE.x - GALLERY_PLAQUE_SIZE_VH.width / 2,
-    right: GALLERY_WINNER_PLAQUE.x + GALLERY_PLAQUE_SIZE_VH.width / 2,
-    top: centerYVh - GALLERY_PLAQUE_SIZE_VH.height / 2,
-    bottom: centerYVh + GALLERY_PLAQUE_SIZE_VH.height / 2,
   });
   return frames;
 }

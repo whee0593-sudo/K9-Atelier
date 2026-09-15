@@ -152,8 +152,33 @@ body {
 .k9-gallery-section-title {
   position: absolute;
   z-index: 4;
-  max-width: 14rem;
+  max-width: 12.75rem;
   pointer-events: none;
+}
+
+@media (min-width: 768px) {
+  .k9-gallery-section-title {
+    max-width: 18rem;
+  }
+}
+
+.k9-gallery-section-kicker {
+  margin: 0;
+  font-family: var(--font-montserrat), Montserrat, Arial, sans-serif;
+  font-size: clamp(0.8125rem, 1.9vh, 0.95rem);
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(196, 168, 130, 0.92);
+}
+
+.k9-gallery-section-lede {
+  margin: 0.55rem 0 0;
+  font-family: var(--font-cormorant), Georgia, "Times New Roman", serif;
+  font-size: clamp(1.25rem, 3.1vh, 1.55rem);
+  font-style: italic;
+  line-height: 1.28;
+  color: rgba(251, 247, 239, 0.82);
 }
 
 .k9-gallery-art,
@@ -240,7 +265,6 @@ body {
 
 .k9-gallery-caption-detail {
   display: block;
-  margin-top: 0.28vh;
   font-family: var(--font-cormorant), Georgia, "Times New Roman", serif;
   font-size: 2.15vh;
   font-style: italic;
@@ -255,27 +279,16 @@ body {
   text-align: center;
 }
 
-.k9-gallery-lightbox-caption p:first-child {
+.k9-gallery-lightbox-caption p.font-body {
   font-size: 0.9375rem;
   letter-spacing: 0.16em;
   text-transform: none;
 }
 
-.k9-gallery-lightbox-caption p:last-child {
+.k9-gallery-lightbox-caption p.font-display {
   margin-top: 0.4rem;
   font-size: 1.5rem;
   font-style: italic;
-}
-
-.k9-gallery-plaque {
-  position: absolute;
-  z-index: 5;
-  min-width: 7.25rem;
-  padding: 0.7rem 0.85rem 0.75rem;
-  pointer-events: none;
-  text-align: center;
-  background: #0c0d08;
-  border: 1px solid rgba(196, 168, 130, 0.32);
 }
 
 .k9-gallery-hint {
