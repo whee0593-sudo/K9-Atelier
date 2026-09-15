@@ -6,8 +6,9 @@ import { Eyebrow } from "@/components/luxury/Eyebrow";
 type Props = {
   id: string;
   extraId?: string;
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
+  titleAs?: "h1" | "h2";
   intro?: string;
   tone?: "ivory" | "white" | "mist";
   children: ReactNode;
@@ -25,20 +26,24 @@ export function ServicesSection({
   extraId,
   eyebrow,
   title,
+  titleAs = "h2",
   intro,
   tone = "ivory",
   children,
   showRequestLink = true,
 }: Props) {
+  const TitleTag = titleAs;
+  const titleClass = eyebrow
+    ? "font-display mt-4 text-3xl text-ink md:text-4xl"
+    : "font-display text-3xl text-ink md:text-4xl";
+
   return (
     <section id={id} className={`scroll-mt-[15rem] ${tones[tone]} py-14 md:py-16`}>
       {extraId ? <div id={extraId} className="scroll-mt-[15rem]" /> : null}
       <Container>
         <header className="mx-auto max-w-2xl text-center">
-          <Eyebrow>{eyebrow}</Eyebrow>
-          <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
-            {title}
-          </h2>
+          {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}
+          <TitleTag className={titleClass}>{title}</TitleTag>
           {intro && (
             <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
               {intro}

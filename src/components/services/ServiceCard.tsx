@@ -21,6 +21,7 @@ type Props = {
   quiet?: boolean;
   requestLabel?: string;
   anchorId?: string;
+  headingAs?: "h2" | "h3";
 };
 
 export function ServiceCard({
@@ -29,7 +30,9 @@ export function ServiceCard({
   quiet = false,
   requestLabel = "Book an Appointment",
   anchorId,
+  headingAs = "h3",
 }: Props) {
+  const Heading = headingAs;
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const bestFor = serviceCardBestFor(service);
@@ -48,9 +51,9 @@ export function ServiceCard({
         quiet ? "bg-ivory/70" : "bg-ivory"
       } p-6 md:p-8`}
     >
-      <h3 className="font-display text-2xl text-ink md:text-[1.75rem]">
+      <Heading className="font-display text-2xl text-ink md:text-[1.75rem]">
         {service.name}
-      </h3>
+      </Heading>
       <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
         {serviceCardSummary(service)}
       </p>

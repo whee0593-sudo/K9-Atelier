@@ -3,7 +3,17 @@ import { describe, it } from "node:test";
 import {
   coloringOptionDisplayNote,
   coloringOptionPriceLabel,
+  FULL_GROOM_IDS,
+  FULL_GROOM_PAGE_DESCRIPTION,
+  FULL_GROOM_PAGE_H1,
+  FULL_GROOM_PAGE_TITLE,
+  FULL_GROOM_PATH,
+  SERVICES_HASH_ROUTES,
+  SERVICES_NAV,
+  SERVICES_PATH,
+  absoluteSiteUrl,
   getServiceById,
+  getServicesByIds,
   serviceCardAccessLabel,
   serviceCardPriceValue,
   serviceCardSummary,
@@ -106,6 +116,50 @@ describe("service page helpers", () => {
     assert.equal(
       coloringOptionDisplayNote("$350 (single color)"),
       "single color",
+    );
+  });
+
+  it("points Full Groom navigation at the dedicated category route", () => {
+    const fullGroom = SERVICES_NAV.find((item) => item.label === "Full Groom");
+    assert.equal(fullGroom?.href, FULL_GROOM_PATH);
+    assert.equal(fullGroom?.sectionId, "full-groom");
+    assert.equal(
+      SERVICES_NAV.find((item) => item.label === "Bath & Coat")?.href,
+      `${SERVICES_PATH}#bath-coat`,
+    );
+  });
+
+  it("keeps Full Groom services on a shared catalog", () => {
+    const services = getServicesByIds(FULL_GROOM_IDS);
+    assert.deepEqual(
+      services.map((service) => service.id),
+      ["custom-full-haircut", "hand-stripping"],
+    );
+    assert.equal(services[0]?.name, "Custom Full Haircut & Styling");
+    assert.equal(services[1]?.name, "Hand Stripping Specialty");
+  });
+
+  it("maps the legacy Full Groom hash to the category route", () => {
+    assert.equal(SERVICES_HASH_ROUTES["full-groom"], FULL_GROOM_PATH);
+  });
+
+  it("uses independent Full Groom SEO copy and canonical", () => {
+    assert.equal(
+      FULL_GROOM_PAGE_TITLE,
+      "Full Grooming & Hand Stripping | K9 Atelier",
+    );
+    assert.equal(
+      FULL_GROOM_PAGE_DESCRIPTION,
+      "Custom full grooming and professional hand stripping for suitable wire-coated breeds. Private mobile grooming serving Jupiter, Palm Beach Gardens and surrounding Palm Beach areas.",
+    );
+    assert.equal(FULL_GROOM_PAGE_H1, "Full Grooming & Hand Stripping");
+    assert.equal(
+      absoluteSiteUrl(FULL_GROOM_PATH),
+      "https://k9atelier.com/services/full-groom",
+    );
+    assert.equal(
+      absoluteSiteUrl(SERVICES_PATH),
+      "https://k9atelier.com/services",
     );
   });
 });
