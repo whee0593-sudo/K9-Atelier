@@ -26,7 +26,7 @@ export function SelectedWorkSection({
     >
       <div
         className="k9-gallery-section-title"
-        style={{ left: "2.4vh", top: "6.5%", maxWidth: "18rem" }}
+        style={{ left: "2.4vh", top: "6.5%" }}
       >
         <p className="k9-gallery-section-kicker">The Work</p>
         <p className="k9-gallery-section-lede">Selected work by K9 Atelier</p>

@@ -32,13 +32,11 @@ export function CompetitionArchiveSection({
     >
       <div
         className="k9-gallery-section-title"
-        style={{ left: "2.4vh", top: "7%", maxWidth: "20rem" }}
+        style={{ left: "2.4vh", top: "7%" }}
       >
         <p className="k9-gallery-section-kicker">The Craft</p>
         <p className="k9-gallery-section-lede">
-          Awards, teaching moments,
-          <br />
-          and memories from the show ring.
+          Awards, teaching moments, and memories from the show ring.
         </p>
       </div>
       {COMPETITION_ARCHIVE_ITEMS.map((item) => (
