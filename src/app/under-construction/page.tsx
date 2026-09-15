@@ -27,7 +27,7 @@ const jost = Jost({
 export const metadata = {
   title: "K9 Atelier — Opening Soon",
   description:
-    "A private atelier experience is being prepared — cage-free, one-on-one mobile grooming for dogs under 45 lbs.",
+    "A private atelier experience is being prepared — cage-free, one-on-one mobile grooming for dogs up to 45 lbs.",
 };
 
 export default function UnderConstructionPage() {
@@ -38,7 +38,7 @@ export default function UnderConstructionPage() {
     copy?.subline ?? "Private Mobile Pet Spa · Palm Beach";
   const headline = copy?.headline ?? "Some things are worth the wait.";
   const lede = copy?.lede ?? [
-    "A private atelier experience is being prepared — cage-free, one-on-one, and reserved exclusively for dogs under 45 lbs.",
+    "A private atelier experience is being prepared — cage-free, one-on-one, and reserved exclusively for dogs up to 45 lbs.",
     "By appointment only.",
   ];
   const locations =
