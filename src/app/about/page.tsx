@@ -1,89 +1,161 @@
-import { BookServiceLink } from "@/components/booking/BookServiceLink";
-import { LuxuryButton } from "@/components/luxury/LuxuryButton";
-import { PageShell } from "@/components/luxury/PageShell";
+import Link from "next/link";
+import { Container } from "@/components/luxury/Container";
 
 export const metadata = {
   title: "About · K9 Atelier",
   description:
-    "Penny, the groomer behind K9 Atelier — professional care since 2010, show honors including Best in Show, and a private mobile pet spa in Palm Beach.",
+    "The story behind K9 Atelier — Penny's work in professional grooming, show styling, and education since 2010, now a private mobile pet spa in Palm Beach.",
 };
 
-const highlights = [
-  "Professional grooming since 2010, with a calm, one-on-one standard of care.",
-  "Former head groomer at a premier luxury dog salon in Shanghai.",
-  "Five years teaching Asian fusion and show styling at a professional academy.",
+const experience = [
+  {
+    kicker: "Since 2010",
+    role: "Professional Groomer",
+    detail: "Dedicated to the craft of professional grooming.",
+  },
+  {
+    kicker: "Shanghai",
+    role: "Former Head Groomer",
+    detail: "Premier luxury dog salon.",
+  },
+  {
+    kicker: "5 Years",
+    role: "Professional Educator",
+    detail: "Asian fusion & show styling.",
+  },
 ] as const;
 
 const honors = [
-  { year: "2014", title: "Best in Group", detail: "Pomeranian" },
-  { year: "2017", title: "Best in Group", detail: "Poodle" },
-  { year: "2019", title: "Best in Show", detail: "Bichon" },
+  { year: "2014", title: "Best in Group · Pomeranian" },
+  { year: "2017", title: "Best in Group · Poodle" },
+  { year: "2019", title: "Best in Show · Bichon" },
 ] as const;
+
+const sectionRule = "border-t border-champagne/25";
+const sectionSpace = "mt-20 pt-16 md:mt-28 md:pt-20 lg:mt-32 lg:pt-24";
+const sectionLabel =
+  "font-body text-[11px] font-medium uppercase tracking-[0.22em] text-deep-lavender";
 
 export default function AboutPage() {
   return (
-    <PageShell
-      eyebrow="Precision. Patience. Purpose."
-      title={
-        <>
-          The Story Behind
-          <br />
-          K9 Atelier
-        </>
-      }
-      intro="Penny is the groomer behind K9 Atelier. The name reflects a workshop of craftsmanship — skill refined with care, and each result approached with intention."
-    >
-      <div className="mx-auto max-w-3xl">
-        <ul className="space-y-0">
-          {highlights.map((item) => (
-            <li
-              key={item}
-              className="border-t border-champagne/50 py-6 font-body text-base leading-relaxed text-taupe md:text-[17px]"
+    <div className="overflow-x-clip">
+      <Container>
+        <div className="mx-auto max-w-[1160px] pb-20 pt-16 md:pb-28 md:pt-24">
+          <header className="mx-auto max-w-[42.5rem] text-center">
+            <p className={sectionLabel}>Precision. Patience. Purpose.</p>
+            <h1 className="font-display mt-6 text-[2.5rem] leading-[1.12] font-medium tracking-[-0.01em] text-ink md:mt-7 md:text-5xl lg:text-[3.25rem]">
+              The Story Behind
+              <br />
+              K9 Atelier
+            </h1>
+            <div className="font-body mx-auto mt-8 max-w-[40.5rem] space-y-5 text-base leading-[1.85] text-taupe md:mt-10 md:text-[17px]">
+              <p>
+                K9 Atelier is the work of Penny, an award-winning groomer whose
+                approach has been shaped by professional grooming, show styling,
+                and education since 2010.
+              </p>
+              <p>
+                <span className="font-display text-[1.05em] text-ink italic">
+                  Atelier
+                </span>{" "}
+                reflects the philosophy behind her work — craftsmanship refined
+                through patience, precision, and an individual approach to every
+                dog.
+              </p>
+            </div>
+          </header>
+
+          <section
+            className={`${sectionRule} ${sectionSpace} mx-auto max-w-[1020px]`}
+            aria-labelledby="about-experience"
+          >
+            <h2 id="about-experience" className={sectionLabel}>
+              Experience
+            </h2>
+            <ul className="mt-10 grid grid-cols-1 gap-12 md:mt-14 md:grid-cols-3 md:gap-10 lg:gap-16">
+              {experience.map((item) => (
+                <li key={item.kicker} className="min-w-0">
+                  <p className="font-display text-[2.125rem] leading-none text-ink md:text-[2.35rem]">
+                    {item.kicker}
+                  </p>
+                  <p className="font-body mt-5 text-[15px] leading-snug text-ink md:text-base">
+                    {item.role}
+                  </p>
+                  <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
+                    {item.detail}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section
+            className={`${sectionRule} ${sectionSpace} mx-auto max-w-[920px]`}
+            aria-labelledby="about-honors"
+          >
+            <h2 id="about-honors" className={sectionLabel}>
+              Show Honors
+            </h2>
+            <p className="font-body mt-4 max-w-md text-sm leading-relaxed text-taupe md:text-[15px]">
+              Competition achievements in professional grooming.
+            </p>
+            <ul className="mt-10 md:mt-12">
+              {honors.map((honor) => (
+                <li
+                  key={honor.year}
+                  className="grid grid-cols-[4.75rem_minmax(0,1fr)] items-baseline gap-x-6 border-t border-champagne/20 py-7 sm:grid-cols-[5.5rem_minmax(0,1fr)] sm:gap-x-10 md:py-8"
+                >
+                  <p className="font-display text-[1.65rem] leading-none text-ink md:text-[1.85rem]">
+                    {honor.year}
+                  </p>
+                  <p className="font-body text-[15px] leading-relaxed text-taupe md:text-base">
+                    {honor.title}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section
+            className={`${sectionRule} ${sectionSpace} mx-auto max-w-[40.5rem] text-center`}
+            aria-labelledby="about-standard"
+          >
+            <h2
+              id="about-standard"
+              className="font-display text-[2rem] leading-[1.15] font-medium text-ink md:text-[2.375rem]"
             >
-              {item}
-            </li>
-          ))}
-        </ul>
-
-        <div className="mt-6 border-t border-champagne/50 pt-10">
-          <h2 className="font-body text-[11px] font-semibold uppercase tracking-[0.18em] text-deep-lavender">
-            Show honors
-          </h2>
-          <ul className="mt-6">
-            {honors.map((honor) => (
-              <li
-                key={`${honor.year}-${honor.detail}`}
-                className="grid gap-1 border-t border-gray-line/80 py-5 md:grid-cols-[88px_1fr] md:items-baseline md:gap-6"
+              A Different Standard of Care
+            </h2>
+            <div className="font-body mt-8 space-y-5 text-base leading-[1.85] text-taupe md:mt-10 md:text-[17px]">
+              <p>
+                Today, that same standard continues at K9 Atelier — a private,
+                cage-free mobile pet spa serving Palm Beach.
+              </p>
+              <p>
+                Every appointment is one-on-one and unhurried, with thoughtful
+                attention to coat health, comfort, structure, and finish. The
+                goal is not simply a beautiful groom, but work that respects the
+                individual dog.
+              </p>
+            </div>
+            <p className={`${sectionLabel} mt-12 md:mt-14`}>
+              Private · One-on-One · Cage-Free
+            </p>
+            <Link
+              href="/services"
+              className="group font-body mt-10 inline-flex min-h-[48px] items-center gap-3 border border-champagne px-8 text-[11px] font-medium uppercase tracking-[0.18em] text-ink transition duration-500 hover:border-ink hover:text-deep-lavender focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne motion-reduce:transition-none md:mt-12"
+            >
+              Explore Services
+              <span
+                aria-hidden="true"
+                className="transition-transform duration-500 group-hover:translate-x-1 motion-reduce:transform-none"
               >
-                <p className="font-display text-2xl text-ink">{honor.year}</p>
-                <p className="font-body text-base text-taupe">
-                  {honor.title} · {honor.detail}
-                </p>
-              </li>
-            ))}
-          </ul>
+                →
+              </span>
+            </Link>
+          </section>
         </div>
-
-        <p className="font-body mt-10 text-base leading-relaxed text-taupe md:text-[17px]">
-          Today, that same standard continues at K9 Atelier — a private,
-          cage-free mobile pet spa in Palm Beach.
-        </p>
-      </div>
-
-      <blockquote className="font-display mx-auto mt-16 max-w-3xl border-l border-champagne px-8 py-2 text-center text-2xl leading-snug text-ink italic md:text-3xl">
-        &ldquo;Because your dog deserves more than a groomer.
-        <br className="hidden sm:block" />
-        They deserve a grooming artisan.&rdquo;
-      </blockquote>
-
-      <div className="mt-14 flex flex-col items-center justify-center gap-4 sm:flex-row">
-        <LuxuryButton href="/services" variant="secondary">
-          Explore Services
-        </LuxuryButton>
-        <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[10px] font-medium uppercase tracking-[0.16em] text-ivory transition hover:bg-ink">
-          Book an Appointment
-        </BookServiceLink>
-      </div>
-    </PageShell>
+      </Container>
+    </div>
   );
 }
