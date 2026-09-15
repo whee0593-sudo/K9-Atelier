@@ -26,14 +26,10 @@ export function SelectedWorkSection({
     >
       <div
         className="k9-gallery-section-title"
-        style={{ left: "2.4vh", top: "6.5%" }}
+        style={{ left: "2.4vh", top: "6.5%", maxWidth: "18rem" }}
       >
-        <p className="font-body text-[10px] font-medium uppercase tracking-[0.28em] text-champagne/70">
-          The Work
-        </p>
-        <p className="font-display mt-2 text-[1.05rem] italic text-ivory/50">
-          Selected work by K9 Atelier
-        </p>
+        <p className="k9-gallery-section-kicker">The Work</p>
+        <p className="k9-gallery-section-lede">Selected work by K9 Atelier</p>
       </div>
       {GALLERY_FRAME_SLOTS.map((slot) => (
         <FramedArtwork

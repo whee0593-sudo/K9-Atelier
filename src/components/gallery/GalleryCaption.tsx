@@ -23,10 +23,10 @@ export function GalleryWallCaption({
 }: {
   caption: GalleryCaptionData;
 }) {
-  const [kicker, detail] = lightboxCaptionLines(caption);
+  const detail = caption.detail?.trim() ?? "";
+  if (!detail) return null;
   return (
     <span className="k9-gallery-caption">
-      <span className="k9-gallery-caption-kicker">{kicker}</span>
       <span className="k9-gallery-caption-detail">{detail}</span>
     </span>
   );
