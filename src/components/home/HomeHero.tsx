@@ -25,7 +25,7 @@ export function HomeHero() {
             <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[11px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink">
               Book an Appointment
             </BookServiceLink>
-            <LuxuryButton href="/#experience" variant="secondary">
+            <LuxuryButton href="/#first-visit" variant="secondary">
               Discover the Experience
             </LuxuryButton>
           </div>
