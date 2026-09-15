@@ -12,7 +12,12 @@ describe("gallery wall markup", () => {
     assert.match(html, /Selected Work/);
     assert.match(html, /Grooms by K9 Atelier\./);
     assert.equal(html.includes("A Study in Coat"), false);
-    assert.match(html, /Competition Archive/);
+    assert.match(html, /The Craft/);
+    assert.match(
+      html,
+      /Awards, teaching moments, and memories from the show ring\./,
+    );
+    assert.equal(html.includes("Competition Archive"), false);
     assert.match(html, /This gallery scrolls horizontally/);
     assert.match(html, /Drag to explore/);
     assert.equal(html.includes("Keepsakes"), false);

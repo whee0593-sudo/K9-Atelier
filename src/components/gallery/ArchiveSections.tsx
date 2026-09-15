@@ -27,15 +27,18 @@ export function CompetitionArchiveSection({
   return (
     <section
       className="k9-gallery-competition"
-      aria-label="Competition Archive"
+      aria-label="The Craft"
       style={{ width: `${GALLERY_SECTION_WIDTH_VH.competition}vh` }}
     >
       <div
         className="k9-gallery-section-title"
-        style={{ left: "2.4vh", top: "7%" }}
+        style={{ left: "2.4vh", top: "7%", maxWidth: "20rem" }}
       >
         <p className="font-body text-[10px] font-medium uppercase tracking-[0.28em] text-champagne/70">
-          Competition Archive
+          The Craft
+        </p>
+        <p className="font-display mt-2 text-[1.05rem] italic leading-snug text-ivory/50">
+          Awards, teaching moments, and memories from the show ring.
         </p>
       </div>
       {COMPETITION_ARCHIVE_ITEMS.map((item) => (
