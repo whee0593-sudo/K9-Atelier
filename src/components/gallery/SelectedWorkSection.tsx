@@ -31,9 +31,6 @@ export function SelectedWorkSection({
         <p className="font-body text-[10px] font-medium uppercase tracking-[0.28em] text-champagne/70">
           Selected Work
         </p>
-        <p className="font-display mt-2 text-[1.05rem] italic text-ivory/50">
-          A Study in Coat &amp; Form
-        </p>
       </div>
       {GALLERY_FRAME_SLOTS.map((slot) => (
         <FramedArtwork

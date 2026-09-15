@@ -10,6 +10,7 @@ describe("gallery wall markup", () => {
   it("renders one horizontal museum track instead of masonry", () => {
     const html = renderToStaticMarkup(<GalleryWall />);
     assert.match(html, /Selected Work/);
+    assert.equal(html.includes("A Study in Coat"), false);
     assert.match(html, /Competition Archive/);
     assert.match(html, /This gallery scrolls horizontally/);
     assert.match(html, /Drag to explore/);
