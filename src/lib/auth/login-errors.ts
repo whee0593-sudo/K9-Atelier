@@ -12,7 +12,7 @@ export function authErrorMessage(message: string) {
     return "That email or password is incorrect.";
   }
   if (lower.includes("already registered") || lower.includes("already been registered")) {
-    return "An account with this email already exists. Sign in, or use the email link if you have not set a password yet.";
+    return "An account with this email already exists. Sign in, or reset your password if you have not set one yet.";
   }
   if (lower.includes("email not confirmed")) {
     return "Please confirm your email first. Check your inbox for a confirmation link.";
