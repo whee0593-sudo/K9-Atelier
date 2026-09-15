@@ -34,21 +34,21 @@ const honors = [
 const sectionRule = "border-t border-champagne/25";
 const sectionSpace = "mt-20 pt-16 md:mt-28 md:pt-20 lg:mt-32 lg:pt-24";
 const sectionLabel =
-  "font-body text-[11px] font-medium uppercase tracking-[0.22em] text-deep-lavender";
+  "font-body text-[13px] font-medium uppercase tracking-[0.2em] text-deep-lavender md:text-sm";
 
 export default function AboutPage() {
   return (
     <div className="overflow-x-clip">
       <Container>
         <div className="mx-auto max-w-[1160px] pb-20 pt-16 md:pb-28 md:pt-24">
-          <header className="mx-auto max-w-[42.5rem] text-center">
+          <header className="mx-auto max-w-[46rem] text-center">
             <p className={sectionLabel}>Precision. Patience. Purpose.</p>
-            <h1 className="font-display mt-6 text-[2.5rem] leading-[1.12] font-medium tracking-[-0.01em] text-ink md:mt-7 md:text-5xl lg:text-[3.25rem]">
+            <h1 className="font-display mt-6 text-[2.875rem] leading-[1.12] font-medium tracking-[-0.01em] text-ink md:mt-8 md:text-[3.5rem] lg:text-[3.75rem]">
               The Story Behind
               <br />
               K9 Atelier
             </h1>
-            <div className="font-body mx-auto mt-8 max-w-[40.5rem] space-y-5 text-base leading-[1.85] text-taupe md:mt-10 md:text-[17px]">
+            <div className="font-body mx-auto mt-8 max-w-[44rem] space-y-6 text-lg leading-[1.8] text-taupe md:mt-10 md:text-[1.25rem] md:leading-[1.85]">
               <p>
                 K9 Atelier is the work of Penny, an award-winning groomer whose
                 approach has been shaped by professional grooming, show styling,
@@ -72,16 +72,16 @@ export default function AboutPage() {
             <h2 id="about-experience" className={sectionLabel}>
               Experience
             </h2>
-            <ul className="mt-10 grid grid-cols-1 gap-12 md:mt-14 md:grid-cols-3 md:gap-10 lg:gap-16">
+            <ul className="mt-10 grid grid-cols-1 gap-14 md:mt-14 md:grid-cols-3 md:gap-10 lg:gap-16">
               {experience.map((item) => (
                 <li key={item.kicker} className="min-w-0">
-                  <p className="font-display text-[2.125rem] leading-none text-ink md:text-[2.35rem]">
+                  <p className="font-display text-[2.5rem] leading-none text-ink md:text-[2.75rem]">
                     {item.kicker}
                   </p>
-                  <p className="font-body mt-5 text-[15px] leading-snug text-ink md:text-base">
+                  <p className="font-body mt-5 text-lg leading-snug text-ink">
                     {item.role}
                   </p>
-                  <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
+                  <p className="font-body mt-3 text-base leading-relaxed text-taupe md:text-[17px]">
                     {item.detail}
                   </p>
                 </li>
@@ -96,19 +96,19 @@ export default function AboutPage() {
             <h2 id="about-honors" className={sectionLabel}>
               Show Honors
             </h2>
-            <p className="font-body mt-4 max-w-md text-sm leading-relaxed text-taupe md:text-[15px]">
+            <p className="font-body mt-5 max-w-lg text-lg leading-relaxed text-taupe">
               Competition achievements in professional grooming.
             </p>
             <ul className="mt-10 md:mt-12">
               {honors.map((honor) => (
                 <li
                   key={honor.year}
-                  className="grid grid-cols-[4.75rem_minmax(0,1fr)] items-baseline gap-x-6 border-t border-champagne/20 py-7 sm:grid-cols-[5.5rem_minmax(0,1fr)] sm:gap-x-10 md:py-8"
+                  className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-baseline gap-x-6 border-t border-champagne/20 py-8 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-x-10 md:py-9"
                 >
-                  <p className="font-display text-[1.65rem] leading-none text-ink md:text-[1.85rem]">
+                  <p className="font-display text-[2rem] leading-none text-ink md:text-[2.25rem]">
                     {honor.year}
                   </p>
-                  <p className="font-body text-[15px] leading-relaxed text-taupe md:text-base">
+                  <p className="font-body text-lg leading-relaxed text-taupe md:text-xl">
                     {honor.title}
                   </p>
                 </li>
@@ -117,16 +117,16 @@ export default function AboutPage() {
           </section>
 
           <section
-            className={`${sectionRule} ${sectionSpace} mx-auto max-w-[40.5rem] text-center`}
+            className={`${sectionRule} ${sectionSpace} mx-auto max-w-[44rem] text-center`}
             aria-labelledby="about-standard"
           >
             <h2
               id="about-standard"
-              className="font-display text-[2rem] leading-[1.15] font-medium text-ink md:text-[2.375rem]"
+              className="font-display text-[2.5rem] leading-[1.15] font-medium text-ink md:text-[2.875rem]"
             >
               A Different Standard of Care
             </h2>
-            <div className="font-body mt-8 space-y-5 text-base leading-[1.85] text-taupe md:mt-10 md:text-[17px]">
+            <div className="font-body mt-8 space-y-6 text-lg leading-[1.8] text-taupe md:mt-10 md:text-[1.25rem] md:leading-[1.85]">
               <p>
                 Today, that same standard continues at K9 Atelier — a private,
                 cage-free mobile pet spa serving Palm Beach.
@@ -143,7 +143,7 @@ export default function AboutPage() {
             </p>
             <Link
               href="/services"
-              className="group font-body mt-10 inline-flex min-h-[48px] items-center gap-3 border border-champagne px-8 text-[11px] font-medium uppercase tracking-[0.18em] text-ink transition duration-500 hover:border-ink hover:text-deep-lavender focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne motion-reduce:transition-none md:mt-12"
+              className="group font-body mt-10 inline-flex min-h-[52px] items-center gap-3 border border-champagne px-9 text-[13px] font-medium uppercase tracking-[0.16em] text-ink transition duration-500 hover:border-ink hover:text-deep-lavender focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne motion-reduce:transition-none md:mt-12"
             >
               Explore Services
               <span
