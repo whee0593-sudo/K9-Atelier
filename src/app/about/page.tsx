@@ -5,43 +5,19 @@ import { PageShell } from "@/components/luxury/PageShell";
 export const metadata = {
   title: "About · K9 Atelier",
   description:
-    "The story behind K9 Atelier — a cage-free Private Mobile Pet Spa in Palm Beach, built on precision, patience, and purpose.",
+    "Penny, the groomer behind K9 Atelier — professional care since 2010, show honors including Best in Show, and a private mobile pet spa in Palm Beach.",
 };
 
-const timeline = [
-  {
-    year: "2010",
-    title: "The Journey Begins",
-    body: "Penny begins her professional grooming career and builds a strong foundation in grooming technique, coat care, and finishing.",
-  },
-  {
-    year: "2014",
-    title: "Education & Craft",
-    body: "Penny becomes an instructor at a professional grooming academy in Shanghai, teaching Asian Fusion styling and show grooming.",
-  },
-  {
-    year: "2014–2019",
-    title: "Competition Grooming",
-    body: "Through professional grooming competitions, Penny develops her experience working with Pomeranians, Poodles, and Shih Tzus while continuing to refine her technique and attention to detail.",
-  },
-  {
-    year: "2019",
-    title: "Best in Show",
-    body: "Penny receives Best in Show, the highest honor of her competitive grooming career.",
-  },
-  {
-    year: "2020",
-    title: "A New Chapter",
-    body: "Penny moves to the United States with her infant son, beginning a new chapter while continuing her commitment to thoughtful, skilled grooming.",
-  },
-  {
-    year: "TODAY",
-    title: "K9 Atelier · Palm Beach",
-    body: [
-      "K9 Atelier is a private, cage-free mobile pet spa offering calm, one-on-one grooming appointments in Palm Beach.",
-      "Each appointment is tailored to the individual dog, with careful attention to comfort, coat condition, skin health, and a well-balanced finish.",
-    ],
-  },
+const highlights = [
+  "Professional grooming since 2010, with a calm, one-on-one standard of care.",
+  "Former head groomer at a premier luxury dog salon in Shanghai.",
+  "Five years teaching Asian fusion and show styling at a professional academy.",
+] as const;
+
+const honors = [
+  { year: "2014", title: "Best in Group", detail: "Pomeranian" },
+  { year: "2017", title: "Best in Group", detail: "Poodle" },
+  { year: "2019", title: "Best in Show", detail: "Bichon" },
 ] as const;
 
 export default function AboutPage() {
@@ -55,44 +31,43 @@ export default function AboutPage() {
           K9 Atelier
         </>
       }
-      intro={
-        <>
-          <p>
-            The name &ldquo;Atelier&rdquo; reflects the care and craftsmanship
-            behind our work. It is a place where skills are refined, details are
-            considered, and each result is approached with intention.
-          </p>
-          <p className="mt-4">
-            This philosophy continues to guide every K9 Atelier appointment
-            today.
-          </p>
-        </>
-      }
+      intro="Penny is the groomer behind K9 Atelier. The name reflects a workshop of craftsmanship — skill refined with care, and each result approached with intention."
     >
-      <div className="mx-auto max-w-3xl space-y-10">
-        {timeline.map((item) => (
-          <article
-            key={item.year}
-            className="grid gap-4 border-t border-champagne/50 pt-8 md:grid-cols-[120px_1fr]"
-          >
-            <p className="font-body text-[11px] font-semibold uppercase tracking-[0.18em] text-deep-lavender">
-              {item.year}
-            </p>
-            <div>
-              <h2 className="font-display text-2xl text-ink">{item.title}</h2>
-              {(Array.isArray(item.body) ? item.body : [item.body]).map(
-                (paragraph) => (
-                  <p
-                    key={paragraph}
-                    className="font-body mt-3 text-base leading-relaxed text-taupe first:mt-3"
-                  >
-                    {paragraph}
-                  </p>
-                ),
-              )}
-            </div>
-          </article>
-        ))}
+      <div className="mx-auto max-w-3xl">
+        <ul className="space-y-0">
+          {highlights.map((item) => (
+            <li
+              key={item}
+              className="border-t border-champagne/50 py-6 font-body text-base leading-relaxed text-taupe md:text-[17px]"
+            >
+              {item}
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-6 border-t border-champagne/50 pt-10">
+          <h2 className="font-body text-[11px] font-semibold uppercase tracking-[0.18em] text-deep-lavender">
+            Show honors
+          </h2>
+          <ul className="mt-6">
+            {honors.map((honor) => (
+              <li
+                key={`${honor.year}-${honor.detail}`}
+                className="grid gap-1 border-t border-gray-line/80 py-5 md:grid-cols-[88px_1fr] md:items-baseline md:gap-6"
+              >
+                <p className="font-display text-2xl text-ink">{honor.year}</p>
+                <p className="font-body text-base text-taupe">
+                  {honor.title} · {honor.detail}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="font-body mt-10 text-base leading-relaxed text-taupe md:text-[17px]">
+          Today, that same standard continues at K9 Atelier — a private,
+          cage-free mobile pet spa in Palm Beach.
+        </p>
       </div>
 
       <blockquote className="font-display mx-auto mt-16 max-w-3xl border-l border-champagne px-8 py-2 text-center text-2xl leading-snug text-ink italic md:text-3xl">
