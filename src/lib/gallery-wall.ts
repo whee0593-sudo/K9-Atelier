@@ -35,7 +35,6 @@ export const GALLERY_FRAME_GAP_VH = 1.2;
 export const GALLERY_SECTION_WIDTH_VH = {
   selected: 240,
   competition: 184,
-  credentials: 96,
 } as const;
 
 export const GALLERY_PLAQUE_SIZE_VH = {
@@ -309,7 +308,6 @@ export type CompetitionArchiveItem = {
   y: number;
   displayWidth: number;
   frame: CompetitionFrameFinish;
-  section: "competition" | "credentials";
   caption?: GalleryCaption;
 };
 
@@ -339,7 +337,6 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     y: 27.5,
     displayWidth: 19,
     frame: "walnut",
-    section: "competition",
     caption: {
       kicker: "FROM THE RING",
       title: "Show-day snapshot",
@@ -355,7 +352,6 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     y: 76,
     displayWidth: 12.8,
     frame: "gold",
-    section: "competition",
     caption: {
       kicker: "IN THE STUDIO",
       title: "Teaching",
@@ -371,7 +367,6 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     y: 76.5,
     displayWidth: 19,
     frame: "walnut",
-    section: "competition",
     caption: {
       kicker: "FROM THE RING",
       title: "Show-day snapshot",
@@ -387,7 +382,6 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     y: 27,
     displayWidth: 24,
     frame: "gold",
-    section: "competition",
     caption: {
       kicker: "2019",
       title: "Best in Show",
@@ -404,7 +398,6 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     y: 27.5,
     displayWidth: 19.5,
     frame: "brass",
-    section: "competition",
     caption: {
       kicker: "FROM THE RING",
       title: "Show-day snapshot",
@@ -420,7 +413,6 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     y: 76,
     displayWidth: 13,
     frame: "gold",
-    section: "competition",
     caption: {
       kicker: "IN THE STUDIO",
       title: "Teaching",
@@ -436,7 +428,6 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
     y: 27.5,
     displayWidth: 18.5,
     frame: "brass",
-    section: "competition",
     caption: {
       kicker: "IN THE STUDIO",
       title: "Teaching",
@@ -445,28 +436,19 @@ export const COMPETITION_ARCHIVE_ITEMS: readonly CompetitionArchiveItem[] = [
   {
     id: "competition-08",
     src: competitionImageSrc(8),
-    alt: "Trophy, ribbons, and notes arranged together on a studio table",
+    alt: "Trophy, ribbons, and certificates arranged together on a studio table",
     width: 960,
     height: 720,
-    x: 48,
-    y: 52,
-    displayWidth: 30,
+    x: 160,
+    y: 76.5,
+    displayWidth: 18,
     frame: "walnut",
-    section: "credentials",
     caption: {
-      kicker: "FROM THE TABLE",
-      title: "Studio keepsakes",
+      kicker: "FROM THE ARCHIVE",
+      title: "Show-day snapshot",
     },
   },
 ];
-
-export const COMPETITION_WALL_ITEMS = COMPETITION_ARCHIVE_ITEMS.filter(
-  (item) => item.section === "competition",
-);
-
-export const CREDENTIALS_ITEMS = COMPETITION_ARCHIVE_ITEMS.filter(
-  (item) => item.section === "credentials",
-);
 
 export const GALLERY_WINNER_ITEM_ID = "competition-04";
 
@@ -603,7 +585,7 @@ export function selectedWorkBoxes(viewportVh = GALLERY_VIEWPORT_VH) {
 }
 
 export function competitionWallBoxes(viewportVh = GALLERY_VIEWPORT_VH) {
-  const frames = COMPETITION_WALL_ITEMS.map((item) =>
+  const frames = COMPETITION_ARCHIVE_ITEMS.map((item) =>
     galleryArtworkBox({
       id: item.id,
       centerXVh: item.x,

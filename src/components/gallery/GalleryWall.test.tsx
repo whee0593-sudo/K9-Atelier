@@ -11,10 +11,11 @@ describe("gallery wall markup", () => {
     const html = renderToStaticMarkup(<GalleryWall />);
     assert.match(html, /Selected Work/);
     assert.match(html, /Competition Archive/);
-    assert.match(html, /Keepsakes/);
     assert.match(html, /This gallery scrolls horizontally/);
     assert.match(html, /Drag to explore/);
-    assert.match(html, /Teaching notes and show-day snapshots/);
+    assert.equal(html.includes("Keepsakes"), false);
+    assert.equal(html.includes("Teaching notes and show-day snapshots"), false);
+    assert.equal(html.includes("Ribbons and notes from the table"), false);
     assert.match(html, /2019/);
     assert.match(html, /BEST IN SHOW/);
     assert.match(html, /Bichon/);

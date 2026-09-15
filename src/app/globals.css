@@ -130,8 +130,7 @@ body {
 }
 
 .k9-gallery-selected,
-.k9-gallery-competition,
-.k9-gallery-credentials {
+.k9-gallery-competition {
   position: relative;
   flex: 0 0 auto;
   height: 100%;
@@ -143,10 +142,6 @@ body {
 
 .k9-gallery-competition {
   width: 184vh;
-}
-
-.k9-gallery-credentials {
-  width: 96vh;
 }
 
 .k9-gallery-end {

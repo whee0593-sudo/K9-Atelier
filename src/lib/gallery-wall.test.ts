@@ -4,7 +4,6 @@ import path from "node:path";
 import { describe, it } from "node:test";
 import {
   COMPETITION_ARCHIVE_ITEMS,
-  CREDENTIALS_ITEMS,
   GALLERY_FRAME_SLOTS,
   GALLERY_LIGHTBOX_ITEMS,
   GALLERY_SECTION_WIDTH_VH,
@@ -68,19 +67,11 @@ describe("competition archive data", () => {
     assert.equal(new Set(ids).size, 8);
   });
 
-  it("keeps competition-08 in keepsakes, not the main archive wall", () => {
-    const credentials = COMPETITION_ARCHIVE_ITEMS.find(
-      (item) => item.id === "competition-08",
-    );
-    assert.equal(credentials?.section, "credentials");
-    assert.deepEqual(
-      CREDENTIALS_ITEMS.map((item) => item.id),
-      ["competition-08"],
-    );
+  it("hangs all eight photographs on the competition archive wall", () => {
+    assert.equal(COMPETITION_ARCHIVE_ITEMS.length, 8);
     assert.equal(
-      COMPETITION_ARCHIVE_ITEMS.filter((item) => item.section === "competition")
-        .length,
-      7,
+      COMPETITION_ARCHIVE_ITEMS.some((item) => item.id === "competition-08"),
+      true,
     );
   });
 

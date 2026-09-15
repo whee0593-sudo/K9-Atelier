@@ -13,10 +13,7 @@ import {
   galleryPointerDistance,
   shouldDismissDragHint,
 } from "@/lib/gallery-wall";
-import {
-  CompetitionArchiveSection,
-  CredentialsSection,
-} from "./ArchiveSections";
+import { CompetitionArchiveSection } from "./ArchiveSections";
 import { GalleryLightbox } from "./GalleryLightbox";
 import { SelectedWorkSection } from "./SelectedWorkSection";
 
@@ -190,7 +187,6 @@ function HorizontalGallery({
       <div className="k9-gallery-track">
         <SelectedWorkSection onOpen={openIfClick} />
         <CompetitionArchiveSection onOpen={openIfClick} />
-        <CredentialsSection onOpen={openIfClick} />
         <div className="k9-gallery-end" aria-hidden="true" />
       </div>
       <DragHint visible={hintVisible} />

@@ -3,8 +3,7 @@
 import Image from "next/image";
 import React, { useState } from "react";
 import {
-  COMPETITION_WALL_ITEMS,
-  CREDENTIALS_ITEMS,
+  COMPETITION_ARCHIVE_ITEMS,
   GALLERY_SECTION_WIDTH_VH,
   GALLERY_WINNER_PLAQUE,
   type CompetitionArchiveItem,
@@ -35,43 +34,11 @@ export function CompetitionArchiveSection({
         <p className="font-body text-[10px] font-medium uppercase tracking-[0.28em] text-champagne/70">
           Competition Archive
         </p>
-        <p className="font-display mt-2 max-w-[13rem] text-[1.05rem] italic leading-snug text-ivory/50">
-          Teaching notes and show-day snapshots.
-        </p>
       </div>
-      {COMPETITION_WALL_ITEMS.map((item) => (
+      {COMPETITION_ARCHIVE_ITEMS.map((item) => (
         <ArchiveFrame key={item.id} item={item} onOpen={onOpen} />
       ))}
       <MuseumLabel />
-    </section>
-  );
-}
-
-export function CredentialsSection({
-  onOpen,
-}: {
-  onOpen: (id: string, trigger: HTMLElement) => void;
-}) {
-  return (
-    <section
-      className="k9-gallery-credentials"
-      aria-label="Keepsakes"
-      style={{ width: `${GALLERY_SECTION_WIDTH_VH.credentials}vh` }}
-    >
-      <div
-        className="k9-gallery-section-title"
-        style={{ left: "2.8vh", top: "10%" }}
-      >
-        <p className="font-body text-[10px] font-medium uppercase tracking-[0.28em] text-champagne/70">
-          Keepsakes
-        </p>
-        <p className="font-display mt-2 max-w-[12rem] text-[1.05rem] italic leading-snug text-ivory/50">
-          Ribbons and notes from the table.
-        </p>
-      </div>
-      {CREDENTIALS_ITEMS.map((item) => (
-        <ArchiveFrame key={item.id} item={item} onOpen={onOpen} />
-      ))}
     </section>
   );
 }
