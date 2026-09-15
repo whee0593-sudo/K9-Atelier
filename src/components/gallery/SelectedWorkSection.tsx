@@ -32,7 +32,7 @@ export function SelectedWorkSection({
           Selected Work
         </p>
         <p className="font-display mt-2 text-[1.05rem] italic text-ivory/50">
-          Selected grooms by K9 Atelier.
+          Grooms by K9 Atelier.
         </p>
       </div>
       {GALLERY_FRAME_SLOTS.map((slot) => (
