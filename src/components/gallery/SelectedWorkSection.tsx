@@ -31,6 +31,9 @@ export function SelectedWorkSection({
         <p className="font-body text-[10px] font-medium uppercase tracking-[0.28em] text-champagne/70">
           Selected Work
         </p>
+        <p className="font-display mt-2 text-[1.05rem] italic text-ivory/50">
+          Selected grooms by K9 Atelier.
+        </p>
       </div>
       {GALLERY_FRAME_SLOTS.map((slot) => (
         <FramedArtwork
