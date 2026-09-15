@@ -4,8 +4,10 @@ import path from "node:path";
 import { describe, it } from "node:test";
 import {
   COMPETITION_ARCHIVE_ITEMS,
+  COMPETITION_LIGHTBOX_ITEMS,
   GALLERY_FRAME_SLOTS,
   GALLERY_LIGHTBOX_ITEMS,
+  SELECTED_WORK_LIGHTBOX_ITEMS,
   GALLERY_SECTION_WIDTH_VH,
   GALLERY_WINNER_ITEM_ID,
   competitionWallBoxes,
@@ -116,14 +118,19 @@ describe("competition archive data", () => {
   });
 });
 
-describe("unified lightbox catalog", () => {
-  it("combines selected work and competition images into 25 items", () => {
-    assert.equal(GALLERY_LIGHTBOX_ITEMS.length, 25);
+describe("gallery lightbox catalog", () => {
+  it("keeps the visible gallery catalog to selected work only", () => {
+    assert.equal(GALLERY_LIGHTBOX_ITEMS.length, 17);
+    assert.equal(SELECTED_WORK_LIGHTBOX_ITEMS.length, 17);
     assert.equal(GALLERY_LIGHTBOX_ITEMS[0]?.id, "work-01");
     assert.equal(GALLERY_LIGHTBOX_ITEMS[16]?.id, "work-17");
-    assert.equal(GALLERY_LIGHTBOX_ITEMS[17]?.id, "competition-01");
-    assert.equal(GALLERY_LIGHTBOX_ITEMS[23]?.id, "competition-07");
-    assert.equal(GALLERY_LIGHTBOX_ITEMS[24]?.id, "competition-08");
+    assert.equal(
+      GALLERY_LIGHTBOX_ITEMS.some((item) => item.id.startsWith("competition-")),
+      false,
+    );
+    assert.equal(COMPETITION_LIGHTBOX_ITEMS.length, 8);
+    assert.equal(COMPETITION_LIGHTBOX_ITEMS[0]?.id, "competition-01");
+    assert.equal(COMPETITION_LIGHTBOX_ITEMS[7]?.id, "competition-08");
   });
 
   it("keeps selected-work lightbox paths mapped to the original PNGs", () => {
@@ -135,12 +142,12 @@ describe("unified lightbox catalog", () => {
     }
   });
 
-  it("navigates across the work-17 and competition-01 boundary", () => {
-    assert.equal(nextLightboxId("work-17"), "competition-01");
-    assert.equal(prevLightboxId("competition-01"), "work-17");
+  it("cycles selected work and competition catalogs independently", () => {
+    assert.equal(nextLightboxId("work-17"), "work-01");
+    assert.equal(prevLightboxId("work-01"), "work-17");
     assert.equal(nextLightboxId("competition-07"), "competition-08");
-    assert.equal(nextLightboxId("competition-08"), "work-01");
-    assert.equal(prevLightboxId("work-01"), "competition-08");
+    assert.equal(nextLightboxId("competition-08"), "competition-01");
+    assert.equal(prevLightboxId("competition-01"), "competition-08");
   });
 });
 
@@ -183,15 +190,11 @@ describe("gallery captions", () => {
     }
   });
 
-  it("gives every lightbox item a caption, unique from the 2019 winner except competition-04", () => {
-    assert.equal(GALLERY_LIGHTBOX_ITEMS.length, 25);
+  it("gives every selected-work lightbox item a two-line caption", () => {
+    assert.equal(GALLERY_LIGHTBOX_ITEMS.length, 17);
     for (const item of GALLERY_LIGHTBOX_ITEMS) {
       assert.ok(item.caption);
       const lines = lightboxCaptionLines(item.caption);
-      if (item.id === GALLERY_WINNER_ITEM_ID) {
-        assert.deepEqual(lines, ["", "2019 Best in Show"]);
-        continue;
-      }
       assert.equal(lines[0].length > 0, true, item.id);
       assert.equal(lines[1].length > 0, true, item.id);
       assert.notEqual(lines[0], "2019 · Best in Show");
@@ -204,7 +207,7 @@ describe("gallery captions", () => {
       "Braided ears",
     ]);
 
-    const snapshot = GALLERY_LIGHTBOX_ITEMS.find(
+    const snapshot = COMPETITION_LIGHTBOX_ITEMS.find(
       (item) => item.id === "competition-05",
     );
     assert.deepEqual(lightboxCaptionLines(snapshot?.caption), [

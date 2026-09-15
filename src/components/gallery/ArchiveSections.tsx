@@ -17,6 +17,7 @@ const FRAME_CLASS: Record<CompetitionFrameFinish, string> = {
   brass: "k9-gallery-frame-brass",
 };
 
+/** Hidden on /gallery for now. Kept for a later About-page placement. */
 export function CompetitionArchiveSection({
   onOpen,
 }: {
