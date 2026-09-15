@@ -9,8 +9,9 @@ import { GALLERY_WALL_GUIDE_ASSETS } from "@/lib/gallery-wall";
 describe("gallery wall markup", () => {
   it("renders one horizontal museum track instead of masonry", () => {
     const html = renderToStaticMarkup(<GalleryWall />);
-    assert.match(html, /Selected Work/);
-    assert.match(html, /Grooms by K9 Atelier\./);
+    assert.match(html, /The Work/);
+    assert.match(html, /Selected work by K9 Atelier/);
+    assert.equal(html.includes("Grooms by K9 Atelier"), false);
     assert.equal(html.includes("A Study in Coat"), false);
     assert.match(html, /The Craft/);
     assert.match(html, /Awards, teaching moments,/);
