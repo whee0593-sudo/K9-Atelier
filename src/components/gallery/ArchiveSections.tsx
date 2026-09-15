@@ -32,7 +32,7 @@ export function CompetitionArchiveSection({
     >
       <div
         className="k9-gallery-section-title"
-        style={{ left: "2.4vh", top: "7%", maxWidth: "20rem" }}
+        style={{ left: "2.4vh", top: "7%", maxWidth: "22rem" }}
       >
         <p className="font-body text-[10px] font-medium uppercase tracking-[0.28em] text-champagne/70">
           The Craft
