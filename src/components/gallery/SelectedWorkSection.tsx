@@ -21,7 +21,7 @@ export function SelectedWorkSection({
   return (
     <section
       className="k9-gallery-selected"
-      aria-label="Selected Work"
+      aria-label="The Work"
       style={{ width: `${GALLERY_SECTION_WIDTH_VH.selected}vh` }}
     >
       <div
@@ -29,10 +29,10 @@ export function SelectedWorkSection({
         style={{ left: "2.4vh", top: "6.5%" }}
       >
         <p className="font-body text-[10px] font-medium uppercase tracking-[0.28em] text-champagne/70">
-          Selected Work
+          The Work
         </p>
         <p className="font-display mt-2 text-[1.05rem] italic text-ivory/50">
-          A Study in Coat &amp; Form
+          Selected work by K9 Atelier
         </p>
       </div>
       {GALLERY_FRAME_SLOTS.map((slot) => (
