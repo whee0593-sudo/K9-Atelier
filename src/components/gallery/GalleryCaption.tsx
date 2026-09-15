@@ -12,8 +12,8 @@ export function GalleryLightboxCaption({
   const [kicker, detail] = lightboxCaptionLines(caption);
   return (
     <figcaption className="k9-gallery-lightbox-caption">
-      <p className="font-body text-champagne/80">{kicker}</p>
-      <p className="font-display text-ivory/80">{detail}</p>
+      {kicker ? <p className="font-body text-champagne/80">{kicker}</p> : null}
+      {detail ? <p className="font-display text-ivory/80">{detail}</p> : null}
     </figcaption>
   );
 }

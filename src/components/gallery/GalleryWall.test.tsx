@@ -21,8 +21,9 @@ describe("gallery wall markup", () => {
     assert.equal(html.includes("Keepsakes"), false);
     assert.equal(html.includes("Teaching notes and show-day snapshots"), false);
     assert.equal(html.includes("Ribbons and notes from the table"), false);
-    assert.match(html, /2019/);
-    assert.match(html, /BEST IN SHOW/);
+    assert.match(html, /2019 Best in Show/);
+    assert.equal(html.includes("BEST IN SHOW"), false);
+    assert.equal(html.includes("k9-gallery-plaque"), false);
     assert.match(html, /Bichon/);
     assert.equal(html.includes("Best in Group"), false);
     assert.equal(html.includes("Pomeranian"), false);
@@ -57,8 +58,9 @@ describe("gallery lightbox markup", () => {
     );
     assert.match(html, /role="dialog"/);
     assert.match(html, /aria-modal="true"/);
-    assert.match(html, /2019 · Best in Show/);
-    assert.match(html, /Bichon/);
+    assert.match(html, /2019 Best in Show/);
+    assert.equal(html.includes("2019 · Best in Show"), false);
+    assert.equal(html.includes(">Bichon<"), false);
     assert.match(html, /k9-gallery-lightbox-caption/);
     assert.match(html, /Previous image/);
     assert.match(html, /Next image/);

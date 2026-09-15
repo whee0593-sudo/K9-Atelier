@@ -6,8 +6,6 @@ import { GalleryWallCaption } from "@/components/gallery/GalleryCaption";
 import {
   COMPETITION_ARCHIVE_ITEMS,
   GALLERY_SECTION_WIDTH_VH,
-  GALLERY_WINNER_ITEM_ID,
-  GALLERY_WINNER_PLAQUE,
   competitionPlacement,
   type CompetitionArchiveItem,
   type CompetitionFrameFinish,
@@ -42,7 +40,6 @@ export function CompetitionArchiveSection({
       {COMPETITION_ARCHIVE_ITEMS.map((item) => (
         <ArchiveFrame key={item.id} item={item} onOpen={onOpen} />
       ))}
-      <MuseumLabel />
     </section>
   );
 }
@@ -94,33 +91,7 @@ function ArchiveFrame({
           />
         )}
       </span>
-      {item.id === GALLERY_WINNER_ITEM_ID ? null : (
-        <GalleryWallCaption caption={item.caption} />
-      )}
+      <GalleryWallCaption caption={item.caption} />
     </button>
-  );
-}
-
-function MuseumLabel() {
-  return (
-    <div
-      className="k9-gallery-plaque"
-      style={{
-        left: `${GALLERY_WINNER_PLAQUE.x}vh`,
-        top: `${GALLERY_WINNER_PLAQUE.y}%`,
-        width: "12vh",
-        transform: "translate(-50%, -50%)",
-      }}
-    >
-      <p className="font-body text-[9px] uppercase tracking-[0.22em] text-champagne/80">
-        {GALLERY_WINNER_PLAQUE.year}
-      </p>
-      <p className="font-body mt-1.5 text-[9px] uppercase tracking-[0.2em] text-champagne">
-        {GALLERY_WINNER_PLAQUE.title}
-      </p>
-      <p className="font-display mt-1.5 text-[0.95rem] text-ivory/75">
-        {GALLERY_WINNER_PLAQUE.detail}
-      </p>
-    </div>
   );
 }

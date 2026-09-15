@@ -279,27 +279,16 @@ body {
   text-align: center;
 }
 
-.k9-gallery-lightbox-caption p:first-child {
+.k9-gallery-lightbox-caption p.font-body {
   font-size: 0.9375rem;
   letter-spacing: 0.16em;
   text-transform: none;
 }
 
-.k9-gallery-lightbox-caption p:last-child {
+.k9-gallery-lightbox-caption p.font-display {
   margin-top: 0.4rem;
   font-size: 1.5rem;
   font-style: italic;
-}
-
-.k9-gallery-plaque {
-  position: absolute;
-  z-index: 5;
-  min-width: 7.25rem;
-  padding: 0.7rem 0.85rem 0.75rem;
-  pointer-events: none;
-  text-align: center;
-  background: #0c0d08;
-  border: 1px solid rgba(196, 168, 130, 0.32);
 }
 
 .k9-gallery-hint {
