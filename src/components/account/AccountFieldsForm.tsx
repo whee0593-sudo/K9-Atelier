@@ -9,9 +9,6 @@ export function AccountFieldPreview({ field }: { field: AccountField }) {
     return (
       <div className="border-t border-lavender/30 pt-6">
         <h3 className="text-base font-medium text-gold-dark">{field.label}</h3>
-        {field.note && (
-          <p className="mt-1 text-xs text-text-muted">{field.note}</p>
-        )}
       </div>
     );
   }
@@ -37,9 +34,6 @@ export function AccountFieldPreview({ field }: { field: AccountField }) {
             className="mt-3 text-xs text-text-muted"
           />
         </div>
-        {field.note && (
-          <p className="mt-1.5 text-xs text-text-muted">{field.note}</p>
-        )}
       </div>
     );
   }
@@ -77,9 +71,6 @@ export function AccountFieldPreview({ field }: { field: AccountField }) {
           placeholder={field.placeholder}
           className={`${inputClassName()} resize-none`}
         />
-        {field.note && (
-          <p className="mt-1.5 text-xs text-text-muted">{field.note}</p>
-        )}
       </div>
     );
   }
@@ -97,9 +88,6 @@ export function AccountFieldPreview({ field }: { field: AccountField }) {
             <option key={opt}>{opt}</option>
           ))}
         </select>
-        {field.note && (
-          <p className="mt-1.5 text-xs text-text-muted">{field.note}</p>
-        )}
       </div>
     );
   }
@@ -131,9 +119,6 @@ export function AccountFieldPreview({ field }: { field: AccountField }) {
         placeholder={field.placeholder}
         className={inputClassName()}
       />
-      {field.note && (
-        <p className="mt-1.5 text-xs text-text-muted">{field.note}</p>
-      )}
     </div>
   );
 }
@@ -168,9 +153,6 @@ export function AccountFieldsForm({
         <div key={field.id}>
           <p className="mb-2 text-sm font-medium text-text">{field.label}</p>
           <AccountFieldPreview field={field} />
-          {field.note && (
-            <p className="mt-1.5 text-xs text-text-muted">{field.note}</p>
-          )}
         </div>
       ))}
     </div>

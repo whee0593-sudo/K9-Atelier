@@ -40,7 +40,6 @@ export default async function AccountSectionPage({
   return (
     <div>
       <h2 className="text-2xl font-semibold text-gold-dark">{section.title}</h2>
-      <p className="mt-2 text-sm text-text-muted">{section.description}</p>
 
       <div className="mt-8 rounded-2xl border border-lavender/30 bg-cream p-6 md:p-8">
         {slug === "pets" ? (
@@ -55,10 +54,6 @@ export default async function AccountSectionPage({
           <CustomerProfileSection />
         ) : slug === "addresses" ? (
           <>
-            <p className="mb-6 text-sm text-text-muted">
-              You can save multiple addresses. Travel fees are calculated from
-              your default service address.
-            </p>
             <AccountFieldsForm fields={section.fields} />
             <button
               type="button"

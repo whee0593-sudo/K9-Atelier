@@ -102,9 +102,6 @@ export function CustomerProfileForm({
           value={profile.email}
           className={`${inputClassName()} ${emailReadOnly ? "opacity-80" : ""}`}
         />
-        <p className="mt-1.5 text-xs text-text-muted">
-          Required. Used for receipts, booking confirmations, and reminders.
-        </p>
         {!profile.email.trim() ? (
           <p className="mt-1.5 text-xs text-red-800">
             An email address is required on this profile.
@@ -141,10 +138,6 @@ export function CustomerProfileForm({
           placeholder="(555) 123-4567"
           className={inputClassName()}
         />
-        <span className="mt-1.5 block text-xs font-normal text-text-muted">
-          Required. We text a thank-you after checkout and may call or text
-          about the appointment day-of.
-        </span>
       </label>
       <label className="block text-sm font-medium text-text">
         Preferred Contact Method
@@ -163,9 +156,6 @@ export function CustomerProfileForm({
       </label>
       <div className="border-t border-lavender/30 pt-6">
         <h3 className="text-base font-medium text-gold-dark">Emergency Contact</h3>
-        <p className="mt-1 text-xs text-text-muted">
-          Optional — someone we can contact if we cannot reach you.
-        </p>
       </div>
       <label className="block text-sm font-medium text-text">
         Emergency Contact Name

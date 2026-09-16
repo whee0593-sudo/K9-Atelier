@@ -96,6 +96,7 @@ export function PetScalarFields({
   const inputClass = fieldInputClass(variant);
   const labelClass = fieldLabelClass(variant);
   const noteClass = fieldNoteClass(variant);
+  const showFieldNotes = variant === "booking";
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [addLater, setAddLater] = useState(false);
@@ -125,7 +126,7 @@ export function PetScalarFields({
               <h3 className="text-base font-medium text-gold-dark">
                 {field.label}
               </h3>
-              {field.note && (
+              {showFieldNotes && field.note && (
                 <p className={`${noteClass} mt-1`}>{field.note}</p>
               )}
             </div>
@@ -216,7 +217,7 @@ export function PetScalarFields({
                   {uploadError}
                 </p>
               )}
-              {field.note && <p className={noteClass}>{field.note}</p>}
+              {showFieldNotes && field.note && <p className={noteClass}>{field.note}</p>}
             </div>
           );
         }
@@ -237,7 +238,7 @@ export function PetScalarFields({
                 }
                 className={`${inputClass} resize-none`}
               />
-              {field.note && <p className={noteClass}>{field.note}</p>}
+              {showFieldNotes && field.note && <p className={noteClass}>{field.note}</p>}
             </div>
           );
         }
@@ -263,7 +264,7 @@ export function PetScalarFields({
                   </option>
                 ))}
               </select>
-              {field.note && <p className={noteClass}>{field.note}</p>}
+              {showFieldNotes && field.note && <p className={noteClass}>{field.note}</p>}
             </div>
           );
         }
@@ -283,7 +284,7 @@ export function PetScalarFields({
                 }
                 className={inputClass}
               />
-              {field.note && <p className={noteClass}>{field.note}</p>}
+              {showFieldNotes && field.note && <p className={noteClass}>{field.note}</p>}
             </div>
           );
         }
@@ -306,7 +307,7 @@ export function PetScalarFields({
               }
               className={inputClass}
             />
-            {field.note && <p className={noteClass}>{field.note}</p>}
+            {showFieldNotes && field.note && <p className={noteClass}>{field.note}</p>}
           </div>
         );
       })}
