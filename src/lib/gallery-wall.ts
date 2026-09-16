@@ -315,9 +315,9 @@ export type GalleryCaption = {
 export const SELECTED_WORK_CAPTIONS: Record<number, GalleryCaption> = {
   1: { kicker: "Bichon", detail: "Braided ears" },
   2: { kicker: "Yorkshire Terrier", detail: "Puppy cut" },
-  3: { kicker: "Bichon", detail: "Asian Fusion" },
+  3: { kicker: "Bichon", detail: "Teddy bear" },
   4: { kicker: "Poodle", detail: "Asian Fusion" },
-  5: { kicker: "Bichon", detail: "Asian Fusion" },
+  5: { kicker: "Bichon", detail: "Teddy bear" },
   6: { kicker: "Yorkshire Terrier", detail: "Top knot" },
   7: { kicker: "Bichon", detail: "Creative color" },
   8: { kicker: "Poodle", detail: "German trim" },
@@ -325,10 +325,10 @@ export const SELECTED_WORK_CAPTIONS: Record<number, GalleryCaption> = {
   10: { kicker: "Shih Tzu", detail: "Pigtails" },
   11: { kicker: "Bichon", detail: "Rainbow" },
   12: { kicker: "Yorkshire Terrier", detail: "Puppy cut" },
-  13: { kicker: "Doodle", detail: "Asian Fusion" },
-  14: { kicker: "Poodle", detail: "Asian Fusion" },
+  13: { kicker: "Doodle", detail: "Teddy bear" },
+  14: { kicker: "Poodle", detail: "Teddy bear" },
   15: { kicker: "Poodle", detail: "Asian Fusion" },
-  16: { kicker: "Pomeranian", detail: "Asian Fusion" },
+  16: { kicker: "Pomeranian", detail: "Teddy bear" },
   17: { kicker: "Bichon", detail: "Coat art" },
 };
 

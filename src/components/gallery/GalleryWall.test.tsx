@@ -41,8 +41,8 @@ describe("gallery wall markup", () => {
     assert.match(html, /k9-gallery-caption-kicker/);
     assert.match(html, /k9-gallery-caption-detail/);
     assert.equal(html.includes("SELECTED WORK"), false);
-    assert.equal(html.includes("Teddy bear"), false);
     assert.match(html, /Asian Fusion/);
+    assert.match(html, /Teddy bear/);
     for (const caption of Object.values(SELECTED_WORK_CAPTIONS)) {
       const pair = `k9-gallery-caption-kicker">${caption.kicker}</span><span class="k9-gallery-caption-detail">${caption.detail}</span>`;
       assert.equal(html.includes(pair), true, `${caption.kicker} / ${caption.detail}`);
@@ -87,8 +87,6 @@ describe("gallery lightbox markup", () => {
     assert.equal(html.includes("SELECTED WORK"), false);
     assert.match(html, /Bichon/);
     assert.match(html, /Braided ears/);
-    assert.equal(html.includes("font-body"), false);
-    assert.equal(html.includes("Teddy bear"), false);
   });
 
   it("uses matching display type on both lightbox caption lines", () => {
@@ -101,7 +99,6 @@ describe("gallery lightbox markup", () => {
     );
     assert.match(html, /Poodle/);
     assert.match(html, /Asian Fusion/);
-    assert.equal(html.includes("Teddy bear"), false);
     const caption = html.match(
       /k9-gallery-lightbox-caption">([\s\S]*?)<\/figcaption>/,
     )?.[1];

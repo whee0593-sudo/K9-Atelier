@@ -214,9 +214,8 @@ describe("gallery captions", () => {
       "Poodle",
       "Asian Fusion",
     ]);
-    for (const item of GALLERY_LIGHTBOX_ITEMS) {
-      assert.notEqual(item.caption?.detail, "Teddy bear", item.id);
-    }
+    assert.equal(SELECTED_WORK_CAPTIONS[5]?.detail, "Teddy bear");
+    assert.equal(SELECTED_WORK_CAPTIONS[14]?.detail, "Teddy bear");
 
     const snapshot = COMPETITION_LIGHTBOX_ITEMS.find(
       (item) => item.id === "competition-05",
