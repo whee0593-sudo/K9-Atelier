@@ -14,6 +14,7 @@ import {
 import { isOwnerEmail } from "@/lib/staff/owner";
 import { formatPaymentMethodLabel } from "@/lib/payments/types";
 import type { StaffCustomerHistory } from "@/lib/charges/history";
+import { formatLineItemMoney } from "@/lib/charges/list-amount";
 import { formatChargeMoney } from "@/lib/charges/money";
 import { formatStaffVisitTiming } from "@/lib/charges/hourly";
 import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
@@ -308,7 +309,7 @@ function CustomerHistory({ customerId, open }: { customerId: string; open: boole
                 {order.lineItems.length > 0 ? (
                   <p className="mt-1 text-xs text-text-muted">
                     {order.lineItems
-                      .map((item) => `${item.label} ${formatChargeMoney(item.amount)}`)
+                      .map((item) => `${item.label} ${formatLineItemMoney(item)}`)
                       .join(" · ")}
                     {order.tipAmount > 0
                       ? ` · Tip ${formatChargeMoney(order.tipAmount)}`

@@ -10,6 +10,7 @@ export function buildPreviewCollectContext(
       id: "preview-bath",
       label: "Signature Bath & Care",
       amount: 140,
+      listAmount: 140,
       catalogId: "signature-bath-care",
     },
   ];

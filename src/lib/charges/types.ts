@@ -16,6 +16,8 @@ export type ChargeLineItem = {
   id: string;
   label: string;
   amount: number;
+  /** Catalog / starting price. Kept when staff changes `amount` at checkout. */
+  listAmount?: number;
   catalogId?: string;
   referralCategory?: ReferralChargeCategory;
 };
