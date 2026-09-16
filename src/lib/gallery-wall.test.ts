@@ -28,12 +28,12 @@ import {
 } from "./gallery-wall";
 
 describe("gallery wall slots", () => {
-  it("maps all 17 framed portraits from 1 to 01 through 17 to 17", () => {
-    assert.equal(GALLERY_FRAME_SLOTS.length, 17);
+  it("maps the framed portraits still hanging on the wall", () => {
+    assert.equal(GALLERY_FRAME_SLOTS.length, 16);
     const ids = GALLERY_FRAME_SLOTS.map((slot) => slot.id);
     assert.deepEqual(
       ids,
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17],
     );
 
     for (const slot of GALLERY_FRAME_SLOTS) {
@@ -120,10 +120,14 @@ describe("competition archive data", () => {
 
 describe("gallery lightbox catalog", () => {
   it("keeps the visible gallery catalog to selected work only", () => {
-    assert.equal(GALLERY_LIGHTBOX_ITEMS.length, 17);
-    assert.equal(SELECTED_WORK_LIGHTBOX_ITEMS.length, 17);
+    assert.equal(GALLERY_LIGHTBOX_ITEMS.length, 16);
+    assert.equal(SELECTED_WORK_LIGHTBOX_ITEMS.length, 16);
     assert.equal(GALLERY_LIGHTBOX_ITEMS[0]?.id, "work-01");
-    assert.equal(GALLERY_LIGHTBOX_ITEMS[16]?.id, "work-17");
+    assert.equal(GALLERY_LIGHTBOX_ITEMS[15]?.id, "work-17");
+    assert.equal(
+      GALLERY_LIGHTBOX_ITEMS.some((item) => item.id === "work-15"),
+      false,
+    );
     assert.equal(
       GALLERY_LIGHTBOX_ITEMS.some((item) => item.id.startsWith("competition-")),
       false,
@@ -192,7 +196,7 @@ describe("gallery captions", () => {
   });
 
   it("gives every selected-work lightbox item a two-line caption", () => {
-    assert.equal(GALLERY_LIGHTBOX_ITEMS.length, 17);
+    assert.equal(GALLERY_LIGHTBOX_ITEMS.length, 16);
     for (const item of GALLERY_LIGHTBOX_ITEMS) {
       assert.ok(item.caption);
       const lines = lightboxCaptionLines(item.caption);
@@ -216,6 +220,7 @@ describe("gallery captions", () => {
     ]);
     assert.equal(SELECTED_WORK_CAPTIONS[5]?.detail, "Teddy bear");
     assert.equal(SELECTED_WORK_CAPTIONS[14]?.detail, "Teddy bear");
+    assert.equal(SELECTED_WORK_CAPTIONS[15], undefined);
 
     const snapshot = COMPETITION_LIGHTBOX_ITEMS.find(
       (item) => item.id === "competition-05",

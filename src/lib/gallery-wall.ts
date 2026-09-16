@@ -74,8 +74,8 @@ export function galleryWallPhotoSrc(id: number) {
 }
 
 /**
- * Selected-work hang: original 17 portraits, two staggered rows, no overlaps.
- * gallery-01 remains gallery-01.png through gallery-17.png — files are unchanged.
+ * Selected-work hang: original portraits, two staggered rows, no overlaps.
+ * gallery-01 remains gallery-01.png through gallery-17.png — unused files stay in place.
  */
 export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
   {
@@ -247,18 +247,6 @@ export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
     fit: "framed",
   },
   {
-    id: 15,
-    centerX: 22,
-    centerY: 72.5,
-    displayWidth: 12.8,
-    photoSrc: galleryWallPhotoSrc(15),
-    photoAlt:
-      "K9 Atelier grooming portfolio — brown-and-white poodle with a floral accent, ornate gold frame",
-    photoWidth: 1119,
-    photoHeight: 1405,
-    fit: "framed",
-  },
-  {
     id: 16,
     centerX: 64,
     centerY: 72,
@@ -309,7 +297,7 @@ export type GalleryCaption = {
 };
 
 /**
- * Lightbox / wall captions for the 17 selected-work portraits. Indexed by slot id.
+ * Lightbox / wall captions for selected-work portraits. Indexed by slot id.
  * Two-line museum label: kicker = breed, detail = styling.
  */
 export const SELECTED_WORK_CAPTIONS: Record<number, GalleryCaption> = {
@@ -327,7 +315,6 @@ export const SELECTED_WORK_CAPTIONS: Record<number, GalleryCaption> = {
   12: { kicker: "Yorkshire Terrier", detail: "Puppy cut" },
   13: { kicker: "Doodle", detail: "Teddy bear" },
   14: { kicker: "Poodle", detail: "Teddy bear" },
-  15: { kicker: "Poodle", detail: "Asian Fusion" },
   16: { kicker: "Pomeranian", detail: "Teddy bear" },
   17: { kicker: "Bichon", detail: "Coat art" },
 };
@@ -525,7 +512,7 @@ export function galleryCaptionBox(frame: GalleryBox): GalleryBox {
   };
 }
 
-export const SELECTED_WORK_PRIORITY_IDS = new Set([1, 2, 3, 15, 16]);
+export const SELECTED_WORK_PRIORITY_IDS = new Set([1, 2, 3, 16]);
 
 export const SELECTED_WORK_LIGHTBOX_ITEMS: readonly GalleryLightboxItem[] =
   GALLERY_FRAME_SLOTS.map((slot) => ({

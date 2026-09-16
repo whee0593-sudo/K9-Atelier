@@ -34,6 +34,7 @@ describe("gallery wall markup", () => {
     assert.equal(html.includes("Credentials"), false);
     assert.match(html, /gallery-01\.png/);
     assert.match(html, /gallery-17\.png/);
+    assert.equal(html.includes("gallery-15.png"), false);
     assert.equal(html.includes("competition-04.jpg"), false);
     assert.equal(html.includes("competition-08.jpg"), false);
     assert.equal(html.includes("Trophy presentation"), false);
