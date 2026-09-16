@@ -1,10 +1,13 @@
+import Link from "next/link";
 import { Container } from "@/components/luxury/Container";
 import { Eyebrow } from "@/components/luxury/Eyebrow";
-import { LuxuryButton } from "@/components/luxury/LuxuryButton";
 import { EditorialPhoto } from "@/components/luxury/EditorialPhoto";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { business } from "@/lib/business";
 import { photoFor } from "@/lib/gallery";
+
+const heroCtaClass =
+  "inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[11px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink";
 
 export function HomeHero() {
   const heroPhoto = photoFor("hero");
@@ -22,12 +25,12 @@ export function HomeHero() {
             private, one-on-one appointment.
           </p>
           <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
-            <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[11px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink">
+            <BookServiceLink className={heroCtaClass}>
               Book an Appointment
             </BookServiceLink>
-            <LuxuryButton href="/#experience" variant="secondary">
-              Discover the Experience
-            </LuxuryButton>
+            <Link href="/contact" className={heroCtaClass}>
+              Ask a Question
+            </Link>
           </div>
           <div className="font-body mt-8 max-w-xl space-y-3 text-[11px] font-medium uppercase leading-relaxed tracking-[0.12em] text-taupe sm:text-[12px] sm:tracking-[0.16em]">
             <p className="break-words">
