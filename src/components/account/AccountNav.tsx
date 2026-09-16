@@ -101,3 +101,42 @@ export function AccountNav({
   const pathname = usePathname();
   return <AccountNavLinks pathname={pathname} summaries={summaries} />;
 }
+
+export function AccountShellLayout({
+  pathname,
+  summaries = emptyAccountNavSummaries(),
+  children,
+}: {
+  pathname: string;
+  summaries?: AccountNavSummaries;
+  children: React.ReactNode;
+}) {
+  const nav = <AccountNavLinks pathname={pathname} summaries={summaries} />;
+  const hasPage = children != null && children !== false && children !== "";
+
+  if (!hasPage) {
+    return <aside className="max-w-xl">{nav}</aside>;
+  }
+
+  return (
+    <div className="grid gap-10 md:grid-cols-[minmax(17rem,22rem)_minmax(0,1fr)]">
+      <aside>{nav}</aside>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+export function AccountShell({
+  summaries = emptyAccountNavSummaries(),
+  children,
+}: {
+  summaries?: AccountNavSummaries;
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname();
+  return (
+    <AccountShellLayout pathname={pathname} summaries={summaries}>
+      {children}
+    </AccountShellLayout>
+  );
+}
