@@ -156,6 +156,7 @@ export async function getCollectContext(
         catalog,
       ),
       catalog,
+      catalogGroups: catalogChargeGroups(weightLbs),
       methods: methods.methods,
       selectedPaymentMethodId,
       paidKinds: (charges ?? []).map((row) => row.kind as ChargeKind),

@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChargeMoneyWithList } from "@/components/admin/ChargeMoneyWithList";
 import { catalogLinePatch, listedAmountIfChanged } from "@/lib/charges/list-amount";
 import { formatChargeMoney, sumLineItems } from "@/lib/charges/money";
+import { getCatalogItemDisplayLabel } from "@/lib/service-display";
 import {
   centsToDollars,
   quoteReferralApplication,
@@ -942,7 +943,7 @@ function PayStep({
             key={item.id}
             className="flex justify-between gap-4 font-body text-sm text-ink"
           >
-            <span>{item.label}</span>
+            <span>{getCatalogItemDisplayLabel(item.catalogId, item.label)}</span>
             <ChargeMoneyWithList item={item} />
           </li>
         ))}
