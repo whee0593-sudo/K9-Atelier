@@ -1,5 +1,6 @@
 "use client";
 
+import { catalogLinePatch } from "@/lib/charges/list-amount";
 import { formatChargeMoney, sumLineItems } from "@/lib/charges/money";
 import type {
   CatalogChargeGroup,
@@ -41,9 +42,7 @@ export function VisitServiceEditor({
       ...lineItems,
       {
         id: newLineId(),
-        label: item.name,
-        amount: item.suggestedAmount ?? 0,
-        catalogId: item.id,
+        ...catalogLinePatch(item),
       },
     ]);
   }
@@ -65,11 +64,7 @@ export function VisitServiceEditor({
                 selectedId={item.catalogId}
                 selectedLabel={item.label}
                 onSelect={(catalogItem) =>
-                  updateItem(item.id, {
-                    label: catalogItem.name,
-                    amount: catalogItem.suggestedAmount ?? item.amount,
-                    catalogId: catalogItem.id,
-                  })
+                  updateItem(item.id, catalogLinePatch(catalogItem))
                 }
               />
             ) : (

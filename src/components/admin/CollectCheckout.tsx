@@ -9,6 +9,8 @@ import {
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChargeMoneyWithList } from "@/components/admin/ChargeMoneyWithList";
+import { catalogLinePatch, listedAmountIfChanged } from "@/lib/charges/list-amount";
 import { formatChargeMoney, sumLineItems } from "@/lib/charges/money";
 import {
   centsToDollars,
@@ -122,6 +124,7 @@ export function CollectCheckout({
                 id: newLineId(),
                 label: "No-show fee",
                 amount: body.appointment.estimatedTotal ?? 0,
+                listAmount: body.appointment.estimatedTotal ?? 0,
                 catalogId: "no-show",
               },
             ]
@@ -162,6 +165,7 @@ export function CollectCheckout({
                 id: newLineId(),
                 label: "No-show fee",
                 amount: body.appointment.estimatedTotal ?? 0,
+                listAmount: body.appointment.estimatedTotal ?? 0,
                 catalogId: "no-show",
               },
             ]
@@ -264,13 +268,12 @@ export function CollectCheckout({
   }
 
   function addCatalogItem(catalog: CatalogChargeItem) {
+    const patch = catalogLinePatch(catalog);
     setLineItems((current) => [
       ...current,
       {
         id: newLineId(),
-        label: catalog.name,
-        amount: catalog.suggestedAmount ?? 0,
-        catalogId: catalog.id,
+        ...patch,
         referralCategory:
           catalog.id === "travel-fee"
             ? "travel_fee"
@@ -597,11 +600,7 @@ export function CollectCheckout({
                     selectedId={item.catalogId}
                     selectedLabel={item.label}
                     onSelect={(catalog) =>
-                      updateItem(item.id, {
-                        label: catalog.name,
-                        amount: catalog.suggestedAmount ?? item.amount,
-                        catalogId: catalog.id,
-                      })
+                      updateItem(item.id, catalogLinePatch(catalog))
                     }
                   />
                 ) : (
@@ -648,6 +647,9 @@ export function CollectCheckout({
                     className="mt-1 w-full rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm text-ink"
                   />
                   </label>
+                  {listedAmountIfChanged(item) != null ? (
+                    <ChargeMoneyWithList item={item} className="mt-5 text-sm text-ink" />
+                  ) : null}
                   <label className="font-body text-xs text-taupe">
                     Referral
                     <select
@@ -941,7 +943,7 @@ function PayStep({
             className="flex justify-between gap-4 font-body text-sm text-ink"
           >
             <span>{item.label}</span>
-            <span>{formatChargeMoney(item.amount)}</span>
+            <ChargeMoneyWithList item={item} />
           </li>
         ))}
       </ul>

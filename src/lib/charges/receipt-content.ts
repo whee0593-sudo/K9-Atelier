@@ -1,4 +1,5 @@
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
+import { formatLineItemMoney } from "@/lib/charges/list-amount";
 import { formatChargeMoney } from "@/lib/charges/money";
 import { formatReceiptServiceTime } from "@/lib/charges/receipt-view";
 import type { AppointmentChargeRecord } from "@/lib/charges/types";
@@ -28,7 +29,7 @@ export function buildChargeReceiptParagraphs(
   const kindLabel = chargeKindLabel(charge.kind);
   const itemLines = charge.lineItems.map(
     (item) =>
-      `${getCatalogItemDisplayLabel(item.catalogId, item.label)}  ${formatChargeMoney(item.amount)}`,
+      `${getCatalogItemDisplayLabel(item.catalogId, item.label)}  ${formatLineItemMoney(item)}`,
   );
   const remaining =
     Math.round((charge.total - (charge.refundedAmount ?? 0)) * 100) / 100;

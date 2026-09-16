@@ -6,6 +6,7 @@ import {
   getGoogleProfileUrl,
 } from "@/lib/business";
 import { business } from "@/lib/business";
+import { formatLineItemMoney, listedAmountIfChanged } from "@/lib/charges/list-amount";
 import { formatChargeMoney } from "@/lib/charges/money";
 import {
   formatReceiptDate,
@@ -32,11 +33,30 @@ function thankYouLine(petName: string | null) {
     : "We are truly grateful for choosing K9 Atelier.";
 }
 
+function moneyCell(amountHtml: string, size: string) {
+  return `<td style="padding:4px 0;color:${INK};font-size:${size};line-height:1.6;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;">${amountHtml}</td>`;
+}
+
 function moneyRow(label: string, amount: number, emphasize = false) {
   const size = emphasize ? "18px" : "16px";
   return `<tr>
     <td style="padding:4px 12px 4px 0;color:${INK};font-size:${size};line-height:1.6;">${escapeHtml(label)}</td>
-    <td style="padding:4px 0;color:${INK};font-size:${size};line-height:1.6;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;">${escapeHtml(formatChargeMoney(amount))}</td>
+    ${moneyCell(escapeHtml(formatChargeMoney(amount)), size)}
+  </tr>`;
+}
+
+function lineItemMoneyRow(
+  label: string,
+  item: { amount: number; listAmount?: number },
+) {
+  const listed = listedAmountIfChanged(item);
+  const amountHtml =
+    listed == null
+      ? escapeHtml(formatChargeMoney(item.amount))
+      : `<span style="color:${MUTED};text-decoration:line-through;padding-right:8px;">${escapeHtml(formatChargeMoney(listed))}</span>${escapeHtml(formatChargeMoney(item.amount))}`;
+  return `<tr>
+    <td style="padding:4px 12px 4px 0;color:${INK};font-size:16px;line-height:1.6;">${escapeHtml(label)}</td>
+    ${moneyCell(amountHtml, "16px")}
   </tr>`;
 }
 
@@ -75,7 +95,10 @@ export function buildChargeReceiptCardHtml(
 
   const itemRows = charge.lineItems
     .map((item) =>
-      moneyRow(getCatalogItemDisplayLabel(item.catalogId, item.label), item.amount),
+      lineItemMoneyRow(
+        getCatalogItemDisplayLabel(item.catalogId, item.label),
+        item,
+      ),
     )
     .join("");
   const tipRow =
@@ -193,7 +216,7 @@ export function buildChargeReceiptCardText(
     "",
     ...charge.lineItems.map(
       (item) =>
-        `${getCatalogItemDisplayLabel(item.catalogId, item.label)}  ${formatChargeMoney(item.amount)}`,
+        `${getCatalogItemDisplayLabel(item.catalogId, item.label)}  ${formatLineItemMoney(item)}`,
     ),
     charge.tipAmount > 0
       ? `Gratuity  ${formatChargeMoney(charge.tipAmount)}`

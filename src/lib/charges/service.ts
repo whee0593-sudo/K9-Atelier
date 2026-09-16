@@ -18,6 +18,7 @@ import {
   sanitizeLineItems,
 } from "@/lib/charges/line-items";
 import { readStoredVisitLineItems } from "@/lib/charges/visit-line-items";
+import { withCatalogListAmount } from "@/lib/charges/list-amount";
 import { dollarsToCents, sumLineItems } from "@/lib/charges/money";
 import type {
   AppointmentChargeRecord,
@@ -142,17 +143,19 @@ export async function getCollectContext(
     serviceEndedAt:
       (timing?.service_ended_at as string | null | undefined) ?? null,
   };
+  const catalog = catalogChargeItems(weightLbs);
 
   return {
     context: {
       appointment: appointmentWithTiming,
       petWeightLbs: weightLbs,
-      lineItems:
+      lineItems: withCatalogListAmount(
         readStoredVisitLineItems(
           (timing?.add_on_options as Record<string, unknown> | null) ?? null,
         ) ?? buildDefaultLineItems(appointment, weightLbs),
-      catalog: catalogChargeItems(weightLbs),
-      catalogGroups: catalogChargeGroups(weightLbs),
+        catalog,
+      ),
+      catalog,
       methods: methods.methods,
       selectedPaymentMethodId,
       paidKinds: (charges ?? []).map((row) => row.kind as ChargeKind),

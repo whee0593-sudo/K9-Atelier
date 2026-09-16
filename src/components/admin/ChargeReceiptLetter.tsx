@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { ChargeReceiptBrandLinks } from "@/components/admin/ChargeReceiptBrandLinks";
 import { business } from "@/lib/business";
+import { ChargeMoneyWithList } from "@/components/admin/ChargeMoneyWithList";
 import { formatChargeMoney } from "@/lib/charges/money";
 import {
   formatReceiptDate,
@@ -94,7 +95,7 @@ export function ChargeReceiptLetter({
                   <MoneyRow
                     key={item.id}
                     label={getCatalogItemDisplayLabel(item.catalogId, item.label)}
-                    amount={item.amount}
+                    item={item}
                   />
                 ))}
                 {charge.tipAmount > 0 ? (
@@ -165,10 +166,12 @@ function SectionLabel({ children }: { children: string }) {
 function MoneyRow({
   label,
   amount,
+  item,
   emphasize = false,
 }: {
   label: string;
-  amount: number;
+  amount?: number;
+  item?: { amount: number; listAmount?: number };
   emphasize?: boolean;
 }) {
   return (
@@ -180,9 +183,13 @@ function MoneyRow({
       }`}
     >
       <span className="min-w-0 break-words">{label}</span>
-      <span className="whitespace-nowrap text-right tabular-nums">
-        {formatChargeMoney(amount)}
-      </span>
+      {item ? (
+        <ChargeMoneyWithList item={item} />
+      ) : (
+        <span className="whitespace-nowrap text-right tabular-nums">
+          {formatChargeMoney(amount ?? 0)}
+        </span>
+      )}
     </div>
   );
 }

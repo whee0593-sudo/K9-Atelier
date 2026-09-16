@@ -34,7 +34,8 @@ describe("visit line items", () => {
       {
         id: "1",
         label: "Signature Bath & Care",
-        amount: 140,
+        amount: 120,
+        listAmount: 140,
         catalogId: "signature-bath-care",
       },
     ];
