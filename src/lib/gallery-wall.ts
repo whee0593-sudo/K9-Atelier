@@ -316,7 +316,7 @@ export const SELECTED_WORK_CAPTIONS: Record<number, GalleryCaption> = {
   13: { kicker: "Doodle", detail: "Teddy bear" },
   14: { kicker: "Poodle", detail: "Teddy bear" },
   16: { kicker: "Pomeranian", detail: "Boo cut with scarf" },
-  17: { kicker: "Bichon", detail: "Coat art" },
+  17: { kicker: "Bichon", detail: "Creative Color Dye" },
 };
 
 export type CompetitionFrameFinish = "gold" | "walnut" | "brass";
