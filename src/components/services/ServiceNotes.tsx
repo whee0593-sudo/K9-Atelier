@@ -1,15 +1,21 @@
 import Link from "next/link";
 import { Container } from "@/components/luxury/Container";
 import { Eyebrow } from "@/components/luxury/Eyebrow";
+import {
+  servicesBodyClass,
+  servicesCtaClass,
+} from "@/components/services/services-type";
 import { FEES_POLICIES_PATH } from "@/lib/service-page";
 
 export function ServiceNotes() {
   return (
     <section className="border-t border-gray-line/60 bg-ivory">
-      <Container className="py-16 md:py-20">
+      <Container className="py-20 md:py-24">
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>Service Notes</Eyebrow>
-          <div className="font-body mx-auto mt-5 max-w-2xl space-y-4 text-base leading-relaxed text-taupe md:text-[17px]">
+          <div
+            className={`${servicesBodyClass} mx-auto mt-6 max-w-xl space-y-5`}
+          >
             <p>
               Starting prices may vary based on coat condition, temperament,
               styling requirements and time.
@@ -21,7 +27,7 @@ export function ServiceNotes() {
           </div>
           <Link
             href={FEES_POLICIES_PATH}
-            className="font-body mt-8 inline-flex min-h-[48px] items-center justify-center text-[11px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne"
+            className={`${servicesCtaClass} mt-8 justify-center transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne`}
           >
             View Fees &amp; Policies
             <span aria-hidden="true" className="ml-1.5">

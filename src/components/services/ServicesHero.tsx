@@ -1,21 +1,26 @@
 import { Container } from "@/components/luxury/Container";
 import { Eyebrow } from "@/components/luxury/Eyebrow";
+import {
+  servicesBodyClass,
+  servicesHeroTitleClass,
+  servicesSupportClass,
+} from "@/components/services/services-type";
 
 export function ServicesHero() {
   return (
-    <section className="bg-ivory pb-12 pt-14 md:pb-16 md:pt-20">
+    <section className="bg-ivory pb-14 pt-16 md:pb-20 md:pt-24">
       <Container>
         <header className="mx-auto max-w-3xl text-center">
           <Eyebrow>Signature Services</Eyebrow>
-          <h1 className="font-display mt-5 text-[2.5rem] leading-[1.08] font-medium text-ink md:text-5xl">
+          <h1 className={servicesHeroTitleClass}>
             Grooming, Considered
             <br />
             Down to Every Detail.
           </h1>
-          <p className="font-body mx-auto mt-6 max-w-2xl text-base leading-relaxed text-taupe md:text-[17px]">
+          <p className={`${servicesBodyClass} mx-auto mt-7 max-w-xl`}>
             Private, one-on-one mobile grooming tailored to your dog.
           </p>
-          <p className="font-body mx-auto mt-4 text-sm text-taupe">
+          <p className={`${servicesSupportClass} mx-auto mt-5`}>
             Dogs up to 45 lbs · By appointment only
           </p>
         </header>
