@@ -12,10 +12,8 @@ export function GalleryLightboxCaption({
   const [breed, styling] = lightboxCaptionLines(caption);
   return (
     <figcaption className="k9-gallery-lightbox-caption">
-      {breed ? <p className="font-body text-champagne/80">{breed}</p> : null}
-      {styling ? (
-        <p className="font-display text-ivory/80">{styling}</p>
-      ) : null}
+      {breed ? <p className="font-display text-ivory/80">{breed}</p> : null}
+      {styling ? <p className="font-display text-ivory/80">{styling}</p> : null}
     </figcaption>
   );
 }

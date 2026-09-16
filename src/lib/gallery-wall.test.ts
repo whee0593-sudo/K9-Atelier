@@ -209,6 +209,15 @@ describe("gallery captions", () => {
       "Braided ears",
     ]);
 
+    const poodle = GALLERY_LIGHTBOX_ITEMS.find((item) => item.id === "work-04");
+    assert.deepEqual(lightboxCaptionLines(poodle?.caption), [
+      "Poodle",
+      "Asian Fusion",
+    ]);
+    for (const item of GALLERY_LIGHTBOX_ITEMS) {
+      assert.notEqual(item.caption?.detail, "Teddy bear", item.id);
+    }
+
     const snapshot = COMPETITION_LIGHTBOX_ITEMS.find(
       (item) => item.id === "competition-05",
     );

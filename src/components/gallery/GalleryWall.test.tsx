@@ -85,5 +85,26 @@ describe("gallery lightbox markup", () => {
     assert.equal(html.includes("SELECTED WORK"), false);
     assert.match(html, /Bichon/);
     assert.match(html, /Braided ears/);
+    assert.equal(html.includes("font-body"), false);
+    assert.equal(html.includes("Teddy bear"), false);
+  });
+
+  it("uses matching display type on both lightbox caption lines", () => {
+    const html = renderToStaticMarkup(
+      <GalleryLightbox
+        activeId="work-04"
+        onActiveIdChange={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    assert.match(html, /Poodle/);
+    assert.match(html, /Asian Fusion/);
+    assert.equal(html.includes("Teddy bear"), false);
+    const caption = html.match(
+      /k9-gallery-lightbox-caption">([\s\S]*?)<\/figcaption>/,
+    )?.[1];
+    assert.ok(caption);
+    assert.equal(caption.includes("font-display"), true);
+    assert.equal(caption.includes("font-body"), false);
   });
 });
