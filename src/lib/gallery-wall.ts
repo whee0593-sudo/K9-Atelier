@@ -74,8 +74,8 @@ export function galleryWallPhotoSrc(id: number) {
 }
 
 /**
- * Selected-work hang: original 17 portraits, two staggered rows, no overlaps.
- * gallery-01 remains gallery-01.png through gallery-17.png — files are unchanged.
+ * Selected-work hang: original portraits, two staggered rows, no overlaps.
+ * gallery-01 remains gallery-01.png through gallery-17.png — unused files stay in place.
  */
 export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
   {
@@ -85,7 +85,7 @@ export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
     displayWidth: 12.6,
     photoSrc: galleryWallPhotoSrc(1),
     photoAlt:
-      "K9 Atelier grooming portfolio — white dog with braided ears in an ornate oval gold frame",
+      "K9 Atelier grooming portfolio — Maltese with braided ears in an ornate oval gold frame",
     photoWidth: 1024,
     photoHeight: 1536,
     fit: "framed",
@@ -109,7 +109,7 @@ export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
     displayWidth: 13.2,
     photoSrc: galleryWallPhotoSrc(3),
     photoAlt:
-      "K9 Atelier grooming portfolio — cream bichon-style portrait in an ornate gold frame",
+      "K9 Atelier grooming portfolio — cream poodle portrait in an ornate gold frame",
     photoWidth: 1141,
     photoHeight: 1378,
     fit: "framed",
@@ -145,7 +145,7 @@ export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
     displayWidth: 13.2,
     photoSrc: galleryWallPhotoSrc(6),
     photoAlt:
-      "K9 Atelier grooming portfolio — Yorkshire Terrier with a top knot in an ornate oval gold frame",
+      "K9 Atelier grooming portfolio — Yorkshire Terrier with an Asian Fusion style in an ornate oval gold frame",
     photoWidth: 1141,
     photoHeight: 1378,
     fit: "framed",
@@ -193,7 +193,7 @@ export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
     displayWidth: 16.5,
     photoSrc: galleryWallPhotoSrc(10),
     photoAlt:
-      "K9 Atelier grooming portfolio — white-and-brown dog with pigtails in an ornate gold frame",
+      "K9 Atelier grooming portfolio — white-and-brown Shih Tzu with a daily braid in an ornate gold frame",
     photoWidth: 1374,
     photoHeight: 1145,
     fit: "framed",
@@ -247,18 +247,6 @@ export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
     fit: "framed",
   },
   {
-    id: 15,
-    centerX: 22,
-    centerY: 72.5,
-    displayWidth: 12.8,
-    photoSrc: galleryWallPhotoSrc(15),
-    photoAlt:
-      "K9 Atelier grooming portfolio — brown-and-white poodle with a floral accent, ornate gold frame",
-    photoWidth: 1119,
-    photoHeight: 1405,
-    fit: "framed",
-  },
-  {
     id: 16,
     centerX: 64,
     centerY: 72,
@@ -308,25 +296,27 @@ export type GalleryCaption = {
   detail?: string;
 };
 
-/** Lightbox / wall captions for the 17 selected-work portraits. Indexed by slot id. */
+/**
+ * Lightbox / wall captions for selected-work portraits. Indexed by slot id.
+ * Two-line museum label: kicker = breed, detail = styling.
+ */
 export const SELECTED_WORK_CAPTIONS: Record<number, GalleryCaption> = {
-  1: { kicker: "SELECTED WORK", detail: "Braided ears" },
-  2: { kicker: "SELECTED WORK", detail: "Yorkshire Terrier" },
-  3: { kicker: "SELECTED WORK", detail: "Bichon-style portrait" },
-  4: { kicker: "SELECTED WORK", detail: "Poodle" },
-  5: { kicker: "SELECTED WORK", detail: "Bichon" },
-  6: { kicker: "SELECTED WORK", detail: "Yorkshire Terrier" },
-  7: { kicker: "SELECTED WORK", detail: "Creative color" },
-  8: { kicker: "SELECTED WORK", detail: "Apricot poodle" },
-  9: { kicker: "SELECTED WORK", detail: "Polka-dot bandana" },
-  10: { kicker: "SELECTED WORK", detail: "Pigtails" },
-  11: { kicker: "SELECTED WORK", detail: "Creative color" },
-  12: { kicker: "SELECTED WORK", detail: "Terrier" },
-  13: { kicker: "SELECTED WORK", detail: "Doodle" },
-  14: { kicker: "SELECTED WORK", detail: "Apricot poodle" },
-  15: { kicker: "SELECTED WORK", detail: "Poodle" },
-  16: { kicker: "SELECTED WORK", detail: "Plush white coat" },
-  17: { kicker: "SELECTED WORK", detail: "Coat art" },
+  1: { kicker: "Maltese", detail: "Braided ears" },
+  2: { kicker: "Yorkshire Terrier", detail: "Puppy cut" },
+  3: { kicker: "Poodle", detail: "Teddy bear" },
+  4: { kicker: "Poodle", detail: "Asian Fusion" },
+  5: { kicker: "Bichon", detail: "Teddy bear" },
+  6: { kicker: "Yorkshire Terrier", detail: "Asian Fusion" },
+  7: { kicker: "Bichon", detail: "Creative color" },
+  8: { kicker: "Poodle", detail: "German trim" },
+  9: { kicker: "Shih Tzu", detail: "Full face" },
+  10: { kicker: "Shih Tzu", detail: "Daily braid" },
+  11: { kicker: "Bichon", detail: "Creative Color Dye" },
+  12: { kicker: "Yorkshire Terrier", detail: "Puppy cut" },
+  13: { kicker: "Doodle", detail: "Teddy bear" },
+  14: { kicker: "Poodle", detail: "Teddy bear" },
+  16: { kicker: "Pomeranian", detail: "Boo cut with scarf" },
+  17: { kicker: "Bichon", detail: "Creative Color Dye" },
 };
 
 export type CompetitionFrameFinish = "gold" | "walnut" | "brass";
@@ -522,7 +512,7 @@ export function galleryCaptionBox(frame: GalleryBox): GalleryBox {
   };
 }
 
-export const SELECTED_WORK_PRIORITY_IDS = new Set([1, 2, 3, 15, 16]);
+export const SELECTED_WORK_PRIORITY_IDS = new Set([1, 2, 3, 16]);
 
 export const SELECTED_WORK_LIGHTBOX_ITEMS: readonly GalleryLightboxItem[] =
   GALLERY_FRAME_SLOTS.map((slot) => ({

@@ -28,12 +28,12 @@ import {
 } from "./gallery-wall";
 
 describe("gallery wall slots", () => {
-  it("maps all 17 framed portraits from 1 to 01 through 17 to 17", () => {
-    assert.equal(GALLERY_FRAME_SLOTS.length, 17);
+  it("maps the framed portraits still hanging on the wall", () => {
+    assert.equal(GALLERY_FRAME_SLOTS.length, 16);
     const ids = GALLERY_FRAME_SLOTS.map((slot) => slot.id);
     assert.deepEqual(
       ids,
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17],
     );
 
     for (const slot of GALLERY_FRAME_SLOTS) {
@@ -120,10 +120,14 @@ describe("competition archive data", () => {
 
 describe("gallery lightbox catalog", () => {
   it("keeps the visible gallery catalog to selected work only", () => {
-    assert.equal(GALLERY_LIGHTBOX_ITEMS.length, 17);
-    assert.equal(SELECTED_WORK_LIGHTBOX_ITEMS.length, 17);
+    assert.equal(GALLERY_LIGHTBOX_ITEMS.length, 16);
+    assert.equal(SELECTED_WORK_LIGHTBOX_ITEMS.length, 16);
     assert.equal(GALLERY_LIGHTBOX_ITEMS[0]?.id, "work-01");
-    assert.equal(GALLERY_LIGHTBOX_ITEMS[16]?.id, "work-17");
+    assert.equal(GALLERY_LIGHTBOX_ITEMS[15]?.id, "work-17");
+    assert.equal(
+      GALLERY_LIGHTBOX_ITEMS.some((item) => item.id === "work-15"),
+      false,
+    );
     assert.equal(
       GALLERY_LIGHTBOX_ITEMS.some((item) => item.id.startsWith("competition-")),
       false,
@@ -177,35 +181,76 @@ describe("2019 winner metadata", () => {
 });
 
 describe("gallery captions", () => {
-  it("gives every selected-work portrait a two-line museum label", () => {
+  it("gives every selected-work portrait a two-line breed + styling label", () => {
     for (const slot of GALLERY_FRAME_SLOTS) {
       const caption = SELECTED_WORK_CAPTIONS[slot.id];
       assert.ok(caption, `missing caption for work ${slot.id}`);
-      assert.equal(caption.kicker, "SELECTED WORK");
-      assert.ok(caption.detail && caption.detail.length > 0);
+      assert.ok(caption.kicker && caption.kicker.length > 0, slot.id);
+      assert.ok(caption.detail && caption.detail.length > 0, slot.id);
+      assert.notEqual(caption.kicker, "SELECTED WORK");
       const lines = lightboxCaptionLines(caption);
       assert.equal(lines.length, 2);
-      assert.equal(lines[0], "SELECTED WORK");
+      assert.equal(lines[0], caption.kicker);
       assert.equal(lines[1], caption.detail);
     }
   });
 
   it("gives every selected-work lightbox item a two-line caption", () => {
-    assert.equal(GALLERY_LIGHTBOX_ITEMS.length, 17);
+    assert.equal(GALLERY_LIGHTBOX_ITEMS.length, 16);
     for (const item of GALLERY_LIGHTBOX_ITEMS) {
       assert.ok(item.caption);
       const lines = lightboxCaptionLines(item.caption);
       assert.equal(lines[0].length > 0, true, item.id);
       assert.equal(lines[1].length > 0, true, item.id);
+      assert.notEqual(lines[0], "SELECTED WORK");
       assert.notEqual(lines[0], "2019 · Best in Show");
       assert.notEqual(lines[1], "2019 Best in Show");
     }
 
     const work = GALLERY_LIGHTBOX_ITEMS.find((item) => item.id === "work-01");
     assert.deepEqual(lightboxCaptionLines(work?.caption), [
-      "SELECTED WORK",
+      "Maltese",
       "Braided ears",
     ]);
+
+    const poodle = GALLERY_LIGHTBOX_ITEMS.find((item) => item.id === "work-04");
+    assert.deepEqual(lightboxCaptionLines(poodle?.caption), [
+      "Poodle",
+      "Asian Fusion",
+    ]);
+    assert.equal(SELECTED_WORK_CAPTIONS[5]?.detail, "Teddy bear");
+    assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[3]), [
+      "Poodle",
+      "Teddy bear",
+    ]);
+    assert.equal(SELECTED_WORK_CAPTIONS[14]?.detail, "Teddy bear");
+    assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[16]), [
+      "Pomeranian",
+      "Boo cut with scarf",
+    ]);
+    assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[11]), [
+      "Bichon",
+      "Creative Color Dye",
+    ]);
+    assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[9]), [
+      "Shih Tzu",
+      "Full face",
+    ]);
+    assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[10]), [
+      "Shih Tzu",
+      "Daily braid",
+    ]);
+    assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[6]), [
+      "Yorkshire Terrier",
+      "Asian Fusion",
+    ]);
+    assert.equal(SELECTED_WORK_CAPTIONS[2]?.detail, "Puppy cut");
+    assert.equal(SELECTED_WORK_CAPTIONS[12]?.detail, "Puppy cut");
+    assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[17]), [
+      "Bichon",
+      "Creative Color Dye",
+    ]);
+    assert.equal(SELECTED_WORK_CAPTIONS[15], undefined);
 
     const snapshot = COMPETITION_LIGHTBOX_ITEMS.find(
       (item) => item.id === "competition-05",

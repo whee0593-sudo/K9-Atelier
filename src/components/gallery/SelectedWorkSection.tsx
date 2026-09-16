@@ -80,7 +80,9 @@ function FramedArtwork({
           className="h-auto w-full bg-transparent object-contain"
         />
       </span>
-      <GalleryWallCaption caption={SELECTED_WORK_CAPTIONS[slot.id] ?? { kicker: "SELECTED WORK", detail: "" }} />
+      <GalleryWallCaption
+        caption={SELECTED_WORK_CAPTIONS[slot.id] ?? { kicker: "", detail: "" }}
+      />
     </button>
   );
 }
