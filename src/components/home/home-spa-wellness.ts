@@ -4,7 +4,7 @@ export const homeSpaWellnessIntro = {
   body: "Targeted spa treatments selected for your dog’s skin and coat needs.",
   note: "Spa Rituals are scheduled separately from full haircut appointments.",
   ctaLabel: "View Spa Services & Pricing",
-  ctaHref: "/services#spa-wellness",
+  ctaHref: "/services/spa",
 } as const;
 
 export const homeSpaWellnessServices = [

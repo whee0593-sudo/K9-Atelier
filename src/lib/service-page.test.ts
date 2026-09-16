@@ -1,17 +1,30 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  coloringOptionDisplayNote,
-  coloringOptionPriceLabel,
+  ADD_ON_IDS,
+  BATH_COAT_IDS,
+  BATH_COAT_PATH,
+  COLOR_IDS,
+  COLOR_PATH,
+  FEES_POLICIES_PATH,
   FULL_GROOM_IDS,
   FULL_GROOM_PAGE_DESCRIPTION,
   FULL_GROOM_PAGE_H1,
   FULL_GROOM_PAGE_TITLE,
   FULL_GROOM_PATH,
+  SERVICE_CATEGORIES,
+  SERVICE_CATEGORY_PATHS,
   SERVICES_HASH_ROUTES,
   SERVICES_NAV,
   SERVICES_PATH,
+  SPA_IDS,
+  SPA_PATH,
+  SPECIALTY_CARE_PATH,
+  SPECIALTY_IDS,
   absoluteSiteUrl,
+  coloringOptionDisplayNote,
+  coloringOptionPriceLabel,
+  directoryPriceLabel,
   getServiceById,
   getServicesByIds,
   serviceCardAccessLabel,
@@ -119,14 +132,71 @@ describe("service page helpers", () => {
     );
   });
 
-  it("points Full Groom navigation at the dedicated category route", () => {
-    const fullGroom = SERVICES_NAV.find((item) => item.label === "Full Groom");
-    assert.equal(fullGroom?.href, FULL_GROOM_PATH);
-    assert.equal(fullGroom?.sectionId, "full-groom");
+  it("points category navigation at dedicated service routes", () => {
+    assert.deepEqual(
+      SERVICES_NAV.map((item) => item.href),
+      SERVICE_CATEGORY_PATHS,
+    );
+    assert.equal(
+      SERVICES_NAV.find((item) => item.label === "Full Groom")?.href,
+      FULL_GROOM_PATH,
+    );
     assert.equal(
       SERVICES_NAV.find((item) => item.label === "Bath & Coat")?.href,
-      `${SERVICES_PATH}#bath-coat`,
+      BATH_COAT_PATH,
     );
+    assert.equal(
+      SERVICES_NAV.find((item) => item.label === "Spa Rituals")?.href,
+      SPA_PATH,
+    );
+  });
+
+  it("derives directory starting prices from the shared catalog", () => {
+    const bySlug = Object.fromEntries(
+      SERVICE_CATEGORIES.map((category) => [
+        category.slug,
+        directoryPriceLabel(category),
+      ]),
+    );
+    const groom = getServiceById("custom-full-haircut");
+
+    assert.equal(bySlug["bath-coat-care"], "From $90");
+    assert.equal(bySlug["full-groom"], serviceStartingPriceLabel(groom!));
+    assert.equal(bySlug["full-groom"], "From $140");
+    assert.equal(bySlug.spa, "From $140");
+    assert.equal(bySlug.color, "From $50");
+    assert.equal(bySlug["specialty-care"], null);
+    assert.equal(bySlug["add-ons"], "From $30");
+  });
+
+  it("keeps six directory categories without repeating individual services", () => {
+    assert.deepEqual(
+      SERVICE_CATEGORIES.map((category) => category.slug),
+      [
+        "bath-coat-care",
+        "full-groom",
+        "spa",
+        "color",
+        "specialty-care",
+        "add-ons",
+      ],
+    );
+    assert.deepEqual([...BATH_COAT_IDS], ["signature-bath-care", "long-coat-show-care"]);
+    assert.deepEqual([...SPA_IDS], [
+      "dead-sea-mud-bath",
+      "aromatherapy-oil-bath",
+      "sensitive-skin-treatment",
+    ]);
+    assert.deepEqual([...COLOR_IDS], ["creative-accent-coloring"]);
+    assert.deepEqual([...SPECIALTY_IDS], [
+      "senior-comfort-care",
+      "end-of-life-care",
+    ]);
+    assert.deepEqual([...ADD_ON_IDS], [
+      "dematting-brush-out",
+      "deshedding-treatment",
+      "mini-trim",
+    ]);
   });
 
   it("keeps Full Groom services on a shared catalog", () => {
@@ -139,8 +209,14 @@ describe("service page helpers", () => {
     assert.equal(services[1]?.name, "Hand Stripping");
   });
 
-  it("maps the legacy Full Groom hash to the category route", () => {
+  it("maps legacy service hashes to category or FAQ routes", () => {
     assert.equal(SERVICES_HASH_ROUTES["full-groom"], FULL_GROOM_PATH);
+    assert.equal(SERVICES_HASH_ROUTES["bath-coat"], BATH_COAT_PATH);
+    assert.equal(SERVICES_HASH_ROUTES["signature-bath"], BATH_COAT_PATH);
+    assert.equal(SERVICES_HASH_ROUTES["spa-wellness"], SPA_PATH);
+    assert.equal(SERVICES_HASH_ROUTES["color-dye"], COLOR_PATH);
+    assert.equal(SERVICES_HASH_ROUTES["gentle-care"], SPECIALTY_CARE_PATH);
+    assert.equal(SERVICES_HASH_ROUTES["fees-policies"], FEES_POLICIES_PATH);
   });
 
   it("uses independent Full Groom SEO copy and canonical", () => {

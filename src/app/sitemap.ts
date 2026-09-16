@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import {
-  FULL_GROOM_PATH,
+  SERVICE_CATEGORY_PATHS,
   SERVICES_PATH,
   absoluteSiteUrl,
 } from "@/lib/service-page";
@@ -8,7 +8,7 @@ import {
 const PUBLIC_PATHS = [
   "/",
   SERVICES_PATH,
-  FULL_GROOM_PATH,
+  ...SERVICE_CATEGORY_PATHS,
   "/gallery",
   "/reviews",
   "/about",
@@ -31,7 +31,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         ? 1
         : path === SERVICES_PATH
           ? 0.9
-          : path === FULL_GROOM_PATH
+          : SERVICE_CATEGORY_PATHS.includes(path)
             ? 0.8
             : 0.6,
   }));

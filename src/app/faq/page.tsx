@@ -1,6 +1,7 @@
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { LuxuryButton } from "@/components/luxury/LuxuryButton";
 import { PageShell } from "@/components/luxury/PageShell";
+import { FeesPoliciesSection } from "@/components/services/FeesPoliciesSection";
 
 export const metadata = {
   title: "FAQ · K9 Atelier",
@@ -293,6 +294,19 @@ export default function FaqPage() {
           </section>
         ))}
       </div>
+
+      <section id="fees-policies" className="mx-auto mt-16 max-w-3xl scroll-mt-32">
+        <h2 className="font-body text-[11px] font-semibold uppercase tracking-[0.18em] text-deep-lavender">
+          Fees &amp; Policies
+        </h2>
+        <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
+          Starting prices are not a fixed quote. Open any item for the full
+          rule.
+        </p>
+        <div className="mt-8">
+          <FeesPoliciesSection />
+        </div>
+      </section>
 
       <div className="mt-14 flex flex-col items-center justify-center gap-4 sm:flex-row">
         <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[10px] font-medium uppercase tracking-[0.16em] text-ivory transition hover:bg-ink">

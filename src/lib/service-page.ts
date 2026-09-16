@@ -12,10 +12,17 @@ import {
 
 export const SERVICES_PATH = "/services";
 export const FULL_GROOM_PATH = "/services/full-groom";
+export const BATH_COAT_PATH = "/services/bath-coat-care";
+export const SPA_PATH = "/services/spa";
+export const COLOR_PATH = "/services/color";
+export const SPECIALTY_CARE_PATH = "/services/specialty-care";
+export const ADD_ONS_PATH = "/services/add-ons";
+export const FEES_POLICIES_PATH = "/faq#fees-policies";
+export const CONSULTATION_PATH = "/contact?inquiry=grooming-consultation";
 
 export const SERVICES_PAGE_TITLE = "Services · K9 Atelier";
 export const SERVICES_PAGE_DESCRIPTION =
-  "Signature grooming, spa rituals, specialty care and gentle comfort services — Private Mobile Pet Spa in Palm Beach.";
+  "A considered menu of private mobile grooming — bath and coat care, full grooming, spa rituals, color, specialty care, and finishing add-ons in Palm Beach.";
 
 export const FULL_GROOM_PAGE_TITLE =
   "Full Grooming & Hand Stripping | K9 Atelier";
@@ -30,12 +37,6 @@ export function absoluteSiteUrl(path: string) {
   const normalized = path.startsWith("/") ? path : `/${path}`;
   return `${origin}${normalized}`;
 }
-
-export const MOST_REQUESTED_IDS = [
-  "signature-bath-care",
-  "custom-full-haircut",
-  "long-coat-show-care",
-] as const;
 
 export const BATH_COAT_IDS = [
   "signature-bath-care",
@@ -53,11 +54,158 @@ export const SPA_IDS = [
   "sensitive-skin-treatment",
 ] as const;
 
+export const COLOR_IDS = ["creative-accent-coloring"] as const;
+
+export const SPECIALTY_IDS = [
+  "senior-comfort-care",
+  "end-of-life-care",
+] as const;
+
 export const ADD_ON_IDS = [
   "dematting-brush-out",
   "deshedding-treatment",
   "mini-trim",
 ] as const;
+
+export const SERVICE_ANCHORS: Record<string, string> = {
+  "signature-bath-care": "signature-bath",
+  "custom-full-haircut": "atelier-full-groom",
+};
+
+export type ServiceCategorySlug =
+  | "bath-coat-care"
+  | "full-groom"
+  | "spa"
+  | "color"
+  | "specialty-care"
+  | "add-ons";
+
+export type ServiceCategory = {
+  slug: ServiceCategorySlug;
+  path: string;
+  navLabel: string;
+  directoryName: string;
+  directoryDescription: string;
+  showStartingPrice: boolean;
+  serviceIds: readonly string[];
+  layout: "cards" | "coloring";
+  pageTitle: string;
+  pageDescription: string;
+  pageEyebrow: string;
+  pageH1: string;
+  pageIntro: string;
+};
+
+export const SERVICE_CATEGORIES: readonly ServiceCategory[] = [
+  {
+    slug: "bath-coat-care",
+    path: BATH_COAT_PATH,
+    navLabel: "Bath & Coat",
+    directoryName: "Bath & Coat Care",
+    directoryDescription: "Bathing · Coat maintenance",
+    showStartingPrice: true,
+    serviceIds: BATH_COAT_IDS,
+    layout: "cards",
+    pageTitle: "Bath & Coat Care | K9 Atelier",
+    pageDescription:
+      "Signature bathing and weekly long-coat care, tailored to texture, length, and how your dog lives. Private mobile grooming in Palm Beach.",
+    pageEyebrow: "Bath & Coat Care",
+    pageH1: "Coat Health, Kept Beautiful.",
+    pageIntro:
+      "Foundational bathing and weekly long-coat care, tailored to texture, length, and how your dog lives.",
+  },
+  {
+    slug: "full-groom",
+    path: FULL_GROOM_PATH,
+    navLabel: "Full Groom",
+    directoryName: "Full Grooming",
+    directoryDescription: "Haircuts · Hand stripping",
+    showStartingPrice: true,
+    serviceIds: FULL_GROOM_IDS,
+    layout: "cards",
+    pageTitle: FULL_GROOM_PAGE_TITLE,
+    pageDescription: FULL_GROOM_PAGE_DESCRIPTION,
+    pageEyebrow: "Full Groom",
+    pageH1: FULL_GROOM_PAGE_H1,
+    pageIntro: FULL_GROOM_PAGE_INTRO,
+  },
+  {
+    slug: "spa",
+    path: SPA_PATH,
+    navLabel: "Spa Rituals",
+    directoryName: "Spa Rituals",
+    directoryDescription: "Skin · Coat · Wellness",
+    showStartingPrice: true,
+    serviceIds: SPA_IDS,
+    layout: "cards",
+    pageTitle: "Spa Rituals | K9 Atelier",
+    pageDescription:
+      "Quiet spa rituals for skin, coat, and comfort. Private mobile wellness baths in Palm Beach, scheduled separately from full haircut appointments.",
+    pageEyebrow: "Spa Rituals",
+    pageH1: "Quiet Rituals for Skin, Coat & Comfort.",
+    pageIntro:
+      "Spa Rituals include a complete wellness bath experience and are best scheduled separately from full haircut appointments to prevent over-tiring your dog.",
+  },
+  {
+    slug: "color",
+    path: COLOR_PATH,
+    navLabel: "Creative Color",
+    directoryName: "Creative Color",
+    directoryDescription: "Pet-safe color artistry",
+    showStartingPrice: true,
+    serviceIds: COLOR_IDS,
+    layout: "coloring",
+    pageTitle: "Creative Color | K9 Atelier",
+    pageDescription:
+      "Pet-safe, semi-permanent accent color designed specifically for animal coats. Private mobile grooming in Palm Beach.",
+    pageEyebrow: "Creative Color",
+    pageH1: "A Playful, Pet-Safe Finish.",
+    pageIntro:
+      "Pet-safe, semi-permanent accent color designed specifically for animal coats.",
+  },
+  {
+    slug: "specialty-care",
+    path: SPECIALTY_CARE_PATH,
+    navLabel: "Specialty Care",
+    directoryName: "Specialty Care",
+    directoryDescription: "Senior · Comfort care",
+    showStartingPrice: false,
+    serviceIds: SPECIALTY_IDS,
+    layout: "cards",
+    pageTitle: "Specialty Care | K9 Atelier",
+    pageDescription:
+      "Unhurried senior comfort care and gentle end-of-life grooming for dogs who need a slower, quieter appointment.",
+    pageEyebrow: "Specialty Care",
+    pageH1: "Comfort, Dignity, and Unhurried Time.",
+    pageIntro:
+      "For dogs who need a slower pace — whether for age, recovery, or a quieter last chapter.",
+  },
+  {
+    slug: "add-ons",
+    path: ADD_ONS_PATH,
+    navLabel: "Add-Ons",
+    directoryName: "Add-On Care",
+    directoryDescription: "Finishing · Coat support",
+    showStartingPrice: true,
+    serviceIds: ADD_ON_IDS,
+    layout: "cards",
+    pageTitle: "Add-On Care | K9 Atelier",
+    pageDescription:
+      "Finishing and coat-support add-ons — dematting, deshedding, and mini trims — reserved with a bath, spa, or grooming appointment.",
+    pageEyebrow: "Add-On Care",
+    pageH1: "Small Refinements, When Needed.",
+    pageIntro:
+      "Added to a bath, show-care, spa, or full grooming appointment as needed.",
+  },
+];
+
+export const SERVICE_CATEGORY_PATHS = SERVICE_CATEGORIES.map(
+  (category) => category.path,
+);
+
+export function getServiceCategory(slug: string) {
+  return SERVICE_CATEGORIES.find((category) => category.slug === slug) ?? null;
+}
 
 const CARD_SUMMARIES: Record<string, string> = {
   "signature-bath-care":
@@ -103,57 +251,27 @@ const CARD_BEST_FOR: Record<string, string> = {
   "end-of-life-care": "Comfort-first visits in a dog’s final chapter",
 };
 
-export const SERVICES_NAV = [
-  {
-    href: `${SERVICES_PATH}#most-requested`,
-    sectionId: "most-requested",
-    label: "Most Requested",
-  },
-  {
-    href: `${SERVICES_PATH}#bath-coat`,
-    sectionId: "bath-coat",
-    label: "Bath & Coat",
-  },
-  {
-    href: FULL_GROOM_PATH,
-    sectionId: "full-groom",
-    label: "Full Groom",
-  },
-  {
-    href: `${SERVICES_PATH}#spa-rituals`,
-    sectionId: "spa-rituals",
-    label: "Spa Rituals",
-  },
-  {
-    href: `${SERVICES_PATH}#color-dye`,
-    sectionId: "color-dye",
-    label: "Color Dye",
-  },
-  {
-    href: `${SERVICES_PATH}#specialty-care`,
-    sectionId: "specialty-care",
-    label: "Specialty Care",
-  },
-  {
-    href: `${SERVICES_PATH}#add-ons`,
-    sectionId: "add-ons",
-    label: "Add-Ons",
-  },
-  {
-    href: `${SERVICES_PATH}#fees-policies`,
-    sectionId: "fees-policies",
-    label: "Fees & Policies",
-  },
-] as const;
+export const SERVICES_NAV = SERVICE_CATEGORIES.map((category) => ({
+  href: category.path,
+  sectionId: category.slug,
+  label: category.navLabel,
+}));
 
-/** Old in-page hashes that now have dedicated category routes. */
+/** Old in-page hashes that now have dedicated category or FAQ routes. */
 export const SERVICES_HASH_ROUTES: Record<string, string> = {
+  "most-requested": SERVICES_PATH,
+  "bath-coat": BATH_COAT_PATH,
+  "signature-bath": BATH_COAT_PATH,
   "full-groom": FULL_GROOM_PATH,
+  "atelier-full-groom": FULL_GROOM_PATH,
+  "spa-rituals": SPA_PATH,
+  "spa-wellness": SPA_PATH,
+  "color-dye": COLOR_PATH,
+  "specialty-care": SPECIALTY_CARE_PATH,
+  "gentle-care": SPECIALTY_CARE_PATH,
+  "add-ons": ADD_ONS_PATH,
+  "fees-policies": FEES_POLICIES_PATH,
 };
-
-export function isServicesCategoryRoute(href: string) {
-  return href.startsWith("/") && !href.includes("#");
-}
 
 export function getServiceById(id: string) {
   return allBookableServices().find((service) => service.id === id) ?? null;
@@ -175,6 +293,30 @@ export function serviceCardBestFor(service: BookableService) {
 
 export function serviceCardPriceValue(service: BookableService) {
   return serviceStartingPriceLabel(service).replace(/^From\s+/i, "");
+}
+
+export function serviceStartingPriceAmount(service: BookableService) {
+  if (service.pricingType === "hourly" && service.hourlyRate != null) {
+    return service.hourlyRate;
+  }
+  if (service.pricingType === "options" && service.options?.length) {
+    const priced = service.options.filter((option) => option.priceFrom != null);
+    if (!priced.length) return null;
+    return Math.min(...priced.map((option) => option.priceFrom!));
+  }
+  if (service.pricingType === "add_on" && service.flatRate != null) {
+    return service.flatRate;
+  }
+  if (service.pricingType === "add_on" && service.tiers?.length) {
+    return Math.min(...service.tiers.map((tier) => tier.priceFrom));
+  }
+  if (service.pricingType === "tiered" && service.coatTypePrices?.length) {
+    return Math.min(...service.coatTypePrices.map((tier) => tier.priceFrom));
+  }
+  if (service.pricingType === "tiered" && service.tiers?.length) {
+    return Math.min(...service.tiers.map((tier) => tier.priceFrom));
+  }
+  return null;
 }
 
 export function serviceStartingPriceLabel(service: BookableService) {
@@ -210,6 +352,20 @@ export function serviceStartingPriceLabel(service: BookableService) {
     return `From ${formatPrice(min)}`;
   }
   return "";
+}
+
+/** Lowest starting price across a category, from the shared catalog. */
+export function categoryStartingPriceLabel(serviceIds: readonly string[]) {
+  const amounts = getServicesByIds(serviceIds)
+    .map(serviceStartingPriceAmount)
+    .filter((amount): amount is number => amount != null);
+  if (!amounts.length) return null;
+  return `From ${formatPrice(Math.min(...amounts))}`;
+}
+
+export function directoryPriceLabel(category: ServiceCategory) {
+  if (!category.showStartingPrice) return null;
+  return categoryStartingPriceLabel(category.serviceIds);
 }
 
 export function serviceCardAccessLabel(service: BookableService) {

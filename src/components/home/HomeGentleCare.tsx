@@ -50,7 +50,7 @@ export function HomeGentleCare() {
             </p>
           </div>
           <Link
-            href="/services#gentle-care"
+            href="/services/specialty-care"
             className="font-body mt-8 inline-flex min-h-[48px] items-center text-[11px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink"
           >
             View Gentle Care Details
