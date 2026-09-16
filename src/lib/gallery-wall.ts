@@ -309,7 +309,7 @@ export const SELECTED_WORK_CAPTIONS: Record<number, GalleryCaption> = {
   6: { kicker: "Yorkshire Terrier", detail: "Top knot" },
   7: { kicker: "Bichon", detail: "Creative color" },
   8: { kicker: "Poodle", detail: "German trim" },
-  9: { kicker: "Shih Tzu", detail: "Puppy cut" },
+  9: { kicker: "Shih Tzu", detail: "Full face" },
   10: { kicker: "Shih Tzu", detail: "Pigtails" },
   11: { kicker: "Bichon", detail: "Creative Color Dye" },
   12: { kicker: "Yorkshire Terrier", detail: "Puppy cut" },

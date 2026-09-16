@@ -232,6 +232,10 @@ describe("gallery captions", () => {
       "Bichon",
       "Creative Color Dye",
     ]);
+    assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[9]), [
+      "Shih Tzu",
+      "Full face",
+    ]);
     assert.equal(SELECTED_WORK_CAPTIONS[15], undefined);
 
     const snapshot = COMPETITION_LIGHTBOX_ITEMS.find(
