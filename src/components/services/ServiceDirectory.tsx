@@ -21,19 +21,19 @@ export function ServiceDirectory() {
                   href={category.path}
                   className="group flex h-full flex-col border border-gray-line/70 bg-ivory px-7 py-8 transition duration-300 hover:border-champagne/80 hover:bg-white/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne motion-reduce:transition-none md:min-h-[13.5rem] md:px-8 md:py-9"
                 >
-                  <h2 className="font-display text-[1.45rem] leading-tight tracking-[0.06em] text-ink uppercase md:text-[1.55rem]">
+                  <h2 className="font-display text-2xl leading-tight text-ink md:text-3xl">
                     {category.directoryName}
                   </h2>
-                  <p className="font-body mt-3 text-[13px] leading-relaxed text-taupe">
+                  <p className="font-body mt-3 text-sm leading-relaxed text-taupe md:text-base">
                     {category.directoryDescription}
                   </p>
                   <div className="mt-auto flex items-end justify-between gap-4 pt-8">
                     {price ? (
-                      <p className="font-body text-sm text-ink">{price}</p>
+                      <p className="font-body text-base text-ink">{price}</p>
                     ) : (
                       <span />
                     )}
-                    <span className="font-body inline-flex min-h-[44px] items-center text-[11px] font-medium uppercase tracking-[0.16em] text-ink">
+                    <span className="font-body inline-flex min-h-[44px] items-center text-[12px] font-medium uppercase tracking-[0.16em] text-ink">
                       Explore
                       <span className="ml-1.5 inline-block transition-transform duration-300 group-hover:translate-x-1 motion-reduce:transition-none">
                         →
