@@ -145,7 +145,7 @@ export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
     displayWidth: 13.2,
     photoSrc: galleryWallPhotoSrc(6),
     photoAlt:
-      "K9 Atelier grooming portfolio — Yorkshire Terrier with a top knot in an ornate oval gold frame",
+      "K9 Atelier grooming portfolio — Yorkshire Terrier with an Asian Fusion style in an ornate oval gold frame",
     photoWidth: 1141,
     photoHeight: 1378,
     fit: "framed",
@@ -306,7 +306,7 @@ export const SELECTED_WORK_CAPTIONS: Record<number, GalleryCaption> = {
   3: { kicker: "Poodle", detail: "Teddy bear" },
   4: { kicker: "Poodle", detail: "Asian Fusion" },
   5: { kicker: "Bichon", detail: "Teddy bear" },
-  6: { kicker: "Yorkshire Terrier", detail: "Top knot" },
+  6: { kicker: "Yorkshire Terrier", detail: "Asian Fusion" },
   7: { kicker: "Bichon", detail: "Creative color" },
   8: { kicker: "Poodle", detail: "German trim" },
   9: { kicker: "Shih Tzu", detail: "Full face" },
