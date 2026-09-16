@@ -9,11 +9,13 @@ export function GalleryLightboxCaption({
 }: {
   caption?: GalleryCaptionData;
 }) {
-  const [kicker, detail] = lightboxCaptionLines(caption);
+  const [breed, styling] = lightboxCaptionLines(caption);
   return (
     <figcaption className="k9-gallery-lightbox-caption">
-      {kicker ? <p className="font-body text-champagne/80">{kicker}</p> : null}
-      {detail ? <p className="font-display text-ivory/80">{detail}</p> : null}
+      {breed ? <p className="font-body text-champagne/80">{breed}</p> : null}
+      {styling ? (
+        <p className="font-display text-ivory/80">{styling}</p>
+      ) : null}
     </figcaption>
   );
 }
@@ -23,11 +25,14 @@ export function GalleryWallCaption({
 }: {
   caption: GalleryCaptionData;
 }) {
-  const detail = caption.detail?.trim() ?? "";
-  if (!detail) return null;
+  const [breed, styling] = lightboxCaptionLines(caption);
+  if (!breed && !styling) return null;
   return (
     <span className="k9-gallery-caption">
-      <span className="k9-gallery-caption-detail">{detail}</span>
+      {breed ? <span className="k9-gallery-caption-kicker">{breed}</span> : null}
+      {styling ? (
+        <span className="k9-gallery-caption-detail">{styling}</span>
+      ) : null}
     </span>
   );
 }

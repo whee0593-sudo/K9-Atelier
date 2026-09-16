@@ -308,25 +308,28 @@ export type GalleryCaption = {
   detail?: string;
 };
 
-/** Lightbox / wall captions for the 17 selected-work portraits. Indexed by slot id. */
+/**
+ * Lightbox / wall captions for the 17 selected-work portraits. Indexed by slot id.
+ * Two-line museum label: kicker = breed, detail = styling.
+ */
 export const SELECTED_WORK_CAPTIONS: Record<number, GalleryCaption> = {
-  1: { kicker: "SELECTED WORK", detail: "Braided ears" },
-  2: { kicker: "SELECTED WORK", detail: "Yorkshire Terrier" },
-  3: { kicker: "SELECTED WORK", detail: "Bichon-style portrait" },
-  4: { kicker: "SELECTED WORK", detail: "Poodle" },
-  5: { kicker: "SELECTED WORK", detail: "Bichon" },
-  6: { kicker: "SELECTED WORK", detail: "Yorkshire Terrier" },
-  7: { kicker: "SELECTED WORK", detail: "Creative color" },
-  8: { kicker: "SELECTED WORK", detail: "Apricot poodle" },
-  9: { kicker: "SELECTED WORK", detail: "Polka-dot bandana" },
-  10: { kicker: "SELECTED WORK", detail: "Pigtails" },
-  11: { kicker: "SELECTED WORK", detail: "Creative color" },
-  12: { kicker: "SELECTED WORK", detail: "Terrier" },
-  13: { kicker: "SELECTED WORK", detail: "Doodle" },
-  14: { kicker: "SELECTED WORK", detail: "Apricot poodle" },
-  15: { kicker: "SELECTED WORK", detail: "Poodle" },
-  16: { kicker: "SELECTED WORK", detail: "Plush white coat" },
-  17: { kicker: "SELECTED WORK", detail: "Coat art" },
+  1: { kicker: "Bichon", detail: "Braided ears" },
+  2: { kicker: "Yorkshire Terrier", detail: "Puppy cut" },
+  3: { kicker: "Bichon", detail: "Teddy bear" },
+  4: { kicker: "Poodle", detail: "Teddy bear" },
+  5: { kicker: "Bichon", detail: "Teddy bear" },
+  6: { kicker: "Yorkshire Terrier", detail: "Top knot" },
+  7: { kicker: "Bichon", detail: "Creative color" },
+  8: { kicker: "Poodle", detail: "German trim" },
+  9: { kicker: "Shih Tzu", detail: "Puppy cut" },
+  10: { kicker: "Shih Tzu", detail: "Pigtails" },
+  11: { kicker: "Bichon", detail: "Rainbow" },
+  12: { kicker: "Yorkshire Terrier", detail: "Puppy cut" },
+  13: { kicker: "Doodle", detail: "Teddy bear" },
+  14: { kicker: "Poodle", detail: "Teddy bear" },
+  15: { kicker: "Poodle", detail: "Teddy bear" },
+  16: { kicker: "Pomeranian", detail: "Teddy bear" },
+  17: { kicker: "Bichon", detail: "Coat art" },
 };
 
 export type CompetitionFrameFinish = "gold" | "walnut" | "brass";

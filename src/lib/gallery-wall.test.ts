@@ -177,15 +177,16 @@ describe("2019 winner metadata", () => {
 });
 
 describe("gallery captions", () => {
-  it("gives every selected-work portrait a two-line museum label", () => {
+  it("gives every selected-work portrait a two-line breed + styling label", () => {
     for (const slot of GALLERY_FRAME_SLOTS) {
       const caption = SELECTED_WORK_CAPTIONS[slot.id];
       assert.ok(caption, `missing caption for work ${slot.id}`);
-      assert.equal(caption.kicker, "SELECTED WORK");
-      assert.ok(caption.detail && caption.detail.length > 0);
+      assert.ok(caption.kicker && caption.kicker.length > 0, slot.id);
+      assert.ok(caption.detail && caption.detail.length > 0, slot.id);
+      assert.notEqual(caption.kicker, "SELECTED WORK");
       const lines = lightboxCaptionLines(caption);
       assert.equal(lines.length, 2);
-      assert.equal(lines[0], "SELECTED WORK");
+      assert.equal(lines[0], caption.kicker);
       assert.equal(lines[1], caption.detail);
     }
   });
@@ -197,13 +198,14 @@ describe("gallery captions", () => {
       const lines = lightboxCaptionLines(item.caption);
       assert.equal(lines[0].length > 0, true, item.id);
       assert.equal(lines[1].length > 0, true, item.id);
+      assert.notEqual(lines[0], "SELECTED WORK");
       assert.notEqual(lines[0], "2019 · Best in Show");
       assert.notEqual(lines[1], "2019 Best in Show");
     }
 
     const work = GALLERY_LIGHTBOX_ITEMS.find((item) => item.id === "work-01");
     assert.deepEqual(lightboxCaptionLines(work?.caption), [
-      "SELECTED WORK",
+      "Bichon",
       "Braided ears",
     ]);
 

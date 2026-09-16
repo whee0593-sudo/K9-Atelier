@@ -4,7 +4,10 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { GalleryLightbox } from "@/components/gallery/GalleryLightbox";
 import { GalleryWall } from "@/components/gallery/GalleryWall";
-import { GALLERY_WALL_GUIDE_ASSETS } from "@/lib/gallery-wall";
+import {
+  GALLERY_WALL_GUIDE_ASSETS,
+  SELECTED_WORK_CAPTIONS,
+} from "@/lib/gallery-wall";
 
 describe("gallery wall markup", () => {
   it("renders one horizontal museum track instead of masonry", () => {
@@ -28,7 +31,6 @@ describe("gallery wall markup", () => {
     assert.equal(html.includes("BEST IN SHOW"), false);
     assert.equal(html.includes("k9-gallery-plaque"), false);
     assert.equal(html.includes("Best in Group"), false);
-    assert.equal(html.includes("Pomeranian"), false);
     assert.equal(html.includes("Credentials"), false);
     assert.match(html, /gallery-01\.png/);
     assert.match(html, /gallery-17\.png/);
@@ -36,7 +38,13 @@ describe("gallery wall markup", () => {
     assert.equal(html.includes("competition-08.jpg"), false);
     assert.equal(html.includes("Trophy presentation"), false);
     assert.equal(html.includes("Group portrait"), false);
-    assert.match(html, /Braided ears/);
+    assert.match(html, /k9-gallery-caption-kicker/);
+    assert.match(html, /k9-gallery-caption-detail/);
+    assert.equal(html.includes("SELECTED WORK"), false);
+    for (const caption of Object.values(SELECTED_WORK_CAPTIONS)) {
+      const pair = `k9-gallery-caption-kicker">${caption.kicker}</span><span class="k9-gallery-caption-detail">${caption.detail}</span>`;
+      assert.equal(html.includes(pair), true, `${caption.kicker} / ${caption.detail}`);
+    }
     assert.equal(html.includes("columns-2"), false);
     for (const src of GALLERY_WALL_GUIDE_ASSETS) {
       assert.equal(html.includes(src), false);
@@ -74,7 +82,8 @@ describe("gallery lightbox markup", () => {
     assert.equal(html.includes("2019 · Best in Show"), false);
     assert.match(html, /gallery-01\.png/);
     assert.match(html, /k9-gallery-lightbox-caption/);
-    assert.match(html, /SELECTED WORK/);
+    assert.equal(html.includes("SELECTED WORK"), false);
+    assert.match(html, /Bichon/);
     assert.match(html, /Braided ears/);
   });
 });
