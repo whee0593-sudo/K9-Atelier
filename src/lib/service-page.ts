@@ -1,9 +1,35 @@
-import { business, formatDuration, formatPrice } from "@/lib/business";
+import {
+  business,
+  formatDuration,
+  formatPrice,
+  getBrandWebsiteUrl,
+} from "@/lib/business";
 import {
   allBookableServices,
   type BookableService,
   type ServiceTier,
 } from "@/lib/services";
+
+export const SERVICES_PATH = "/services";
+export const FULL_GROOM_PATH = "/services/full-groom";
+
+export const SERVICES_PAGE_TITLE = "Services · K9 Atelier";
+export const SERVICES_PAGE_DESCRIPTION =
+  "Signature grooming, spa rituals, specialty care and gentle comfort services — Private Mobile Pet Spa in Palm Beach.";
+
+export const FULL_GROOM_PAGE_TITLE =
+  "Full Grooming & Hand Stripping | K9 Atelier";
+export const FULL_GROOM_PAGE_DESCRIPTION =
+  "Custom full grooming and professional hand stripping for suitable wire-coated breeds. Private mobile grooming serving Jupiter, Palm Beach Gardens and surrounding Palm Beach areas.";
+export const FULL_GROOM_PAGE_H1 = "Full Grooming & Hand Stripping";
+export const FULL_GROOM_PAGE_INTRO =
+  "Custom haircuts and traditional hand stripping for coats that need more than a bath.";
+
+export function absoluteSiteUrl(path: string) {
+  const origin = getBrandWebsiteUrl().replace(/\/$/, "");
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return `${origin}${normalized}`;
+}
 
 export const MOST_REQUESTED_IDS = [
   "signature-bath-care",
@@ -78,15 +104,56 @@ const CARD_BEST_FOR: Record<string, string> = {
 };
 
 export const SERVICES_NAV = [
-  { href: "#most-requested", label: "Most Requested" },
-  { href: "#bath-coat", label: "Bath & Coat" },
-  { href: "#full-groom", label: "Full Groom" },
-  { href: "#spa-rituals", label: "Spa Rituals" },
-  { href: "#color-dye", label: "Color Dye" },
-  { href: "#specialty-care", label: "Specialty Care" },
-  { href: "#add-ons", label: "Add-Ons" },
-  { href: "#fees-policies", label: "Fees & Policies" },
+  {
+    href: `${SERVICES_PATH}#most-requested`,
+    sectionId: "most-requested",
+    label: "Most Requested",
+  },
+  {
+    href: `${SERVICES_PATH}#bath-coat`,
+    sectionId: "bath-coat",
+    label: "Bath & Coat",
+  },
+  {
+    href: FULL_GROOM_PATH,
+    sectionId: "full-groom",
+    label: "Full Groom",
+  },
+  {
+    href: `${SERVICES_PATH}#spa-rituals`,
+    sectionId: "spa-rituals",
+    label: "Spa Rituals",
+  },
+  {
+    href: `${SERVICES_PATH}#color-dye`,
+    sectionId: "color-dye",
+    label: "Color Dye",
+  },
+  {
+    href: `${SERVICES_PATH}#specialty-care`,
+    sectionId: "specialty-care",
+    label: "Specialty Care",
+  },
+  {
+    href: `${SERVICES_PATH}#add-ons`,
+    sectionId: "add-ons",
+    label: "Add-Ons",
+  },
+  {
+    href: `${SERVICES_PATH}#fees-policies`,
+    sectionId: "fees-policies",
+    label: "Fees & Policies",
+  },
 ] as const;
+
+/** Old in-page hashes that now have dedicated category routes. */
+export const SERVICES_HASH_ROUTES: Record<string, string> = {
+  "full-groom": FULL_GROOM_PATH,
+};
+
+export function isServicesCategoryRoute(href: string) {
+  return href.startsWith("/") && !href.includes("#");
+}
 
 export function getServiceById(id: string) {
   return allBookableServices().find((service) => service.id === id) ?? null;

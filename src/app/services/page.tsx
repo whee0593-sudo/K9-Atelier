@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { CreativeColoringSection } from "@/components/services/CreativeColoringSection";
 import { FeesPoliciesSection } from "@/components/services/FeesPoliciesSection";
+import { FullGroomSection } from "@/components/services/FullGroomSection";
 import { MobileBookBar } from "@/components/services/MobileBookBar";
 import { ServiceCard } from "@/components/services/ServiceCard";
 import { ConsultationPrompt } from "@/components/services/ConsultationPrompt";
+import { ServicesHashRedirect } from "@/components/services/ServicesHashRedirect";
 import { ServicesHero } from "@/components/services/ServicesHero";
 import { ServicesNav } from "@/components/services/ServicesNav";
 import { ServicesSection } from "@/components/services/ServicesSection";
@@ -10,25 +13,31 @@ import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import {
   ADD_ON_IDS,
   BATH_COAT_IDS,
-  FULL_GROOM_IDS,
   MOST_REQUESTED_IDS,
+  SERVICES_PAGE_DESCRIPTION,
+  SERVICES_PAGE_TITLE,
+  SERVICES_PATH,
   SPA_IDS,
+  absoluteSiteUrl,
   getServiceById,
   getServicesByIds,
   serviceCardSummary,
   spaIncludesItems,
 } from "@/lib/service-page";
 
-export const metadata = {
-  title: "Services · K9 Atelier",
-  description:
-    "Signature grooming, spa rituals, specialty care and gentle comfort services — Private Mobile Pet Spa in Palm Beach.",
+const canonical = absoluteSiteUrl(SERVICES_PATH);
+
+export const metadata: Metadata = {
+  title: SERVICES_PAGE_TITLE,
+  description: SERVICES_PAGE_DESCRIPTION,
+  alternates: {
+    canonical,
+  },
 };
 
 export default function ServicesPage() {
   const featured = getServicesByIds(MOST_REQUESTED_IDS);
   const bathCoat = getServicesByIds(BATH_COAT_IDS);
-  const fullGroom = getServicesByIds(FULL_GROOM_IDS);
   const spa = getServicesByIds(SPA_IDS);
   const addOns = getServicesByIds(ADD_ON_IDS);
   const coloring = getServiceById("creative-accent-coloring");
@@ -38,6 +47,7 @@ export default function ServicesPage() {
 
   return (
     <div className="pb-24 md:pb-0">
+      <ServicesHashRedirect />
       <ServicesHero />
       <ConsultationPrompt />
       <ServicesNav />
@@ -78,27 +88,7 @@ export default function ServicesPage() {
         </div>
       </ServicesSection>
 
-      <ServicesSection
-        id="full-groom"
-        eyebrow="Full Grooming & Hand Stripping"
-        title="A Complete Style, Done With Patience."
-        intro="Custom haircuts and traditional hand stripping for coats that need more than a bath."
-        tone="white"
-      >
-        <div className="grid gap-6 lg:grid-cols-2">
-          {fullGroom.map((service) => (
-            <ServiceCard
-              key={service.id}
-              service={service}
-              anchorId={
-                service.id === "custom-full-haircut"
-                  ? "atelier-full-groom"
-                  : service.id
-              }
-            />
-          ))}
-        </div>
-      </ServicesSection>
+      <FullGroomSection />
 
       <ServicesSection
         id="spa-rituals"
