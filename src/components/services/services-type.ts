@@ -21,4 +21,4 @@ export const servicesPriceClass =
   "font-body min-h-[1.5rem] text-[15px] font-medium tracking-[0.02em] text-ink";
 
 export const servicesCtaClass =
-  "font-body inline-flex min-h-[48px] items-center text-xs font-medium uppercase tracking-[0.16em] text-deep-lavender";
+  "font-body inline-flex min-h-[48px] max-w-full flex-wrap items-center justify-center text-xs font-medium uppercase tracking-[0.16em] text-deep-lavender";

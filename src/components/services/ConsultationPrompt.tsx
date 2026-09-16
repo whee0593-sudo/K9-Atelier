@@ -23,11 +23,11 @@ export function ConsultationPrompt() {
           </p>
           <Link
             href={CONSULTATION_PATH}
-            className={`${servicesCtaClass} mt-8 justify-center transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne`}
+            className={`${servicesCtaClass} mt-8 px-2 leading-relaxed transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne`}
           >
-            Request a Complimentary Consultation
-            <span aria-hidden="true" className="ml-1.5">
-              →
+            <span className="text-center">
+              Request a Complimentary Consultation
+              <span aria-hidden="true"> →</span>
             </span>
           </Link>
         </div>
