@@ -3,13 +3,13 @@
  * Uses the site font classes (font-display / font-body) and ink / taupe colors.
  */
 export const servicesHeroTitleClass =
-  "font-display mt-6 text-[2.5rem] leading-[1.12] font-medium tracking-[-0.01em] text-ink md:mt-7 md:text-5xl";
+  "font-display mt-6 max-w-full text-[2.125rem] leading-[1.14] font-medium tracking-[-0.01em] text-ink sm:text-[2.5rem] md:mt-7 md:text-5xl";
 
 export const servicesSectionTitleClass =
-  "font-display mt-5 text-[2rem] leading-[1.14] font-medium tracking-[-0.01em] text-ink md:text-[2.5rem]";
+  "font-display mt-5 max-w-full text-[1.875rem] leading-[1.16] font-medium tracking-[-0.01em] text-ink md:text-[2.5rem]";
 
 export const servicesCategoryTitleClass =
-  "font-display text-[1.875rem] leading-[1.18] font-medium tracking-[-0.01em] text-ink md:text-3xl";
+  "font-display text-[1.75rem] leading-[1.2] font-medium tracking-[-0.01em] text-ink md:text-3xl";
 
 export const servicesBodyClass =
   "font-body text-base leading-[1.75] text-taupe md:text-[17px] md:leading-[1.8]";
