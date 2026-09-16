@@ -109,7 +109,7 @@ export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
     displayWidth: 13.2,
     photoSrc: galleryWallPhotoSrc(3),
     photoAlt:
-      "K9 Atelier grooming portfolio — cream bichon-style portrait in an ornate gold frame",
+      "K9 Atelier grooming portfolio — cream poodle portrait in an ornate gold frame",
     photoWidth: 1141,
     photoHeight: 1378,
     fit: "framed",
@@ -303,7 +303,7 @@ export type GalleryCaption = {
 export const SELECTED_WORK_CAPTIONS: Record<number, GalleryCaption> = {
   1: { kicker: "Maltese", detail: "Braided ears" },
   2: { kicker: "Yorkshire Terrier", detail: "Puppy cut" },
-  3: { kicker: "Bichon", detail: "Teddy bear" },
+  3: { kicker: "Poodle", detail: "Teddy bear" },
   4: { kicker: "Poodle", detail: "Asian Fusion" },
   5: { kicker: "Bichon", detail: "Teddy bear" },
   6: { kicker: "Yorkshire Terrier", detail: "Top knot" },

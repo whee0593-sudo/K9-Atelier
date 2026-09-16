@@ -219,6 +219,10 @@ describe("gallery captions", () => {
       "Asian Fusion",
     ]);
     assert.equal(SELECTED_WORK_CAPTIONS[5]?.detail, "Teddy bear");
+    assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[3]), [
+      "Poodle",
+      "Teddy bear",
+    ]);
     assert.equal(SELECTED_WORK_CAPTIONS[14]?.detail, "Teddy bear");
     assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[16]), [
       "Pomeranian",
