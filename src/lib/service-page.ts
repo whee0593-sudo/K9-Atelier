@@ -12,6 +12,7 @@ import {
 
 export const SERVICES_PATH = "/services";
 export const FULL_GROOM_PATH = "/services/full-groom";
+export const HAND_STRIPPING_PATH = "/services/hand-stripping";
 export const BATH_COAT_PATH = "/services/bath-coat-care";
 export const SPA_PATH = "/services/spa";
 export const COLOR_PATH = "/services/color";
@@ -22,15 +23,21 @@ export const CONSULTATION_PATH = "/contact?inquiry=grooming-consultation";
 
 export const SERVICES_PAGE_TITLE = "Services · K9 Atelier";
 export const SERVICES_PAGE_DESCRIPTION =
-  "A considered menu of private mobile grooming — bath and coat care, full grooming, spa rituals, color, specialty care, and finishing add-ons in Palm Beach.";
+  "A considered menu of private mobile grooming — bath and coat care, full grooming, hand stripping, spa rituals, color, specialty care, and finishing add-ons in Palm Beach.";
 
-export const FULL_GROOM_PAGE_TITLE =
-  "Full Grooming & Hand Stripping | K9 Atelier";
+export const FULL_GROOM_PAGE_TITLE = "Full Grooming | K9 Atelier";
 export const FULL_GROOM_PAGE_DESCRIPTION =
-  "Custom full grooming and professional hand stripping for suitable wire-coated breeds. Private mobile grooming serving Jupiter, Palm Beach Gardens and surrounding Palm Beach areas.";
-export const FULL_GROOM_PAGE_H1 = "Full Grooming & Hand Stripping";
+  "Custom full grooming and haircuts tailored to coat, lifestyle, and expression. Private mobile grooming serving Jupiter, Palm Beach Gardens and surrounding Palm Beach areas.";
+export const FULL_GROOM_PAGE_H1 = "A Complete Style, Done With Patience.";
 export const FULL_GROOM_PAGE_INTRO =
-  "Custom haircuts and traditional hand stripping for coats that need more than a bath.";
+  "Custom haircuts for coats that need more than a bath.";
+
+export const HAND_STRIPPING_PAGE_TITLE = "Hand Stripping | K9 Atelier";
+export const HAND_STRIPPING_PAGE_DESCRIPTION =
+  "Traditional hand stripping for suitable wire-coated breeds, preserving harsh texture, color, and natural coat protection. Private mobile grooming serving Jupiter, Palm Beach Gardens and surrounding Palm Beach areas.";
+export const HAND_STRIPPING_PAGE_H1 = "Hand Stripping";
+export const HAND_STRIPPING_PAGE_INTRO =
+  "Traditional coat maintenance for wire-coated breeds, preserving harsh texture, color, and natural coat protection.";
 
 export function absoluteSiteUrl(path: string) {
   const origin = getBrandWebsiteUrl().replace(/\/$/, "");
@@ -43,10 +50,9 @@ export const BATH_COAT_IDS = [
   "long-coat-show-care",
 ] as const;
 
-export const FULL_GROOM_IDS = [
-  "custom-full-haircut",
-  "hand-stripping",
-] as const;
+export const FULL_GROOM_IDS = ["custom-full-haircut"] as const;
+
+export const HAND_STRIPPING_IDS = ["hand-stripping"] as const;
 
 export const SPA_IDS = [
   "dead-sea-mud-bath",
@@ -75,6 +81,7 @@ export const SERVICE_ANCHORS: Record<string, string> = {
 export type ServiceCategorySlug =
   | "bath-coat-care"
   | "full-groom"
+  | "hand-stripping"
   | "spa"
   | "color"
   | "specialty-care"
@@ -117,17 +124,32 @@ export const SERVICE_CATEGORIES: readonly ServiceCategory[] = [
   {
     slug: "full-groom",
     path: FULL_GROOM_PATH,
-    navLabel: "Full Groom",
+    navLabel: "Full Grooming",
     directoryName: "Full Grooming",
-    directoryDescription: "Haircuts · Hand stripping",
+    directoryDescription: "Haircuts · Styling",
     showStartingPrice: true,
     serviceIds: FULL_GROOM_IDS,
     layout: "cards",
     pageTitle: FULL_GROOM_PAGE_TITLE,
     pageDescription: FULL_GROOM_PAGE_DESCRIPTION,
-    pageEyebrow: "Full Groom",
+    pageEyebrow: "Full Grooming",
     pageH1: FULL_GROOM_PAGE_H1,
     pageIntro: FULL_GROOM_PAGE_INTRO,
+  },
+  {
+    slug: "hand-stripping",
+    path: HAND_STRIPPING_PATH,
+    navLabel: "Hand Stripping",
+    directoryName: "Hand Stripping",
+    directoryDescription: "Traditional coat maintenance",
+    showStartingPrice: false,
+    serviceIds: HAND_STRIPPING_IDS,
+    layout: "cards",
+    pageTitle: HAND_STRIPPING_PAGE_TITLE,
+    pageDescription: HAND_STRIPPING_PAGE_DESCRIPTION,
+    pageEyebrow: "Hand Stripping",
+    pageH1: HAND_STRIPPING_PAGE_H1,
+    pageIntro: HAND_STRIPPING_PAGE_INTRO,
   },
   {
     slug: "spa",
@@ -183,7 +205,7 @@ export const SERVICE_CATEGORIES: readonly ServiceCategory[] = [
   {
     slug: "add-ons",
     path: ADD_ONS_PATH,
-    navLabel: "Add-Ons",
+    navLabel: "Add-On Care",
     directoryName: "Add-On Care",
     directoryDescription: "Finishing · Coat support",
     showStartingPrice: true,
@@ -264,6 +286,7 @@ export const SERVICES_HASH_ROUTES: Record<string, string> = {
   "signature-bath": BATH_COAT_PATH,
   "full-groom": FULL_GROOM_PATH,
   "atelier-full-groom": FULL_GROOM_PATH,
+  "hand-stripping": HAND_STRIPPING_PATH,
   "spa-rituals": SPA_PATH,
   "spa-wellness": SPA_PATH,
   "color-dye": COLOR_PATH,

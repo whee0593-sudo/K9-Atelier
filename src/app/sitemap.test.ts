@@ -4,6 +4,7 @@ import {
   BATH_COAT_PATH,
   COLOR_PATH,
   FULL_GROOM_PATH,
+  HAND_STRIPPING_PATH,
   SERVICE_CATEGORY_PATHS,
   SERVICES_PATH,
   SPA_PATH,
@@ -18,6 +19,7 @@ describe("sitemap", () => {
     const urls = sitemap().map((entry) => entry.url);
     assert.ok(urls.includes(absoluteSiteUrl(SERVICES_PATH)));
     assert.ok(urls.includes(absoluteSiteUrl(FULL_GROOM_PATH)));
+    assert.ok(urls.includes(absoluteSiteUrl(HAND_STRIPPING_PATH)));
     assert.ok(urls.includes(absoluteSiteUrl(BATH_COAT_PATH)));
     assert.ok(urls.includes(absoluteSiteUrl(SPA_PATH)));
     assert.ok(urls.includes(absoluteSiteUrl(COLOR_PATH)));
@@ -30,8 +32,8 @@ describe("sitemap", () => {
       true,
     );
     assert.equal(
-      absoluteSiteUrl(FULL_GROOM_PATH),
-      "https://k9atelier.com/services/full-groom",
+      absoluteSiteUrl(HAND_STRIPPING_PATH),
+      "https://k9atelier.com/services/hand-stripping",
     );
   });
 });

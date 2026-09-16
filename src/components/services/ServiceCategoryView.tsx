@@ -1,6 +1,7 @@
 import { CreativeColoringSection } from "@/components/services/CreativeColoringSection";
 import { MobileBookBar } from "@/components/services/MobileBookBar";
 import { ServiceCard } from "@/components/services/ServiceCard";
+import { ServicesHashRedirect } from "@/components/services/ServicesHashRedirect";
 import { ServicesNav } from "@/components/services/ServicesNav";
 import { ServicesSection } from "@/components/services/ServicesSection";
 import type { ServiceCategory } from "@/lib/service-page";
@@ -15,15 +16,20 @@ type Props = {
   category: ServiceCategory;
 };
 
+function serviceGridClass(count: number) {
+  if (count <= 1) return "mx-auto max-w-2xl";
+  if (count >= 3) return "grid gap-6 lg:grid-cols-3";
+  return "grid gap-6 lg:grid-cols-2";
+}
+
 export function ServiceCategoryView({ category }: Props) {
   const services = getServicesByIds(category.serviceIds);
   const coloring = getServiceById("creative-accent-coloring");
   const spaIncludes = category.slug === "spa" ? spaIncludesItems() : [];
-  const columns =
-    services.length >= 3 ? "lg:grid-cols-3" : "lg:grid-cols-2";
 
   return (
     <div className="pb-24 md:pb-0">
+      <ServicesHashRedirect />
       <ServicesNav />
       <ServicesSection
         id={category.slug}
@@ -51,7 +57,7 @@ export function ServiceCategoryView({ category }: Props) {
         {category.layout === "coloring" && coloring ? (
           <CreativeColoringSection service={coloring} />
         ) : (
-          <div className={`grid gap-6 ${columns}`}>
+          <div className={serviceGridClass(services.length)}>
             {services.map((service) => (
               <ServiceCard
                 key={service.id}

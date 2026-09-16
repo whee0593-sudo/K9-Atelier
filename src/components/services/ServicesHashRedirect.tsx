@@ -11,7 +11,10 @@ export function ServicesHashRedirect() {
     const applyHashRoute = () => {
       const hash = window.location.hash.replace(/^#/, "");
       const dest = SERVICES_HASH_ROUTES[hash];
-      if (dest) router.replace(dest);
+      if (!dest) return;
+      const destPath = dest.split("#")[0];
+      if (destPath === window.location.pathname) return;
+      router.replace(dest);
     };
 
     applyHashRoute();

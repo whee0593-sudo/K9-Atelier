@@ -12,6 +12,11 @@ import {
   FULL_GROOM_PAGE_H1,
   FULL_GROOM_PAGE_TITLE,
   FULL_GROOM_PATH,
+  HAND_STRIPPING_IDS,
+  HAND_STRIPPING_PAGE_DESCRIPTION,
+  HAND_STRIPPING_PAGE_H1,
+  HAND_STRIPPING_PAGE_TITLE,
+  HAND_STRIPPING_PATH,
   SERVICE_CATEGORIES,
   SERVICE_CATEGORY_PATHS,
   SERVICES_HASH_ROUTES,
@@ -138,8 +143,12 @@ describe("service page helpers", () => {
       SERVICE_CATEGORY_PATHS,
     );
     assert.equal(
-      SERVICES_NAV.find((item) => item.label === "Full Groom")?.href,
+      SERVICES_NAV.find((item) => item.label === "Full Grooming")?.href,
       FULL_GROOM_PATH,
+    );
+    assert.equal(
+      SERVICES_NAV.find((item) => item.label === "Hand Stripping")?.href,
+      HAND_STRIPPING_PATH,
     );
     assert.equal(
       SERVICES_NAV.find((item) => item.label === "Bath & Coat")?.href,
@@ -163,25 +172,37 @@ describe("service page helpers", () => {
     assert.equal(bySlug["bath-coat-care"], "From $90");
     assert.equal(bySlug["full-groom"], serviceStartingPriceLabel(groom!));
     assert.equal(bySlug["full-groom"], "From $140");
+    assert.equal(bySlug["hand-stripping"], null);
     assert.equal(bySlug.spa, "From $140");
     assert.equal(bySlug.color, "From $50");
     assert.equal(bySlug["specialty-care"], null);
     assert.equal(bySlug["add-ons"], "From $30");
   });
 
-  it("keeps six directory categories without repeating individual services", () => {
+  it("keeps seven directory categories without repeating individual services", () => {
     assert.deepEqual(
       SERVICE_CATEGORIES.map((category) => category.slug),
       [
         "bath-coat-care",
         "full-groom",
+        "hand-stripping",
         "spa",
         "color",
         "specialty-care",
         "add-ons",
       ],
     );
-    assert.deepEqual([...BATH_COAT_IDS], ["signature-bath-care", "long-coat-show-care"]);
+    assert.equal(
+      SERVICE_CATEGORIES.find((category) => category.slug === "full-groom")
+        ?.directoryDescription,
+      "Haircuts · Styling",
+    );
+    assert.equal(
+      SERVICE_CATEGORIES.find((category) => category.slug === "hand-stripping")
+        ?.directoryDescription,
+      "Traditional coat maintenance",
+    );
+    assert.deepEqual([...HAND_STRIPPING_IDS], ["hand-stripping"]);
     assert.deepEqual([...SPA_IDS], [
       "dead-sea-mud-bath",
       "aromatherapy-oil-bath",
@@ -199,17 +220,27 @@ describe("service page helpers", () => {
     ]);
   });
 
-  it("keeps Full Groom services on a shared catalog", () => {
-    const services = getServicesByIds(FULL_GROOM_IDS);
+  it("keeps Full Groom and Hand Stripping on separate catalog entries", () => {
+    const fullGroom = getServicesByIds(FULL_GROOM_IDS);
+    const handStripping = getServicesByIds(HAND_STRIPPING_IDS);
     assert.deepEqual(
-      services.map((service) => service.id),
-      ["custom-full-haircut", "hand-stripping"],
+      fullGroom.map((service) => service.id),
+      ["custom-full-haircut"],
     );
-    assert.equal(services[0]?.name, "Custom Full Haircut & Styling");
-    assert.equal(services[1]?.name, "Hand Stripping");
+    assert.equal(fullGroom[0]?.name, "Custom Full Haircut & Styling");
+    assert.deepEqual(
+      handStripping.map((service) => service.id),
+      ["hand-stripping"],
+    );
+    assert.equal(handStripping[0]?.name, "Hand Stripping");
+    assert.equal(
+      serviceStartingPriceLabel(handStripping[0]!),
+      "From $160 / hour",
+    );
   });
 
   it("maps legacy service hashes to category or FAQ routes", () => {
+    assert.equal(SERVICES_HASH_ROUTES["hand-stripping"], HAND_STRIPPING_PATH);
     assert.equal(SERVICES_HASH_ROUTES["full-groom"], FULL_GROOM_PATH);
     assert.equal(SERVICES_HASH_ROUTES["bath-coat"], BATH_COAT_PATH);
     assert.equal(SERVICES_HASH_ROUTES["signature-bath"], BATH_COAT_PATH);
@@ -219,19 +250,25 @@ describe("service page helpers", () => {
     assert.equal(SERVICES_HASH_ROUTES["fees-policies"], FEES_POLICIES_PATH);
   });
 
-  it("uses independent Full Groom SEO copy and canonical", () => {
-    assert.equal(
-      FULL_GROOM_PAGE_TITLE,
-      "Full Grooming & Hand Stripping | K9 Atelier",
-    );
+  it("uses independent Full Groom and Hand Stripping SEO copy", () => {
+    assert.equal(FULL_GROOM_PAGE_TITLE, "Full Grooming | K9 Atelier");
     assert.equal(
       FULL_GROOM_PAGE_DESCRIPTION,
-      "Custom full grooming and professional hand stripping for suitable wire-coated breeds. Private mobile grooming serving Jupiter, Palm Beach Gardens and surrounding Palm Beach areas.",
+      "Custom full grooming and haircuts tailored to coat, lifestyle, and expression. Private mobile grooming serving Jupiter, Palm Beach Gardens and surrounding Palm Beach areas.",
     );
-    assert.equal(FULL_GROOM_PAGE_H1, "Full Grooming & Hand Stripping");
+    assert.equal(FULL_GROOM_PAGE_H1, "A Complete Style, Done With Patience.");
+    assert.equal(HAND_STRIPPING_PAGE_TITLE, "Hand Stripping | K9 Atelier");
+    assert.equal(HAND_STRIPPING_PAGE_H1, "Hand Stripping");
+    assert.notEqual(FULL_GROOM_PAGE_TITLE, HAND_STRIPPING_PAGE_TITLE);
+    assert.notEqual(FULL_GROOM_PAGE_H1, HAND_STRIPPING_PAGE_H1);
+    assert.match(HAND_STRIPPING_PAGE_DESCRIPTION, /Hand stripping|hand stripping/);
     assert.equal(
       absoluteSiteUrl(FULL_GROOM_PATH),
       "https://k9atelier.com/services/full-groom",
+    );
+    assert.equal(
+      absoluteSiteUrl(HAND_STRIPPING_PATH),
+      "https://k9atelier.com/services/hand-stripping",
     );
     assert.equal(
       absoluteSiteUrl(SERVICES_PATH),

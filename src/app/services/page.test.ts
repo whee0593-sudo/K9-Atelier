@@ -18,3 +18,17 @@ describe("services directory page", () => {
     assert.equal(servicesPage.includes("MobileBookBar"), false);
   });
 });
+
+describe("service directory layout", () => {
+  const directory = readFileSync(
+    new URL("../../components/services/ServiceDirectory.tsx", import.meta.url),
+    "utf8",
+  );
+
+  it("centers leftover cards instead of leaving a 2-column orphan", () => {
+    assert.match(directory, /lg:grid-cols-3/);
+    assert.match(directory, /lg:last:col-start-2/);
+    assert.match(directory, /md:last:justify-self-center/);
+    assert.equal(directory.includes("Haircuts · Hand stripping"), false);
+  });
+});

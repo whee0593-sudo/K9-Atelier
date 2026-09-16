@@ -2,6 +2,8 @@ import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { LuxuryButton } from "@/components/luxury/LuxuryButton";
 import { PageShell } from "@/components/luxury/PageShell";
 import { FeesPoliciesSection } from "@/components/services/FeesPoliciesSection";
+import { HAND_STRIPPING_PATH } from "@/lib/service-page";
+import Link from "next/link";
 
 export const metadata = {
   title: "FAQ · K9 Atelier",
@@ -177,12 +179,25 @@ export default function FaqPage() {
     {
       q: "Do you groom dogs over 45 lbs?",
       a: (
-        <FaqParagraphs
-          paragraphs={[
-            "Our Standard Bathing, Grooming, and Spa Services are designed for dogs weighing up to 45 lbs.",
-            "For dogs over 45 lbs, availability is limited to select services, including Hand Stripping without a bath and End-of-Life Comfort Care. Please contact us before booking so we can determine whether we can safely accommodate your dog’s individual needs.",
-          ]}
-        />
+        <div className="space-y-4">
+          <p>
+            Our Standard Bathing, Grooming, and Spa Services are designed for
+            dogs weighing up to 45 lbs.
+          </p>
+          <p>
+            For dogs over 45 lbs, availability is limited to select services,
+            including{" "}
+            <Link
+              href={HAND_STRIPPING_PATH}
+              className="underline decoration-champagne/70 underline-offset-4 transition hover:text-ink"
+            >
+              Hand Stripping
+            </Link>{" "}
+            without a bath and End-of-Life Comfort Care. Please contact us
+            before booking so we can determine whether we can safely accommodate
+            your dog’s individual needs.
+          </p>
+        </div>
       ),
     },
     {
