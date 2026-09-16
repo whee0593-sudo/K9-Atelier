@@ -136,7 +136,7 @@ describe("service page helpers", () => {
       ["custom-full-haircut", "hand-stripping"],
     );
     assert.equal(services[0]?.name, "Custom Full Haircut & Styling");
-    assert.equal(services[1]?.name, "Hand Stripping Specialty");
+    assert.equal(services[1]?.name, "Hand Stripping");
   });
 
   it("maps the legacy Full Groom hash to the category route", () => {

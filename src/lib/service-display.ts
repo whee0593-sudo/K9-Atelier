@@ -3,7 +3,7 @@ export const SERVICE_DISPLAY_NAMES: Record<string, string> = {
   "signature-bath-care": "The Signature Bath",
   "custom-full-haircut": "The Atelier Full Groom",
   "long-coat-show-care": "Show Care for Long Coats",
-  "hand-stripping": "Hand-Stripping Specialty",
+  "hand-stripping": "Hand Stripping",
   "dead-sea-mud-bath": "Dead Sea Mineral Ritual",
   "aromatherapy-oil-bath": "Lavender & Chamomile Bath Ritual",
   "sensitive-skin-treatment": "Sensitive Skin Botanical Ritual",
