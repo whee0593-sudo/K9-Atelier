@@ -86,7 +86,7 @@ describe("gallery lightbox markup", () => {
     assert.match(html, /gallery-01\.png/);
     assert.match(html, /k9-gallery-lightbox-caption/);
     assert.equal(html.includes("SELECTED WORK"), false);
-    assert.match(html, /Bichon/);
+    assert.match(html, /Maltese/);
     assert.match(html, /Braided ears/);
   });
 

@@ -209,7 +209,7 @@ describe("gallery captions", () => {
 
     const work = GALLERY_LIGHTBOX_ITEMS.find((item) => item.id === "work-01");
     assert.deepEqual(lightboxCaptionLines(work?.caption), [
-      "Bichon",
+      "Maltese",
       "Braided ears",
     ]);
 

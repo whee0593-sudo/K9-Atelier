@@ -85,7 +85,7 @@ export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
     displayWidth: 12.6,
     photoSrc: galleryWallPhotoSrc(1),
     photoAlt:
-      "K9 Atelier grooming portfolio — white dog with braided ears in an ornate oval gold frame",
+      "K9 Atelier grooming portfolio — Maltese with braided ears in an ornate oval gold frame",
     photoWidth: 1024,
     photoHeight: 1536,
     fit: "framed",
@@ -301,7 +301,7 @@ export type GalleryCaption = {
  * Two-line museum label: kicker = breed, detail = styling.
  */
 export const SELECTED_WORK_CAPTIONS: Record<number, GalleryCaption> = {
-  1: { kicker: "Bichon", detail: "Braided ears" },
+  1: { kicker: "Maltese", detail: "Braided ears" },
   2: { kicker: "Yorkshire Terrier", detail: "Puppy cut" },
   3: { kicker: "Bichon", detail: "Teddy bear" },
   4: { kicker: "Poodle", detail: "Asian Fusion" },
