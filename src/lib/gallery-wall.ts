@@ -193,7 +193,7 @@ export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
     displayWidth: 16.5,
     photoSrc: galleryWallPhotoSrc(10),
     photoAlt:
-      "K9 Atelier grooming portfolio — white-and-brown dog with pigtails in an ornate gold frame",
+      "K9 Atelier grooming portfolio — white-and-brown Shih Tzu with a daily braid in an ornate gold frame",
     photoWidth: 1374,
     photoHeight: 1145,
     fit: "framed",
@@ -310,7 +310,7 @@ export const SELECTED_WORK_CAPTIONS: Record<number, GalleryCaption> = {
   7: { kicker: "Bichon", detail: "Creative color" },
   8: { kicker: "Poodle", detail: "German trim" },
   9: { kicker: "Shih Tzu", detail: "Full face" },
-  10: { kicker: "Shih Tzu", detail: "Pigtails" },
+  10: { kicker: "Shih Tzu", detail: "Daily braid" },
   11: { kicker: "Bichon", detail: "Creative Color Dye" },
   12: { kicker: "Yorkshire Terrier", detail: "Puppy cut" },
   13: { kicker: "Doodle", detail: "Teddy bear" },

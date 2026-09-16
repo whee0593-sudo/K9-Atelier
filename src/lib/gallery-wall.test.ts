@@ -236,6 +236,10 @@ describe("gallery captions", () => {
       "Shih Tzu",
       "Full face",
     ]);
+    assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[10]), [
+      "Shih Tzu",
+      "Daily braid",
+    ]);
     assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[17]), [
       "Bichon",
       "Creative Color Dye",
