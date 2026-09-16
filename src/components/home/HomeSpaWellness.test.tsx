@@ -51,7 +51,7 @@ describe("home spa wellness content", () => {
   });
 
   it("points the CTA to spa wellness pricing", () => {
-    assert.equal(homeSpaWellnessIntro.ctaHref, "/services#spa-wellness");
+    assert.equal(homeSpaWellnessIntro.ctaHref, "/services/spa");
     assert.equal(
       homeSpaWellnessIntro.ctaLabel,
       "View Spa Services & Pricing",

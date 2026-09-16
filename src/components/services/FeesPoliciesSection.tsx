@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { business, formatPrice } from "@/lib/business";
-import { getServiceById } from "@/lib/service-page";
+import { SPECIALTY_CARE_PATH, getServiceById } from "@/lib/service-page";
 import { PolicyAccordion } from "@/components/services/PolicyAccordion";
 
 export function FeesPoliciesSection() {
@@ -110,8 +111,14 @@ export function FeesPoliciesSection() {
 
       {senior && (
         <p className="font-body px-1 pt-2 text-sm leading-relaxed text-taupe">
-          Senior & Gentle Comfort Care is listed under Gentle & End-of-Life
-          Care, including starting prices by weight.
+          Senior & Gentle Comfort Care is listed under{" "}
+          <Link
+            href={SPECIALTY_CARE_PATH}
+            className="underline decoration-champagne/70 underline-offset-4 transition hover:text-ink"
+          >
+            Specialty Care
+          </Link>
+          , including starting prices by weight.
         </p>
       )}
     </div>

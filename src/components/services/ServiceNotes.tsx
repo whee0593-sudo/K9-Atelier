@@ -1,27 +1,30 @@
 import Link from "next/link";
 import { Container } from "@/components/luxury/Container";
-import { CONSULTATION_PATH } from "@/lib/service-page";
+import { FEES_POLICIES_PATH } from "@/lib/service-page";
 
-export function ConsultationPrompt() {
+export function ServiceNotes() {
   return (
     <section className="border-t border-gray-line/70 bg-ivory">
-      <Container className="py-16 md:py-20">
+      <Container className="py-14 md:py-16">
         <div className="mx-auto max-w-md text-center">
           <p className="font-body text-[11px] font-medium uppercase tracking-[0.2em] text-taupe">
-            Not Sure Where to Start?
+            Service Notes
           </p>
-          <h2 className="font-display mt-4 text-[1.85rem] leading-[1.12] text-ink md:text-3xl">
-            A More Personal Recommendation
-          </h2>
-          <p className="font-body mt-5 text-sm leading-relaxed text-taupe">
-            Tell me a little about your dog and I’ll help you choose the care
-            that suits them best.
-          </p>
+          <div className="font-body mt-5 space-y-3 text-sm leading-relaxed text-taupe">
+            <p>
+              Starting prices may vary based on coat condition, temperament,
+              styling requirements and time.
+            </p>
+            <p>Dogs up to 45 lbs · By appointment only</p>
+            <p>
+              Travel fees may apply outside the complimentary service area.
+            </p>
+          </div>
           <Link
-            href={CONSULTATION_PATH}
+            href={FEES_POLICIES_PATH}
             className="font-body mt-8 inline-flex min-h-[48px] items-center justify-center text-[11px] font-medium uppercase tracking-[0.16em] text-ink transition hover:text-deep-lavender focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne"
           >
-            Request a Complimentary Consultation
+            View Fees &amp; Policies
             <span aria-hidden="true" className="ml-1.5">
               →
             </span>
