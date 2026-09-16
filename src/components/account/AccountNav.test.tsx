@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { AccountNavLinks } from "@/components/account/AccountNav";
+import {
+  AccountNavLinks,
+  AccountShellLayout,
+} from "@/components/account/AccountNav";
 import { buildAccountNavSummaries } from "@/lib/account-nav-summaries";
 
 const summaries = buildAccountNavSummaries({
@@ -45,6 +49,45 @@ describe("AccountNavLinks", () => {
     assert.equal(html.includes("Messages from K9 Atelier"), false);
     assert.equal(html.includes("aria-label=\"Password,"), false);
     assert.match(html, /aria-current="page"/);
+  });
+
+  it("keeps each menu row as a real link", () => {
+    const html = renderToStaticMarkup(
+      <AccountNavLinks pathname="/account" summaries={summaries} />,
+    );
+    assert.match(html, /href="\/account"/);
+    assert.match(html, /href="\/account\/profile"/);
+    assert.match(html, /href="\/account\/addresses"/);
+    assert.match(html, /href="\/account\/pets"/);
+    assert.match(html, /href="\/account\/payment"/);
+    assert.match(html, /href="\/account\/referrals"/);
+    assert.match(html, /href="\/account\/bookings"/);
+    assert.match(html, /href="\/account\/password"/);
+  });
+
+  it("renders section content whenever the page slot has content", () => {
+    const overview = renderToStaticMarkup(
+      <AccountShellLayout pathname="/account" summaries={summaries}>
+        {null}
+      </AccountShellLayout>,
+    );
+    const profile = renderToStaticMarkup(
+      <AccountShellLayout pathname="/account/profile" summaries={summaries}>
+        <p>PROFILE_CONTENT</p>
+      </AccountShellLayout>,
+    );
+    assert.equal(overview.includes("PROFILE_CONTENT"), false);
+    assert.equal(profile.includes("PROFILE_CONTENT"), true);
+    assert.match(profile, /href="\/account\/profile"/);
+  });
+
+  it("always passes the page slot into the account shell", () => {
+    const source = readFileSync(
+      new URL("../../app/account/layout.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.match(source, /<AccountShell summaries=\{summaries\}>\{children\}<\/AccountShell>/);
+    assert.equal(source.includes("isOverview"), false);
   });
 
   it("keeps Password without a right-side summary", () => {

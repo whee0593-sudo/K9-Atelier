@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { AccountNav } from "@/components/account/AccountNav";
+import { AccountShell } from "@/components/account/AccountNav";
 import { CustomerSignOutButton } from "@/components/auth/CustomerSignOutButton";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { accountConfig } from "@/lib/account-fields";
@@ -23,7 +23,6 @@ export default async function AccountLayout({
   }
 
   const summaries = await getAccountNavSummaries(user.id);
-  const isOverview = pathname === "/account";
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
@@ -40,18 +39,7 @@ export default async function AccountLayout({
         </BookServiceLink>
       </div>
 
-      {isOverview ? (
-        <aside className="max-w-xl">
-          <AccountNav summaries={summaries} />
-        </aside>
-      ) : (
-        <div className="grid gap-10 md:grid-cols-[minmax(17rem,22rem)_minmax(0,1fr)]">
-          <aside>
-            <AccountNav summaries={summaries} />
-          </aside>
-          <div>{children}</div>
-        </div>
-      )}
+      <AccountShell summaries={summaries}>{children}</AccountShell>
     </div>
   );
 }
