@@ -1,6 +1,8 @@
+import React from "react";
 import Link from "next/link";
 import { AdminCancelAppointmentButton } from "@/components/admin/AdminCancelAppointmentButton";
 import { CallCustomerButton } from "@/components/admin/CallCustomerButton";
+import { CustomerRecordNotesButton } from "@/components/admin/CustomerRecordNotesButton";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import type { ChargeKind } from "@/lib/charges/types";
 
@@ -32,12 +34,10 @@ export function AppointmentActionLinks({
         disabled={!appointment.customerPhone}
         preview={preview}
       />
-      <Link
-        href={`/admin/pets?customer=${appointment.customerId}`}
-        className="rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text"
-      >
-        Customer record
-      </Link>
+      <CustomerRecordNotesButton
+        customerId={appointment.customerId}
+        preview={preview}
+      />
       {appointment.status === "cancelled" ? null : (
         <>
           {completed ? null : (
