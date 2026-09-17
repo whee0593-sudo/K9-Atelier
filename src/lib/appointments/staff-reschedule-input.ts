@@ -4,15 +4,22 @@ import {
   isDateBookable,
   parseDateValue,
 } from "@/lib/booking-slots";
-import { todayInBusinessTimezone } from "@/lib/sms/schedule";
+import {
+  addDaysToIsoDate,
+  todayInBusinessTimezone,
+} from "@/lib/sms/schedule";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const PAST_CORRECTION_DAYS = 60;
 
 export function isStaffAssignableDate(date: string): boolean {
   if (!DATE_PATTERN.test(date)) return false;
   const parsed = parseDateValue(date);
+  if (!isBookableWeekday(parsed)) return false;
   if (isDateBookable(parsed)) return true;
-  return date === todayInBusinessTimezone() && isBookableWeekday(parsed);
+  const today = todayInBusinessTimezone();
+  if (date > today) return false;
+  return date >= addDaysToIsoDate(today, -PAST_CORRECTION_DAYS);
 }
 
 export function parseStaffRescheduleInput(

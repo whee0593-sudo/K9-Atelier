@@ -59,9 +59,9 @@ export function AdminRescheduleAppointmentButton({
   );
   const slotChoices = useMemo(() => {
     if (selectedDay?.slots.length) return selectedDay.slots;
-    if (preview && nextDate) return listHourlyStartMinutes();
-    return selectedDay?.slots ?? [];
-  }, [preview, nextDate, selectedDay]);
+    if (nextDate) return listHourlyStartMinutes();
+    return [];
+  }, [nextDate, selectedDay]);
   const minDate = todayInBusinessTimezone();
 
   useEffect(() => {
@@ -274,11 +274,9 @@ export function AdminRescheduleAppointmentButton({
             </div>
 
             <p className="mt-4 text-sm leading-relaxed text-text-muted">
-              The customer will receive an email with the new date and time. No
-              policy fee is charged for a staff change.
               {appointment.serviceStartedAt || appointment.serviceEndedAt
-                ? " Any recorded check-in for this visit will be cleared."
-                : ""}
+                ? "This only corrects the calendar date and time. Check-in, check-out, and payment stay on the record. The customer will not be emailed."
+                : "The customer will receive an email with the new date and time. No policy fee is charged for a staff change."}
             </p>
             {error ? (
               <p className="mt-3 text-sm text-red-700" role="alert">
