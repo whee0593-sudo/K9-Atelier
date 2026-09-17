@@ -1,14 +1,22 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import type { AppointmentRecord } from "../src/lib/appointments/types.ts";
+import type { AdminAppointmentRecord, AppointmentRecord } from "../src/lib/appointments/types.ts";
+import { buildChargeReceiptCardHtml } from "../src/lib/charges/receipt-email.ts";
+import type { AppointmentChargeRecord } from "../src/lib/charges/types.ts";
+import { buildCustomerCancelConfirmationEmail } from "../src/lib/email/cancel-confirmation.ts";
+import { buildCancelFeeFailedEmail } from "../src/lib/email/cancel-fee-failed.ts";
 import {
+  buildCustomerAddDogEmail,
   buildCustomerAppointmentConfirmedEmail,
   buildCustomerAppointmentDeclinedEmail,
   buildCustomerAppointmentSubmittedEmail,
+  buildCustomerRescheduleEmail,
   buildStaffNewAppointmentEmail,
   buildVaccinationRejectedEmail,
   buildVaccinationVerifiedEmail,
 } from "../src/lib/email/html-templates.ts";
+import { getEmailBrand } from "../src/lib/email/layout.ts";
+import { buildCustomerRemoveDogConfirmationEmail } from "../src/lib/email/remove-dog-confirmation.ts";
 
 const sampleAppointment: AppointmentRecord = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -88,7 +96,88 @@ const previews = [
       customerName: customer.name,
     }),
   },
+  {
+    title: "Customer — Appointment rescheduled",
+    ...buildCustomerRescheduleEmail({
+      appointment: confirmedAppointment,
+      customer,
+    }),
+  },
+  {
+    title: "Customer — Add-a-dog request received",
+    ...buildCustomerAddDogEmail({
+      appointment: confirmedAppointment,
+      customer,
+    }),
+  },
+  {
+    title: "Customer — Appointment canceled",
+    ...buildCustomerCancelConfirmationEmail({
+      appointment: { ...sampleAppointment, status: "cancelled" },
+      customer,
+      fee: 0,
+    }),
+  },
+  {
+    title: "Customer — Cancellation fee needs attention",
+    ...buildCancelFeeFailedEmail({
+      appointment: { ...sampleAppointment, status: "cancelled" },
+      customer,
+      fee: 70,
+    }),
+  },
+  {
+    title: "Customer — Dog removed from appointment",
+    ...buildCustomerRemoveDogConfirmationEmail({
+      appointment: { ...confirmedAppointment, petName: "Lychee" },
+      customer,
+      remainingAppointments: [{ ...confirmedAppointment, id: "apt-otto", petName: "Otto" }],
+      fee: 0,
+    }),
+  },
+  {
+    title: "Customer — Visit receipt",
+    subject: "Your K9 Atelier receipt",
+    html: buildChargeReceiptCardHtml(
+      {
+        ...confirmedAppointment,
+        customerEmail: customer.email,
+        customerName: customer.name,
+        customerFirstName: "Sarah",
+        customerLastName: null,
+        customerPhone: null,
+        reminderSmsSentAt: null,
+        enRouteSmsSentAt: null,
+        serviceStartedAt: "2026-08-18T14:05:00.000Z",
+        serviceEndedAt: "2026-08-18T15:40:00.000Z",
+      } as AdminAppointmentRecord,
+      {
+        id: "chg-1",
+        appointmentId: confirmedAppointment.id,
+        kind: "service",
+        status: "paid",
+        lineItems: [
+          {
+            id: "1",
+            label: "Signature Bath & Style",
+            amount: 185,
+          },
+        ],
+        subtotal: 185,
+        tipAmount: 20,
+        total: 205,
+        receiptChannel: "email",
+        paidAt: "2026-08-18T15:45:00.000Z",
+        refundedAmount: 0,
+      } as AppointmentChargeRecord,
+    ),
+  },
 ];
+
+function previewHtml(html: string) {
+  const { logoUrl } = getEmailBrand();
+  return html.replaceAll(logoUrl, "/email-logo.png");
+}
 
 const page = `<!DOCTYPE html>
 <html lang="en">
@@ -130,7 +219,7 @@ const page = `<!DOCTYPE html>
       <h2>${preview.title}</h2>
       <div><strong>Subject:</strong> ${preview.subject.replace(/</g, "&lt;")}</div>
     </div>
-    <iframe class="frame" title="${preview.title.replace(/"/g, "&quot;")}" srcdoc="${preview.html.replace(/"/g, "&quot;").replace(/#/g, "&#35;")}"></iframe>
+    <iframe class="frame" title="${preview.title.replace(/"/g, "&quot;")}" srcdoc="${previewHtml(preview.html).replace(/"/g, "&quot;").replace(/#/g, "&#35;")}"></iframe>
   </section>`,
     )
     .join("\n")}

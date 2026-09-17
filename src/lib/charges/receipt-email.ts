@@ -16,7 +16,7 @@ import {
 } from "@/lib/charges/receipt-view";
 import type { AppointmentChargeRecord } from "@/lib/charges/types";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
-import { escapeHtml, getEmailBrand } from "@/lib/email/layout";
+import { escapeHtml, emailLogoImg } from "@/lib/email/layout";
 import { getCatalogItemDisplayLabel } from "@/lib/service-display";
 import { siteUrl } from "@/lib/email/resend";
 
@@ -77,7 +77,6 @@ export function buildChargeReceiptCardHtml(
   charge: AppointmentChargeRecord,
   paymentMethodLabel?: string | null,
 ) {
-  const { logoUrl } = getEmailBrand();
   const petName = appointment.petName?.trim() || null;
   const appointmentDate = formatReceiptDate(appointment.appointmentDate);
   const appointmentTime = formatReceiptServiceTime(appointment);
@@ -146,7 +145,7 @@ export function buildChargeReceiptCardHtml(
       <div style="height:1px;background:${LAVENDER};font-size:0;line-height:0;">&nbsp;</div>
       <div style="padding:40px 28px;">
         <div style="text-align:center;">
-          <img src="${logoUrl}" width="72" height="72" alt="${escapeHtml(business.brand.name)}" style="display:block;margin:0 auto;"/>
+          ${emailLogoImg({ display: "block" })}
           <p style="margin:16px 0 0;color:${LAVENDER};font-size:22px;letter-spacing:3px;">${escapeHtml(business.brand.name)}</p>
           <p style="margin:12px 0 0;color:${LAVENDER};font-size:12px;letter-spacing:2px;font-family:Arial,Helvetica,sans-serif;">${escapeHtml(business.brand.lockup)}</p>
         </div>

@@ -8,19 +8,36 @@ export function escapeHtml(value: string) {
     .replace(/"/g, "&quot;");
 }
 
+export const EMAIL_LOGO_SIZE = 120;
+
 export function getEmailBrand() {
   const c = business.colors;
-  const logoUrl = business.brand.website
-    ? `${business.brand.website}${business.brand.logo}`
-    : business.brand.logo;
+  const website = business.brand.website ?? "https://k9atelier.com";
+  const logoPath = business.brand.emailLogo || business.brand.logo;
+  const logoUrl = `${website.replace(/\/$/, "")}${logoPath}`;
 
   return {
     c,
     logoUrl,
     brandName: business.brand.name,
     email: business.brand.email,
-    website: business.brand.website ?? "https://k9atelier.com",
+    website,
   };
+}
+
+export function emailLogoImg(options?: {
+  size?: number;
+  className?: string;
+  display?: "block" | "inline-block";
+}) {
+  const { logoUrl, brandName } = getEmailBrand();
+  const size = options?.size ?? EMAIL_LOGO_SIZE;
+  const display = options?.display ?? "block";
+  const classAttr = options?.className
+    ? ` class="${escapeHtml(options.className)}"`
+    : "";
+  const margin = display === "block" ? "margin:0 auto 12px;" : "";
+  return `<img${classAttr} src="${escapeHtml(logoUrl)}" width="${size}" height="${size}" alt="${escapeHtml(brandName)}" style="display:${display};width:${size}px;height:${size}px;${margin}border:0;"/>`;
 }
 
 export function emailFooterText() {
@@ -97,7 +114,7 @@ export type BrandedEmailContent = {
 };
 
 export function buildBrandedEmailHtml(content: BrandedEmailContent) {
-  const { c, logoUrl, brandName } = getEmailBrand();
+  const { c, brandName } = getEmailBrand();
   const greetingName = escapeHtml(content.greetingName ?? "there");
   const footerLine = escapeHtml(emailFooterText());
 
@@ -113,7 +130,7 @@ export function buildBrandedEmailHtml(content: BrandedEmailContent) {
     <tr><td align="center">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border:1px solid ${c.lavender};border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(77,67,72,0.08);">
         <tr><td style="padding:32px 32px 24px;text-align:center;background:linear-gradient(180deg, ${c.lavenderLight} 0%, #ffffff 100%);">
-          <img src="${logoUrl}" alt="${escapeHtml(brandName)}" width="72" height="72" style="border-radius:50%;display:inline-block;border:2px solid ${c.gold};"/>
+          ${emailLogoImg({ display: "inline-block" })}
           <div style="margin-top:12px;font-size:12px;font-weight:600;color:${c.goldDark};letter-spacing:0.24em;text-transform:uppercase;">${escapeHtml(brandName)}</div>
           <div style="margin-top:4px;font-size:12px;color:${c.textMuted};letter-spacing:0.08em;">${escapeHtml(business.brand.lockup)}</div>
         </td></tr>
@@ -175,7 +192,6 @@ function customerLetterDetailRow(label: string, value: string) {
 }
 
 export function buildCustomerLetterEmailHtml(content: CustomerLetterEmailContent) {
-  const { logoUrl } = getEmailBrand();
   const detailsHtml = content.detailRows
     .map(({ label, value }) => customerLetterDetailRow(label, value))
     .join("");
@@ -198,7 +214,7 @@ export function buildCustomerLetterEmailHtml(content: CustomerLetterEmailContent
   <div style="background-color:${STAFF_EMAIL.cream}; padding:40px 20px; font-family: Georgia, 'Times New Roman', serif;">
     <div style="max-width:480px; margin:0 auto; background-color:#ffffff; border:1px solid ${STAFF_EMAIL.border};">
       <div style="background-color:${STAFF_EMAIL.cream}; padding:32px 32px 20px; text-align:center; border-bottom:1px solid ${STAFF_EMAIL.gold};">
-        <img src="${logoUrl}" width="64" height="64" style="border-radius:50%; display:block; margin:0 auto 12px;" alt="${escapeHtml(business.brand.name)}" />
+        ${emailLogoImg()}
         <div style="font-size:20px; letter-spacing:4px; color:${STAFF_EMAIL.ink}; font-family:Georgia,'Times New Roman',serif;">${escapeHtml(business.brand.wordmark)}</div>
         <div style="margin-top:8px;font-size:11px;letter-spacing:0.08em;color:${STAFF_EMAIL.muted};">${escapeHtml(business.brand.lockup)}</div>
       </div>
@@ -330,7 +346,6 @@ export type CustomerConfirmedEmailContent = {
 };
 
 function customerLetterHeader(subject: string) {
-  const { logoUrl } = getEmailBrand();
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -342,7 +357,7 @@ function customerLetterHeader(subject: string) {
   <div style="background-color:${STAFF_EMAIL.cream}; padding:40px 20px; font-family: Georgia, 'Times New Roman', serif;">
     <div style="max-width:480px; margin:0 auto; background-color:#ffffff; border:1px solid ${STAFF_EMAIL.border};">
       <div style="background-color:${STAFF_EMAIL.cream}; padding:32px 32px 20px; text-align:center; border-bottom:1px solid ${STAFF_EMAIL.gold};">
-        <img src="${logoUrl}" width="64" height="64" style="border-radius:50%; display:block; margin:0 auto 12px;" alt="${escapeHtml(business.brand.name)}" />
+        ${emailLogoImg()}
         <div style="font-size:20px; letter-spacing:4px; color:${STAFF_EMAIL.ink}; font-family:Georgia,'Times New Roman',serif;">${escapeHtml(business.brand.wordmark)}</div>
         <div style="margin-top:8px;font-size:11px;letter-spacing:0.08em;color:${STAFF_EMAIL.muted};">${escapeHtml(business.brand.lockup)}</div>
       </div>`;

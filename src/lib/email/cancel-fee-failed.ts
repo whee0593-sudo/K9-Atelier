@@ -10,7 +10,7 @@ import {
   formatPetNameList,
   type CancelFeeStatus,
 } from "@/lib/email/cancel-confirmation";
-import { escapeHtml, getEmailBrand } from "@/lib/email/layout";
+import { escapeHtml, emailLogoImg } from "@/lib/email/layout";
 import { siteUrl } from "@/lib/email/resend";
 
 export type CancelPaymentFailureKind =
@@ -132,7 +132,6 @@ function emphasizeAmount(paragraph: string, amountLabel: string | null) {
 
 export function buildCancelFeeFailedEmailHtml(input: CancelFeeFailedInput) {
   const content = buildCancelFeeFailedEmailContent(input);
-  const { logoUrl } = getEmailBrand();
   const lockup = business.brand.lockup;
   const wordmark = business.brand.wordmark;
   const timeRow = content.timeLabel
@@ -162,7 +161,7 @@ export function buildCancelFeeFailedEmailHtml(input: CancelFeeFailedInput) {
     a.k9-fail-link:focus { outline: 2px solid ${COLORS.gold}; outline-offset: 2px; }
     @media only screen and (max-width: 620px) {
       .k9-fail-pad { padding-left: 20px !important; padding-right: 20px !important; }
-      .k9-fail-logo { width: 52px !important; height: 52px !important; }
+      .k9-fail-logo { width: 96px !important; height: 96px !important; }
     }
     @media only screen and (max-width: 360px) {
       .k9-fail-time { white-space: normal !important; }
@@ -182,7 +181,7 @@ export function buildCancelFeeFailedEmailHtml(input: CancelFeeFailedInput) {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:580px;background-color:${COLORS.card};border:1px solid ${COLORS.line};box-shadow:0 8px 24px rgba(47,41,48,0.04);">
           <tr>
             <td align="center" class="k9-fail-pad" style="padding:32px 36px 20px;background-color:${COLORS.page};">
-              <img class="k9-fail-logo" src="${escapeHtml(logoUrl)}" width="64" height="64" alt="${escapeHtml(business.brand.name)}" style="display:block;width:64px;height:64px;border-radius:50%;margin:0 auto 12px;border:0;"/>
+              ${emailLogoImg({ className: "k9-fail-logo" })}
               <div style="font-family:Georgia,'Times New Roman',Times,serif;font-size:20px;letter-spacing:0.18em;color:${COLORS.ink};">${escapeHtml(wordmark)}</div>
               <div style="margin-top:8px;font-family:Georgia,'Times New Roman',Times,serif;font-size:12px;letter-spacing:0.04em;color:${COLORS.muted};">${escapeHtml(lockup)}</div>
             </td>
