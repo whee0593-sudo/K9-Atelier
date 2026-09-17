@@ -152,11 +152,17 @@ export function buildStaffNewAppointmentEmail(
   customer: CustomerContact,
 ) {
   const pendingReview = appointment.status === "pending_confirmation";
+  const vaccinationPending =
+    appointment.vaccinationStatusAtBooking === "needs_review";
   const subject = pendingReview
-    ? "Vaccination Review Required"
+    ? vaccinationPending
+      ? "Vaccination Review Required"
+      : "Appointment Awaiting Confirmation"
     : "New Appointment Confirmed";
   const introLine = pendingReview
-    ? "A new appointment is awaiting vaccination review."
+    ? vaccinationPending
+      ? "A new appointment is awaiting vaccination review."
+      : "A new appointment is awaiting confirmation."
     : "A new appointment has been confirmed.";
   const ctaLabel = pendingReview ? "REVIEW APPOINTMENT" : "VIEW APPOINTMENT";
 
@@ -189,7 +195,7 @@ export function buildStaffNewAppointmentEmail(
     { label: "Estimated Total", value: totalLabel },
   ];
 
-  if (pendingReview) {
+  if (pendingReview && vaccinationPending) {
     rows.push({
       label: "Vaccination",
       value: "Pending staff review",
@@ -259,10 +265,10 @@ export function buildCustomerAppointmentSubmittedEmail(
   appointment: AppointmentRecord,
   customer: CustomerContact,
 ) {
-  const subject = "Vaccination Record Received";
+  const subject = "Appointment Received";
   const greetingName = customer.name ?? "Client";
   const introParagraph =
-    "We have received your dog’s vaccination record. Your selected appointment is pending review, and we will notify you once it has been confirmed.";
+    "We have received your appointment request. Your selected appointment is pending confirmation, and we will notify you once it has been confirmed.";
   const estimateDisclaimer =
     "An estimate, subject to coat condition and temperament on the day.";
   const closingParagraph =
@@ -429,7 +435,7 @@ export function buildVaccinationVerifiedEmail(context: VaccinationMailContext) {
   const subject = `${context.petName}'s vaccination record is approved`;
   const expiration = formatExpirationDate(context.expirationDate);
   const greetingName = context.customerName ?? "Client";
-  const closingParagraph = `Appointments for ${context.petName} may now be booked or confirmed.`;
+  const closingParagraph = `This record has been saved to ${context.petName}'s profile.`;
 
   const text = [
     `Dear ${greetingName},`,
@@ -669,7 +675,7 @@ export function buildCustomerAddDogEmail({
 export function buildVaccinationRejectedEmail(context: VaccinationMailContext) {
   const subject = `Update on ${context.petName}'s vaccination record`;
   const greetingName = context.customerName ?? "Client";
-  const reviewParagraph = `Upon review, ${context.petName}'s vaccination record requires an updated upload before an appointment can be confirmed.`;
+  const reviewParagraph = `Upon review, ${context.petName}'s vaccination record needs an updated upload for their profile. You may still book once rabies vaccination status is confirmed.`;
   const followUpParagraph =
     "Please reply to this email should you have any questions.";
 

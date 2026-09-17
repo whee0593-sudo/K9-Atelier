@@ -216,7 +216,7 @@ describe("staff-created booking copy", () => {
     assert.match(email.subject, /confirm/i);
     assert.match(email.text, /confirm-account\?token=abc/);
     assert.match(email.html, /CONFIRM APPOINTMENT/);
-    assert.match(email.text, /vaccination record/);
+    assert.match(email.text, /rabies vaccination status/);
     assert.match(email.text, /card on file/);
     const sms = buildStaffCreatedBookingSms(appointment, confirmUrl);
     assert.match(sms, /Bella/);

@@ -49,7 +49,7 @@ export async function AdminStaffBanner() {
         <div>
           <p className="font-medium">Staff sign-in required</p>
           <p className="mt-1 text-text-muted">
-            Use your team email to review vaccinations and manage admin tools.
+            Use your team email to review customer records and manage admin tools.
           </p>
         </div>
         <AdminStaffSignInLink />

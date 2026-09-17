@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { PetBirthdayFields } from "@/components/account/PetBirthdayFields";
 import { PetScalarFields } from "@/components/account/PetScalarFields";
 import { filterFieldsByAudience, getAccountSection } from "@/lib/account-fields";
@@ -22,6 +23,7 @@ type Props = {
   variant?: "account" | "booking";
   petPersisted?: boolean;
   vaccinationUploading?: boolean;
+  vaccinationAudience?: "customer" | "admin";
   onVaccinationUpload?: (file: File) => Promise<void>;
 };
 
@@ -31,6 +33,7 @@ export function PetProfileFieldsForm({
   variant = "account",
   petPersisted,
   vaccinationUploading,
+  vaccinationAudience = "customer",
   onVaccinationUpload,
 }: Props) {
   const bookingLabels =
@@ -67,6 +70,7 @@ export function PetProfileFieldsForm({
         variant={variant}
         petPersisted={petPersisted}
         vaccinationUploading={vaccinationUploading}
+        vaccinationAudience={vaccinationAudience}
         onVaccinationUpload={onVaccinationUpload}
       />
     </div>

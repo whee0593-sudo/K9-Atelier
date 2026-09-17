@@ -4,7 +4,7 @@ import { sanitizeAuthRedirect } from "@/lib/auth-redirect";
 import {
   ACCOUNT_SETUP_PATH,
   paymentSetupHref,
-  petNeedsVaccinationRecord,
+  petNeedsRabiesStatus,
   petToExpandForSetup,
   petsSetupHref,
 } from "@/lib/account-setup";
@@ -32,12 +32,13 @@ describe("account setup helpers", () => {
     const ready = pet({
       id: "22222222-2222-4222-8222-222222222222",
       name: "Coco",
-      vaccineRecordUploaded: true,
-      vaccinationBookingStatus: "current",
+      rabiesStatus: "current",
+      vaccineRecordUploaded: false,
+      vaccinationBookingStatus: "missing",
     });
     const missing = pet({ name: "Bella" });
-    assert.equal(petNeedsVaccinationRecord(missing), true);
-    assert.equal(petNeedsVaccinationRecord(ready), false);
+    assert.equal(petNeedsRabiesStatus(missing), true);
+    assert.equal(petNeedsRabiesStatus(ready), false);
     assert.equal(petToExpandForSetup([ready, missing], ready.id), ready.id);
     assert.equal(petToExpandForSetup([ready, missing], null), missing.id);
   });

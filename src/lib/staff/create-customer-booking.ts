@@ -15,6 +15,7 @@ import { drivingDistanceMiles, geocodeAddress } from "@/lib/geo";
 import { getBaseAddressFormatted } from "@/lib/server/base-address";
 import { formatServiceAddress, calculateTravelFee } from "@/lib/travel";
 import { mapValidatedInputToInsertRow } from "@/lib/pets/map";
+import { PET_SELECT } from "@/lib/pets/types";
 import {
   estimateServiceDurationMinutes,
   getServicePriceEstimate,
@@ -277,9 +278,7 @@ export async function createStaffCustomerBooking(
         customer_id: userId,
         ...mapValidatedInputToInsertRow(input.pet),
       })
-      .select(
-        "id, customer_id, name, breed, weight_lbs, date_of_birth, approximate_age_years, sex, temperament_notes, health_comfort_notes, grooming_preferences, archived_at, created_at, updated_at",
-      )
+      .select(PET_SELECT)
       .single();
 
     if (petError || !petRow) {

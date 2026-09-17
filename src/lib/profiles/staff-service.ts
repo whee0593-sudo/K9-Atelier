@@ -6,7 +6,12 @@ import {
   createAuthenticatedSupabaseClient,
 } from "@/lib/pets/auth";
 import { mapPetRowToRecord, mapValidatedInputToUpdateRow } from "@/lib/pets/map";
-import type { PetRecord, PetRow, PetWriteInput } from "@/lib/pets/types";
+import {
+  PET_SELECT,
+  type PetRecord,
+  type PetRow,
+  type PetWriteInput,
+} from "@/lib/pets/types";
 import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
 import {
   FREEZE_BAN_DURATION,
@@ -26,9 +31,6 @@ import {
   type PaymentMethodRecord,
   type PaymentMethodRow,
 } from "@/lib/payments/types";
-
-const PET_SELECT =
-  "id, customer_id, name, breed, weight_lbs, date_of_birth, approximate_age_years, sex, temperament_notes, health_comfort_notes, grooming_preferences, archived_at, created_at, updated_at";
 
 export type StaffCustomerKind = "admin" | "customer";
 

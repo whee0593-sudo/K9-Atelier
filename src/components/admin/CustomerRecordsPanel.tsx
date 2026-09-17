@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { CustomerProfileForm } from "@/components/account/CustomerProfileForm";
 import { PetProfileFieldsForm } from "@/components/account/PetProfileFieldsForm";
+import { RabiesStatusSummary } from "@/components/account/RabiesStatusSummary";
 import { mapPetRecordToUiProfile, mapPetProfileToWriteInput } from "@/lib/pets/map";
 import { normalizePetProfile, type PetProfile } from "@/lib/pets";
 import type { CustomerProfile } from "@/lib/profiles/types";
@@ -149,6 +150,7 @@ function StaffPetEditor({
           setSaved(false);
         }}
         petPersisted
+        vaccinationAudience="admin"
       />
       <label className="block text-sm font-medium text-text">
         Service & Product Notes (Admin Only)
@@ -548,6 +550,12 @@ export function CustomerRecordCard({
                     <p className="font-medium text-text">
                       {pet.name} · {pet.breed}
                     </p>
+                    <div className="mt-3 rounded-xl border border-lavender/30 bg-lavender-light/20 px-4 py-4">
+                      <RabiesStatusSummary
+                        pet={mapPetRecordToUiProfile(pet)}
+                        statusLabel="Rabies Status"
+                      />
+                    </div>
                     <StaffPetEditor
                       customerId={customer.profile.id}
                       pet={pet}
