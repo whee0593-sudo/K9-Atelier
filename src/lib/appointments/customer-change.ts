@@ -575,6 +575,7 @@ async function rescheduleRows(
       durationMinutes,
       slotStartMinutes,
       base,
+      excludeAppointmentIds: rows.map((entry) => entry.id),
     });
     if ("error" in assignment) {
       if (assignment.error === "slot_unavailable") {

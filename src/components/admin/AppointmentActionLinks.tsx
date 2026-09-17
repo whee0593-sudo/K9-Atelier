@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { AdminCancelAppointmentButton } from "@/components/admin/AdminCancelAppointmentButton";
+import { AdminRescheduleAppointmentButton } from "@/components/admin/AdminRescheduleAppointmentButton";
 import { CallCustomerButton } from "@/components/admin/CallCustomerButton";
 import { CustomerRecordNotesButton } from "@/components/admin/CustomerRecordNotesButton";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
@@ -11,11 +12,13 @@ export function AppointmentActionLinks({
   paidKinds,
   preview = false,
   onCancelled,
+  onChanged,
 }: {
   appointment: AdminAppointmentRecord;
   paidKinds: ChargeKind[];
   preview?: boolean;
   onCancelled?: () => void;
+  onChanged?: () => void;
 }) {
   const completed = Boolean(appointment.serviceEndedAt);
   const paidService = paidKinds.includes("service");
@@ -76,10 +79,15 @@ export function AppointmentActionLinks({
               {paidNoShow ? "No-show charged" : "Charge no-show"}
             </Link>
           )}
+          <AdminRescheduleAppointmentButton
+            appointment={appointment}
+            preview={preview}
+            onChanged={onChanged ?? onCancelled}
+          />
           <AdminCancelAppointmentButton
             appointment={appointment}
             preview={preview}
-            onCancelled={onCancelled}
+            onCancelled={onChanged ?? onCancelled}
           />
         </>
       )}

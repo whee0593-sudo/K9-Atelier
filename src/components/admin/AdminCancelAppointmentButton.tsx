@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { canStaffCancelAppointment } from "@/lib/appointments/staff-actions";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 
 function formatConfirmDate(iso: string): string {
@@ -39,7 +40,7 @@ export function AdminCancelAppointmentButton({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, busy]);
 
-  if (appointment.status !== "confirmed") return null;
+  if (!canStaffCancelAppointment(appointment)) return null;
 
   const customerLabel =
     appointment.customerName?.trim() ||
@@ -85,7 +86,6 @@ export function AdminCancelAppointmentButton({
     <>
       <button
         type="button"
-        disabled={preview}
         onClick={() => {
           setError(null);
           setOpen(true);
@@ -134,8 +134,9 @@ export function AdminCancelAppointmentButton({
               </div>
             </dl>
             <p className="mt-4 text-sm leading-relaxed text-text-muted">
-              The customer will receive an email and text that this confirmed
-              appointment has been cancelled.
+              {appointment.status === "confirmed"
+                ? "The customer will receive an email and text that this confirmed appointment has been cancelled."
+                : "The customer will be notified that this booking request was cancelled."}
             </p>
             {error ? (
               <p className="mt-3 text-sm text-red-700" role="alert">

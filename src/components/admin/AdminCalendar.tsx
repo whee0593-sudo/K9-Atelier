@@ -349,7 +349,7 @@ export function AdminCalendar({
                     appointment={appointment}
                     paidKinds={paidKinds[appointment.id] ?? []}
                     preview={preview}
-                    onCancelled={refreshSelectedDay}
+                    onChanged={refreshSelectedDay}
                   />
                 </div>
               </li>
