@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatHourLabel } from "@/lib/appointments/closures";
 import { listHourlyStartMinutes } from "@/lib/booking-schedule";
@@ -10,11 +10,13 @@ import {
   getServicePriceEstimate,
   isServiceAvailableForPet,
 } from "@/lib/services";
+import { getUpcomingBookableDates } from "@/lib/booking-slots";
 import {
-  getEarliestBookableDate,
-  getUpcomingBookableDates,
-  toDateValue,
-} from "@/lib/booking-slots";
+  formatStaffDateOption,
+  selectableStaffDays,
+  slotsForStaffDate,
+  staffScheduleHint,
+} from "@/lib/staff/book-for-customer-schedule";
 import type { TravelQuote } from "@/lib/travel";
 
 type Prefill = {
@@ -76,7 +78,7 @@ export function BookForCustomerForm({
   const [quoteState, setQuoteState] = useState<QuoteState>({ status: "idle" });
   const [days, setDays] = useState<AvailabilityDay[]>(() =>
     preview
-      ? getUpcomingBookableDates(8).map((day) => ({
+      ? getUpcomingBookableDates(20).map((day) => ({
           date: day.value,
           available: true,
           slots: listHourlyStartMinutes(),
@@ -84,6 +86,8 @@ export function BookForCustomerForm({
       : [],
   );
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [availabilityLoaded, setAvailabilityLoaded] = useState(preview);
   const [appointmentDate, setAppointmentDate] = useState("");
   const [slotStartMinutes, setSlotStartMinutes] = useState("");
   const [verbalConsent, setVerbalConsent] = useState(false);
@@ -105,8 +109,24 @@ export function BookForCustomerForm({
   );
 
   const selectedService = services.find((service) => service.id === serviceId);
-  const selectedDay = days.find((day) => day.date === appointmentDate);
-  const minDate = toDateValue(getEarliestBookableDate());
+  const openDays = useMemo(() => selectableStaffDays(days), [days]);
+  const openSlots = useMemo(
+    () => slotsForStaffDate(days, appointmentDate),
+    [days, appointmentDate],
+  );
+  const quoteReady = quoteState.status === "ready";
+  const quoteLat = quoteReady ? quoteState.quote.lat : null;
+  const quoteLon = quoteReady ? quoteState.quote.lon : null;
+  const scheduleHint = staffScheduleHint({
+    quoteReady: preview || quoteReady,
+    hasService: preview || Boolean(serviceId),
+    loading: availabilityLoading,
+    error: availabilityError,
+    daysLoaded: preview || availabilityLoaded,
+    selectedDate: appointmentDate,
+    availableDayCount: openDays.length,
+    slotCount: openSlots.length,
+  });
 
   const estimate =
     selectedService && Number.isFinite(weightLbs)
@@ -153,35 +173,74 @@ export function BookForCustomerForm({
     }
   }
 
-  async function loadAvailability(nextServiceId: string) {
-    if (quoteState.status !== "ready" || !Number.isFinite(weightLbs)) return;
-    setAvailabilityError(null);
-    try {
-      const params = new URLSearchParams({
-        lat: String(quoteState.quote.lat),
-        lon: String(quoteState.quote.lon),
-        zip,
-        serviceId: nextServiceId,
-        weightLbs: String(weightLbs),
-      });
-      const response = await fetch(`/api/booking/availability?${params}`, {
-        credentials: "include",
-      });
-      const body = (await response.json()) as {
-        error?: string;
-        days?: AvailabilityDay[];
-      };
-      if (!response.ok || !body.days) {
-        setAvailabilityError(body.error ?? "Could not load available times.");
-        setDays([]);
-        return;
-      }
-      setDays(body.days);
-    } catch {
-      setAvailabilityError("Could not load available times.");
+  useEffect(() => {
+    if (!appointmentDate) return;
+    if (openDays.some((day) => day.date === appointmentDate)) return;
+    setAppointmentDate("");
+    setSlotStartMinutes("");
+  }, [appointmentDate, openDays]);
+
+  useEffect(() => {
+    if (preview) return;
+    if (
+      quoteLat == null ||
+      quoteLon == null ||
+      !serviceId ||
+      !Number.isFinite(weightLbs) ||
+      weightLbs <= 0
+    ) {
+      setAvailabilityLoading(false);
+      setAvailabilityLoaded(false);
+      setAvailabilityError(null);
       setDays([]);
+      return;
     }
-  }
+
+    const controller = new AbortController();
+    setAvailabilityLoading(true);
+    setAvailabilityError(null);
+
+    async function loadDays() {
+      try {
+        const params = new URLSearchParams({
+          lat: String(quoteLat),
+          lon: String(quoteLon),
+          zip,
+          serviceId,
+          weightLbs: String(weightLbs),
+        });
+        const response = await fetch(`/api/booking/availability?${params}`, {
+          credentials: "include",
+          signal: controller.signal,
+        });
+        const body = (await response.json()) as {
+          error?: string;
+          days?: AvailabilityDay[];
+        };
+        if (!response.ok || !body.days) {
+          setAvailabilityError(body.error ?? "Could not load available times.");
+          setDays([]);
+          setAvailabilityLoaded(true);
+          return;
+        }
+        setDays(body.days);
+        setAvailabilityLoaded(true);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        console.error("Book for customer availability failed:", error);
+        setAvailabilityError("Could not load available times.");
+        setDays([]);
+        setAvailabilityLoaded(true);
+      } finally {
+        if (!controller.signal.aborted) {
+          setAvailabilityLoading(false);
+        }
+      }
+    }
+
+    void loadDays();
+    return () => controller.abort();
+  }, [preview, quoteLat, quoteLon, serviceId, weightLbs, zip]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -199,7 +258,7 @@ export function BookForCustomerForm({
         serviceName: selectedService?.name ?? "Grooming",
         appointmentDate,
         appointmentTime: slotStartMinutes
-          ? formatHourLabel(Number(slotStartMinutes) / 60)
+          ? formatHourLabel(Math.floor(Number(slotStartMinutes) / 60))
           : "9:00 AM",
       });
       return;
@@ -527,11 +586,9 @@ export function BookForCustomerForm({
             className={fieldClass}
             value={serviceId}
             onChange={(event) => {
-              const next = event.target.value;
-              setServiceId(next);
+              setServiceId(event.target.value);
               setAppointmentDate("");
               setSlotStartMinutes("");
-              void loadAvailability(next);
             }}
             required
           >
@@ -547,18 +604,26 @@ export function BookForCustomerForm({
           <label className={labelClass} htmlFor="appointment-date">
             Date
           </label>
-          <input
+          <select
             id="appointment-date"
-            type="date"
-            min={minDate}
             className={fieldClass}
             value={appointmentDate}
             onChange={(event) => {
               setAppointmentDate(event.target.value);
               setSlotStartMinutes("");
             }}
+            disabled={availabilityLoading}
             required
-          />
+          >
+            <option value="">
+              {availabilityLoading ? "Loading dates…" : "Select a date"}
+            </option>
+            {openDays.map((day) => (
+              <option key={day.date} value={day.date}>
+                {formatStaffDateOption(day.date)}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className={labelClass} htmlFor="appointment-slot">
@@ -569,12 +634,15 @@ export function BookForCustomerForm({
             className={fieldClass}
             value={slotStartMinutes}
             onChange={(event) => setSlotStartMinutes(event.target.value)}
+            disabled={availabilityLoading}
             required
           >
-            <option value="">Select a time</option>
-            {(selectedDay?.slots ?? []).map((slot) => (
+            <option value="">
+              {availabilityLoading ? "Loading times…" : "Select a time"}
+            </option>
+            {openSlots.map((slot) => (
               <option key={slot} value={slot}>
-                {formatHourLabel(slot / 60)}
+                {formatHourLabel(Math.floor(slot / 60))}
               </option>
             ))}
           </select>
@@ -582,6 +650,9 @@ export function BookForCustomerForm({
             <p className="mt-2 text-sm text-red-800" role="alert">
               {availabilityError}
             </p>
+          ) : null}
+          {scheduleHint ? (
+            <p className="mt-2 text-sm text-text-muted">{scheduleHint}</p>
           ) : null}
         </div>
         <div className="text-sm text-text-muted">
