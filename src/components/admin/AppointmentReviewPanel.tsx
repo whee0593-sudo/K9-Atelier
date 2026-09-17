@@ -637,7 +637,7 @@ export function AppointmentReviewPanel() {
                     <AppointmentActionLinks
                       appointment={appointment}
                       paidKinds={paidKinds[appointment.id] ?? []}
-                      onCancelled={() => void loadAppointments({ silent: true })}
+                      onChanged={() => void loadAppointments({ silent: true })}
                     />
                   </div>
                 </li>
