@@ -76,6 +76,17 @@ Verify (optional, requires `DATABASE_URL` in `.env.local`):
 npm run verify:supabase
 ```
 
+## 4. Customer record notes (admin only)
+
+This lets staff save private notes on a completed bill and see the same notes on that customer's file.
+
+1. Open the Supabase Dashboard for project `ceejxoobxxoxqhpujrdz`
+2. Left sidebar → **SQL Editor** → **New query**
+3. Paste everything in [`migrations/20260917013000_customer_admin_notes.sql`](./migrations/20260917013000_customer_admin_notes.sql)
+4. Click **Run**
+
+Safe to run more than once. After it succeeds, **Save** on Customer record writes to the live database.
+
 ---
 
 ## Checklist

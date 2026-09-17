@@ -46,11 +46,26 @@ function readOptionalText(record: Record<string, unknown>, key: string, maxLengt
   return trimmed.slice(0, maxLength);
 }
 
+export const CUSTOMER_ADMIN_NOTES_MAX_LENGTH = 8000;
+
 export function validateCustomerId(id: string | undefined): string {
   if (!id || !UUID_PATTERN.test(id)) {
     throw new ProfileValidationError("Invalid customer id.");
   }
   return id;
+}
+
+export function validateCustomerAdminNotes(body: unknown): string {
+  const record = assertPlainObject(body);
+  const notes = record.notes;
+  if (notes == null) return "";
+  if (typeof notes !== "string") {
+    throw new ProfileValidationError("Notes must be text.", "notes");
+  }
+  if (notes.length > CUSTOMER_ADMIN_NOTES_MAX_LENGTH) {
+    throw new ProfileValidationError("Notes are too long.", "notes");
+  }
+  return notes;
 }
 
 export function validateProfileWriteInput(body: unknown): CustomerProfileWriteInput {
