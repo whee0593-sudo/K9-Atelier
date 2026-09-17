@@ -518,6 +518,8 @@ export function CustomerRecordCard({
                 profile={customer.profile}
                 saveUrl={`/api/admin/customers/${customer.profile.id}`}
                 onSaved={onProfileSaved}
+                audience="staff"
+                preview={preview}
               />
             </div>
           </section>

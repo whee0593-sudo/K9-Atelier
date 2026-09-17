@@ -3,6 +3,7 @@ import {
   requireAuthenticatedUser,
 } from "@/lib/pets/auth";
 import { getStaffSession } from "@/lib/staff/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   mapProfileRow,
   type CustomerProfile,
@@ -80,8 +81,8 @@ export async function updateStaffCustomerProfile(
   const session = await getStaffSession();
   if ("error" in session) return session;
 
-  const supabase = await createAuthenticatedSupabaseClient();
-  const { data, error } = await supabase
+  const admin = createAdminClient();
+  const { data, error } = await admin
     .from("profiles")
     .update(toUpdateRow(input))
     .eq("id", customerId)

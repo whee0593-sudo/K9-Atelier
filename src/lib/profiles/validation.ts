@@ -77,8 +77,14 @@ export function missingCustomerProfileFieldLabels(input: {
   return missing;
 }
 
-export function formatMissingProfileFieldsMessage(missing: string[]) {
+export function formatMissingProfileFieldsMessage(
+  missing: string[],
+  audience: "customer" | "staff" = "customer",
+) {
   if (missing.length === 0) return null;
+  if (audience === "staff") {
+    return `Complete these fields to save this customer file: ${missing.join(", ")}.`;
+  }
   return `This profile cannot be saved until you complete: ${missing.join(", ")}.`;
 }
 

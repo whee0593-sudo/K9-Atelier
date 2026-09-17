@@ -118,4 +118,13 @@ describe("CustomerRecordCard actions", () => {
     );
     assert.match(source, /CustomerAdminNotesEditor/);
   });
+
+  it("lets staff save the owner profile on a customer file", () => {
+    const source = readFileSync(
+      path.join(process.cwd(), "src/components/admin/CustomerRecordsPanel.tsx"),
+      "utf8",
+    );
+    assert.match(source, /audience="staff"/);
+    assert.match(source, /preview=\{preview\}/);
+  });
 });

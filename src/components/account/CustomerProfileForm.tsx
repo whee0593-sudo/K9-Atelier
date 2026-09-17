@@ -72,17 +72,22 @@ export function CustomerProfileForm({
   emailReadOnly = true,
   saveUrl,
   onSaved,
+  audience = "customer",
+  preview = false,
 }: {
   profile: CustomerProfile;
   emailReadOnly?: boolean;
   saveUrl: string;
   onSaved?: (profile: CustomerProfile) => void;
+  audience?: "customer" | "staff";
+  preview?: boolean;
 }) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(profile));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [requireComplete, setRequireComplete] = useState(
     () =>
+      audience === "customer" &&
       missingCustomerProfileFieldLabels({
         firstName: profile.firstName,
         lastName: profile.lastName,
@@ -96,14 +101,15 @@ export function CustomerProfileForm({
     setDraft(toDraft(profile));
     setError(null);
     setRequireComplete(
-      missingCustomerProfileFieldLabels({
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        phone: profile.phone,
-        email: profile.email,
-      }).length > 0,
+      audience === "customer" &&
+        missingCustomerProfileFieldLabels({
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          phone: profile.phone,
+          email: profile.email,
+        }).length > 0,
     );
-  }, [profile]);
+  }, [profile, audience]);
 
   const missing = missingCustomerProfileFieldLabels({
     firstName: draft.firstName,
@@ -115,7 +121,7 @@ export function CustomerProfileForm({
     ? requiredFieldErrors(draft, profile.email)
     : {};
   const incompleteMessage = requireComplete
-    ? formatMissingProfileFieldsMessage(missing)
+    ? formatMissingProfileFieldsMessage(missing, audience)
     : null;
 
   function update<K extends keyof Draft>(key: K, value: Draft[K]) {
@@ -135,6 +141,25 @@ export function CustomerProfileForm({
     setSaving(true);
     setError(null);
     setRequireComplete(false);
+
+    if (preview) {
+      const nextProfile: CustomerProfile = {
+        ...profile,
+        firstName: draft.firstName.trim(),
+        lastName: draft.lastName.trim(),
+        phone: draft.phone.trim(),
+        preferredContact: draft.preferredContact,
+        emergencyContactName: draft.emergencyContactName.trim(),
+        emergencyContactPhone: draft.emergencyContactPhone.trim(),
+        emergencyContactRelationship: draft.emergencyContactRelationship,
+      };
+      onSaved?.(nextProfile);
+      setDraft(toDraft(nextProfile));
+      setSaved(true);
+      setSaving(false);
+      return;
+    }
+
     try {
       const response = await fetch(saveUrl, {
         method: "PATCH",

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   AppointmentValidationError,
@@ -64,6 +65,10 @@ describe("required customer profile fields", () => {
       formatMissingProfileFieldsMessage(["First Name", "Last Name"]),
       "This profile cannot be saved until you complete: First Name, Last Name.",
     );
+    assert.equal(
+      formatMissingProfileFieldsMessage(["First Name", "Last Name"], "staff"),
+      "Complete these fields to save this customer file: First Name, Last Name.",
+    );
   });
 
   it("rejects a profile write that omits first and last name", () => {
@@ -111,5 +116,18 @@ describe("required customer profile fields", () => {
     const input = validateCreateAppointmentInput(validAppointmentBody());
     assert.equal(input.customerFirstName, "Tia");
     assert.equal(input.customerLastName, "Francavilla");
+  });
+
+  it("saves staff edits to a customer file with the admin client", () => {
+    const source = readFileSync(
+      new URL("./service.ts", import.meta.url),
+      "utf8",
+    );
+    assert.match(source, /export async function updateStaffCustomerProfile/);
+    assert.match(source, /createAdminClient\(\)/);
+    assert.doesNotMatch(
+      source,
+      /updateStaffCustomerProfile[\s\S]*createAuthenticatedSupabaseClient/,
+    );
   });
 });
