@@ -5,14 +5,37 @@ import { AdminStaffSignInLink } from "@/components/admin/AdminStaffSignInLink";
 import { readRequestPathname } from "@/lib/request-path";
 import { getStaffSession, isOwnerUser } from "@/lib/staff/auth";
 
+function isAppointmentsPreviewPath(pathname: string) {
+  return (
+    pathname === "/admin/appointments/preview" ||
+    pathname.startsWith("/admin/appointments/preview/")
+  );
+}
+
+async function readAdminSession() {
+  try {
+    return await getStaffSession();
+  } catch {
+    return { error: "unauthenticated" as const };
+  }
+}
+
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getStaffSession();
+  const session = await readAdminSession();
   const pathname = await readRequestPathname("/admin");
   const next = pathname.startsWith("/admin") ? pathname : "/admin";
+
+  if ("error" in session && isAppointmentsPreviewPath(pathname)) {
+    return (
+      <AdminChrome banner={null} showTeam={false}>
+        {children}
+      </AdminChrome>
+    );
+  }
 
   if ("error" in session) {
     if (session.error === "unauthenticated") {

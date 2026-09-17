@@ -192,6 +192,7 @@ export async function setStaffDayClosure(
 }
 
 type OccupiedRow = {
+  id?: string;
   appointment_date: string;
   address_lat: number | null;
   address_lon: number | null;
@@ -200,6 +201,10 @@ type OccupiedRow = {
   add_on_ids: string[] | null;
   address_zip: string | null;
   pets: { weight_lbs?: number } | { weight_lbs?: number }[] | null;
+};
+
+type OccupiedLoadOptions = {
+  excludeAppointmentIds?: string[];
 };
 
 function mapOccupiedRow(row: OccupiedRow): OccupiedAppointment | null {
@@ -226,6 +231,7 @@ function mapOccupiedRow(row: OccupiedRow): OccupiedAppointment | null {
 export async function loadOccupiedStopsByDate(
   fromDate: string,
   toDate: string,
+  options?: OccupiedLoadOptions,
 ): Promise<{ byDate: Map<string, OccupiedDay> } | ScheduleError> {
   const admin = requireAdminClient();
   if (!admin) return { error: "misconfigured" as const };
@@ -233,7 +239,7 @@ export async function loadOccupiedStopsByDate(
   const { data, error } = await admin
     .from("appointments")
     .select(
-      "appointment_date, address_lat, address_lon, scheduled_start, service_id, add_on_ids, address_zip, pets ( weight_lbs )",
+      "id, appointment_date, address_lat, address_lon, scheduled_start, service_id, add_on_ids, address_zip, pets ( weight_lbs )",
     )
     .gte("appointment_date", fromDate)
     .lte("appointment_date", toDate)
@@ -244,8 +250,10 @@ export async function loadOccupiedStopsByDate(
     return { error: "server" as const };
   }
 
+  const exclude = new Set(options?.excludeAppointmentIds ?? []);
   const byDate = new Map<string, { stops: OccupiedAppointment[]; bookedCount: number }>();
   for (const row of (data ?? []) as OccupiedRow[]) {
+    if (row.id && exclude.has(row.id)) continue;
     const current = byDate.get(row.appointment_date) ?? {
       stops: [],
       bookedCount: 0,
@@ -265,8 +273,9 @@ export async function loadOccupiedStopsByDate(
 
 export async function loadOccupiedStops(
   dateValue: string,
+  options?: OccupiedLoadOptions,
 ): Promise<OccupiedDay | ScheduleError> {
-  const result = await loadOccupiedStopsByDate(dateValue, dateValue);
+  const result = await loadOccupiedStopsByDate(dateValue, dateValue, options);
   if ("error" in result) return result;
   return result.byDate.get(dateValue) ?? { stops: [], bookedCount: 0 };
 }
@@ -321,6 +330,8 @@ export async function getAvailabilityForAddress(input: {
   zip: string;
   durationMinutes: number;
   base: GeoPoint;
+  excludeAppointmentIds?: string[];
+  extraDates?: string[];
 }): Promise<
   | {
       days: Array<{
@@ -331,14 +342,21 @@ export async function getAvailabilityForAddress(input: {
     }
   | ScheduleError
 > {
+  const extraDates = input.extraDates ?? [];
   const dates = listCalendarDates(40);
+  for (const extra of extraDates) {
+    if (!dates.includes(extra)) dates.unshift(extra);
+  }
+  dates.sort();
   if (dates.length === 0) return { days: [] };
 
   const fromDate = dates[0]!;
   const toDate = dates[dates.length - 1]!;
   const [plansResult, occupiedResult, closuresResult] = await Promise.all([
     loadDayPlans(fromDate, toDate),
-    loadOccupiedStopsByDate(fromDate, toDate),
+    loadOccupiedStopsByDate(fromDate, toDate, {
+      excludeAppointmentIds: input.excludeAppointmentIds,
+    }),
     loadDayClosures(fromDate, toDate),
   ]);
   if ("error" in plansResult) return plansResult;
@@ -347,7 +365,7 @@ export async function getAvailabilityForAddress(input: {
 
   const days = [];
   for (const date of dates) {
-    if (!isDateBookable(parseDateValue(date))) {
+    if (!extraDates.includes(date) && !isDateBookable(parseDateValue(date))) {
       days.push({
         date,
         available: false,
@@ -404,12 +422,17 @@ export async function assignArrivalWindow(input: {
   durationMinutes: number;
   slotStartMinutes: number;
   base: GeoPoint;
+  excludeAppointmentIds?: string[];
+  allowUnbookableDate?: boolean;
 }): Promise<
   | { insertion: NonNullable<ReturnType<typeof findRouteInsertionAtHour>> }
   | ScheduleError
   | { error: "slot_unavailable" }
 > {
-  if (!isDateBookable(parseDateValue(input.date))) {
+  if (
+    !input.allowUnbookableDate &&
+    !isDateBookable(parseDateValue(input.date))
+  ) {
     return { error: "slot_unavailable" as const };
   }
 
@@ -425,7 +448,9 @@ export async function assignArrivalWindow(input: {
     return { error: "slot_unavailable" as const };
   }
 
-  const occupied = await loadOccupiedStops(input.date);
+  const occupied = await loadOccupiedStops(input.date, {
+    excludeAppointmentIds: input.excludeAppointmentIds,
+  });
   if ("error" in occupied) return occupied;
 
   const stored = plansResult.plans.get(input.date) ?? null;
