@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { CustomerProfile } from "@/lib/profiles/types";
 import {
   EMERGENCY_RELATIONSHIP_OPTIONS,
   PREFERRED_CONTACT_OPTIONS,
 } from "@/lib/profiles/types";
+import {
+  CUSTOMER_PROFILE_REQUIRED_FIELD_LABELS,
+  formatMissingProfileFieldsMessage,
+  missingCustomerProfileFieldLabels,
+} from "@/lib/profiles/validation";
 
 function inputClassName() {
   return "mt-1.5 w-full rounded-xl border border-lavender/40 bg-cream px-4 py-2.5 text-sm text-text placeholder:text-text-muted/50";
@@ -34,6 +39,34 @@ function toDraft(profile: CustomerProfile): Draft {
   };
 }
 
+function requiredFieldErrors(
+  draft: Draft,
+  email: string,
+): Partial<Record<"firstName" | "lastName" | "phone" | "email", string>> {
+  const missing = missingCustomerProfileFieldLabels({
+    firstName: draft.firstName,
+    lastName: draft.lastName,
+    phone: draft.phone,
+    email,
+  });
+  const errors: Partial<
+    Record<"firstName" | "lastName" | "phone" | "email", string>
+  > = {};
+  if (missing.includes(CUSTOMER_PROFILE_REQUIRED_FIELD_LABELS.email)) {
+    errors.email = "Email is required.";
+  }
+  if (missing.includes(CUSTOMER_PROFILE_REQUIRED_FIELD_LABELS.firstName)) {
+    errors.firstName = "First Name is required.";
+  }
+  if (missing.includes(CUSTOMER_PROFILE_REQUIRED_FIELD_LABELS.lastName)) {
+    errors.lastName = "Last Name is required.";
+  }
+  if (missing.includes(CUSTOMER_PROFILE_REQUIRED_FIELD_LABELS.phone)) {
+    errors.phone = "Mobile Phone is required.";
+  }
+  return errors;
+}
+
 export function CustomerProfileForm({
   profile,
   emailReadOnly = true,
@@ -48,20 +81,60 @@ export function CustomerProfileForm({
   const [draft, setDraft] = useState<Draft>(() => toDraft(profile));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [requireComplete, setRequireComplete] = useState(
+    () =>
+      missingCustomerProfileFieldLabels({
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        phone: profile.phone,
+        email: profile.email,
+      }).length > 0,
+  );
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     setDraft(toDraft(profile));
+    setError(null);
+    setRequireComplete(
+      missingCustomerProfileFieldLabels({
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        phone: profile.phone,
+        email: profile.email,
+      }).length > 0,
+    );
   }, [profile]);
+
+  const missing = missingCustomerProfileFieldLabels({
+    firstName: draft.firstName,
+    lastName: draft.lastName,
+    phone: draft.phone,
+    email: profile.email,
+  });
+  const fieldErrors = requireComplete
+    ? requiredFieldErrors(draft, profile.email)
+    : {};
+  const incompleteMessage = requireComplete
+    ? formatMissingProfileFieldsMessage(missing)
+    : null;
 
   function update<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
     setSaved(false);
   }
 
-  async function handleSave() {
+  async function handleSave(event: React.FormEvent) {
+    event.preventDefault();
+    if (missing.length > 0) {
+      setRequireComplete(true);
+      setError(null);
+      setSaved(false);
+      return;
+    }
+
     setSaving(true);
     setError(null);
+    setRequireComplete(false);
     try {
       const response = await fetch(saveUrl, {
         method: "PATCH",
@@ -90,7 +163,7 @@ export function CustomerProfileForm({
   }
 
   return (
-    <div className="space-y-5">
+    <form className="space-y-5" onSubmit={(event) => void handleSave(event)} noValidate>
       <div>
         <label className="block text-sm font-medium text-text">
           Email <span className="text-gold-dark">*</span>
@@ -102,9 +175,9 @@ export function CustomerProfileForm({
           value={profile.email}
           className={`${inputClassName()} ${emailReadOnly ? "opacity-80" : ""}`}
         />
-        {!profile.email.trim() ? (
+        {fieldErrors.email || !profile.email.trim() ? (
           <p className="mt-1.5 text-xs text-red-800">
-            An email address is required on this profile.
+            {fieldErrors.email ?? "An email address is required on this profile."}
           </p>
         ) : null}
       </div>
@@ -115,8 +188,12 @@ export function CustomerProfileForm({
             required
             value={draft.firstName}
             onChange={(event) => update("firstName", event.target.value)}
+            aria-invalid={Boolean(fieldErrors.firstName)}
             className={inputClassName()}
           />
+          {fieldErrors.firstName ? (
+            <p className="mt-1.5 text-xs text-red-800">{fieldErrors.firstName}</p>
+          ) : null}
         </label>
         <label className="block text-sm font-medium text-text">
           Last Name <span className="text-gold-dark">*</span>
@@ -124,8 +201,12 @@ export function CustomerProfileForm({
             required
             value={draft.lastName}
             onChange={(event) => update("lastName", event.target.value)}
+            aria-invalid={Boolean(fieldErrors.lastName)}
             className={inputClassName()}
           />
+          {fieldErrors.lastName ? (
+            <p className="mt-1.5 text-xs text-red-800">{fieldErrors.lastName}</p>
+          ) : null}
         </label>
       </div>
       <label className="block text-sm font-medium text-text">
@@ -136,8 +217,12 @@ export function CustomerProfileForm({
           value={draft.phone}
           onChange={(event) => update("phone", event.target.value)}
           placeholder="(555) 123-4567"
+          aria-invalid={Boolean(fieldErrors.phone)}
           className={inputClassName()}
         />
+        {fieldErrors.phone ? (
+          <p className="mt-1.5 text-xs text-red-800">{fieldErrors.phone}</p>
+        ) : null}
       </label>
       <label className="block text-sm font-medium text-text">
         Preferred Contact Method
@@ -193,15 +278,14 @@ export function CustomerProfileForm({
           ))}
         </select>
       </label>
-      {error && (
+      {error || incompleteMessage ? (
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
-          {error}
+          {error ?? incompleteMessage}
         </p>
-      )}
+      ) : null}
       <div className="flex items-center gap-3">
         <button
-          type="button"
-          onClick={() => void handleSave()}
+          type="submit"
           disabled={saving}
           className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
         >
@@ -209,7 +293,7 @@ export function CustomerProfileForm({
         </button>
         {saved && <span className="text-xs text-text-muted">Saved</span>}
       </div>
-    </div>
+    </form>
   );
 }
 

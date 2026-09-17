@@ -31,6 +31,10 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { isValidSmsPhone } from "@/lib/sms/phone";
 import {
+  formatMissingProfileFieldsMessage,
+  missingCustomerProfileFieldLabels,
+} from "@/lib/profiles/validation";
+import {
   photoMarketingConsentCopy,
   smsConsentCopy,
 } from "@/lib/notifications";
@@ -150,6 +154,8 @@ export function BookingReviewStep({
       })
       .catch(() => undefined);
   }, [initialReferralCode]);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [smsConsent, setSmsConsent] = useState(false);
   const [photoMarketingConsent, setPhotoMarketingConsent] = useState(false);
@@ -180,10 +186,19 @@ export function BookingReviewStep({
     async function loadSavedDetails() {
       try {
         const [phoneResult, paymentResult] = await Promise.all([
-          createClient().from("profiles").select("phone").maybeSingle(),
+          createClient()
+            .from("profiles")
+            .select("phone, first_name, last_name")
+            .maybeSingle(),
           fetchCustomerPaymentMethods(),
         ]);
         if (cancelled) return;
+        if (phoneResult.data?.first_name) {
+          setFirstName(phoneResult.data.first_name);
+        }
+        if (phoneResult.data?.last_name) {
+          setLastName(phoneResult.data.last_name);
+        }
         if (phoneResult.data?.phone) {
           setPhone(phoneResult.data.phone);
         }
@@ -241,6 +256,16 @@ export function BookingReviewStep({
   );
 
   async function handleReserve() {
+    const missing = missingCustomerProfileFieldLabels({
+      firstName,
+      lastName,
+      phone,
+    });
+    if (missing.length > 0) {
+      setError(formatMissingProfileFieldsMessage(missing));
+      return;
+    }
+
     if (!isValidSmsPhone(phone)) {
       setError(
         "Please enter a valid US mobile number so we can text appointment updates.",
@@ -310,6 +335,8 @@ export function BookingReviewStep({
         estimatedTotal,
         paymentMethodId: selectedPaymentMethodId,
         customerPhone: phone,
+        customerFirstName: firstName.trim(),
+        customerLastName: lastName.trim(),
         smsConsent: true,
         photoMarketingConsent: true,
         servicePoliciesConsent: true,
@@ -588,8 +615,30 @@ export function BookingReviewStep({
       )}
 
       <div className="mt-8">
-        <label className="block">
-          <span className={bookingLabelClass}>Mobile phone for appointment texts</span>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className={bookingLabelClass}>First Name *</span>
+            <input
+              type="text"
+              autoComplete="given-name"
+              value={firstName}
+              onChange={(event) => setFirstName(event.target.value)}
+              className={bookingFieldClass}
+            />
+          </label>
+          <label className="block">
+            <span className={bookingLabelClass}>Last Name *</span>
+            <input
+              type="text"
+              autoComplete="family-name"
+              value={lastName}
+              onChange={(event) => setLastName(event.target.value)}
+              className={bookingFieldClass}
+            />
+          </label>
+        </div>
+        <label className="mt-4 block">
+          <span className={bookingLabelClass}>Mobile phone for appointment texts *</span>
           <input
             type="tel"
             autoComplete="tel"

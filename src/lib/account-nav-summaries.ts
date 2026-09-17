@@ -1,4 +1,5 @@
 import type { CustomerProfile } from "@/lib/profiles/types";
+import { missingCustomerProfileFieldLabels } from "@/lib/profiles/validation";
 import { centsToDollars } from "@/lib/referrals/eligible";
 
 export type AccountNavSummaryKey =
@@ -37,11 +38,13 @@ export function emptyAccountNavSummaries(): AccountNavSummaries {
 export function isCustomerProfileComplete(
   profile: Pick<CustomerProfile, "firstName" | "lastName" | "email" | "phone">,
 ) {
-  return Boolean(
-    profile.firstName.trim() &&
-      profile.lastName.trim() &&
-      profile.email.trim() &&
-      profile.phone.trim(),
+  return (
+    missingCustomerProfileFieldLabels({
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      email: profile.email,
+      phone: profile.phone,
+    }).length === 0
   );
 }
 
