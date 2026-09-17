@@ -11,7 +11,7 @@ import {
   type CancelFeeStatus,
 } from "@/lib/email/cancel-confirmation";
 import { formatAppointmentTimeRange } from "@/lib/appointments/time-label";
-import { escapeHtml, getEmailBrand } from "@/lib/email/layout";
+import { escapeHtml, emailLogoImg } from "@/lib/email/layout";
 import { siteUrl } from "@/lib/email/resend";
 import { allBookableServices } from "@/lib/services";
 
@@ -205,7 +205,6 @@ function emphasizeAmount(paragraph: string, amountLabel: string | null) {
 
 export function buildRemoveDogEmailHtml(input: RemoveDogConfirmationInput) {
   const content = buildRemoveDogEmailContent(input);
-  const { logoUrl } = getEmailBrand();
   const lockup = business.brand.lockup;
   const wordmark = business.brand.wordmark;
   const feeHtml = content.fee.paragraphs
@@ -240,7 +239,7 @@ export function buildRemoveDogEmailHtml(input: RemoveDogConfirmationInput) {
     a.k9-remove-cta:focus { outline: 2px solid ${COLORS.gold}; outline-offset: 3px; }
     @media only screen and (max-width: 620px) {
       .k9-remove-pad { padding-left: 20px !important; padding-right: 20px !important; }
-      .k9-remove-logo { width: 52px !important; height: 52px !important; }
+      .k9-remove-logo { width: 96px !important; height: 96px !important; }
       .k9-remove-date { white-space: nowrap !important; }
     }
     @media only screen and (max-width: 360px) {
@@ -261,7 +260,7 @@ export function buildRemoveDogEmailHtml(input: RemoveDogConfirmationInput) {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:580px;background-color:${COLORS.card};border:1px solid ${COLORS.line};box-shadow:0 8px 24px rgba(47,41,48,0.04);">
           <tr>
             <td align="center" class="k9-remove-pad" style="padding:32px 36px 20px;background-color:${COLORS.page};">
-              <img class="k9-remove-logo" src="${escapeHtml(logoUrl)}" width="64" height="64" alt="${escapeHtml(business.brand.name)}" style="display:block;width:64px;height:64px;border-radius:50%;margin:0 auto 12px;border:0;"/>
+              ${emailLogoImg({ className: "k9-remove-logo" })}
               <div style="font-family:Georgia,'Times New Roman',Times,serif;font-size:20px;letter-spacing:0.18em;color:${COLORS.ink};">${escapeHtml(wordmark)}</div>
               <div style="margin-top:8px;font-family:Georgia,'Times New Roman',Times,serif;font-size:12px;letter-spacing:0.04em;color:${COLORS.muted};">${escapeHtml(lockup)}</div>
             </td>
