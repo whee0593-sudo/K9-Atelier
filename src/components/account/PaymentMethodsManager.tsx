@@ -35,11 +35,13 @@ function AddCardForm({
   onSaved,
   onCancel,
   returnUrl,
+  saveSetupIntent = savePaymentSetupIntent,
 }: {
   clientSecret: string;
   onSaved: (method: PaymentMethodRecord) => void;
   onCancel: () => void;
   returnUrl?: string;
+  saveSetupIntent?: (setupIntentId: string) => Promise<PaymentMethodRecord>;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -86,7 +88,7 @@ function AddCardForm({
         setError("This card could not be verified. Please try again.");
         return;
       }
-      const method = await savePaymentSetupIntent(setupIntent.id);
+      const method = await saveSetupIntent(setupIntent.id);
       onSaved(method);
     } catch (saveError) {
       setError(

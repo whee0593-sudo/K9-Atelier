@@ -100,6 +100,6 @@ describe("customer profile required fields", () => {
     );
     assert.doesNotMatch(html, /First Name is required\./);
     assert.match(html, /tiafrancavilla@gmail.com/);
-    assert.match(html, /readOnly/);
+    assert.doesNotMatch(html, /readOnly/);
   });
 });

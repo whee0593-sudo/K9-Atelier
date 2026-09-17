@@ -71,20 +71,75 @@ export async function updateOwnProfile(
   return { profile: mapProfileRow(data as CustomerProfileRow) };
 }
 
+function isDuplicateAuthEmail(message: string) {
+  return /already been registered|already exists|email address is already/i.test(
+    message,
+  );
+}
+
 export async function updateStaffCustomerProfile(
   customerId: string,
   input: CustomerProfileWriteInput,
 ): Promise<
   | { profile: CustomerProfile }
-  | { error: "unauthenticated" | "forbidden" | "not_found" | "server" }
+  | {
+      error: "unauthenticated" | "forbidden" | "not_found" | "conflict" | "server";
+      message?: string;
+    }
 > {
   const session = await getStaffSession();
   if ("error" in session) return session;
 
   const admin = createAdminClient();
+  const nextEmail = input.email?.trim().toLowerCase();
+
+  if (nextEmail) {
+    const { data: existing, error: existingError } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("email", nextEmail)
+      .neq("id", customerId)
+      .maybeSingle();
+    if (existingError) {
+      console.error(
+        "updateStaffCustomerProfile email lookup failed:",
+        existingError.message,
+      );
+      return { error: "server" };
+    }
+    if (existing) {
+      return {
+        error: "conflict",
+        message: "That email is already used by another account.",
+      };
+    }
+
+    const { error: authError } = await admin.auth.admin.updateUserById(
+      customerId,
+      {
+        email: nextEmail,
+        email_confirm: true,
+      },
+    );
+    if (authError) {
+      console.error("updateStaffCustomerProfile auth email failed:", authError.message);
+      if (isDuplicateAuthEmail(authError.message)) {
+        return {
+          error: "conflict",
+          message: "That email is already used by another account.",
+        };
+      }
+      return { error: "server" };
+    }
+  }
+
+  const updateRow = {
+    ...toUpdateRow(input),
+    ...(nextEmail ? { email: nextEmail } : {}),
+  };
   const { data, error } = await admin
     .from("profiles")
-    .update(toUpdateRow(input))
+    .update(updateRow)
     .eq("id", customerId)
     .select(PROFILE_SELECT)
     .maybeSingle();

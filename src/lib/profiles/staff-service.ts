@@ -5,7 +5,7 @@ import { isOwnerEmail, OWNER_EMAIL, normalizeStaffEmail } from "@/lib/staff/owne
 import {
   createAuthenticatedSupabaseClient,
 } from "@/lib/pets/auth";
-import { mapPetRowToRecord, mapValidatedInputToUpdateRow } from "@/lib/pets/map";
+import { mapPetRowToRecord, mapValidatedInputToInsertRow, mapValidatedInputToUpdateRow } from "@/lib/pets/map";
 import type { PetRecord, PetRow, PetWriteInput } from "@/lib/pets/types";
 import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
 import {
@@ -542,4 +542,163 @@ export async function updateStaffPet(
       adminServiceNotes: notesRow?.notes ?? "",
     },
   };
+}
+
+async function loadStaffPetWithNotes(
+  petId: string,
+): Promise<
+  | { pet: PetRecord & { adminServiceNotes: string } }
+  | { error: "server" | "not_found" }
+> {
+  const admin = createAdminClient();
+  const { data: petRow, error: reloadError } = await admin
+    .from("pets")
+    .select(PET_SELECT)
+    .eq("id", petId)
+    .maybeSingle();
+
+  if (reloadError) {
+    console.error("loadStaffPetWithNotes failed:", reloadError.message);
+    return { error: "server" };
+  }
+  if (!petRow) return { error: "not_found" };
+
+  const [pet] = await attachVaccinationSummaries([
+    mapPetRowToRecord(petRow as PetRow),
+  ]);
+
+  const { data: notesRow } = await admin
+    .from("pet_admin_notes")
+    .select("notes")
+    .eq("pet_id", petId)
+    .maybeSingle();
+
+  return {
+    pet: {
+      ...pet,
+      adminServiceNotes: notesRow?.notes ?? "",
+    },
+  };
+}
+
+export async function createStaffPet(
+  customerId: string,
+  input: PetWriteInput,
+): Promise<
+  | { pet: PetRecord & { adminServiceNotes: string } }
+  | { error: "unauthenticated" | "forbidden" | "not_found" | "conflict" | "server" }
+> {
+  const session = await getStaffSession();
+  if ("error" in session) return session;
+
+  const admin = createAdminClient();
+  const { data: profile, error: profileError } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("id", customerId)
+    .maybeSingle();
+  if (profileError) {
+    console.error("createStaffPet profile failed:", profileError.message);
+    return { error: "server" };
+  }
+  if (!profile) return { error: "not_found" };
+
+  const { data, error } = await admin
+    .from("pets")
+    .insert({
+      customer_id: customerId,
+      ...mapValidatedInputToInsertRow(input),
+    })
+    .select(PET_SELECT)
+    .single();
+
+  if (error) {
+    console.error("createStaffPet failed:", error.code, error.message);
+    if (error.code === "23514" || error.code === "23505") {
+      return { error: "conflict" };
+    }
+    return { error: "server" };
+  }
+
+  const pet = mapPetRowToRecord(data as PetRow);
+  try {
+    const { ensurePetReferralCode } = await import("@/lib/referrals/service");
+    await ensurePetReferralCode({
+      petId: pet.id,
+      petName: pet.name,
+      ownerCustomerId: customerId,
+    });
+  } catch (referralError) {
+    console.error("createStaffPet referral code failed:", referralError);
+  }
+
+  const loaded = await loadStaffPetWithNotes(pet.id);
+  if ("error" in loaded) return loaded;
+  return loaded;
+}
+
+export async function archiveStaffPet(
+  customerId: string,
+  petId: string,
+): Promise<{ ok: true } | { error: "unauthenticated" | "forbidden" | "not_found" | "server" }> {
+  const session = await getStaffSession();
+  if ("error" in session) return session;
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("pets")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", petId)
+    .eq("customer_id", customerId)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    console.error("archiveStaffPet failed:", error.message);
+    return { error: "server" };
+  }
+  if (!data) return { error: "not_found" };
+
+  const { error: referralError } = await admin
+    .from("pet_referral_codes")
+    .update({ is_active: false })
+    .eq("pet_id", petId);
+  if (referralError && !isMissingTableError(referralError)) {
+    console.error("archiveStaffPet referral codes failed:", referralError.message);
+  }
+
+  return { ok: true };
+}
+
+export async function setStaffCustomerPassword(
+  customerId: string,
+  password: string,
+): Promise<
+  | { ok: true }
+  | { error: "unauthenticated" | "forbidden" | "not_found" | "server" }
+> {
+  const session = await getStaffSession();
+  if ("error" in session) return session;
+
+  const admin = createAdminClient();
+  const { data: profile, error: profileError } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("id", customerId)
+    .maybeSingle();
+  if (profileError) {
+    console.error("setStaffCustomerPassword profile failed:", profileError.message);
+    return { error: "server" };
+  }
+  if (!profile) return { error: "not_found" };
+
+  const { error: updateError } = await admin.auth.admin.updateUserById(customerId, {
+    password,
+  });
+  if (updateError) {
+    console.error("setStaffCustomerPassword failed:", updateError.message);
+    return { error: "server" };
+  }
+  return { ok: true };
 }

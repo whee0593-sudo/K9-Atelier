@@ -17,6 +17,7 @@ function inputClassName() {
 }
 
 type Draft = {
+  email: string;
   firstName: string;
   lastName: string;
   phone: string;
@@ -28,6 +29,7 @@ type Draft = {
 
 function toDraft(profile: CustomerProfile): Draft {
   return {
+    email: profile.email,
     firstName: profile.firstName,
     lastName: profile.lastName,
     phone: profile.phone,
@@ -69,7 +71,7 @@ function requiredFieldErrors(
 
 export function CustomerProfileForm({
   profile,
-  emailReadOnly = true,
+  emailReadOnly,
   saveUrl,
   onSaved,
   audience = "customer",
@@ -85,6 +87,8 @@ export function CustomerProfileForm({
   const [draft, setDraft] = useState<Draft>(() => toDraft(profile));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const lockEmail = emailReadOnly ?? audience !== "staff";
+  const emailValue = lockEmail ? profile.email : draft.email;
   const [requireComplete, setRequireComplete] = useState(
     () =>
       audience === "customer" &&
@@ -115,10 +119,10 @@ export function CustomerProfileForm({
     firstName: draft.firstName,
     lastName: draft.lastName,
     phone: draft.phone,
-    email: profile.email,
+    email: emailValue,
   });
   const fieldErrors = requireComplete
-    ? requiredFieldErrors(draft, profile.email)
+    ? requiredFieldErrors(draft, emailValue)
     : {};
   const incompleteMessage = requireComplete
     ? formatMissingProfileFieldsMessage(missing, audience)
@@ -145,6 +149,7 @@ export function CustomerProfileForm({
     if (preview) {
       const nextProfile: CustomerProfile = {
         ...profile,
+        email: emailValue.trim(),
         firstName: draft.firstName.trim(),
         lastName: draft.lastName.trim(),
         phone: draft.phone.trim(),
@@ -165,7 +170,19 @@ export function CustomerProfileForm({
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(draft),
+          body: JSON.stringify(
+            lockEmail
+              ? {
+                  firstName: draft.firstName,
+                  lastName: draft.lastName,
+                  phone: draft.phone,
+                  preferredContact: draft.preferredContact,
+                  emergencyContactName: draft.emergencyContactName,
+                  emergencyContactPhone: draft.emergencyContactPhone,
+                  emergencyContactRelationship: draft.emergencyContactRelationship,
+                }
+              : draft,
+          ),
       });
       const body = (await response.json()) as {
         error?: string;
@@ -196,11 +213,16 @@ export function CustomerProfileForm({
         <input
           type="email"
           required
-          readOnly={emailReadOnly}
-          value={profile.email}
-          className={`${inputClassName()} ${emailReadOnly ? "opacity-80" : ""}`}
+          readOnly={lockEmail}
+          value={emailValue}
+          onChange={
+            lockEmail
+              ? undefined
+              : (event) => update("email", event.target.value)
+          }
+          className={`${inputClassName()} ${lockEmail ? "opacity-80" : ""}`}
         />
-        {fieldErrors.email || !profile.email.trim() ? (
+        {fieldErrors.email || !emailValue.trim() ? (
           <p className="mt-1.5 text-xs text-red-800">
             {fieldErrors.email ?? "An email address is required on this profile."}
           </p>
