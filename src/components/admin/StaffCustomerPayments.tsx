@@ -34,6 +34,9 @@ export function StaffCustomerPayments({
   } | null>(null);
   const [adding, setAdding] = useState(false);
 
+  const visibleMethods = methods.filter(
+    (method, index) => methods.findIndex((item) => item.id === method.id) === index,
+  );
   const stripePromise = useMemo(
     () => (setup ? stripePromiseFor(setup.publishableKey) : null),
     [setup],
@@ -52,7 +55,11 @@ export function StaffCustomerPayments({
           expYear: 2028,
           isDefault: methods.length === 0,
         };
-        onChange([...methods, next]);
+        onChange(
+          methods.some((method) => method.id === next.id)
+            ? methods
+            : [...methods, next],
+        );
         setAdding(false);
         return;
       }
@@ -101,11 +108,11 @@ export function StaffCustomerPayments({
           {error}
         </p>
       ) : null}
-      {methods.length === 0 && !setup ? (
+      {visibleMethods.length === 0 && !setup ? (
         <p className="mt-3 text-sm text-text-muted">No cards on file.</p>
       ) : (
         <ul className="mt-3 space-y-2">
-          {methods.map((method) => (
+          {visibleMethods.map((method) => (
             <li
               key={method.id}
               className="flex items-center justify-between gap-4 rounded-xl border border-lavender/40 bg-cream px-4 py-3 text-sm"

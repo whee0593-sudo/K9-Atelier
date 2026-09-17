@@ -358,7 +358,9 @@ export function StaffCustomerPets({
       )}
       {showNewForm ? (
         <div className="mt-4 rounded-2xl border border-dashed border-gold/50 bg-lavender-light/20 p-6">
-          <h4 className="font-medium text-gold-dark">New Pet Profile</h4>
+          <h4 className="font-medium text-gold-dark">
+            {draftPet.name.trim() ? `${draftPet.name.trim()} Profile` : "New Pet Profile"}
+          </h4>
           <div className="mt-4">
             <PetProfileFieldsForm
               pet={draftPet}

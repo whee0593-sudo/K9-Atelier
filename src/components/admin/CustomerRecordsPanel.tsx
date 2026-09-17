@@ -334,7 +334,13 @@ export function CustomerRecordCard({
   const [open, setOpen] = useState(Boolean(startOpen));
   const [busyAction, setBusyAction] = useState<"delete" | "freeze" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const roleLabel = isOwnerEmail(customer.profile.email)
+  const [profile, setProfile] = useState(customer.profile);
+
+  useEffect(() => {
+    setProfile(customer.profile);
+  }, [customer.profile]);
+
+  const roleLabel = isOwnerEmail(profile.email)
     ? "Owner"
     : customer.kind === "admin"
       ? "Administrator"
@@ -440,19 +446,19 @@ export function CustomerRecordCard({
           onClick={() => setOpen((value) => !value)}
           className="min-w-0 flex-1 text-left"
         >
-          <p className="font-medium text-text">{customerLabel(customer.profile)}</p>
+          <p className="font-medium text-text">{customerLabel(profile)}</p>
           <p className="mt-1 text-sm text-text-muted">
             {roleLabel}
             {customer.frozen ? " · Frozen" : ""}
             {" · "}
-            {customer.profile.email}
-            {customer.profile.phone ? ` · ${customer.profile.phone}` : ""}
+            {profile.email}
+            {profile.phone ? ` · ${profile.phone}` : ""}
           </p>
         </button>
         <div className="flex shrink-0 items-center gap-2">
           {customer.kind === "customer" && !customer.frozen ? (
             <a
-              href={bookForCustomerHref(customer.profile)}
+              href={bookForCustomerHref(profile)}
               className="rounded-xl border border-lavender/40 px-3 py-2 text-sm text-text-muted hover:border-gold/40 hover:text-text"
             >
               Book for customer
@@ -487,7 +493,7 @@ export function CustomerRecordCard({
               <div className="flex flex-wrap items-center gap-2">
                 {customer.kind === "customer" && !customer.frozen ? (
                   <a
-                    href={bookForCustomerHref(customer.profile)}
+                    href={bookForCustomerHref(profile)}
                     className="rounded-xl border border-lavender/40 px-3 py-2 text-sm text-text-muted hover:border-gold/40 hover:text-text"
                   >
                     Book for customer
@@ -495,7 +501,7 @@ export function CustomerRecordCard({
                 ) : null}
                 <CallCustomerButton
                   customerId={customer.profile.id}
-                  disabled={!customer.profile.phone}
+                  disabled={!profile.phone}
                   preview={preview}
                 />
                 {renderOwnerActions()}
@@ -503,9 +509,12 @@ export function CustomerRecordCard({
             </div>
             <div className="mt-4">
               <CustomerProfileForm
-                profile={customer.profile}
-                saveUrl={`/api/admin/customers/${customer.profile.id}`}
-                onSaved={onProfileSaved}
+                profile={profile}
+                saveUrl={`/api/admin/customers/${profile.id}`}
+                onSaved={(next) => {
+                  setProfile(next);
+                  onProfileSaved(next);
+                }}
                 audience="staff"
                 preview={preview}
               />
@@ -524,7 +533,7 @@ export function CustomerRecordCard({
             previewHistory={previewHistory}
             bookHref={
               customer.kind === "customer" && !customer.frozen
-                ? bookForCustomerHref(customer.profile)
+                ? bookForCustomerHref(profile)
                 : undefined
             }
           />
