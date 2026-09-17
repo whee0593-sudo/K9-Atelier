@@ -71,7 +71,7 @@ type StaffRescheduleError =
   | "misconfigured"
   | "server";
 
-type LoadedAppointment = AppointmentRow & {
+type LoadedAppointment = Omit<AppointmentRow, "pets"> & {
   address_lat?: number | null;
   address_lon?: number | null;
   pets?:
