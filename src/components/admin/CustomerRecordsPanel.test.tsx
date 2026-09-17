@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, it } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { CustomerAdminNotesEditor } from "@/components/admin/CustomerAdminNotesEditor";
 import { CustomerRecordCard } from "@/components/admin/CustomerRecordsPanel";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
 
@@ -96,5 +99,23 @@ describe("CustomerRecordCard actions", () => {
     assert.match(html, />Unfreeze</);
     assert.match(html, /Frozen/);
     assert.doesNotMatch(html, /Book for customer/);
+  });
+
+  it("shows the admin-only customer record notes editor", () => {
+    const html = renderToStaticMarkup(
+      <CustomerAdminNotesEditor customerId="11111111-1111-4111-8111-111111111111" />,
+    );
+    assert.match(html, />Customer record</);
+    assert.match(html, /Admin only\. These notes stay with this customer\./);
+    assert.match(html, /<textarea/);
+    assert.match(html, />Save</);
+  });
+
+  it("opens the same customer-record notes on a customer file", () => {
+    const source = readFileSync(
+      path.join(process.cwd(), "src/components/admin/CustomerRecordsPanel.tsx"),
+      "utf8",
+    );
+    assert.match(source, /CustomerAdminNotesEditor/);
   });
 });

@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useEffect, useId, useState } from "react";
-
-const previewNotesByCustomer = new Map<string, string>();
+import {
+  loadCustomerAdminNotes,
+  saveCustomerAdminNotes,
+} from "@/lib/profiles/admin-notes-client";
 
 export function CustomerRecordNotesDialog({
   open,
@@ -121,27 +123,17 @@ export function CustomerRecordNotesButton({
     setSaved(false);
     setOpen(true);
 
-    if (preview) {
-      setNotes(previewNotesByCustomer.get(customerId) ?? "");
-      return;
-    }
-
     setLoading(true);
     try {
-      const response = await fetch(
-        `/api/admin/customers/${customerId}/notes`,
-        { credentials: "include" },
-      );
-      const body = (await response.json()) as { notes?: string; error?: string };
-      if (!response.ok) {
-        setNotes("");
-        setError(body.error ?? "Could not load this customer record.");
-        return;
-      }
-      setNotes(body.notes ?? "");
-    } catch {
+      const value = await loadCustomerAdminNotes(customerId, preview);
+      setNotes(value);
+    } catch (loadError) {
       setNotes("");
-      setError("Could not load this customer record.");
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Could not load this customer record.",
+      );
     } finally {
       setLoading(false);
     }
@@ -152,32 +144,16 @@ export function CustomerRecordNotesButton({
     setError(null);
     setSaved(false);
 
-    if (preview) {
-      previewNotesByCustomer.set(customerId, notes);
-      setSaved(true);
-      setBusy(false);
-      return;
-    }
-
     try {
-      const response = await fetch(
-        `/api/admin/customers/${customerId}/notes`,
-        {
-          method: "PUT",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ notes }),
-        },
-      );
-      const body = (await response.json()) as { notes?: string; error?: string };
-      if (!response.ok) {
-        setError(body.error ?? "Could not save this customer record.");
-        return;
-      }
-      setNotes(body.notes ?? notes);
+      const next = await saveCustomerAdminNotes(customerId, notes, preview);
+      setNotes(next);
       setSaved(true);
-    } catch {
-      setError("Could not save this customer record.");
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Could not save this customer record.",
+      );
     } finally {
       setBusy(false);
     }

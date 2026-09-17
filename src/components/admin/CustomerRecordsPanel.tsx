@@ -19,6 +19,7 @@ import { formatChargeMoney } from "@/lib/charges/money";
 import { formatStaffVisitTiming } from "@/lib/charges/hourly";
 import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
 import { CallCustomerButton } from "@/components/admin/CallCustomerButton";
+import { CustomerAdminNotesEditor } from "@/components/admin/CustomerAdminNotesEditor";
 
 type LoadState =
   | { status: "loading" }
@@ -488,6 +489,10 @@ export function CustomerRecordCard({
               {actionError}
             </p>
           ) : null}
+          <CustomerAdminNotesEditor
+            customerId={customer.profile.id}
+            preview={preview}
+          />
           <section>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-base font-medium text-gold-dark">Owner Profile</h3>

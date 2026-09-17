@@ -1,12 +1,16 @@
 BEGIN;
 
 -- Staff-only notes about a customer. Customers never see this table.
-CREATE TABLE public.customer_admin_notes (
+-- Safe to run more than once.
+CREATE TABLE IF NOT EXISTS public.customer_admin_notes (
   customer_id uuid PRIMARY KEY REFERENCES public.profiles (id) ON DELETE CASCADE,
   notes text NOT NULL DEFAULT '',
   updated_at timestamptz NOT NULL DEFAULT now(),
   updated_by uuid REFERENCES auth.users (id)
 );
+
+DROP TRIGGER IF EXISTS customer_admin_notes_set_updated_at
+  ON public.customer_admin_notes;
 
 CREATE TRIGGER customer_admin_notes_set_updated_at
   BEFORE UPDATE ON public.customer_admin_notes
@@ -19,6 +23,9 @@ REVOKE ALL ON TABLE public.customer_admin_notes FROM authenticated;
 GRANT SELECT ON TABLE public.customer_admin_notes TO authenticated;
 
 ALTER TABLE public.customer_admin_notes ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS customer_admin_notes_staff_all
+  ON public.customer_admin_notes;
 
 CREATE POLICY customer_admin_notes_staff_all
   ON public.customer_admin_notes
