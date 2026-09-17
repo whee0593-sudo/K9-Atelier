@@ -68,7 +68,7 @@ export function missingCustomerProfileFieldLabels(input: {
   if (!input.lastName?.trim()) {
     missing.push(CUSTOMER_PROFILE_REQUIRED_FIELD_LABELS.lastName);
   }
-  if (input.email !== undefined && !input.email.trim()) {
+  if (input.email !== undefined && !input.email?.trim()) {
     missing.push(CUSTOMER_PROFILE_REQUIRED_FIELD_LABELS.email);
   }
   if (!input.phone?.trim()) {
@@ -127,7 +127,7 @@ export function validateProfileWriteInput(body: unknown): CustomerProfileWriteIn
     throw new ProfileValidationError(
       formatMissingProfileFieldsMessage([
         CUSTOMER_PROFILE_REQUIRED_FIELD_LABELS.phone,
-      ]),
+      ]) ?? "Mobile Phone is required.",
       "phone",
     );
   }
