@@ -136,7 +136,6 @@ function assertOpenForReschedule(
   row: LoadedAppointment,
 ): { error: StaffRescheduleError } | null {
   if (row.status === "cancelled") return { error: "conflict" };
-  if (row.service_started_at || row.service_ended_at) return { error: "conflict" };
   if (
     row.status !== "confirmed" &&
     row.status !== "pending_confirmation"
@@ -230,6 +229,10 @@ export async function rescheduleStaffAppointment(
       appointment_time: assignment.insertion.appointmentTime,
       scheduled_start: assignment.insertion.scheduledStart,
       time_preference: assignment.insertion.usedPreference,
+      service_started_at: null,
+      service_ended_at: null,
+      en_route_sms_sent_at: null,
+      reminder_sms_sent_at: null,
     })
     .eq("id", appointmentId)
     .select(STAFF_RESCHEDULE_SELECT)

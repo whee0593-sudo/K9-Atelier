@@ -15,49 +15,15 @@ describe("staff calendar appointment actions", () => {
     assert.equal(canStaffCancelAppointment({ status: "cancelled" }), false);
   });
 
-  it("lets staff change date and time before the visit starts", () => {
+  it("lets staff change date and time on pending, confirmed, and checked-out visits", () => {
     assert.equal(
-      canStaffRescheduleAppointment({
-        status: "confirmed",
-        serviceStartedAt: null,
-        serviceEndedAt: null,
-      }),
+      canStaffRescheduleAppointment({ status: "confirmed" }),
       true,
     );
     assert.equal(
-      canStaffRescheduleAppointment({
-        status: "pending_confirmation",
-        serviceStartedAt: null,
-        serviceEndedAt: null,
-      }),
+      canStaffRescheduleAppointment({ status: "pending_confirmation" }),
       true,
     );
-  });
-
-  it("hides date changes after check-in or cancellation", () => {
-    assert.equal(
-      canStaffRescheduleAppointment({
-        status: "confirmed",
-        serviceStartedAt: "2026-09-24T15:00:00.000Z",
-        serviceEndedAt: null,
-      }),
-      false,
-    );
-    assert.equal(
-      canStaffRescheduleAppointment({
-        status: "confirmed",
-        serviceStartedAt: "2026-09-24T15:00:00.000Z",
-        serviceEndedAt: "2026-09-24T16:00:00.000Z",
-      }),
-      false,
-    );
-    assert.equal(
-      canStaffRescheduleAppointment({
-        status: "cancelled",
-        serviceStartedAt: null,
-        serviceEndedAt: null,
-      }),
-      false,
-    );
+    assert.equal(canStaffRescheduleAppointment({ status: "cancelled" }), false);
   });
 });

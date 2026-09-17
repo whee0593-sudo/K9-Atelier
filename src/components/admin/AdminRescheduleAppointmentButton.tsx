@@ -276,6 +276,9 @@ export function AdminRescheduleAppointmentButton({
             <p className="mt-4 text-sm leading-relaxed text-text-muted">
               The customer will receive an email with the new date and time. No
               policy fee is charged for a staff change.
+              {appointment.serviceStartedAt || appointment.serviceEndedAt
+                ? " Any recorded check-in for this visit will be cleared."
+                : ""}
             </p>
             {error ? (
               <p className="mt-3 text-sm text-red-700" role="alert">
