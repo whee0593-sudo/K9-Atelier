@@ -57,6 +57,11 @@ export function AdminRescheduleAppointmentButton({
     () => days.find((day) => day.date === nextDate),
     [days, nextDate],
   );
+  const slotChoices = useMemo(() => {
+    if (selectedDay?.slots.length) return selectedDay.slots;
+    if (preview && nextDate) return listHourlyStartMinutes();
+    return selectedDay?.slots ?? [];
+  }, [preview, nextDate, selectedDay]);
   const minDate = todayInBusinessTimezone();
 
   useEffect(() => {
@@ -254,13 +259,13 @@ export function AdminRescheduleAppointmentButton({
                   <option value="">
                     {loadingDays ? "Loading times…" : "Select a time"}
                   </option>
-                  {(selectedDay?.slots ?? []).map((slot) => (
+                  {slotChoices.map((slot) => (
                     <option key={slot} value={slot}>
                       {formatHourLabel(slot / 60)}
                     </option>
                   ))}
                 </select>
-                {nextDate && !loadingDays && (selectedDay?.slots.length ?? 0) === 0 ? (
+                {nextDate && !loadingDays && slotChoices.length === 0 ? (
                   <p className="mt-2 text-sm text-text-muted">
                     No open start times on that date. Choose another day.
                   </p>
