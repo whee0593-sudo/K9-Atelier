@@ -10,6 +10,10 @@ import type {
   AppointmentRow,
 } from "@/lib/appointments/types";
 import {
+  formatArrivalWindow,
+  preferenceFromStart,
+} from "@/lib/booking-schedule";
+import {
   isBookableWeekday,
   parseDateValue,
 } from "@/lib/booking-slots";
@@ -145,6 +149,18 @@ function assertOpenForReschedule(
   return null;
 }
 
+function isCompletedVisit(row: LoadedAppointment) {
+  return Boolean(row.service_started_at || row.service_ended_at);
+}
+
+function scheduleFromSlot(slotStartMinutes: number, durationMinutes: number) {
+  return {
+    appointmentTime: formatArrivalWindow(slotStartMinutes, durationMinutes),
+    scheduledStart: slotStartMinutes,
+    timePreference: preferenceFromStart(slotStartMinutes),
+  };
+}
+
 export async function listStaffAppointmentAvailability(
   appointmentId: string,
 ): Promise<
@@ -169,8 +185,12 @@ export async function listStaffAppointmentAvailability(
   if (!base) return { error: "misconfigured" };
 
   const today = todayInBusinessTimezone();
-  const extraDates =
-    today && isBookableWeekday(parseDateValue(today)) ? [today] : [];
+  const extraDates = [today, loaded.row.appointment_date].filter(
+    (date, index, all) =>
+      Boolean(date) &&
+      isBookableWeekday(parseDateValue(date)) &&
+      all.indexOf(date) === index,
+  );
   const result = await getAvailabilityForAddress({
     point,
     zip: loaded.row.address_zip,
@@ -203,36 +223,41 @@ export async function rescheduleStaffAppointment(
   const blocked = assertOpenForReschedule(loaded.row);
   if (blocked) return blocked;
 
-  const point = visitPoint(loaded.row);
-  if (!point) return { error: "conflict" };
+  const durationMinutes = visitDurationMinutes(loaded.row);
+  const completed = isCompletedVisit(loaded.row);
+  let nextSchedule = scheduleFromSlot(parsed.slotStartMinutes, durationMinutes);
 
-  const base = await getBaseGeoPoint();
-  if (!base) return { error: "misconfigured" };
-
-  const assignment = await assignArrivalWindow({
-    date: parsed.date,
-    point,
-    zip: loaded.row.address_zip,
-    durationMinutes: visitDurationMinutes(loaded.row),
-    slotStartMinutes: parsed.slotStartMinutes,
-    base,
-    excludeAppointmentIds: [appointmentId],
-    allowUnbookableDate: true,
-  });
-  if ("error" in assignment) return assignment;
+  if (!completed) {
+    const point = visitPoint(loaded.row);
+    if (!point) return { error: "conflict" };
+    const base = await getBaseGeoPoint();
+    if (!base) return { error: "misconfigured" };
+    const assignment = await assignArrivalWindow({
+      date: parsed.date,
+      point,
+      zip: loaded.row.address_zip,
+      durationMinutes,
+      slotStartMinutes: parsed.slotStartMinutes,
+      base,
+      excludeAppointmentIds: [appointmentId],
+      allowUnbookableDate: true,
+    });
+    if ("error" in assignment) return assignment;
+    nextSchedule = {
+      appointmentTime: assignment.insertion.appointmentTime,
+      scheduledStart: assignment.insertion.scheduledStart,
+      timePreference: assignment.insertion.usedPreference,
+    };
+  }
 
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("appointments")
     .update({
       appointment_date: parsed.date,
-      appointment_time: assignment.insertion.appointmentTime,
-      scheduled_start: assignment.insertion.scheduledStart,
-      time_preference: assignment.insertion.usedPreference,
-      service_started_at: null,
-      service_ended_at: null,
-      en_route_sms_sent_at: null,
-      reminder_sms_sent_at: null,
+      appointment_time: nextSchedule.appointmentTime,
+      scheduled_start: nextSchedule.scheduledStart,
+      time_preference: nextSchedule.timePreference,
     })
     .eq("id", appointmentId)
     .select(STAFF_RESCHEDULE_SELECT)
@@ -247,14 +272,20 @@ export async function rescheduleStaffAppointment(
   const appointment = mapAppointmentRowToAdminRecord(
     data as unknown as AppointmentRow,
   );
-  const contact: CustomerContact | null = contactFromAdminAppointment(appointment);
-  if (contact) {
-    try {
-      await notifyCustomerAppointmentChange("reschedule", appointment, contact, {
-        fee: 0,
-      });
-    } catch (emailError) {
-      console.error("staff reschedule email failed:", emailError);
+  if (!completed) {
+    const contact: CustomerContact | null =
+      contactFromAdminAppointment(appointment);
+    if (contact) {
+      try {
+        await notifyCustomerAppointmentChange(
+          "reschedule",
+          appointment,
+          contact,
+          { fee: 0 },
+        );
+      } catch (emailError) {
+        console.error("staff reschedule email failed:", emailError);
+      }
     }
   }
 

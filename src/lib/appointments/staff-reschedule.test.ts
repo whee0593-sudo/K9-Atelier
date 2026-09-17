@@ -5,7 +5,7 @@ import {
   parseStaffRescheduleInput,
 } from "@/lib/appointments/staff-reschedule-input";
 import { getUpcomingBookableDates } from "@/lib/booking-slots";
-import { todayInBusinessTimezone } from "@/lib/sms/schedule";
+import { addDaysToIsoDate, todayInBusinessTimezone } from "@/lib/sms/schedule";
 
 describe("staff reschedule input", () => {
   it("requires a date and hourly start time", () => {
@@ -45,7 +45,19 @@ describe("staff reschedule input", () => {
     );
   });
 
-  it("rejects a past weekday", () => {
+  it("accepts a recent weekday so staff can correct a completed visit", () => {
+    const today = todayInBusinessTimezone();
+    for (let days = 0; days <= 7; days += 1) {
+      const date = addDaysToIsoDate(today, -days);
+      const weekday = new Date(`${date}T12:00:00`).getDay();
+      if (weekday === 0 || weekday === 6) continue;
+      assert.equal(isStaffAssignableDate(date), true);
+      return;
+    }
+    assert.fail("expected a weekday in the last week");
+  });
+
+  it("rejects a weekday far in the past", () => {
     assert.equal(isStaffAssignableDate("2020-01-06"), false);
     assert.deepEqual(
       parseStaffRescheduleInput({
