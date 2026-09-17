@@ -48,6 +48,40 @@ function readOptionalText(record: Record<string, unknown>, key: string, maxLengt
 
 export const CUSTOMER_ADMIN_NOTES_MAX_LENGTH = 8000;
 
+export const CUSTOMER_PROFILE_REQUIRED_FIELD_LABELS = {
+  firstName: "First Name",
+  lastName: "Last Name",
+  phone: "Mobile Phone",
+  email: "Email",
+} as const;
+
+export function missingCustomerProfileFieldLabels(input: {
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+  email?: string | null;
+}): string[] {
+  const missing: string[] = [];
+  if (!input.firstName?.trim()) {
+    missing.push(CUSTOMER_PROFILE_REQUIRED_FIELD_LABELS.firstName);
+  }
+  if (!input.lastName?.trim()) {
+    missing.push(CUSTOMER_PROFILE_REQUIRED_FIELD_LABELS.lastName);
+  }
+  if (input.email !== undefined && !input.email.trim()) {
+    missing.push(CUSTOMER_PROFILE_REQUIRED_FIELD_LABELS.email);
+  }
+  if (!input.phone?.trim()) {
+    missing.push(CUSTOMER_PROFILE_REQUIRED_FIELD_LABELS.phone);
+  }
+  return missing;
+}
+
+export function formatMissingProfileFieldsMessage(missing: string[]) {
+  if (missing.length === 0) return null;
+  return `This profile cannot be saved until you complete: ${missing.join(", ")}.`;
+}
+
 export function validateCustomerId(id: string | undefined): string {
   if (!id || !UUID_PATTERN.test(id)) {
     throw new ProfileValidationError("Invalid customer id.");
@@ -70,11 +104,32 @@ export function validateCustomerAdminNotes(body: unknown): string {
 
 export function validateProfileWriteInput(body: unknown): CustomerProfileWriteInput {
   const record = assertPlainObject(body);
-  const firstName = readRequiredName(record, "firstName", "First name");
-  const lastName = readRequiredName(record, "lastName", "Last name");
+  const missing = missingCustomerProfileFieldLabels({
+    firstName: typeof record.firstName === "string" ? record.firstName : "",
+    lastName: typeof record.lastName === "string" ? record.lastName : "",
+    phone: typeof record.phone === "string" ? record.phone : "",
+  });
+  const incompleteMessage = formatMissingProfileFieldsMessage(missing);
+  if (incompleteMessage) {
+    const firstField =
+      missing[0] === CUSTOMER_PROFILE_REQUIRED_FIELD_LABELS.firstName
+        ? "firstName"
+        : missing[0] === CUSTOMER_PROFILE_REQUIRED_FIELD_LABELS.lastName
+          ? "lastName"
+          : "phone";
+    throw new ProfileValidationError(incompleteMessage, firstField);
+  }
+
+  const firstName = readRequiredName(record, "firstName", "First Name");
+  const lastName = readRequiredName(record, "lastName", "Last Name");
   const phoneRaw = readOptionalText(record, "phone", 32);
   if (!phoneRaw) {
-    throw new ProfileValidationError("Mobile phone is required.", "phone");
+    throw new ProfileValidationError(
+      formatMissingProfileFieldsMessage([
+        CUSTOMER_PROFILE_REQUIRED_FIELD_LABELS.phone,
+      ]),
+      "phone",
+    );
   }
   const phone = normalizePhoneToE164(phoneRaw);
   if (!phone) {

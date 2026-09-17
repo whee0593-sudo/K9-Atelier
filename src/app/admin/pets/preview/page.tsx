@@ -59,9 +59,33 @@ const previewCustomers: StaffCustomerRecord[] = [
     canDelete: true,
     canFreeze: true,
   },
+  {
+    profile: {
+      id: "44444444-4444-4444-8444-444444444444",
+      email: "tiafrancavilla@gmail.com",
+      firstName: "",
+      lastName: "",
+      phone: "+15613466778",
+      preferredContact: "",
+      emergencyContactName: "",
+      emergencyContactPhone: "",
+      emergencyContactRelationship: "",
+    },
+    pets: [],
+    paymentMethods: [],
+    kind: "customer",
+    frozen: false,
+    canDelete: true,
+    canFreeze: true,
+  },
 ];
 
-export default function CustomerRecordsPreviewPage() {
+export default async function CustomerRecordsPreviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ customer?: string }>;
+}) {
+  const query = await searchParams;
   return (
     <div>
       <p className="mb-4 rounded-xl border border-gold/40 bg-lavender-light/50 px-4 py-2 text-center text-xs uppercase tracking-[0.16em] text-gold-dark">
@@ -75,7 +99,11 @@ export default function CustomerRecordsPreviewPage() {
         accounts.
       </p>
       <div className="mt-8">
-        <CustomerRecordsPanel preview previewCustomers={previewCustomers} />
+        <CustomerRecordsPanel
+          preview
+          previewCustomers={previewCustomers}
+          focusCustomerId={query.customer}
+        />
       </div>
     </div>
   );

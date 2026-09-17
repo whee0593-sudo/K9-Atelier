@@ -165,6 +165,18 @@ export function validateCreateAppointmentInput(
   );
   const travelFee = readNumber(record, "travelFee", "Travel fee");
   const estimatedTotal = readNumber(record, "estimatedTotal", "Estimated total");
+  const customerFirstName = readString(
+    record,
+    "customerFirstName",
+    "First Name",
+    80,
+  );
+  const customerLastName = readString(
+    record,
+    "customerLastName",
+    "Last Name",
+    80,
+  );
   const customerPhone = normalizePhoneToE164(
     readString(record, "customerPhone", "Mobile phone", 32),
   );
@@ -235,6 +247,8 @@ export function validateCreateAppointmentInput(
     estimatedTotal,
     paymentMethodId,
     customerPhone,
+    customerFirstName,
+    customerLastName,
     referralCode:
       typeof record.referralCode === "string"
         ? record.referralCode.trim()

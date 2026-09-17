@@ -170,7 +170,11 @@ export async function createAppointment(
 
   const { error: phoneError } = await supabase
     .from("profiles")
-    .update({ phone: input.customerPhone })
+    .update({
+      phone: input.customerPhone,
+      first_name: input.customerFirstName,
+      last_name: input.customerLastName,
+    })
     .eq("id", user.id);
 
   if (phoneError) {

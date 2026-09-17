@@ -5,10 +5,11 @@ import { AdminStaffSignInLink } from "@/components/admin/AdminStaffSignInLink";
 import { readRequestPathname } from "@/lib/request-path";
 import { getStaffSession, isOwnerUser } from "@/lib/staff/auth";
 
-function isAppointmentsPreviewPath(pathname: string) {
+function isStafflessPreviewPath(pathname: string) {
   return (
     pathname === "/admin/appointments/preview" ||
-    pathname.startsWith("/admin/appointments/preview/")
+    pathname.startsWith("/admin/appointments/preview/") ||
+    pathname === "/admin/pets/preview"
   );
 }
 
@@ -29,7 +30,7 @@ export default async function AdminLayout({
   const pathname = await readRequestPathname("/admin");
   const next = pathname.startsWith("/admin") ? pathname : "/admin";
 
-  if ("error" in session && isAppointmentsPreviewPath(pathname)) {
+  if ("error" in session && isStafflessPreviewPath(pathname)) {
     return (
       <AdminChrome banner={null} showTeam={false}>
         {children}
