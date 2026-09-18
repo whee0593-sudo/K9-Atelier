@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { StaffBookingDatePicker } from "@/components/admin/StaffBookingDatePicker";
 import { formatHourLabel } from "@/lib/appointments/closures";
 import { formatPrice } from "@/lib/business";
 import {
@@ -11,7 +12,6 @@ import {
 } from "@/lib/services";
 import {
   fallbackStaffScheduleDays,
-  formatStaffDateOption,
   selectableStaffDays,
   slotsForStaffDate,
   staffScheduleHint,
@@ -597,26 +597,18 @@ export function BookForCustomerForm({
           <label className={labelClass} htmlFor="appointment-date">
             Date
           </label>
-          <select
+          <StaffBookingDatePicker
             id="appointment-date"
-            className={fieldClass}
             value={appointmentDate}
-            onChange={(event) => {
-              setAppointmentDate(event.target.value);
+            openDates={openDays.map((day) => day.date)}
+            disabled={availabilityLoading}
+            loading={availabilityLoading}
+            preview={preview}
+            onChange={(date) => {
+              setAppointmentDate(date);
               setSlotStartMinutes("");
             }}
-            disabled={availabilityLoading}
-            required
-          >
-            <option value="">
-              {availabilityLoading ? "Loading dates…" : "Select a date"}
-            </option>
-            {openDays.map((day) => (
-              <option key={day.date} value={day.date}>
-                {formatStaffDateOption(day.date)}
-              </option>
-            ))}
-          </select>
+          />
         </div>
         <div>
           <label className={labelClass} htmlFor="appointment-slot">
