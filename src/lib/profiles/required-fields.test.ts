@@ -6,6 +6,7 @@ import {
   validateCreateAppointmentInput,
 } from "@/lib/appointments/validation";
 import { getUpcomingBookableDates } from "@/lib/booking-slots";
+import { accountConfig } from "@/lib/account-fields";
 import {
   formatMissingProfileFieldsMessage,
   missingCustomerProfileFieldLabels,
@@ -117,6 +118,21 @@ describe("required customer profile fields", () => {
     const input = validateCreateAppointmentInput(validAppointmentBody());
     assert.equal(input.customerFirstName, "Tia");
     assert.equal(input.customerLastName, "Francavilla");
+  });
+
+  it("treats a saved payment method as optional on the customer profile", () => {
+    const payment = accountConfig.sections.find(
+      (section) => section.id === "payment",
+    );
+    const savedCards = payment?.fields.find((field) => field.id === "savedCards");
+    assert.equal(savedCards?.required, false);
+  });
+
+  it("accepts a booking without a saved payment method", () => {
+    const body = validAppointmentBody();
+    delete body.paymentMethodId;
+    const input = validateCreateAppointmentInput(body);
+    assert.equal(input.paymentMethodId, undefined);
   });
 
   it("saves staff edits to a customer file with the admin client", () => {

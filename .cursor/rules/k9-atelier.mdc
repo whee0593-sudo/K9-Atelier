@@ -19,7 +19,7 @@ Mobile pet grooming business. Website at k9atelier.com.
 - Email: penny@k9atelier.com
 
 ## Business rules
-- Booking: valid payment method required; **no charge at booking** (card on file via Stripe Setup Intent when built)
+- Booking: payment method is optional in the customer profile and at reservation; **no charge at booking** (card on file via Stripe Setup Intent when built)
 - Hours: Mon–Fri 9:00–16:00 (America/New_York)
 - Service area: 10 mi free, then $6.50/mile one-way beyond, max 20 mi
 - Over 45 lbs: hand stripping (no bath) + end-of-life care only

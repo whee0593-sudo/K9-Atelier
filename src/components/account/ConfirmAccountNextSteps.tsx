@@ -25,9 +25,9 @@ export function ConfirmAccountNextSteps({
         Your appointment is confirmed. You are not charged now.
       </p>
       <p className="font-body text-sm leading-relaxed text-taupe">
-        Next, confirm rabies vaccination status for {petLabel} and add a card on
-        file in your account. You may also upload a current rabies certificate
-        or vaccination record.
+        Next, confirm rabies vaccination status for {petLabel} in your account.
+        You may also add a card on file, and you may upload a current rabies
+        certificate or vaccination record.
       </p>
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Link href={ACCOUNT_SETUP_PATH} className={bookingPrimaryBtnClass}>

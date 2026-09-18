@@ -42,7 +42,7 @@ describe("AccountNavLinks", () => {
     assert.match(html, /Personal Information[\s\S]*Completed/);
     assert.match(html, /Service Addresses[\s\S]*Completed/);
     assert.match(html, /My Pets[\s\S]*Bella, Max/);
-    assert.match(html, /Payment Methods[\s\S]*Completed/);
+    assert.match(html, /Payment Methods[\s\S]*1 saved/);
     assert.match(html, /Referral Rewards[\s\S]*\$18\.00/);
     assert.match(html, /Booking History[\s\S]*Aug 12, 2026/);
     assert.match(html, /Password/);

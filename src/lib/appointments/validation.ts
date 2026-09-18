@@ -1,4 +1,4 @@
-import { business } from "@/lib/business";
+import { bookingRequiresPaymentMethod, business } from "@/lib/business";
 import type { AppointmentWriteInput } from "@/lib/appointments/types";
 import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
 import {
@@ -204,13 +204,17 @@ export function validateCreateAppointmentInput(
       "servicePoliciesConsent",
     );
   }
-  const paymentMethodId = readString(
-    record,
-    "paymentMethodId",
-    "Payment method",
-    80,
-  );
-  if (!UUID_PATTERN.test(paymentMethodId)) {
+  const paymentMethodRaw = record.paymentMethodId;
+  let paymentMethodId: string | undefined;
+  if (typeof paymentMethodRaw === "string" && paymentMethodRaw.trim()) {
+    paymentMethodId = paymentMethodRaw.trim();
+    if (!UUID_PATTERN.test(paymentMethodId)) {
+      throw new AppointmentValidationError(
+        "Please select a saved payment method for this appointment.",
+        "paymentMethodId",
+      );
+    }
+  } else if (bookingRequiresPaymentMethod()) {
     throw new AppointmentValidationError(
       "Please select a saved payment method for this appointment.",
       "paymentMethodId",

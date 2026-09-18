@@ -45,7 +45,7 @@ export function AccountFieldPreview({ field }: { field: AccountField }) {
   if (field.type === "payment-list") {
     return (
       <div className="rounded-xl border border-dashed border-lavender/50 bg-lavender-light/30 px-4 py-8 text-center text-sm text-text-muted">
-        No saved cards yet. Add a payment method when booking opens.
+        No saved cards yet. Saving a card is optional.
       </div>
     );
   }

@@ -1,4 +1,4 @@
-import { business } from "@/lib/business";
+import { bookingRequiresPaymentMethod, business } from "@/lib/business";
 import {
   mapAppointmentRowToAdminRecord,
   mapAppointmentRowToRecord,
@@ -126,11 +126,15 @@ export async function createAppointment(
     return { error: "conflict" };
   }
 
-  const paymentMethod = await getCustomerPaymentMethod(
-    user.id,
-    input.paymentMethodId,
-  );
-  if (!paymentMethod) return { error: "payment_required" };
+  if (input.paymentMethodId) {
+    const paymentMethod = await getCustomerPaymentMethod(
+      user.id,
+      input.paymentMethodId,
+    );
+    if (!paymentMethod) return { error: "payment_required" };
+  } else if (bookingRequiresPaymentMethod()) {
+    return { error: "payment_required" };
+  }
 
   const base = await getBaseGeoPoint();
   if (!base) return { error: "server" };
@@ -219,7 +223,7 @@ export async function createAppointment(
       timezone: business.booking.timezone,
       estimated_total: input.estimatedTotal,
       new_client_deposit: 0,
-      payment_method_id: input.paymentMethodId,
+      payment_method_id: input.paymentMethodId ?? null,
       vaccination_status_at_booking: vaccinationStatus,
       status,
       confirmed_at: status === "confirmed" ? new Date().toISOString() : null,

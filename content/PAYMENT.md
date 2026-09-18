@@ -4,9 +4,9 @@
 
 ## Policy (updated)
 
-- **Pet profile:** You can save a pet profile without a card on file.
-- **At booking:** After date and time are chosen, a **valid payment method** is required to reserve. The customer adds or selects which saved card to use for that appointment.
-- **At booking:** **No charge** — card is on file only.
+- **Pet profile / customer account:** Saving a card is **optional**. The Add payment method control stays in the account.
+- **At booking:** A payment method is **not required** to reserve. The customer may add or select a saved card, or skip and add one later.
+- **At booking:** **No charge** — if a card is saved, it is on file only.
 - **After service:** Charge the selected card for the appointment total.
 - **Later charges:** cancellation / no-show fees per the published policy.
 

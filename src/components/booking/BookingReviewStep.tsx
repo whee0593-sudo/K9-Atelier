@@ -3,7 +3,7 @@
 import { Elements } from "@stripe/react-stripe-js";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { formatPrice } from "@/lib/business";
+import { bookingRequiresPaymentMethod, formatPrice } from "@/lib/business";
 import {
   bookingIncludesCreativeColoring,
   formatServicePrice,
@@ -204,7 +204,7 @@ export function BookingReviewStep({
           paymentResult.methods[0];
         if (defaultMethod) setSelectedPaymentMethodId(defaultMethod.id);
       } catch {
-        // Profile phone and cards are confirmed before reserve.
+        // Saved phone and cards are optional helpers before reserve.
       }
     }
 
@@ -290,7 +290,7 @@ export function BookingReviewStep({
       return;
     }
 
-    if (!selectedPaymentMethodId) {
+    if (bookingRequiresPaymentMethod() && !selectedPaymentMethodId) {
       setError(
         "Please add a payment method to finish this reservation. You will not be charged when you book.",
       );
@@ -329,7 +329,7 @@ export function BookingReviewStep({
         addressLat: travelQuote.lat,
         addressLon: travelQuote.lon,
         estimatedTotal,
-        paymentMethodId: selectedPaymentMethodId,
+        paymentMethodId: selectedPaymentMethodId ?? undefined,
         customerPhone: phone,
         customerFirstName: firstName.trim(),
         customerLastName: lastName.trim(),
@@ -522,9 +522,8 @@ export function BookingReviewStep({
         {paymentMethods.length === 0 && !cardSetup ? (
           <div>
             <p className="font-body text-sm leading-relaxed text-taupe">
-              Add a valid card to complete this reservation. You will not be
-              charged when you book — payment is settled after your
-              appointment.
+              You may add a card now. This is optional — you will not be charged
+              when you book. Payment is settled after your appointment.
             </p>
             <button
               type="button"

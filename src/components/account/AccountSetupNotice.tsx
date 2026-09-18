@@ -8,8 +8,8 @@ export function AccountSetupNotice({
 }) {
   const body =
     step === "pets"
-      ? "Confirm your dog’s rabies vaccination status, then add a card on file. You may also upload a rabies certificate or vaccination record. You are not charged now."
-      : "Save a card on file for after the visit. You are not charged now.";
+      ? "Confirm your dog’s rabies vaccination status. You may also add a card on file, and you may upload a rabies certificate or vaccination record. You are not charged now."
+      : "You may save a card for after the visit. This is optional. You are not charged now.";
 
   return (
     <div className="rounded-xl border border-gold/40 bg-lavender-light/40 px-4 py-3 text-sm text-text">

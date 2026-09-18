@@ -52,6 +52,11 @@ export function formatCompletionStatus(complete: boolean) {
   return complete ? "Completed" : "Incomplete";
 }
 
+export function formatPaymentMethodSummary(count: number) {
+  if (count <= 0) return "None";
+  return count === 1 ? "1 saved" : `${count} saved`;
+}
+
 export function formatReferralCodeSummary(codes: string[]) {
   const code = codes.map((value) => value.trim()).find(Boolean);
   if (!code) return null;
@@ -165,7 +170,7 @@ export function buildAccountNavSummaries(input: {
   }
 
   if (input.paymentMethodCount != null) {
-    summaries.payment = formatCompletionStatus(input.paymentMethodCount > 0);
+    summaries.payment = formatPaymentMethodSummary(input.paymentMethodCount);
   }
 
   if (input.availableCreditCents != null) {

@@ -57,7 +57,8 @@
 **管理员专用页面（客人看不到）：** `/admin/pets` — 查看/编辑 Service & Product Notes
 
 ### 4. Payment Methods（付款方式）
-- 保存有效信用卡（Stripe，预约时不扣款）
+- **可选** — 档案里可以添加信用卡，但不是预约的必填项
+- 保存有效信用卡（Stripe，添加时不扣款）
 - 以后可扣服务费、取消费等
 
 ### 5. Booking History（预约记录）
