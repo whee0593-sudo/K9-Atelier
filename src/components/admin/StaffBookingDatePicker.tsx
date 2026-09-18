@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useId, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { AdminCalendarMonthGrid } from "@/components/admin/AdminCalendarMonthGrid";
 import type { AdminCalendarDay } from "@/lib/appointments/calendar";
@@ -9,7 +9,6 @@ import {
   calendarMonthFromDate,
   currentBusinessCalendarMonth,
   shiftCalendarMonth,
-  staffPickerSelectableDates,
 } from "@/lib/appointments/calendar-month";
 import { buildPreviewCalendarMonth } from "@/lib/appointments/calendar-preview";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
@@ -51,7 +50,6 @@ export function StaffBookingDatePicker({
         ),
   );
   const [occupancyLoading, setOccupancyLoading] = useState(false);
-  const selectableDates = useMemo(() => staffPickerSelectableDates(days), [days]);
 
   useEffect(() => {
     setMounted(true);
@@ -129,7 +127,7 @@ export function StaffBookingDatePicker({
             </h3>
             <p className="mt-1 text-sm text-text-muted">
               Gray days are in the past or fully booked. White days still
-              have room. Click a day to book it.
+              have room. Click any day to choose it.
             </p>
           </div>
           <button
@@ -147,7 +145,6 @@ export function StaffBookingDatePicker({
             days={days}
             selectedDate={value || null}
             loading={occupancyLoading && days.length === 0}
-            selectableDates={selectableDates}
             onPrevMonth={() =>
               setMonth((current) => shiftCalendarMonth(current, -1))
             }
