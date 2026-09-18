@@ -9,7 +9,8 @@ function isStafflessPreviewPath(pathname: string) {
   return (
     pathname === "/admin/appointments/preview" ||
     pathname.startsWith("/admin/appointments/preview/") ||
-    pathname === "/admin/pets/preview"
+    pathname === "/admin/pets/preview" ||
+    pathname === "/admin/book-for-customer/preview"
   );
 }
 
