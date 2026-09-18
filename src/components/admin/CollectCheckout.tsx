@@ -1200,7 +1200,6 @@ function PayStep({
               onChange={() => onSelectMethod(method.id)}
             />
             {formatPaymentMethodLabel(method)}
-            {method.isDefault ? " · Saved" : ""}
           </label>
         ))}
         <label className="flex items-center gap-3 rounded-2xl border border-lavender/40 bg-cream px-4 py-3 text-sm">
