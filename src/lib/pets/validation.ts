@@ -1,6 +1,8 @@
 import { parseDateOfBirth } from "@/lib/pet-age";
 import {
   PET_SEX_OPTIONS,
+  parsePetRabiesStatus,
+  type PetRabiesStatus,
   type PetWriteInput,
 } from "@/lib/pets/types";
 
@@ -24,6 +26,7 @@ const CREATE_FIELDS = [
   "temperamentNotes",
   "healthComfortNotes",
   "groomingPreferences",
+  "rabiesStatus",
 ] as const;
 
 const UPDATE_FIELDS = [...CREATE_FIELDS] as const;
@@ -179,6 +182,18 @@ function normalizeSex(value: unknown): string | null {
   return trimmed;
 }
 
+function normalizeRabiesStatus(value: unknown): PetRabiesStatus | null {
+  if (value == null || value === "") return null;
+  const parsed = parsePetRabiesStatus(value);
+  if (!parsed) {
+    throw new PetValidationError(
+      "Choose current rabies vaccination or a veterinarian-issued medical exemption.",
+      "rabiesStatus",
+    );
+  }
+  return parsed;
+}
+
 function assertBirthStrategy(
   dateOfBirth: string | null,
   approximateAgeYears: number | null,
@@ -232,6 +247,8 @@ function validateWriteFields(
     body.groomingPreferences !== undefined
       ? normalizeOptionalText(body.groomingPreferences, "groomingPreferences", MAX_NOTES_LENGTH)
       : undefined;
+  const rabiesStatus =
+    body.rabiesStatus !== undefined ? normalizeRabiesStatus(body.rabiesStatus) : undefined;
 
   const resolvedDate =
     dateOfBirth !== undefined ? dateOfBirth : mode === "create" ? null : undefined;
@@ -258,6 +275,7 @@ function validateWriteFields(
       temperamentNotes: temperamentNotes ?? null,
       healthComfortNotes: healthComfortNotes ?? null,
       groomingPreferences: groomingPreferences ?? null,
+      rabiesStatus: rabiesStatus ?? null,
     };
   }
 
@@ -270,7 +288,8 @@ function validateWriteFields(
     sex === undefined &&
     temperamentNotes === undefined &&
     healthComfortNotes === undefined &&
-    groomingPreferences === undefined
+    groomingPreferences === undefined &&
+    rabiesStatus === undefined
   ) {
     throw new PetValidationError("No valid fields provided to update.");
   }
@@ -291,6 +310,7 @@ function validateWriteFields(
   if (groomingPreferences !== undefined) {
     partial.groomingPreferences = groomingPreferences;
   }
+  if (rabiesStatus !== undefined) partial.rabiesStatus = rabiesStatus;
 
   return partial as PetWriteInput;
 }

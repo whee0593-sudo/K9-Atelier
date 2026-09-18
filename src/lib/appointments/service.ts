@@ -15,11 +15,11 @@ import {
 } from "@/lib/pets/auth";
 import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
 import { mapPetRowToRecord } from "@/lib/pets/map";
-import type { PetRow } from "@/lib/pets/types";
+import { PET_SELECT, type PetRow } from "@/lib/pets/types";
 import { AppointmentValidationError } from "@/lib/appointments/validation";
 import {
-  vaccinationBookingNeedsAdminConfirmation,
-  vaccinationReadyToBook,
+  petHasConfirmedRabiesStatus,
+  vaccinationStatusSnapshotForBooking,
 } from "@/lib/vaccinations/booking";
 import {
   contactFromAdminAppointment,
@@ -105,9 +105,7 @@ export async function createAppointment(
   const supabase = await createAuthenticatedSupabaseClient();
   const { data: petRow, error: petError } = await supabase
     .from("pets")
-    .select(
-      "id, customer_id, name, breed, weight_lbs, date_of_birth, approximate_age_years, sex, temperament_notes, health_comfort_notes, grooming_preferences, archived_at, created_at, updated_at",
-    )
+    .select(PET_SELECT)
     .eq("id", input.petId)
     .eq("customer_id", user.id)
     .is("archived_at", null)
@@ -122,9 +120,9 @@ export async function createAppointment(
   const [pet] = await attachVaccinationSummaries([
     mapPetRowToRecord(petRow as PetRow),
   ]);
-  const vaccinationStatus = pet.vaccinationBookingStatus ?? "missing";
+  const vaccinationStatus = vaccinationStatusSnapshotForBooking(pet);
 
-  if (!vaccinationReadyToBook(vaccinationStatus)) {
+  if (!petHasConfirmedRabiesStatus(pet)) {
     return { error: "conflict" };
   }
 
@@ -195,9 +193,7 @@ export async function createAppointment(
     }
   }
 
-  const status = vaccinationBookingNeedsAdminConfirmation(vaccinationStatus)
-    ? "pending_confirmation"
-    : "confirmed";
+  const status = "confirmed";
 
   const { data, error } = await supabase
     .from("appointments")

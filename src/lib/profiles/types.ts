@@ -18,6 +18,8 @@ export type CustomerProfileWriteInput = {
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
   emergencyContactRelationship: string | null;
+  /** Staff-only: login email. Customers cannot change email from My Account. */
+  email?: string;
 };
 
 export type CustomerProfileRow = {

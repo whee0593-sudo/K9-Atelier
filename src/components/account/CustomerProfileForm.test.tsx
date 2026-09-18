@@ -71,7 +71,7 @@ describe("customer profile required fields", () => {
     const html = renderToStaticMarkup(
       <CustomerProfileForm
         profile={incompleteProfile}
-        saveUrl="/api/admin/customers/11111111-1111-4111-8111-111111111111"
+        saveUrl="/api/account/profile"
       />,
     );
     assert.match(
@@ -81,5 +81,25 @@ describe("customer profile required fields", () => {
     assert.match(html, /First Name is required\./);
     assert.match(html, /Last Name is required\./);
     assert.doesNotMatch(html, /Mobile Phone is required\./);
+  });
+
+  it("lets staff edit an incomplete customer file without locking the form", () => {
+    const html = renderToStaticMarkup(
+      <CustomerProfileForm
+        profile={incompleteProfile}
+        saveUrl="/api/admin/customers/11111111-1111-4111-8111-111111111111"
+        audience="staff"
+        preview
+      />,
+    );
+    assert.match(html, /type="submit"/);
+    assert.match(html, />Save Profile</);
+    assert.doesNotMatch(
+      html,
+      /This profile cannot be saved until you complete/,
+    );
+    assert.doesNotMatch(html, /First Name is required\./);
+    assert.match(html, /tiafrancavilla@gmail.com/);
+    assert.doesNotMatch(html, /readOnly/);
   });
 });

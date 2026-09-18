@@ -22,7 +22,7 @@ export default async function LoginPage({ searchParams }: Props) {
         </h1>
         <p className="font-body mx-auto mt-6 max-w-md text-sm leading-relaxed text-taupe">
           {adminFlow
-            ? "Sign in with your team email to review vaccinations and use admin tools."
+            ? "Sign in with your team email to review customer records and use admin tools."
             : bookingFlow
               ? "Sign in with your email and password to reserve or manage your dog's private grooming appointment."
               : "Sign in with your email and password to manage your profile, pets, and appointments."}

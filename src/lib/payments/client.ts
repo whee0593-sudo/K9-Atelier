@@ -96,3 +96,37 @@ export async function deleteCustomerPaymentMethod(
   });
   await readPaymentResponse<{ ok: boolean }>(response);
 }
+
+export async function createStaffPaymentSetupIntent(customerId: string): Promise<{
+  clientSecret: string;
+  publishableKey: string;
+}> {
+  const response = await paymentFetch(`/api/admin/customers/${customerId}/setup-intent`, {
+    method: "POST",
+  });
+  return readPaymentResponse(response);
+}
+
+export async function saveStaffPaymentSetupIntent(
+  customerId: string,
+  setupIntentId: string,
+): Promise<PaymentMethodRecord> {
+  const response = await paymentFetch(`/api/admin/customers/${customerId}/setup-intent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ setupIntentId }),
+  });
+  const body = await readPaymentResponse<{ method: PaymentMethodRecord }>(response);
+  return body.method;
+}
+
+export async function deleteStaffCustomerPaymentMethod(
+  customerId: string,
+  paymentMethodId: string,
+): Promise<void> {
+  const response = await paymentFetch(
+    `/api/admin/customers/${customerId}/payment-methods/${paymentMethodId}`,
+    { method: "DELETE" },
+  );
+  await readPaymentResponse<{ ok: boolean }>(response);
+}

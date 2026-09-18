@@ -5,11 +5,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { ConfirmAccountNextSteps } from "@/components/account/ConfirmAccountNextSteps";
 
 describe("ConfirmAccountNextSteps", () => {
-  it("sends confirmed customers to vaccination and payment", () => {
+  it("sends confirmed customers to rabies status and payment", () => {
     const html = renderToStaticMarkup(
       <ConfirmAccountNextSteps petId="pet-1" petName="Bella" />,
     );
-    assert.match(html, /vaccination record for Bella/);
+    assert.match(html, /rabies vaccination status for Bella/);
     assert.match(html, /card on file/);
     assert.match(html, /Complete your profile/);
     assert.match(html, /href="\/account\/setup"/);

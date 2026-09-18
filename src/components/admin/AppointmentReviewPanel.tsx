@@ -411,7 +411,7 @@ export function AppointmentReviewPanel() {
         <div className="rounded-2xl border border-lavender/30 bg-cream p-8 text-center">
           <p className="font-medium text-gold-dark">All caught up</p>
           <p className="mt-2 text-sm text-text-muted">
-            No appointments are waiting for vaccination review.
+            No appointments are waiting for staff review.
           </p>
         </div>
       ) : (
@@ -460,7 +460,7 @@ export function AppointmentReviewPanel() {
                       customerConfirmedAt={appointment.customerConfirmedAt}
                     />
                     <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
-                      Vaccination review
+                      Pending Review
                     </span>
                   </div>
                 </div>

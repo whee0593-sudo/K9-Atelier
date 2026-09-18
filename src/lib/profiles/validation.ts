@@ -77,9 +77,51 @@ export function missingCustomerProfileFieldLabels(input: {
   return missing;
 }
 
-export function formatMissingProfileFieldsMessage(missing: string[]) {
+export function formatMissingProfileFieldsMessage(
+  missing: string[],
+  audience: "customer" | "staff" = "customer",
+) {
   if (missing.length === 0) return null;
+  if (audience === "staff") {
+    return `Complete these fields to save this customer file: ${missing.join(", ")}.`;
+  }
   return `This profile cannot be saved until you complete: ${missing.join(", ")}.`;
+}
+
+export const MIN_CUSTOMER_PASSWORD_LENGTH = 8;
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function validateEmailAddress(value: unknown): string {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new ProfileValidationError(
+      formatMissingProfileFieldsMessage(
+        [CUSTOMER_PROFILE_REQUIRED_FIELD_LABELS.email],
+        "staff",
+      ) ?? "Email is required.",
+      "email",
+    );
+  }
+  const email = value.trim().toLowerCase();
+  if (email.length > 254 || !EMAIL_PATTERN.test(email)) {
+    throw new ProfileValidationError("Please enter a valid email address.", "email");
+  }
+  return email;
+}
+
+export function validateStaffPassword(body: unknown): string {
+  const record = assertPlainObject(body);
+  const password = record.password;
+  if (typeof password !== "string" || password.length < MIN_CUSTOMER_PASSWORD_LENGTH) {
+    throw new ProfileValidationError(
+      `Use at least ${MIN_CUSTOMER_PASSWORD_LENGTH} characters.`,
+      "password",
+    );
+  }
+  if (password.length > 72) {
+    throw new ProfileValidationError("Password is too long.", "password");
+  }
+  return password;
 }
 
 export function validateCustomerId(id: string | undefined): string {
@@ -171,5 +213,16 @@ export function validateProfileWriteInput(body: unknown): CustomerProfileWriteIn
     emergencyContactName: readOptionalText(record, "emergencyContactName", 80),
     emergencyContactPhone: readOptionalText(record, "emergencyContactPhone", 32),
     emergencyContactRelationship,
+  };
+}
+
+export function validateStaffProfileWriteInput(
+  body: unknown,
+): CustomerProfileWriteInput & { email: string } {
+  const record = assertPlainObject(body);
+  const email = validateEmailAddress(record.email);
+  return {
+    ...validateProfileWriteInput(body),
+    email,
   };
 }

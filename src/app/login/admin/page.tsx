@@ -13,7 +13,7 @@ export default function AdminLoginPage() {
       <div className="mt-8 rounded-2xl border border-lavender/30 bg-cream px-6 py-5 text-left text-sm">
         <p className="font-medium text-gold-dark">Staff account sign-in</p>
         <p className="mt-2 text-text-muted">
-          Review vaccinations and use admin tools with your team email (OTP).
+          Review customer records and use admin tools with your team email (OTP).
         </p>
         <Link
           href="/login?next=/admin"

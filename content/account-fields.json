@@ -218,25 +218,31 @@
         },
         {
           "id": "vaccineHeading",
-          "label": "Vaccination Records",
+          "label": "Rabies Vaccination",
           "type": "section-heading",
           "required": false,
-          "note": "Required before booking. You may add the record later."
+          "note": "Dogs 4 months of age or older must have a current rabies vaccination as required by Florida law. A veterinarian-issued medical exemption is accepted where applicable."
         },
         {
-          "id": "vaccineExpiration",
-          "label": "Vaccination Expiration Date",
-          "type": "date",
-          "required": false,
-          "note": "Optional — expiration date on the certificate, if shown."
+          "id": "rabiesStatus",
+          "label": "Rabies Status",
+          "type": "radio",
+          "required": true
         },
         {
           "id": "vaccineRecord",
-          "label": "Upload Vaccination Record",
+          "label": "Rabies Record",
           "type": "file",
           "required": false,
           "accept": ".pdf,.jpg,.jpeg,.png,.webp,.heic",
-          "note": "Upload a current rabies certificate or vaccination record, or choose Add later. Needed before booking. Accepted formats: PDF, JPG, PNG, WEBP, HEIC. Max 4 MB."
+          "note": "Optional · You may upload your dog’s current rabies certificate or vaccination record for your profile. Accepted formats: PDF, JPG, PNG, WEBP, HEIC. Max 4 MB."
+        },
+        {
+          "id": "vaccineExpiration",
+          "label": "Record Expiration Date",
+          "type": "date",
+          "required": false,
+          "note": "Optional — expiration date on the certificate, if shown."
         }
       ]
     },

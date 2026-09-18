@@ -8,7 +8,7 @@ export function AccountSetupNotice({
 }) {
   const body =
     step === "pets"
-      ? "Upload a current rabies certificate or vaccination record, then add a card on file. You are not charged now."
+      ? "Confirm your dog’s rabies vaccination status, then add a card on file. You may also upload a rabies certificate or vaccination record. You are not charged now."
       : "Save a card on file for after the visit. You are not charged now.";
 
   return (

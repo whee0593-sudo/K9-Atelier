@@ -3,16 +3,18 @@ import {
   mapValidatedInputToInsertRow,
   mapValidatedInputToUpdateRow,
 } from "@/lib/pets/map";
-import type { PetRecord, PetRow, PetWriteInput } from "@/lib/pets/types";
+import {
+  PET_SELECT,
+  type PetRecord,
+  type PetRow,
+  type PetWriteInput,
+} from "@/lib/pets/types";
 import {
   createAuthenticatedSupabaseClient,
   requireAuthenticatedUser,
 } from "@/lib/pets/auth";
 import { PetValidationError } from "@/lib/pets/validation";
 import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
-
-const PET_SELECT =
-  "id, customer_id, name, breed, weight_lbs, date_of_birth, approximate_age_years, sex, temperament_notes, health_comfort_notes, grooming_preferences, archived_at, created_at, updated_at";
 
 export async function listPets(): Promise<
   { pets: PetRecord[] } | { error: "unauthenticated" | "server" }

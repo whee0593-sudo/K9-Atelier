@@ -510,3 +510,75 @@ export async function deleteCustomerPaymentMethod(
 
   return { ok: true };
 }
+
+export async function deleteStaffCustomerPaymentMethod(
+  customerId: string,
+  paymentMethodId: string,
+): Promise<
+  | { ok: true }
+  | { error: "unauthenticated" | "forbidden" | "not_found" | "conflict" | "server" }
+> {
+  const { getStaffSession } = await import("@/lib/staff/auth");
+  const session = await getStaffSession();
+  if ("error" in session) return { error: session.error };
+
+  const admin = createAdminClient();
+  const { data: row, error: loadError } = await admin
+    .from("payment_methods")
+    .select("id, stripe_payment_method_id, is_default")
+    .eq("id", paymentMethodId)
+    .eq("customer_id", customerId)
+    .maybeSingle();
+
+  if (loadError) {
+    console.error("deleteStaffCustomerPaymentMethod load failed:", loadError.message);
+    return { error: "server" };
+  }
+  if (!row) return { error: "not_found" };
+
+  const { count } = await admin
+    .from("appointments")
+    .select("id", { count: "exact", head: true })
+    .eq("payment_method_id", paymentMethodId)
+    .in("status", ["pending_confirmation", "confirmed"]);
+
+  if ((count ?? 0) > 0) return { error: "conflict" };
+
+  const stripe = getStripe();
+  if (stripe) {
+    try {
+      await stripe.paymentMethods.detach(row.stripe_payment_method_id);
+    } catch (error) {
+      console.error("deleteStaffCustomerPaymentMethod detach failed:", error);
+    }
+  }
+
+  const { error: deleteError } = await admin
+    .from("payment_methods")
+    .delete()
+    .eq("id", paymentMethodId)
+    .eq("customer_id", customerId);
+
+  if (deleteError) {
+    console.error("deleteStaffCustomerPaymentMethod delete failed:", deleteError.message);
+    return { error: "server" };
+  }
+
+  if (row.is_default) {
+    const { data: next } = await admin
+      .from("payment_methods")
+      .select("id")
+      .eq("customer_id", customerId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (next?.id) {
+      await admin
+        .from("payment_methods")
+        .update({ is_default: true })
+        .eq("id", next.id);
+    }
+  }
+
+  return { ok: true };
+}

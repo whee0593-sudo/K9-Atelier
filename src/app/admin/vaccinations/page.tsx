@@ -41,8 +41,9 @@ export default async function AdminVaccinationsPage() {
         Vaccination Review
       </h2>
       <p className="mt-2 text-sm text-text-muted">
-        Review uploaded vaccination records before confirming appointments that
-        are waiting on staff approval.
+        Review uploaded rabies certificates or vaccination records. These files
+        are optional and do not block booking. Use Confirm / Decline only for
+        appointments that still need staff review.
       </p>
       <VaccinationReviewPanel />
     </div>

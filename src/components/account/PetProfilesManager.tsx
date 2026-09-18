@@ -4,8 +4,12 @@ import { useEffect, useState } from "react";
 import { PetProfileAgeSummary } from "@/components/account/PetBirthdayFields";
 import { PetProfileFieldsForm } from "@/components/account/PetProfileFieldsForm";
 import { AccountSetupNotice } from "@/components/account/AccountSetupNotice";
+import { RabiesStatusSummary } from "@/components/account/RabiesStatusSummary";
 import type { PetProfile } from "@/lib/pets";
-import { petProfileVaccinationLabel } from "@/lib/vaccinations/booking";
+import {
+  parsePetRabiesStatus,
+  petProfileVaccinationLabel,
+} from "@/lib/vaccinations/booking";
 import { useCustomerPets } from "@/lib/pets/use-customer-pets";
 import { petToExpandForSetup } from "@/lib/account-setup";
 
@@ -17,19 +21,15 @@ function createDraftPet(name = "New Pet"): PetProfile {
     weightLbs: 0,
     vaccineRecordUploaded: false,
     vaccinationBookingStatus: "missing",
+    rabiesStatus: null,
   };
 }
 
-function vaccinationBadgeClass(pet: PetProfile) {
-  switch (pet.vaccinationBookingStatus) {
-    case "current":
-    case "expiring_soon":
-      return "bg-lavender-light text-gold-dark";
-    case "needs_review":
-      return "bg-amber-100 text-amber-900";
-    default:
-      return "bg-red-100 text-red-800";
+function rabiesBadgeClass(pet: PetProfile) {
+  if (parsePetRabiesStatus(pet.rabiesStatus) || pet.vaccineRecordUploaded) {
+    return "bg-lavender-light text-gold-dark";
   }
+  return "bg-red-100 text-red-800";
 }
 
 function PetCard({
@@ -72,7 +72,7 @@ function PetCard({
             <span className="text-xs text-text-muted">Uploading…</span>
           )}
           <span
-            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${vaccinationBadgeClass(pet)}`}
+            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${rabiesBadgeClass(pet)}`}
           >
             {petProfileVaccinationLabel(pet)}
           </span>
@@ -81,6 +81,9 @@ function PetCard({
       </button>
       {expanded && (
         <div className="border-t border-lavender/30 px-5 py-6">
+          <div className="mb-6 rounded-xl border border-lavender/30 bg-lavender-light/20 px-4 py-4">
+            <RabiesStatusSummary pet={pet} />
+          </div>
           <PetProfileFieldsForm
             pet={pet}
             onPetChange={onPetChange}
@@ -125,6 +128,7 @@ export function PetProfilesManager({
   const [showNewForm, setShowNewForm] = useState(false);
   const [draftPet, setDraftPet] = useState<PetProfile>(() => createDraftPet());
   const [submittingDraft, setSubmittingDraft] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!setup || openedSetupPet || loading || pets.length === 0) return;
@@ -134,6 +138,13 @@ export function PetProfilesManager({
   }, [setup, openedSetupPet, loading, pets, setupPetId]);
 
   async function handleAddPet() {
+    if (!parsePetRabiesStatus(draftPet.rabiesStatus)) {
+      setDraftError(
+        "Please confirm this dog’s rabies vaccination status before saving.",
+      );
+      return;
+    }
+    setDraftError(null);
     setSubmittingDraft(true);
     try {
       const created = await createPet(draftPet);
@@ -203,11 +214,18 @@ export function PetProfilesManager({
               petPersisted={false}
             />
           </div>
+          {draftError ? (
+            <p className="mt-3 text-sm text-red-800" role="alert">
+              {draftError}
+            </p>
+          ) : null}
           <div className="mt-4 flex gap-3">
             <button
               type="button"
               onClick={() => void handleAddPet()}
-              disabled={submittingDraft}
+              disabled={
+                submittingDraft || !parsePetRabiesStatus(draftPet.rabiesStatus)
+              }
               className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
             >
               {submittingDraft ? "Saving…" : "Save Pet"}

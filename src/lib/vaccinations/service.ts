@@ -6,7 +6,7 @@ import {
   requireAuthenticatedUser,
 } from "@/lib/pets/auth";
 import { mapPetRowToRecord } from "@/lib/pets/map";
-import type { PetRecord, PetRow } from "@/lib/pets/types";
+import { PET_SELECT, type PetRecord, type PetRow } from "@/lib/pets/types";
 import {
   detectVaccinationMimeType,
   extensionForMime,
@@ -144,9 +144,7 @@ export async function uploadPetVaccination(
 
   const { data: refreshedPet, error: refreshError } = await supabase
     .from("pets")
-    .select(
-      "id, customer_id, name, breed, weight_lbs, date_of_birth, approximate_age_years, sex, temperament_notes, health_comfort_notes, grooming_preferences, archived_at, created_at, updated_at",
-    )
+    .select(PET_SELECT)
     .eq("id", petId)
     .maybeSingle();
 
@@ -160,7 +158,187 @@ export async function uploadPetVaccination(
   return { pet: enriched };
 }
 
+export async function uploadStaffPetVaccination(
+  customerId: string,
+  petId: string,
+  input: VaccinationUploadInput,
+): Promise<
+  | { pet: PetRecord }
+  | {
+      error:
+        | "unauthenticated"
+        | "forbidden"
+        | "not_found"
+        | "invalid_file"
+        | "invalid_key"
+        | "server"
+        | "misconfigured";
+    }
+> {
+  const { getStaffSession } = await import("@/lib/staff/auth");
+  const session = await getStaffSession();
+  if ("error" in session) return { error: session.error };
+
+  if (!hasSupabaseAdminConfig()) {
+    console.error("uploadStaffPetVaccination: missing SUPABASE_SECRET_KEY");
+    return { error: "misconfigured" };
+  }
+
+  validateVaccinationFileSize(input.fileBuffer.length);
+  const expirationDate = validateVaccinationExpirationDate(input.expirationDate);
+
+  const mimeType = detectVaccinationMimeType(input.fileBuffer);
+  if (!mimeType) {
+    return { error: "invalid_file" };
+  }
+
+  const admin = createAdminClient();
+  const { data: petRow, error: petError } = await admin
+    .from("pets")
+    .select("id")
+    .eq("id", petId)
+    .eq("customer_id", customerId)
+    .is("archived_at", null)
+    .maybeSingle();
+
+  if (petError) {
+    console.error("uploadStaffPetVaccination pet lookup failed:", petError.message);
+    return { error: "server" };
+  }
+  if (!petRow) return { error: "not_found" };
+
+  const recordId = randomUUID();
+  const extension = extensionForMime(mimeType);
+  const storagePath = `${customerId}/${petId}/${recordId}.${extension}`;
+
+  const { error: uploadError } = await admin.storage
+    .from(VACCINATION_BUCKET)
+    .upload(storagePath, input.fileBuffer, {
+      contentType: mimeType,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    console.error(
+      "uploadStaffPetVaccination storage upload failed:",
+      uploadError.message,
+    );
+    if (/invalid compact jws/i.test(uploadError.message)) {
+      return { error: "invalid_key" };
+    }
+    return { error: "server" };
+  }
+
+  const { data: inserted, error: insertError } = await admin
+    .from("pet_vaccination_records")
+    .insert({
+      id: recordId,
+      pet_id: petId,
+      customer_id: customerId,
+      storage_path: storagePath,
+      original_filename: sanitizeOriginalFilename(input.originalFilename),
+      mime_type: mimeType,
+      file_size_bytes: input.fileBuffer.length,
+      expiration_date: expirationDate,
+    })
+    .select("pet_id")
+    .single();
+
+  if (insertError) {
+    console.error(
+      "uploadStaffPetVaccination insert failed:",
+      insertError.code,
+      insertError.message,
+    );
+    await admin.storage.from(VACCINATION_BUCKET).remove([storagePath]);
+    return { error: "server" };
+  }
+
+  if (!inserted) {
+    await admin.storage.from(VACCINATION_BUCKET).remove([storagePath]);
+    return { error: "server" };
+  }
+
+  const { data: refreshedPet, error: refreshError } = await admin
+    .from("pets")
+    .select(
+      "id, customer_id, name, breed, weight_lbs, date_of_birth, approximate_age_years, sex, temperament_notes, health_comfort_notes, grooming_preferences, archived_at, created_at, updated_at",
+    )
+    .eq("id", petId)
+    .maybeSingle();
+
+  if (refreshError || !refreshedPet) {
+    console.error("uploadStaffPetVaccination refresh failed:", refreshError?.message);
+    return { error: "server" };
+  }
+
+  const pet = mapPetRowToRecord(refreshedPet as PetRow);
+  const [enriched] = await attachVaccinationSummaries([pet]);
+  return { pet: enriched };
+}
+
 export async function getPetVaccinationSummaryForPet(petId: string) {
   const supabase = await createAuthenticatedSupabaseClient();
   return fetchPetVaccinationSummary(supabase, petId);
+}
+
+export async function createOwnVaccinationFileSignedUrl(petId: string): Promise<
+  | { url: string; mimeType: string; filename: string | null }
+  | { error: "unauthenticated" | "not_found" | "server" }
+> {
+  const user = await requireAuthenticatedUser();
+  if (!user) return { error: "unauthenticated" };
+
+  const supabase = await createAuthenticatedSupabaseClient();
+  const { data: petRow, error: petError } = await supabase
+    .from("pets")
+    .select("id")
+    .eq("id", petId)
+    .eq("customer_id", user.id)
+    .is("archived_at", null)
+    .maybeSingle();
+
+  if (petError) {
+    console.error(
+      "createOwnVaccinationFileSignedUrl pet lookup failed:",
+      petError.message,
+    );
+    return { error: "server" };
+  }
+  if (!petRow) return { error: "not_found" };
+
+  const { data: record, error: recordError } = await supabase
+    .from("pet_vaccination_records")
+    .select("storage_path, mime_type, original_filename")
+    .eq("pet_id", petId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (recordError) {
+    console.error(
+      "createOwnVaccinationFileSignedUrl record lookup failed:",
+      recordError.message,
+    );
+    return { error: "server" };
+  }
+  if (!record) return { error: "not_found" };
+
+  const { data: signed, error: signError } = await supabase.storage
+    .from(VACCINATION_BUCKET)
+    .createSignedUrl(record.storage_path, 120);
+
+  if (signError || !signed?.signedUrl) {
+    console.error(
+      "createOwnVaccinationFileSignedUrl sign failed:",
+      signError?.message ?? "missing url",
+    );
+    return { error: "server" };
+  }
+
+  return {
+    url: signed.signedUrl,
+    mimeType: record.mime_type,
+    filename: record.original_filename,
+  };
 }
