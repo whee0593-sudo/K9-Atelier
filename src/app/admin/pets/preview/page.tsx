@@ -182,10 +182,6 @@ export default async function CustomerRecordsPreviewPage({
       <h2 className="text-2xl font-semibold text-gold-dark">
         Registered Accounts
       </h2>
-      <p className="mt-2 text-sm text-text-muted">
-        Administrators appear first. Staff can view and edit every guest
-        account field. Only the owner can freeze or delete other accounts.
-      </p>
       <div className="mt-8">
         <CustomerRecordsPanel
           preview

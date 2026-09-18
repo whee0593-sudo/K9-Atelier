@@ -9,10 +9,6 @@ export default function CalendarPreviewPage() {
       <h2 className="text-2xl font-semibold text-gold-dark">
         Calendar & Appointments
       </h2>
-      <p className="mt-2 text-sm text-text-muted">
-        Last month opens first. Completed visits show View payment and Refund.
-        Check-in is hidden after check-out.
-      </p>
       <div className="mt-8">
         <AdminCalendar preview />
       </div>

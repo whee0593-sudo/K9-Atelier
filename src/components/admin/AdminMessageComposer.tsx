@@ -211,11 +211,6 @@ export function AdminMessageComposer({
     <div className="space-y-8">
       <section className="rounded-2xl border border-lavender/30 bg-cream p-6">
         <h3 className="font-medium text-gold-dark">Recent callers</h3>
-        <p className="mt-1 text-sm text-text-muted">
-          Texts send automatically when someone calls. Unknown numbers get the
-          website and booking links. Known guests get a shorter reply-and-book
-          text. You can still resend or type a number.
-        </p>
         <form
           className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end"
           onSubmit={(event) => {
@@ -329,11 +324,6 @@ export function AdminMessageComposer({
         className="rounded-2xl border border-lavender/30 bg-cream p-6"
       >
         <h3 className="font-medium text-gold-dark">Text a customer</h3>
-        <p className="mt-1 text-sm text-text-muted">
-          Search or choose a guest, or type any mobile number. Sends from the
-          studio number. Replies are forwarded to your phone and listed below.
-          Guests can reply STOP to opt out.
-        </p>
 
         <div className="mt-6 space-y-4">
           <div>
@@ -417,9 +407,6 @@ export function AdminMessageComposer({
               placeholder="(561) 555-0123"
               className="mt-1.5 w-full rounded-xl border border-lavender/40 bg-cream px-4 py-2.5 text-sm"
             />
-            <p className="mt-1 text-xs text-text-muted">
-              Type any US mobile number to text, or pick a customer above.
-            </p>
           </div>
 
           <div>

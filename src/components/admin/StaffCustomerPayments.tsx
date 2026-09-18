@@ -99,10 +99,6 @@ export function StaffCustomerPayments({
   return (
     <section>
       <h3 className="text-base font-medium text-gold-dark">Payment Methods</h3>
-      <p className="mt-2 text-sm text-text-muted">
-        Cards on file are not charged until checkout. Add or remove the same
-        saved methods the guest sees in My Account.
-      </p>
       {error ? (
         <p className="mt-3 text-sm text-red-800" role="alert">
           {error}

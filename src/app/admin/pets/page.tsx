@@ -12,11 +12,6 @@ export default async function AdminPetsPage({
       <h2 className="text-2xl font-semibold text-gold-dark">
         Registered Accounts
       </h2>
-      <p className="mt-2 text-sm text-text-muted">
-        Administrators are listed first, then customers. Staff can view and
-        edit every guest account field on the customer file. The owner can
-        freeze or delete any account except their own.
-      </p>
       <p className="mt-2">
         <Link
           href="/admin/pets/preview"

@@ -65,10 +65,6 @@ export function StaffCustomerPassword({
   return (
     <section>
       <h3 className="text-base font-medium text-gold-dark">Password</h3>
-      <p className="mt-2 text-sm text-text-muted">
-        Set a new sign-in password for this customer. They can use it the next
-        time they log in.
-      </p>
       <form onSubmit={(event) => void handleSubmit(event)} className="mt-4 space-y-4">
         <label className="block text-sm font-medium text-text">
           New password

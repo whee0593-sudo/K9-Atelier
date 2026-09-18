@@ -9,10 +9,6 @@ export default function ContactCustomerPreviewPage() {
       <h2 className="text-2xl font-semibold text-gold-dark">
         Contact Customer
       </h2>
-      <p className="mt-2 text-sm text-text-muted">
-        Incoming-call texts send automatically. Search by pet, first name, last
-        name, or phone to send a custom text.
-      </p>
       <div className="mt-8">
         <AdminMessageComposer preview />
       </div>

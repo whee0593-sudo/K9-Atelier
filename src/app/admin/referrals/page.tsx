@@ -32,11 +32,6 @@ export default async function AdminReferralsPage() {
   return (
     <div>
       <h2 className="text-2xl font-semibold text-gold-dark">Referrals</h2>
-      <p className="mt-2 text-sm text-text-muted">
-        Referral codes, household relationships, issued credit, and audit
-        adjustments. Refunds stay on the existing charge flow; related rewards
-        are marked under review here for a manual decision.
-      </p>
       <div className="mt-8">
         <ReferralReport />
       </div>

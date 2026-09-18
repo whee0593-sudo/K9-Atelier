@@ -9,10 +9,6 @@ export default function BookForCustomerPreviewPage() {
       <h2 className="text-2xl font-semibold text-gold-dark">
         Book for a customer
       </h2>
-      <p className="mt-2 text-sm text-text-muted">
-        Staff form for creating a customer account, reserving a visit, and
-        sending a confirmation link.
-      </p>
       <div className="mt-8">
         <BookForCustomerForm
           preview

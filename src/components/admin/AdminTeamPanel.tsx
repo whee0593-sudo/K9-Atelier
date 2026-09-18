@@ -196,9 +196,6 @@ export function AdminTeamPanel() {
         className="rounded-2xl border border-lavender/30 bg-cream p-6"
       >
         <h3 className="font-medium text-gold-dark">Add an admin</h3>
-        <p className="mt-2 text-sm text-text-muted">
-          They will not have admin access until you confirm.
-        </p>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row">
           <label className="sr-only" htmlFor="admin-email">
             Admin email

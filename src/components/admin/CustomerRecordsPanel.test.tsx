@@ -103,7 +103,6 @@ describe("CustomerRecordCard actions", () => {
       <CustomerAdminNotesEditor customerId="11111111-1111-4111-8111-111111111111" />,
     );
     assert.match(html, />Customer record</);
-    assert.match(html, /Admin only\. These notes stay with this customer\./);
     assert.match(html, /<textarea/);
     assert.match(html, />Save</);
   });

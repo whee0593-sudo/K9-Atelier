@@ -137,10 +137,6 @@ export function StaffCustomerReferrals({
           Adjust on Referrals
         </a>
       </div>
-      <p className="mt-2 text-sm text-text-muted">
-        Codes and credit on this guest file. Use Referrals to issue, reverse, or
-        adjust credit.
-      </p>
       {error ? (
         <p className="mt-3 text-sm text-red-800">{error}</p>
       ) : !view ? (

@@ -138,11 +138,7 @@ export function FinanceReport({ preview = false }: { preview?: boolean }) {
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <SummaryCard label="Service" value={formatFinanceMoney(totals.service)} />
             <SummaryCard label="Tips" value={formatFinanceMoney(totals.tip)} />
-            <SummaryCard
-              label="Tax"
-              value={formatFinanceMoney(totals.tax)}
-              note="Florida grooming service is not taxed"
-            />
+            <SummaryCard label="Tax" value={formatFinanceMoney(totals.tax)} />
             <SummaryCard label="Refunds" value={formatFinanceMoney(totals.refunds)} />
             <SummaryCard
               label="Net"

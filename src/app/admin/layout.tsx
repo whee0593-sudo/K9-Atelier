@@ -69,10 +69,6 @@ function StaffAccessRequired() {
         <p className="text-sm text-text">
           Staff access is required to use admin tools.
         </p>
-        <p className="mt-2 text-sm text-text-muted">
-          Sign in with your team email. If you already signed in, Penny may
-          still need to confirm this admin account.
-        </p>
         <div className="mt-4">
           <AdminStaffSignInLink />
         </div>

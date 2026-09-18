@@ -635,13 +635,11 @@ export function BookForCustomerForm({
             <p className="mt-2 text-sm text-text-muted">{scheduleHint}</p>
           ) : null}
         </div>
-        <div className="text-sm text-text-muted">
-          {estimatedTotal != null ? (
+        {estimatedTotal != null ? (
+          <div className="text-sm text-text-muted">
             <p>Estimated total: from {formatPrice(estimatedTotal)}</p>
-          ) : (
-            <p>Estimate appears after address and service are set.</p>
-          )}
-        </div>
+          </div>
+        ) : null}
       </section>
 
       <label className="flex items-start gap-2 text-sm text-text">
