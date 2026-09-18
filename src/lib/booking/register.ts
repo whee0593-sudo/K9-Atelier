@@ -2,7 +2,7 @@ import { isFrozenAuthUser } from "@/lib/auth/frozen-account";
 import { isRegisteredEmailFrozen } from "@/lib/auth/frozen-lookup";
 import type { BookingRegisterInput } from "@/lib/booking/register-input";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
+import { hasSupabaseAdminConfig, hasSupabaseConfig } from "@/lib/supabase/env";
 
 export type BookingRegisterResult =
   | { ok: true }
@@ -20,7 +20,7 @@ function isDuplicateAuthEmail(message: string) {
 export async function registerBookingCustomer(
   input: BookingRegisterInput,
 ): Promise<BookingRegisterResult> {
-  if (!hasSupabaseAdminConfig()) {
+  if (!hasSupabaseConfig() || !hasSupabaseAdminConfig()) {
     return {
       error: "misconfigured",
       message: "Account setup is not available right now. Please try again shortly.",
