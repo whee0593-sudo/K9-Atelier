@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   AppointmentValidationError,
@@ -10,6 +11,7 @@ import {
   missingCustomerProfileFieldLabels,
   ProfileValidationError,
   validateProfileWriteInput,
+  validateStaffProfileWriteInput,
 } from "@/lib/profiles/validation";
 
 function validAppointmentBody(overrides: Record<string, unknown> = {}) {
@@ -64,6 +66,10 @@ describe("required customer profile fields", () => {
       formatMissingProfileFieldsMessage(["First Name", "Last Name"]),
       "This profile cannot be saved until you complete: First Name, Last Name.",
     );
+    assert.equal(
+      formatMissingProfileFieldsMessage(["First Name", "Last Name"], "staff"),
+      "Complete these fields to save this customer file: First Name, Last Name.",
+    );
   });
 
   it("rejects a profile write that omits first and last name", () => {
@@ -111,5 +117,61 @@ describe("required customer profile fields", () => {
     const input = validateCreateAppointmentInput(validAppointmentBody());
     assert.equal(input.customerFirstName, "Tia");
     assert.equal(input.customerLastName, "Francavilla");
+  });
+
+  it("saves staff edits to a customer file with the admin client", () => {
+    const source = readFileSync(
+      new URL("./service.ts", import.meta.url),
+      "utf8",
+    );
+    assert.match(source, /export async function updateStaffCustomerProfile/);
+    assert.match(source, /createAdminClient\(\)/);
+    assert.match(source, /auth\.admin\.updateUserById/);
+    assert.doesNotMatch(
+      source,
+      /updateStaffCustomerProfile[\s\S]*createAuthenticatedSupabaseClient/,
+    );
+  });
+
+  it("requires a valid email when staff save a customer file", () => {
+    assert.throws(
+      () =>
+        validateStaffProfileWriteInput({
+          firstName: "Tia",
+          lastName: "Francavilla",
+          phone: "5613466778",
+          email: "not-an-email",
+        }),
+      (error: unknown) =>
+        error instanceof ProfileValidationError &&
+        error.message === "Please enter a valid email address.",
+    );
+    const input = validateStaffProfileWriteInput({
+      firstName: "Tia",
+      lastName: "Francavilla",
+      phone: "5613466778",
+      email: "tiafrancavilla@gmail.com",
+    });
+    assert.equal(input.email, "tiafrancavilla@gmail.com");
+  });
+
+  it("exposes staff APIs for every persisted guest account surface", () => {
+    const staffService = readFileSync(
+      new URL("../profiles/staff-service.ts", import.meta.url),
+      "utf8",
+    );
+    assert.match(staffService, /export async function createStaffPet/);
+    assert.match(staffService, /export async function archiveStaffPet/);
+    assert.match(staffService, /export async function setStaffCustomerPassword/);
+    const payments = readFileSync(
+      new URL("../payments/service.ts", import.meta.url),
+      "utf8",
+    );
+    assert.match(payments, /export async function deleteStaffCustomerPaymentMethod/);
+    const vaccinations = readFileSync(
+      new URL("../vaccinations/service.ts", import.meta.url),
+      "utf8",
+    );
+    assert.match(vaccinations, /export async function uploadStaffPetVaccination/);
   });
 });

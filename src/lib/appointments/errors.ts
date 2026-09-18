@@ -37,7 +37,7 @@ export function mapAppointmentServiceError(
       return appointmentJsonError("Pet not found.", 404);
     case "conflict":
       return appointmentJsonError(
-        "This pet is not ready to book yet. Please update vaccination records first.",
+        "This pet is not ready to book yet. Please confirm rabies vaccination status first.",
         409,
       );
     case "slot_unavailable":

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { PetRecord } from "@/lib/pets/types";
 import type {
   PetVaccinationSummary,
   VaccinationBookingStatus,
@@ -24,6 +25,7 @@ function parseBookingStatus(value: unknown): VaccinationBookingStatus {
 }
 
 type VaccinationRecordRow = {
+  id: string;
   expiration_date: string | null;
   verification_status: string;
   created_at: string;
@@ -38,7 +40,7 @@ export async function fetchPetVaccinationSummary(
       supabase.rpc("get_pet_booking_vaccination_status", { p_pet_id: petId }),
       supabase
         .from("pet_vaccination_records")
-        .select("expiration_date, verification_status, created_at")
+        .select("id, expiration_date, verification_status, created_at")
         .eq("pet_id", petId)
         .order("created_at", { ascending: false }),
     ]);
@@ -66,6 +68,7 @@ export async function fetchPetVaccinationSummary(
     bookingStatus: parsedStatus,
     expirationDate,
     hasUpload: rows.length > 0,
+    latestRecordId: rows[0]?.id ?? null,
   };
 }
 
@@ -92,6 +95,7 @@ export async function enrichPetRecordsWithVaccination<T extends { id: string }>(
       vaccinationBookingStatus: VaccinationBookingStatus;
       vaccinationExpirationDate: string | null;
       vaccinationHasUpload: boolean;
+      vaccinationLatestRecordId: string | null;
     }
   >
 > {
@@ -103,6 +107,7 @@ export async function enrichPetRecordsWithVaccination<T extends { id: string }>(
         vaccinationBookingStatus: summary.bookingStatus,
         vaccinationExpirationDate: summary.expirationDate,
         vaccinationHasUpload: summary.hasUpload,
+        vaccinationLatestRecordId: summary.latestRecordId,
       };
     }),
   );

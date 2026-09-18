@@ -6,7 +6,7 @@ import {
   petReadyToBook,
   type PetProfile,
 } from "@/lib/pets";
-import { vaccinationBookingNeedsAdminConfirmation } from "@/lib/vaccinations/booking";
+import { parsePetRabiesStatus } from "@/lib/vaccinations/booking";
 import { useCustomerPets } from "@/lib/pets/use-customer-pets";
 import { formatPetAgeLabel, getPetAgeYears } from "@/lib/pet-age";
 import {
@@ -25,6 +25,7 @@ function createDraftPet(name = "New Dog"): PetProfile {
     weightLbs: 0,
     vaccineRecordUploaded: false,
     vaccinationBookingStatus: "missing",
+    rabiesStatus: null,
   };
 }
 
@@ -40,7 +41,16 @@ export function PetSelector({
   const [draftPet, setDraftPet] = useState<PetProfile>(() => createDraftPet());
   const [submittingDraft, setSubmittingDraft] = useState(false);
 
+  const [draftError, setDraftError] = useState<string | null>(null);
+
   async function saveNewPet() {
+    if (!parsePetRabiesStatus(draftPet.rabiesStatus)) {
+      setDraftError(
+        "Please confirm this dog’s rabies vaccination status before saving.",
+      );
+      return;
+    }
+    setDraftError(null);
     setSubmittingDraft(true);
     try {
       const created = await createPet(draftPet);
@@ -96,9 +106,6 @@ export function PetSelector({
 
       {pets.map((pet) => {
         const ready = petReadyToBook(pet);
-        const pendingReview = vaccinationBookingNeedsAdminConfirmation(
-          pet.vaccinationBookingStatus,
-        );
         const selected = selectedId === pet.id;
 
         if (!ready) {
@@ -110,7 +117,9 @@ export function PetSelector({
                 </p>
                 <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
                   Before we can reserve {pet.name}&apos;s appointment, please
-                  upload their current vaccination record in your account.
+                  confirm rabies vaccination status in their profile. You may
+                  also upload a current rabies certificate or vaccination
+                  record.
                 </p>
                 <a
                   href="/account/pets"
@@ -144,15 +153,9 @@ export function PetSelector({
                     : `${pet.weightLbs} lbs`;
                 })()}
               </p>
-              {pendingReview ? (
-                <p className="font-body mt-4 text-[10px] font-medium uppercase tracking-[0.14em] text-red-700">
-                  Vaccination pending review — appointment awaits confirmation
-                </p>
-              ) : (
-                <p className="font-body mt-4 text-[10px] font-medium uppercase tracking-[0.14em] text-champagne">
-                  Profile Complete
-                </p>
-              )}
+              <p className="font-body mt-4 text-[10px] font-medium uppercase tracking-[0.14em] text-champagne">
+                Profile Complete
+              </p>
               <span className={`${bookingPrimaryBtnClass} mt-6`}>
                 Select {pet.name}
               </span>
@@ -173,11 +176,18 @@ export function PetSelector({
             }
             variant="booking"
           />
+          {draftError ? (
+            <p className="font-body text-sm text-red-700" role="alert">
+              {draftError}
+            </p>
+          ) : null}
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
               onClick={() => void saveNewPet()}
-              disabled={submittingDraft}
+              disabled={
+                submittingDraft || !parsePetRabiesStatus(draftPet.rabiesStatus)
+              }
               className={bookingPrimaryBtnClass}
             >
               {submittingDraft ? "Saving…" : "Save & Continue"}

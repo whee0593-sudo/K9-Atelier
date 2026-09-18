@@ -5,7 +5,12 @@ import type { ChargeKind } from "@/lib/charges/types";
 export default async function CollectPreviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ kind?: string; step?: string; view?: string }>;
+  searchParams: Promise<{
+    kind?: string;
+    step?: string;
+    view?: string;
+    firstVisit?: string;
+  }>;
 }) {
   const query = await searchParams;
   const kind: ChargeKind = query.kind === "no_show" ? "no_show" : "service";
@@ -20,6 +25,7 @@ export default async function CollectPreviewPage({
       appointmentId="preview"
       kind={kind}
       preview
+      previewFirstVisit={query.firstVisit === "1"}
       initialStep={step}
       brandLinks={getBrandPublicLinks()}
     />

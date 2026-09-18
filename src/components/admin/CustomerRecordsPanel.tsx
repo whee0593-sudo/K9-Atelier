@@ -2,9 +2,6 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { CustomerProfileForm } from "@/components/account/CustomerProfileForm";
-import { PetProfileFieldsForm } from "@/components/account/PetProfileFieldsForm";
-import { mapPetRecordToUiProfile, mapPetProfileToWriteInput } from "@/lib/pets/map";
-import { normalizePetProfile, type PetProfile } from "@/lib/pets";
 import type { CustomerProfile } from "@/lib/profiles/types";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
 import {
@@ -12,7 +9,7 @@ import {
   customerFreezeConfirmMessage,
 } from "@/lib/profiles/delete-guard";
 import { isOwnerEmail } from "@/lib/staff/owner";
-import { formatPaymentMethodLabel } from "@/lib/payments/types";
+import type { PaymentMethodRecord } from "@/lib/payments/types";
 import type { StaffCustomerHistory } from "@/lib/charges/history";
 import { formatLineItemMoney } from "@/lib/charges/list-amount";
 import { formatChargeMoney } from "@/lib/charges/money";
@@ -20,6 +17,11 @@ import { formatStaffVisitTiming } from "@/lib/charges/hourly";
 import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
 import { CallCustomerButton } from "@/components/admin/CallCustomerButton";
 import { CustomerAdminNotesEditor } from "@/components/admin/CustomerAdminNotesEditor";
+import { StaffCustomerPassword } from "@/components/admin/StaffCustomerPassword";
+import { StaffCustomerPayments } from "@/components/admin/StaffCustomerPayments";
+import { StaffCustomerPets } from "@/components/admin/StaffCustomerPets";
+import { StaffCustomerReferrals } from "@/components/admin/StaffCustomerReferrals";
+import type { StaffReferralView } from "@/components/admin/StaffCustomerReferrals";
 
 type LoadState =
   | { status: "loading" }
@@ -76,115 +78,6 @@ function AccountActionButton({
   );
 }
 
-function StaffPetEditor({
-  customerId,
-  pet,
-  onSaved,
-}: {
-  customerId: string;
-  pet: StaffCustomerRecord["pets"][number];
-  onSaved: (pet: StaffCustomerRecord["pets"][number]) => void;
-}) {
-  const [draft, setDraft] = useState<PetProfile>(() =>
-    normalizePetProfile({
-      ...mapPetRecordToUiProfile(pet),
-      adminServiceNotes: pet.adminServiceNotes,
-    }),
-  );
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    setDraft(
-      normalizePetProfile({
-        ...mapPetRecordToUiProfile(pet),
-        adminServiceNotes: pet.adminServiceNotes,
-      }),
-    );
-  }, [pet]);
-
-  async function handleSave() {
-    setSaving(true);
-    setError(null);
-    try {
-      const response = await fetch(
-        `/api/admin/customers/${customerId}/pets/${pet.id}`,
-        {
-          method: "PATCH",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...mapPetProfileToWriteInput(draft),
-            adminServiceNotes: draft.adminServiceNotes ?? "",
-          }),
-        },
-      );
-      const body = (await response.json()) as {
-        error?: string;
-        pet?: StaffCustomerRecord["pets"][number];
-      };
-      if (!response.ok || !body.pet) {
-        throw new Error(body.error ?? "Could not save this pet profile.");
-      }
-      onSaved(body.pet);
-      setSaved(true);
-    } catch (saveError) {
-      setError(
-        saveError instanceof Error
-          ? saveError.message
-          : "Could not save this pet profile.",
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="mt-4 space-y-4">
-      <PetProfileFieldsForm
-        pet={draft}
-        onPetChange={(updates) => {
-          setDraft((current) => normalizePetProfile({ ...current, ...updates }));
-          setSaved(false);
-        }}
-        petPersisted
-      />
-      <label className="block text-sm font-medium text-text">
-        Service & Product Notes (Admin Only)
-        <textarea
-          value={draft.adminServiceNotes ?? ""}
-          onChange={(event) => {
-            setDraft((current) => ({
-              ...current,
-              adminServiceNotes: event.target.value,
-            }));
-            setSaved(false);
-          }}
-          rows={3}
-          className="mt-1.5 w-full rounded-xl border border-lavender/40 bg-cream px-4 py-2.5 text-sm text-text"
-        />
-      </label>
-      {error && (
-        <p className="text-sm text-red-800" role="alert">
-          {error}
-        </p>
-      )}
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => void handleSave()}
-          disabled={saving}
-          className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-        >
-          {saving ? "Saving…" : "Save Pet"}
-        </button>
-        {saved && <span className="text-xs text-text-muted">Saved</span>}
-      </div>
-    </div>
-  );
-}
-
 function formatHistoryDate(iso: string) {
   if (!iso) return "—";
   return new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", {
@@ -200,12 +93,53 @@ function appointmentStatusLabel(status: string) {
   return "Confirmed";
 }
 
-function CustomerHistory({ customerId, open }: { customerId: string; open: boolean }) {
-  const [history, setHistory] = useState<StaffCustomerHistory | null>(null);
+function formatAppointmentAddress(appointment: {
+  addressStreet: string;
+  addressCity: string;
+  addressState: string;
+  addressZip: string;
+}) {
+  const cityLine = [appointment.addressCity, appointment.addressState]
+    .filter(Boolean)
+    .join(", ");
+  const withZip = [cityLine, appointment.addressZip].filter(Boolean).join(" ");
+  return [appointment.addressStreet, withZip].filter(Boolean).join(", ");
+}
+
+function uniqueServiceAddresses(
+  appointments: StaffCustomerHistory["appointments"],
+) {
+  const seen = new Set<string>();
+  const addresses: string[] = [];
+  for (const appointment of appointments) {
+    const label = formatAppointmentAddress(appointment);
+    if (!label || seen.has(label)) continue;
+    seen.add(label);
+    addresses.push(label);
+  }
+  return addresses;
+}
+
+function CustomerHistory({
+  customerId,
+  open,
+  preview = false,
+  previewHistory,
+  bookHref,
+}: {
+  customerId: string;
+  open: boolean;
+  preview?: boolean;
+  previewHistory?: StaffCustomerHistory;
+  bookHref?: string;
+}) {
+  const [history, setHistory] = useState<StaffCustomerHistory | null>(
+    preview ? previewHistory ?? { appointments: [], orders: [] } : null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open || history) return;
+    if (!open || history || preview) return;
     let cancelled = false;
     void fetch(`/api/admin/customers/${customerId}/history`, {
       credentials: "include",
@@ -227,12 +161,51 @@ function CustomerHistory({ customerId, open }: { customerId: string; open: boole
     return () => {
       cancelled = true;
     };
-  }, [customerId, history, open]);
+  }, [customerId, history, open, preview]);
 
   if (!open) return null;
 
+  const addresses = history ? uniqueServiceAddresses(history.appointments) : [];
+
   return (
     <>
+      <section>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-base font-medium text-gold-dark">
+            Service addresses
+          </h3>
+          {bookHref ? (
+            <a
+              href={bookHref}
+              className="rounded-xl border border-lavender/40 px-3 py-2 text-sm text-text-muted hover:border-gold/40 hover:text-text"
+            >
+              Book for customer
+            </a>
+          ) : null}
+        </div>
+        <p className="mt-2 text-sm text-text-muted">
+          Guests do not keep a saved address book. Addresses come from booked
+          visits. Use Book for customer to add or change a visit address.
+        </p>
+        {!history ? (
+          <p className="mt-3 text-sm text-text-muted">Loading addresses…</p>
+        ) : addresses.length === 0 ? (
+          <p className="mt-3 text-sm text-text-muted">
+            No visit addresses yet.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-2 text-sm text-text">
+            {addresses.map((address) => (
+              <li
+                key={address}
+                className="rounded-xl border border-lavender/30 px-4 py-3"
+              >
+                {address}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
       <section>
         <h3 className="text-base font-medium text-gold-dark">
           Appointment history
@@ -281,6 +254,11 @@ function CustomerHistory({ customerId, open }: { customerId: string; open: boole
                     appointment.timezone,
                   )}
                 </p>
+                {formatAppointmentAddress(appointment) ? (
+                  <p className="mt-1 text-xs text-text-muted">
+                    {formatAppointmentAddress(appointment)}
+                  </p>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -330,23 +308,39 @@ export function CustomerRecordCard({
   customer,
   startOpen,
   preview = false,
+  previewHistory,
+  previewReferrals,
   onProfileSaved,
   onPetSaved,
+  onPetCreated,
+  onPetArchived,
+  onPaymentMethodsChange,
   onDeleted,
   onFrozenChange,
 }: {
   customer: StaffCustomerRecord;
   startOpen?: boolean;
   preview?: boolean;
+  previewHistory?: StaffCustomerHistory;
+  previewReferrals?: StaffReferralView;
   onProfileSaved: (profile: CustomerProfile) => void;
   onPetSaved: (pet: StaffCustomerRecord["pets"][number]) => void;
+  onPetCreated: (pet: StaffCustomerRecord["pets"][number]) => void;
+  onPetArchived: (petId: string) => void;
+  onPaymentMethodsChange: (methods: PaymentMethodRecord[]) => void;
   onDeleted: (customerId: string) => void;
   onFrozenChange: (customerId: string, frozen: boolean) => void;
 }) {
   const [open, setOpen] = useState(Boolean(startOpen));
   const [busyAction, setBusyAction] = useState<"delete" | "freeze" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const roleLabel = isOwnerEmail(customer.profile.email)
+  const [profile, setProfile] = useState(customer.profile);
+
+  useEffect(() => {
+    setProfile(customer.profile);
+  }, [customer.profile]);
+
+  const roleLabel = isOwnerEmail(profile.email)
     ? "Owner"
     : customer.kind === "admin"
       ? "Administrator"
@@ -452,19 +446,19 @@ export function CustomerRecordCard({
           onClick={() => setOpen((value) => !value)}
           className="min-w-0 flex-1 text-left"
         >
-          <p className="font-medium text-text">{customerLabel(customer.profile)}</p>
+          <p className="font-medium text-text">{customerLabel(profile)}</p>
           <p className="mt-1 text-sm text-text-muted">
             {roleLabel}
             {customer.frozen ? " · Frozen" : ""}
             {" · "}
-            {customer.profile.email}
-            {customer.profile.phone ? ` · ${customer.profile.phone}` : ""}
+            {profile.email}
+            {profile.phone ? ` · ${profile.phone}` : ""}
           </p>
         </button>
         <div className="flex shrink-0 items-center gap-2">
           {customer.kind === "customer" && !customer.frozen ? (
             <a
-              href={bookForCustomerHref(customer.profile)}
+              href={bookForCustomerHref(profile)}
               className="rounded-xl border border-lavender/40 px-3 py-2 text-sm text-text-muted hover:border-gold/40 hover:text-text"
             >
               Book for customer
@@ -499,7 +493,7 @@ export function CustomerRecordCard({
               <div className="flex flex-wrap items-center gap-2">
                 {customer.kind === "customer" && !customer.frozen ? (
                   <a
-                    href={bookForCustomerHref(customer.profile)}
+                    href={bookForCustomerHref(profile)}
                     className="rounded-xl border border-lavender/40 px-3 py-2 text-sm text-text-muted hover:border-gold/40 hover:text-text"
                   >
                     Book for customer
@@ -507,7 +501,7 @@ export function CustomerRecordCard({
                 ) : null}
                 <CallCustomerButton
                   customerId={customer.profile.id}
-                  disabled={!customer.profile.phone}
+                  disabled={!profile.phone}
                   preview={preview}
                 />
                 {renderOwnerActions()}
@@ -515,49 +509,51 @@ export function CustomerRecordCard({
             </div>
             <div className="mt-4">
               <CustomerProfileForm
-                profile={customer.profile}
-                saveUrl={`/api/admin/customers/${customer.profile.id}`}
-                onSaved={onProfileSaved}
+                profile={profile}
+                saveUrl={`/api/admin/customers/${profile.id}`}
+                onSaved={(next) => {
+                  setProfile(next);
+                  onProfileSaved(next);
+                }}
+                audience="staff"
+                preview={preview}
               />
             </div>
           </section>
-          <section>
-            <h3 className="text-base font-medium text-gold-dark">Payment Methods</h3>
-            {customer.paymentMethods.length === 0 ? (
-              <p className="mt-3 text-sm text-text-muted">No cards on file.</p>
-            ) : (
-              <ul className="mt-3 space-y-2 text-sm text-text">
-                {customer.paymentMethods.map((method) => (
-                  <li key={method.id}>{formatPaymentMethodLabel(method)}</li>
-                ))}
-              </ul>
-            )}
-          </section>
-          <CustomerHistory customerId={customer.profile.id} open={open} />
-          <section>
-            <h3 className="text-base font-medium text-gold-dark">Pet Profiles</h3>
-            {customer.pets.length === 0 ? (
-              <p className="mt-3 text-sm text-text-muted">No pet profiles yet.</p>
-            ) : (
-              <div className="mt-4 space-y-6">
-                {customer.pets.map((pet) => (
-                  <div
-                    key={pet.id}
-                    className="rounded-xl border border-lavender/30 px-4 py-4"
-                  >
-                    <p className="font-medium text-text">
-                      {pet.name} · {pet.breed}
-                    </p>
-                    <StaffPetEditor
-                      customerId={customer.profile.id}
-                      pet={pet}
-                      onSaved={onPetSaved}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+          <StaffCustomerPayments
+            customerId={customer.profile.id}
+            methods={customer.paymentMethods}
+            preview={preview}
+            onChange={onPaymentMethodsChange}
+          />
+          <CustomerHistory
+            customerId={customer.profile.id}
+            open={open}
+            preview={preview}
+            previewHistory={previewHistory}
+            bookHref={
+              customer.kind === "customer" && !customer.frozen
+                ? bookForCustomerHref(profile)
+                : undefined
+            }
+          />
+          <StaffCustomerPets
+            customerId={customer.profile.id}
+            pets={customer.pets}
+            preview={preview}
+            onPetSaved={onPetSaved}
+            onPetCreated={onPetCreated}
+            onPetArchived={onPetArchived}
+          />
+          <StaffCustomerReferrals
+            customerId={customer.profile.id}
+            preview={preview}
+            previewView={previewReferrals}
+          />
+          <StaffCustomerPassword
+            customerId={customer.profile.id}
+            preview={preview}
+          />
           {customer.canDelete || customer.canFreeze ? (
             <section className="border-t border-lavender/30 pt-6">
               <h3 className="text-base font-medium text-gold-dark">
@@ -580,10 +576,14 @@ export function CustomerRecordsPanel({
   focusCustomerId,
   preview = false,
   previewCustomers,
+  previewHistoryByCustomerId,
+  previewReferralsByCustomerId,
 }: {
   focusCustomerId?: string;
   preview?: boolean;
   previewCustomers?: StaffCustomerRecord[];
+  previewHistoryByCustomerId?: Record<string, StaffCustomerHistory>;
+  previewReferralsByCustomerId?: Record<string, StaffReferralView>;
 }) {
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
 
@@ -692,6 +692,8 @@ export function CustomerRecordsPanel({
               customer={customer}
               startOpen={customer.profile.id === focusCustomerId}
               preview={preview}
+              previewHistory={previewHistoryByCustomerId?.[customer.profile.id]}
+              previewReferrals={previewReferralsByCustomerId?.[customer.profile.id]}
               onDeleted={(customerId) => {
                 setLoadState((current) => {
                   if (current.status !== "ready") return current;
@@ -719,12 +721,49 @@ export function CustomerRecordsPanel({
               onPetSaved={(pet) => {
                 setLoadState((current) => {
                   if (current.status !== "ready") return current;
-                  return updateLists(current, (item) => ({
-                    ...item,
-                    pets: item.pets.map((existing) =>
-                      existing.id === pet.id ? pet : existing,
-                    ),
-                  }));
+                  return updateLists(current, (item) =>
+                    item.profile.id === customer.profile.id
+                      ? {
+                          ...item,
+                          pets: item.pets.map((existing) =>
+                            existing.id === pet.id ? pet : existing,
+                          ),
+                        }
+                      : item,
+                  );
+                });
+              }}
+              onPetCreated={(pet) => {
+                setLoadState((current) => {
+                  if (current.status !== "ready") return current;
+                  return updateLists(current, (item) =>
+                    item.profile.id === customer.profile.id
+                      ? { ...item, pets: [...item.pets, pet] }
+                      : item,
+                  );
+                });
+              }}
+              onPetArchived={(petId) => {
+                setLoadState((current) => {
+                  if (current.status !== "ready") return current;
+                  return updateLists(current, (item) =>
+                    item.profile.id === customer.profile.id
+                      ? {
+                          ...item,
+                          pets: item.pets.filter((existing) => existing.id !== petId),
+                        }
+                      : item,
+                  );
+                });
+              }}
+              onPaymentMethodsChange={(methods) => {
+                setLoadState((current) => {
+                  if (current.status !== "ready") return current;
+                  return updateLists(current, (item) =>
+                    item.profile.id === customer.profile.id
+                      ? { ...item, paymentMethods: methods }
+                      : item,
+                  );
                 });
               }}
             />

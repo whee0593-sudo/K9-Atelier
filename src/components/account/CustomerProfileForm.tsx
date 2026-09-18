@@ -17,6 +17,7 @@ function inputClassName() {
 }
 
 type Draft = {
+  email: string;
   firstName: string;
   lastName: string;
   phone: string;
@@ -28,6 +29,7 @@ type Draft = {
 
 function toDraft(profile: CustomerProfile): Draft {
   return {
+    email: profile.email,
     firstName: profile.firstName,
     lastName: profile.lastName,
     phone: profile.phone,
@@ -69,20 +71,27 @@ function requiredFieldErrors(
 
 export function CustomerProfileForm({
   profile,
-  emailReadOnly = true,
+  emailReadOnly,
   saveUrl,
   onSaved,
+  audience = "customer",
+  preview = false,
 }: {
   profile: CustomerProfile;
   emailReadOnly?: boolean;
   saveUrl: string;
   onSaved?: (profile: CustomerProfile) => void;
+  audience?: "customer" | "staff";
+  preview?: boolean;
 }) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(profile));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const lockEmail = emailReadOnly ?? audience !== "staff";
+  const emailValue = lockEmail ? profile.email : draft.email;
   const [requireComplete, setRequireComplete] = useState(
     () =>
+      audience === "customer" &&
       missingCustomerProfileFieldLabels({
         firstName: profile.firstName,
         lastName: profile.lastName,
@@ -96,26 +105,27 @@ export function CustomerProfileForm({
     setDraft(toDraft(profile));
     setError(null);
     setRequireComplete(
-      missingCustomerProfileFieldLabels({
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        phone: profile.phone,
-        email: profile.email,
-      }).length > 0,
+      audience === "customer" &&
+        missingCustomerProfileFieldLabels({
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          phone: profile.phone,
+          email: profile.email,
+        }).length > 0,
     );
-  }, [profile]);
+  }, [profile, audience]);
 
   const missing = missingCustomerProfileFieldLabels({
     firstName: draft.firstName,
     lastName: draft.lastName,
     phone: draft.phone,
-    email: profile.email,
+    email: emailValue,
   });
   const fieldErrors = requireComplete
-    ? requiredFieldErrors(draft, profile.email)
+    ? requiredFieldErrors(draft, emailValue)
     : {};
   const incompleteMessage = requireComplete
-    ? formatMissingProfileFieldsMessage(missing)
+    ? formatMissingProfileFieldsMessage(missing, audience)
     : null;
 
   function update<K extends keyof Draft>(key: K, value: Draft[K]) {
@@ -135,12 +145,44 @@ export function CustomerProfileForm({
     setSaving(true);
     setError(null);
     setRequireComplete(false);
+
+    if (preview) {
+      const nextProfile: CustomerProfile = {
+        ...profile,
+        email: emailValue.trim(),
+        firstName: draft.firstName.trim(),
+        lastName: draft.lastName.trim(),
+        phone: draft.phone.trim(),
+        preferredContact: draft.preferredContact,
+        emergencyContactName: draft.emergencyContactName.trim(),
+        emergencyContactPhone: draft.emergencyContactPhone.trim(),
+        emergencyContactRelationship: draft.emergencyContactRelationship,
+      };
+      onSaved?.(nextProfile);
+      setDraft(toDraft(nextProfile));
+      setSaved(true);
+      setSaving(false);
+      return;
+    }
+
     try {
       const response = await fetch(saveUrl, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(draft),
+          body: JSON.stringify(
+            lockEmail
+              ? {
+                  firstName: draft.firstName,
+                  lastName: draft.lastName,
+                  phone: draft.phone,
+                  preferredContact: draft.preferredContact,
+                  emergencyContactName: draft.emergencyContactName,
+                  emergencyContactPhone: draft.emergencyContactPhone,
+                  emergencyContactRelationship: draft.emergencyContactRelationship,
+                }
+              : draft,
+          ),
       });
       const body = (await response.json()) as {
         error?: string;
@@ -171,11 +213,16 @@ export function CustomerProfileForm({
         <input
           type="email"
           required
-          readOnly={emailReadOnly}
-          value={profile.email}
-          className={`${inputClassName()} ${emailReadOnly ? "opacity-80" : ""}`}
+          readOnly={lockEmail}
+          value={emailValue}
+          onChange={
+            lockEmail
+              ? undefined
+              : (event) => update("email", event.target.value)
+          }
+          className={`${inputClassName()} ${lockEmail ? "opacity-80" : ""}`}
         />
-        {fieldErrors.email || !profile.email.trim() ? (
+        {fieldErrors.email || !emailValue.trim() ? (
           <p className="mt-1.5 text-xs text-red-800">
             {fieldErrors.email ?? "An email address is required on this profile."}
           </p>

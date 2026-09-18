@@ -29,6 +29,13 @@ export async function POST(request: Request) {
     }
 
     const input = validateCreatePetInput(body);
+    if (!input.rabiesStatus) {
+      return jsonError(
+        "Please confirm this dog’s rabies vaccination status.",
+        400,
+        "rabiesStatus",
+      );
+    }
     const result = await createPet(input);
 
     if (isServiceError(result)) {

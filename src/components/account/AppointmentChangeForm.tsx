@@ -21,7 +21,7 @@ import { formatPrice } from "@/lib/business";
 import { useCustomerPets } from "@/lib/pets/use-customer-pets";
 import { allBookableServices, formatServicePrice, getBookableServicesForPet } from "@/lib/services";
 import { formatServiceAddress } from "@/lib/travel";
-import { vaccinationReadyToBook } from "@/lib/vaccinations/booking";
+import { petReadyToBook } from "@/lib/pets";
 import { buildPreviewOnTheWayAppointments } from "@/lib/appointments/calendar-preview";
 
 type VisitContext = {
@@ -170,7 +170,7 @@ export function AppointmentChangeForm({
   const addablePets = pets.filter(
     (pet) =>
       !bookedPetIds.has(pet.id) &&
-      vaccinationReadyToBook(pet.vaccinationBookingStatus),
+      petReadyToBook(pet),
   );
   const selectedAddPet = addablePets.find((pet) => pet.id === addPetId) ?? null;
   const addServices = selectedAddPet
@@ -368,8 +368,8 @@ export function AppointmentChangeForm({
           </label>
           {addablePets.length === 0 ? (
             <p className="text-sm text-text-muted">
-              Add another dog in your pet profiles, with a current vaccine
-              record, before attaching them to this visit.
+              Add another dog in your pet profiles, with confirmed rabies
+              status, before attaching them to this visit.
             </p>
           ) : null}
           <label className="block">

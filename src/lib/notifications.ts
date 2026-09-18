@@ -65,7 +65,7 @@ export function buildBookingConfirmationSms(
 export function buildAppointmentSubmittedSms(
   details: BookingConfirmationDetails,
 ): string {
-  return `K9 Atelier has received your dog’s vaccination record. Your selected appointment is pending review. We will notify you once it is confirmed. ${SMS_OPT_OUT}`;
+  return `K9 Atelier has received your appointment request. Your selected appointment is pending confirmation. We will notify you once it is confirmed. ${SMS_OPT_OUT}`;
 }
 
 export function buildAppointmentDeclinedSms(

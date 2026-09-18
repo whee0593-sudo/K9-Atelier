@@ -14,4 +14,5 @@ export type PetVaccinationSummary = {
   bookingStatus: VaccinationBookingStatus;
   expirationDate: string | null;
   hasUpload: boolean;
+  latestRecordId: string | null;
 };

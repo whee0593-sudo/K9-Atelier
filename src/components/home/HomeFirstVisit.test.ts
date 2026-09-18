@@ -11,14 +11,13 @@ describe("home first visit guide", () => {
     );
   });
 
-  it("uses the approved vaccination-review wording", () => {
+  it("uses rabies confirmation wording", () => {
     const details = homeFirstVisitSteps[2];
     assert.equal(details.title, "Complete Your Details");
-    assert.match(details.body, /vaccination record/);
+    assert.match(details.body, /rabies vaccination status/);
     assert.match(details.body, /card on file/);
-    assert.match(details.body, /If the record needs review/);
-    assert.match(details.body, /when your appointment is confirmed/);
-    assert.equal(details.body.includes("Should the record require review"), false);
+    assert.match(details.body, /rabies certificate or vaccination record/);
+    assert.equal(details.body.includes("If the record needs review"), false);
     assert.equal(details.body.includes("COMPLETE YOUR BOOKING"), false);
   });
 

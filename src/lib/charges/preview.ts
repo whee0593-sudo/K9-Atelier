@@ -2,7 +2,7 @@ import { catalogChargeGroups, catalogChargeItems } from "@/lib/charges/catalog";
 import type { AppointmentChargeRecord, CollectContext } from "@/lib/charges/types";
 
 export function buildPreviewCollectContext(
-  options: { paid?: boolean } = {},
+  options: { paid?: boolean; firstVisit?: boolean } = {},
 ): CollectContext {
   const petWeightLbs = 18;
   const lineItems = [
@@ -28,6 +28,8 @@ export function buildPreviewCollectContext(
         receiptChannel: "email",
         paidAt: "2026-07-08T15:10:00.000Z",
         refundedAmount: 0,
+        paymentMethodId: "preview-card",
+        tender: "card",
       }
     : null;
   return {
@@ -82,17 +84,34 @@ export function buildPreviewCollectContext(
         expYear: 2028,
         isDefault: true,
       },
+      {
+        id: "preview-card-b",
+        brand: "mastercard",
+        last4: "5555",
+        expMonth: 8,
+        expYear: 2029,
+        isDefault: false,
+      },
     ],
     selectedPaymentMethodId: "preview-card",
     paidKinds: paidCharge ? ["service"] : [],
     paidCharges: paidCharge ? [paidCharge] : [],
     stripeConfigured: true,
     stripePublishableKey: "",
-    referral: {
-      availableCreditCents: 10000,
-      applyNewClientDiscount: false,
-      canUseCredit: true,
-      referralCode: null,
-    },
+    referral: options.firstVisit
+      ? {
+          availableCreditCents: 0,
+          applyNewClientDiscount: false,
+          canUseCredit: false,
+          referralCode: null,
+          canEnterReferralCode: true,
+        }
+      : {
+          availableCreditCents: 10000,
+          applyNewClientDiscount: false,
+          canUseCredit: true,
+          referralCode: null,
+          canEnterReferralCode: false,
+        },
   };
 }

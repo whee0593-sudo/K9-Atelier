@@ -27,8 +27,8 @@ export default async function AdminDashboardPage() {
         >
           <h3 className="font-medium text-gold-dark">Vaccination Review</h3>
           <p className="mt-2 text-sm text-text-muted">
-            Approve or reject customer vaccination uploads before confirming
-            pending appointments.
+            Approve or reject optional vaccination uploads. Rabies status
+            confirmation is enough for customers to book.
           </p>
         </Link>
         <Link
