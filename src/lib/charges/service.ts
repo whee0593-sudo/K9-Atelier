@@ -24,10 +24,12 @@ import type {
   AppointmentChargeRecord,
   ChargeKind,
   ChargeLineItem,
+  ChargeTender,
   CollectContext,
   CreateChargeInput,
   ReceiptChannel,
 } from "@/lib/charges/types";
+import { isCashTender, readChargeTender } from "@/lib/charges/tender";
 import {
   sendAfterVisitThankYouSms,
   sendChargeReceiptEmail,
@@ -46,6 +48,9 @@ import {
   writeReferralAudit,
 } from "@/lib/referrals/service";
 
+const CHARGE_SELECT =
+  "id, appointment_id, kind, status, line_items, subtotal, tip_amount, total, receipt_channel, paid_at, stripe_payment_intent_id, refunded_amount, payment_method_id, tender";
+
 type ChargeRow = {
   id: string;
   appointment_id: string;
@@ -59,6 +64,8 @@ type ChargeRow = {
   paid_at: string | null;
   stripe_payment_intent_id: string | null;
   refunded_amount?: number | null;
+  payment_method_id?: string | null;
+  tender?: ChargeTender | null;
 };
 
 function mapCharge(row: ChargeRow & { refunded_amount?: number | null }): AppointmentChargeRecord {
@@ -74,6 +81,8 @@ function mapCharge(row: ChargeRow & { refunded_amount?: number | null }): Appoin
     receiptChannel: row.receipt_channel,
     paidAt: row.paid_at,
     refundedAmount: Number(row.refunded_amount ?? 0),
+    paymentMethodId: (row.payment_method_id as string | null | undefined) ?? null,
+    tender: readChargeTender(row.tender),
   };
 }
 
@@ -107,9 +116,7 @@ export async function getCollectContext(
 
   const { data: charges, error: chargeError } = await admin
     .from("appointment_charges")
-    .select(
-      "id, appointment_id, kind, status, line_items, subtotal, tip_amount, total, receipt_channel, paid_at, refunded_amount",
-    )
+    .select(CHARGE_SELECT)
     .eq("appointment_id", appointmentId)
     .eq("status", "paid");
 
@@ -287,13 +294,16 @@ export async function createAppointmentCharge(
     return { error: "conflict", message: "This appointment is already paid." };
   }
 
+  const useCash = isCashTender(input.tender);
+  const useNewCard = !useCash && Boolean(input.useNewCard);
+  const tender: ChargeTender = useCash ? "cash" : "card";
   const stripe = getStripe();
-  if (cents > 0 && (!stripe || !isStripeConfigured())) {
+  if (cents > 0 && !useCash && (!stripe || !isStripeConfigured())) {
     return { error: "misconfigured" };
   }
 
   let stripeCustomerId: string | null = null;
-  if (cents > 0) {
+  if (cents > 0 && !useCash) {
     stripeCustomerId = await getOrCreateStripeCustomerId(
       appointment.customerId,
       appointment.customerEmail,
@@ -302,7 +312,7 @@ export async function createAppointmentCharge(
   }
 
   let stripePaymentMethodId: string | undefined;
-  if (cents > 0 && !input.useNewCard) {
+  if (cents > 0 && !useCash && !useNewCard) {
     if (!input.paymentMethodId) {
       return { error: "conflict", message: "Select a saved card." };
     }
@@ -331,11 +341,10 @@ export async function createAppointmentCharge(
       new_client_discount: newClientDiscount,
       referral_credit_applied: referralCreditApplied,
       created_by: session.user.id,
-      payment_method_id: input.useNewCard ? null : input.paymentMethodId,
+      payment_method_id: useCash || useNewCard ? null : input.paymentMethodId,
+      tender,
     })
-    .select(
-      "id, appointment_id, kind, status, line_items, subtotal, tip_amount, total, receipt_channel, paid_at, stripe_payment_intent_id",
-    )
+    .select(CHARGE_SELECT)
     .single();
 
   if (insertError || !inserted) {
@@ -363,10 +372,10 @@ export async function createAppointmentCharge(
     }
   }
 
-  if (cents === 0) {
+  if (cents === 0 || useCash) {
     const charge = await markChargePaid(
       inserted.id,
-      input.useNewCard ? null : input.paymentMethodId ?? null,
+      useCash || useNewCard ? null : input.paymentMethodId ?? null,
     );
     return { charge: charge ?? mapCharge(inserted as ChargeRow) };
   }
@@ -394,7 +403,7 @@ export async function createAppointmentCharge(
         charge_id: inserted.id,
         kind: input.kind,
       },
-      ...(input.useNewCard
+      ...(useNewCard
         ? {
             automatic_payment_methods: {
               enabled: true,
@@ -418,7 +427,7 @@ export async function createAppointmentCharge(
     if (paymentIntent.status === "succeeded") {
       const charge = await markChargePaid(
         inserted.id,
-        input.useNewCard ? null : input.paymentMethodId ?? null,
+        useNewCard ? null : input.paymentMethodId ?? null,
       );
       return { charge: charge ?? mapCharge(inserted as ChargeRow) };
     }
@@ -426,7 +435,7 @@ export async function createAppointmentCharge(
     if (
       paymentIntent.status === "requires_action" ||
       paymentIntent.status === "requires_confirmation" ||
-      input.useNewCard
+      useNewCard
     ) {
       if (!paymentIntent.client_secret) return { error: "server" };
       return {
@@ -476,9 +485,7 @@ export async function confirmAppointmentCharge(
   const admin = createAdminClient();
   const { data: row, error } = await admin
     .from("appointment_charges")
-    .select(
-      "id, appointment_id, kind, status, line_items, subtotal, tip_amount, total, receipt_channel, paid_at, stripe_payment_intent_id",
-    )
+    .select(CHARGE_SELECT)
     .eq("id", chargeId)
     .maybeSingle();
 
@@ -568,9 +575,7 @@ async function markChargePaid(
       ...(paymentMethodId ? { payment_method_id: paymentMethodId } : {}),
     })
     .eq("id", chargeId)
-    .select(
-      "id, appointment_id, kind, status, line_items, subtotal, tip_amount, total, receipt_channel, paid_at, stripe_payment_intent_id",
-    )
+    .select(CHARGE_SELECT)
     .single();
 
   if (error || !data) {
@@ -615,9 +620,7 @@ export async function sendChargeReceipt(
   const admin = createAdminClient();
   const { data: row, error } = await admin
     .from("appointment_charges")
-    .select(
-      "id, appointment_id, kind, status, line_items, subtotal, tip_amount, total, receipt_channel, paid_at, stripe_payment_intent_id",
-    )
+    .select(CHARGE_SELECT)
     .eq("id", chargeId)
     .maybeSingle();
 
@@ -675,15 +678,10 @@ export async function refundAppointmentCharge(
     return { error: "conflict", message: "Enter a refund amount." };
   }
 
-  const stripe = getStripe();
-  if (!stripe) return { error: "misconfigured" };
-
   const admin = createAdminClient();
   const { data: row, error } = await admin
     .from("appointment_charges")
-    .select(
-      "id, appointment_id, kind, status, line_items, subtotal, tip_amount, total, receipt_channel, paid_at, stripe_payment_intent_id, refunded_amount",
-    )
+    .select(CHARGE_SELECT)
     .eq("id", chargeId)
     .maybeSingle();
 
@@ -692,7 +690,12 @@ export async function refundAppointmentCharge(
     return { error: "server" };
   }
   if (!row) return { error: "not_found" };
-  if (row.status !== "paid" || !row.stripe_payment_intent_id) {
+  if (row.status !== "paid") {
+    return { error: "conflict", message: "This payment cannot be refunded." };
+  }
+
+  const cashRefund = isCashTender(readChargeTender(row.tender));
+  if (!cashRefund && !row.stripe_payment_intent_id) {
     return { error: "conflict", message: "This payment cannot be refunded." };
   }
 
@@ -705,14 +708,18 @@ export async function refundAppointmentCharge(
     };
   }
 
-  try {
-    await stripe.refunds.create({
-      payment_intent: row.stripe_payment_intent_id,
-      amount: dollarsToCents(refundAmount),
-    });
-  } catch (refundError) {
-    console.error("refundAppointmentCharge stripe failed:", refundError);
-    return { error: "conflict", message: "Stripe could not process this refund." };
+  if (!cashRefund) {
+    const stripe = getStripe();
+    if (!stripe) return { error: "misconfigured" };
+    try {
+      await stripe.refunds.create({
+        payment_intent: row.stripe_payment_intent_id as string,
+        amount: dollarsToCents(refundAmount),
+      });
+    } catch (refundError) {
+      console.error("refundAppointmentCharge stripe failed:", refundError);
+      return { error: "conflict", message: "Stripe could not process this refund." };
+    }
   }
 
   const nextRefunded = Math.round((alreadyRefunded + refundAmount) * 100) / 100;
@@ -723,9 +730,7 @@ export async function refundAppointmentCharge(
       refunded_at: new Date().toISOString(),
     })
     .eq("id", chargeId)
-    .select(
-      "id, appointment_id, kind, status, line_items, subtotal, tip_amount, total, receipt_channel, paid_at, stripe_payment_intent_id, refunded_amount",
-    )
+    .select(CHARGE_SELECT)
     .single();
 
   if (updateError) {

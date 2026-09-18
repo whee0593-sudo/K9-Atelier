@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { mapStaffServiceError, staffJsonError } from "@/lib/staff/api-errors";
 import { createAppointmentCharge } from "@/lib/charges/service";
-import type { ChargeKind } from "@/lib/charges/types";
+import type { ChargeKind, ChargeTender } from "@/lib/charges/types";
+import { readChargeTender } from "@/lib/charges/tender";
 
 export async function POST(request: Request) {
   let body: {
@@ -11,6 +12,7 @@ export async function POST(request: Request) {
     tipAmount?: number;
     paymentMethodId?: string;
     useNewCard?: boolean;
+    tender?: ChargeTender;
     referralMode?: "full" | "custom" | "none";
     referralCustomDollars?: number;
     referralCode?: string;
@@ -33,6 +35,7 @@ export async function POST(request: Request) {
     tipAmount: Number(body.tipAmount ?? 0),
     paymentMethodId: body.paymentMethodId,
     useNewCard: Boolean(body.useNewCard),
+    tender: readChargeTender(body.tender),
     referralMode: body.referralMode,
     referralCustomDollars: body.referralCustomDollars,
     referralCode: body.referralCode,

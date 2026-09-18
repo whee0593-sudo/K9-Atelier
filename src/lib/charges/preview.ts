@@ -28,6 +28,8 @@ export function buildPreviewCollectContext(
         receiptChannel: "email",
         paidAt: "2026-07-08T15:10:00.000Z",
         refundedAmount: 0,
+        paymentMethodId: "preview-card",
+        tender: "card",
       }
     : null;
   return {
@@ -81,6 +83,14 @@ export function buildPreviewCollectContext(
         expMonth: 12,
         expYear: 2028,
         isDefault: true,
+      },
+      {
+        id: "preview-card-b",
+        brand: "mastercard",
+        last4: "5555",
+        expMonth: 8,
+        expYear: 2029,
+        isDefault: false,
       },
     ],
     selectedPaymentMethodId: "preview-card",

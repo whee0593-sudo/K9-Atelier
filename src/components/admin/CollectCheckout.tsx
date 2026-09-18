@@ -27,10 +27,12 @@ import { HourlyVisitTimer } from "@/components/admin/HourlyVisitTimer";
 import { ChargeReceiptActions } from "@/components/admin/ChargeReceiptActions";
 import { ChargeReceiptLetter } from "@/components/admin/ChargeReceiptLetter";
 import { ChargeRefundForm } from "@/components/admin/ChargeRefundForm";
+import { collectBillHeading } from "@/lib/charges/receipt-view";
 import {
-  collectBillHeading,
-  formatReceiptPaymentMethod,
-} from "@/lib/charges/receipt-view";
+  buildCollectChargePaymentFields,
+  collectReceiptPaymentLabel,
+} from "@/lib/charges/tender";
+import type { ChargeTender } from "@/lib/charges/types";
 import type {
   AppointmentChargeRecord,
   CatalogChargeItem,
@@ -85,6 +87,8 @@ export function CollectCheckout({
   const [methods, setMethods] = useState<PaymentMethodRecord[]>([]);
   const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null);
   const [useNewCard, setUseNewCard] = useState(false);
+  const [useCash, setUseCash] = useState(false);
+  const [chargedTender, setChargedTender] = useState<ChargeTender>("card");
   const [tipMode, setTipMode] = useState<"15" | "18" | "20" | "custom">("18");
   const [customTip, setCustomTip] = useState("0");
   const [step, setStep] = useState<Step>(initialStep);
@@ -139,7 +143,10 @@ export function CollectCheckout({
         body.paidCharges.find((charge) => charge.kind === kind) ?? null;
       setPaidCharge(previewPaid);
       if (previewPaid) setChargeId(previewPaid.id);
-      if (previewPaid) setChargedMethodId(body.selectedPaymentMethodId);
+      if (previewPaid) {
+        setChargedMethodId(previewPaid.paymentMethodId ?? body.selectedPaymentMethodId);
+        setChargedTender(previewPaid.tender ?? "card");
+      }
       const existingCode = body.referral?.referralCode?.trim() ?? "";
       setReferralCode(existingCode);
       setReferralCodeStatus(existingCode ? "applied" : "idle");
@@ -179,7 +186,11 @@ export function CollectCheckout({
       const loadedPaid =
         (body.paidCharges ?? []).find((charge) => charge.kind === kind) ?? null;
       setPaidCharge(loadedPaid);
-      if (loadedPaid) setChargeId(loadedPaid.id);
+      if (loadedPaid) {
+        setChargeId(loadedPaid.id);
+        setChargedMethodId(loadedPaid.paymentMethodId ?? null);
+        setChargedTender(loadedPaid.tender ?? "card");
+      }
       const existingCode = body.referral?.referralCode?.trim() ?? "";
       setReferralCode(existingCode);
       setReferralCodeStatus(existingCode ? "applied" : "idle");
@@ -259,6 +270,8 @@ export function CollectCheckout({
           receiptChannel: null,
           paidAt: new Date().toISOString(),
           refundedAmount: 0,
+          paymentMethodId: useCash ? null : selectedMethodId,
+          tender: useCash ? "cash" : "card",
         }
       : null);
 
@@ -386,16 +399,35 @@ export function CollectCheckout({
         receiptChannel: null,
         paidAt: new Date().toISOString(),
         refundedAmount: 0,
+        paymentMethodId: useCash ? null : selectedMethodId,
+        tender: useCash ? "cash" : "card",
       };
       setChargeId(nextCharge.id);
       setPaidCharge(nextCharge);
-      if (!useNewCard) setChargedMethodId(selectedMethodId);
+      if (useCash) {
+        setChargedTender("cash");
+        setChargedMethodId(null);
+      } else {
+        setChargedTender("card");
+        if (!useNewCard) setChargedMethodId(selectedMethodId);
+      }
       setStep("receipt");
       return;
     }
     setBusy(true);
     setError(null);
     try {
+      const paymentFields = buildCollectChargePaymentFields(
+        useCash
+          ? { tender: "cash" }
+          : useNewCard
+            ? { tender: "card", useNewCard: true }
+            : {
+                tender: "card",
+                useNewCard: false,
+                paymentMethodId: selectedMethodId ?? "",
+              },
+      );
       const response = await fetch("/api/admin/charges", {
         method: "POST",
         credentials: "include",
@@ -405,8 +437,7 @@ export function CollectCheckout({
           kind,
           lineItems,
           tipAmount,
-          paymentMethodId: useNewCard ? undefined : selectedMethodId,
-          useNewCard,
+          ...paymentFields,
           referralMode: kind === "service" ? referralMode : "none",
           referralCustomDollars: Number(referralCustom) || 0,
           referralCode:
@@ -424,7 +455,13 @@ export function CollectCheckout({
         return;
       }
       if (body.charge?.id) setChargeId(body.charge.id);
-      if (!useNewCard) setChargedMethodId(selectedMethodId);
+      if (useCash) {
+        setChargedTender("cash");
+        setChargedMethodId(null);
+      } else {
+        setChargedTender("card");
+        if (!useNewCard) setChargedMethodId(selectedMethodId);
+      }
       if (body.requiresAction && body.clientSecret) {
         if (kind === "no_show") {
           setError(
@@ -795,6 +832,7 @@ export function CollectCheckout({
           methods={methods}
           selectedMethodId={selectedMethodId}
           useNewCard={useNewCard}
+          useCash={useCash}
           busy={busy}
           clientSecret={clientSecret}
           chargeId={chargeId}
@@ -811,9 +849,16 @@ export function CollectCheckout({
           onSelectMethod={(id) => {
             setSelectedMethodId(id);
             setUseNewCard(false);
+            setUseCash(false);
           }}
           onUseNewCard={() => {
             setUseNewCard(true);
+            setUseCash(false);
+            setSelectedMethodId(null);
+          }}
+          onUseCash={() => {
+            setUseCash(true);
+            setUseNewCard(false);
             setSelectedMethodId(null);
           }}
           onBack={() => setStep("review")}
@@ -829,9 +874,10 @@ export function CollectCheckout({
           <ChargeReceiptLetter
             appointment={appointment}
             charge={receiptCharge}
-            paymentMethodLabel={formatReceiptPaymentMethod(
-              methods.find((method) => method.id === chargedMethodId) ?? null,
-            )}
+            paymentMethodLabel={collectReceiptPaymentLabel({
+              tender: paidCharge?.tender ?? chargedTender,
+              method: methods.find((method) => method.id === chargedMethodId) ?? null,
+            })}
             websiteUrl={brandLinks?.websiteUrl}
             instagramUrl={brandLinks?.instagramUrl}
             googleReviewUrl={brandLinks?.googleReviewUrl}
@@ -874,6 +920,7 @@ function PayStep({
   methods,
   selectedMethodId,
   useNewCard,
+  useCash,
   busy,
   clientSecret,
   chargeId,
@@ -885,6 +932,7 @@ function PayStep({
   onApplyReferralCode,
   onSelectMethod,
   onUseNewCard,
+  onUseCash,
   onBack,
   onPay,
   onPaid,
@@ -907,6 +955,7 @@ function PayStep({
   methods: PaymentMethodRecord[];
   selectedMethodId: string | null;
   useNewCard: boolean;
+  useCash: boolean;
   busy: boolean;
   clientSecret: string | null;
   chargeId: string | null;
@@ -918,6 +967,7 @@ function PayStep({
   onApplyReferralCode: () => void;
   onSelectMethod: (id: string) => void;
   onUseNewCard: () => void;
+  onUseCash: () => void;
   onBack: () => void;
   onPay: () => Promise<string | null | void>;
   onPaid: () => void;
@@ -1134,6 +1184,9 @@ function PayStep({
       <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
         Payment
       </p>
+      <p className="font-body mt-2 text-sm text-taupe">
+        Choose a saved card, a different card, or cash.
+      </p>
       <div className="mt-3 space-y-2">
         {methods.map((method) => (
           <label
@@ -1143,10 +1196,11 @@ function PayStep({
             <input
               type="radio"
               name="collect-card"
-              checked={!useNewCard && selectedMethodId === method.id}
+              checked={!useNewCard && !useCash && selectedMethodId === method.id}
               onChange={() => onSelectMethod(method.id)}
             />
             {formatPaymentMethodLabel(method)}
+            {method.isDefault ? " · On file" : ""}
           </label>
         ))}
         <label className="flex items-center gap-3 rounded-2xl border border-lavender/40 bg-cream px-4 py-3 text-sm">
@@ -1156,7 +1210,16 @@ function PayStep({
             checked={useNewCard}
             onChange={onUseNewCard}
           />
-          Add another payment method
+          Use a different card
+        </label>
+        <label className="flex items-center gap-3 rounded-2xl border border-lavender/40 bg-cream px-4 py-3 text-sm">
+          <input
+            type="radio"
+            name="collect-card"
+            checked={useCash}
+            onChange={onUseCash}
+          />
+          Cash
         </label>
       </div>
 
@@ -1188,11 +1251,17 @@ function PayStep({
       ) : (
         <button
           type="button"
-          disabled={busy || !selectedMethodId}
+          disabled={busy || (!useCash && !selectedMethodId)}
           onClick={() => void onPay()}
           className="mt-8 w-full rounded-sm bg-gold px-6 py-4 text-[11px] font-medium uppercase tracking-[0.16em] text-white disabled:opacity-50"
         >
-          {busy ? "Charging…" : `Pay ${formatChargeMoney(total)}`}
+          {busy
+            ? useCash
+              ? "Recording…"
+              : "Charging…"
+            : useCash
+              ? `Pay ${formatChargeMoney(total)} in cash`
+              : `Pay ${formatChargeMoney(total)}`}
         </button>
       )}
 
