@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { updateStaffPet } from "@/lib/profiles/staff-service";
+import { archiveStaffPet, updateStaffPet } from "@/lib/profiles/staff-service";
 import { jsonError, handlePetRouteError } from "@/lib/pets/errors";
 import { isServiceError } from "@/lib/pets/result";
 import { validatePetId, validateUpdatePetInput } from "@/lib/pets/validation";
+import { ProfileValidationError, validateCustomerId } from "@/lib/profiles/validation";
 import { mapStaffServiceError } from "@/lib/staff/api-errors";
 
 type RouteContext = {
@@ -42,6 +43,24 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
     return NextResponse.json({ pet: result.pet });
   } catch (error) {
+    return handlePetRouteError(error);
+  }
+}
+
+export async function DELETE(_request: Request, context: RouteContext) {
+  try {
+    const { customerId: rawId, petId: rawPetId } = await context.params;
+    const customerId = validateCustomerId(rawId);
+    const petId = validatePetId(rawPetId);
+    const result = await archiveStaffPet(customerId, petId);
+    if (isServiceError(result)) {
+      return mapStaffServiceError(result.error);
+    }
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    if (error instanceof ProfileValidationError) {
+      return jsonError(error.message, 400, error.field);
+    }
     return handlePetRouteError(error);
   }
 }

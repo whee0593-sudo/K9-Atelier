@@ -1,5 +1,50 @@
 import { CustomerRecordsPanel } from "@/components/admin/CustomerRecordsPanel";
+import type { StaffReferralView } from "@/components/admin/StaffCustomerReferrals";
+import type { StaffCustomerHistory } from "@/lib/charges/history";
+import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
+
+const TIA_ID = "44444444-4444-4444-8444-444444444444";
+const MILO_ID = "55555555-5555-4555-8555-555555555555";
+
+const tiaAppointment: AdminAppointmentRecord = {
+  id: "77777777-7777-4777-8777-777777777777",
+  customerId: TIA_ID,
+  petId: MILO_ID,
+  petName: "Milo",
+  petBreed: "Yorkie",
+  serviceId: "signature-bath-care",
+  serviceName: "Signature Bath & Care",
+  addOnIds: [],
+  addOnOptions: {},
+  addressStreet: "2100 S Ocean Blvd",
+  addressCity: "Palm Beach",
+  addressState: "FL",
+  addressZip: "33480",
+  travelDistanceMiles: 12,
+  travelFee: 13,
+  appointmentDate: "2026-09-22",
+  appointmentTime: "10–11 AM",
+  scheduledStart: 600,
+  timePreference: "morning",
+  timezone: "America/New_York",
+  estimatedTotal: 140,
+  newClientDeposit: null,
+  vaccinationStatusAtBooking: "needs_review",
+  status: "confirmed",
+  confirmedAt: "2026-09-18T14:00:00.000Z",
+  customerConfirmedAt: null,
+  createdAt: "2026-09-18T14:00:00.000Z",
+  customerEmail: "tiafrancavilla@gmail.com",
+  customerName: null,
+  customerFirstName: "",
+  customerLastName: "",
+  customerPhone: "+15613466778",
+  reminderSmsSentAt: null,
+  enRouteSmsSentAt: null,
+  serviceStartedAt: null,
+  serviceEndedAt: null,
+};
 
 const previewCustomers: StaffCustomerRecord[] = [
   {
@@ -61,7 +106,7 @@ const previewCustomers: StaffCustomerRecord[] = [
   },
   {
     profile: {
-      id: "44444444-4444-4444-8444-444444444444",
+      id: TIA_ID,
       email: "tiafrancavilla@gmail.com",
       firstName: "",
       lastName: "",
@@ -71,14 +116,57 @@ const previewCustomers: StaffCustomerRecord[] = [
       emergencyContactPhone: "",
       emergencyContactRelationship: "",
     },
-    pets: [],
-    paymentMethods: [],
+    pets: [
+      {
+        id: MILO_ID,
+        name: "Milo",
+        breed: "Yorkie",
+        weightLbs: 8,
+        dateOfBirth: "2019-04-12",
+        approximateAgeYears: null,
+        sex: "Male, Neutered",
+        temperamentNotes: "Calm with familiar people.",
+        healthComfortNotes: "",
+        groomingPreferences: "Face trim, sanitary.",
+        createdAt: "2026-09-01T12:00:00.000Z",
+        updatedAt: "2026-09-01T12:00:00.000Z",
+        adminServiceNotes: "",
+        vaccinationBookingStatus: "missing",
+        vaccinationHasUpload: false,
+      },
+    ],
+    paymentMethods: [
+      {
+        id: "66666666-6666-4666-8666-666666666666",
+        brand: "visa",
+        last4: "4242",
+        expMonth: 12,
+        expYear: 2028,
+        isDefault: true,
+      },
+    ],
     kind: "customer",
     frozen: false,
     canDelete: true,
     canFreeze: true,
   },
 ];
+
+const previewHistoryByCustomerId: Record<string, StaffCustomerHistory> = {
+  [TIA_ID]: {
+    appointments: [tiaAppointment],
+    orders: [],
+  },
+};
+
+const previewReferralsByCustomerId: Record<string, StaffReferralView> = {
+  [TIA_ID]: {
+    availableCreditCents: 1800,
+    availableLabel: "18.00",
+    codes: [{ petName: "Milo", code: "MILO-TIA" }],
+    rewards: [],
+  },
+};
 
 export default async function CustomerRecordsPreviewPage({
   searchParams,
@@ -95,14 +183,16 @@ export default async function CustomerRecordsPreviewPage({
         Registered Accounts
       </h2>
       <p className="mt-2 text-sm text-text-muted">
-        Administrators appear first. Only the owner can freeze or delete other
-        accounts.
+        Administrators appear first. Staff can view and edit every guest
+        account field. Only the owner can freeze or delete other accounts.
       </p>
       <div className="mt-8">
         <CustomerRecordsPanel
           preview
           previewCustomers={previewCustomers}
-          focusCustomerId={query.customer}
+          previewHistoryByCustomerId={previewHistoryByCustomerId}
+          previewReferralsByCustomerId={previewReferralsByCustomerId}
+          focusCustomerId={query.customer ?? TIA_ID}
         />
       </div>
     </div>

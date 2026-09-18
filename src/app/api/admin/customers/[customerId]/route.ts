@@ -4,7 +4,7 @@ import { updateStaffCustomerProfile } from "@/lib/profiles/service";
 import {
   ProfileValidationError,
   validateCustomerId,
-  validateProfileWriteInput,
+  validateStaffProfileWriteInput,
 } from "@/lib/profiles/validation";
 import { jsonError } from "@/lib/pets/errors";
 import { mapStaffServiceError, staffJsonError } from "@/lib/staff/api-errors";
@@ -25,9 +25,15 @@ export async function PATCH(request: Request, context: RouteContext) {
       return jsonError("Invalid request body.", 400);
     }
 
-    const input = validateProfileWriteInput(body);
+    const input = validateStaffProfileWriteInput(body);
     const result = await updateStaffCustomerProfile(customerId, input);
     if ("error" in result) {
+      if (result.message) {
+        return staffJsonError(
+          result.message,
+          result.error === "conflict" ? 409 : 500,
+        );
+      }
       return mapStaffServiceError(result.error);
     }
     return NextResponse.json({ profile: result.profile });
