@@ -125,10 +125,6 @@ export function StaffBookingDatePicker({
             <h3 id={titleId} className="text-lg font-medium text-gold-dark">
               Choose a date
             </h3>
-            <p className="mt-1 text-sm text-text-muted">
-              Gray days are in the past or fully booked. White days still
-              have room. Click any day to choose it.
-            </p>
           </div>
           <button
             type="button"

@@ -6,9 +6,6 @@ export default async function AdminDashboardPage() {
   return (
     <div>
       <h2 className="text-2xl font-semibold text-gold-dark">Dashboard</h2>
-      <p className="mt-2 text-sm text-text-muted">
-        Manage customer profiles, pet records, appointments, and messages.
-      </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         <Link
@@ -16,79 +13,48 @@ export default async function AdminDashboardPage() {
           className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
         >
           <h3 className="font-medium text-gold-dark">Calendar</h3>
-          <p className="mt-2 text-sm text-text-muted">
-            Click any day to see bookings. Each booking has Call customer.
-            Gray days are past or full; white days still have room.
-          </p>
         </Link>
         <Link
           href="/admin/vaccinations"
           className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
         >
           <h3 className="font-medium text-gold-dark">Vaccination Review</h3>
-          <p className="mt-2 text-sm text-text-muted">
-            Approve or reject optional vaccination uploads. Rabies status
-            confirmation is enough for customers to book.
-          </p>
         </Link>
         <Link
           href="/admin/finance"
           className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
         >
           <h3 className="font-medium text-gold-dark">Finance</h3>
-          <p className="mt-2 text-sm text-text-muted">
-            Daily, weekly, quarterly, and yearly revenue. Service, tips, and
-            tax are listed separately, plus how often each service was sold.
-          </p>
         </Link>
         <Link
           href="/admin/referrals"
           className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
         >
           <h3 className="font-medium text-gold-dark">Referrals</h3>
-          <p className="mt-2 text-sm text-text-muted">
-            Referral codes, household relationships, available credit, and
-            reward adjustments after refunds or review.
-          </p>
         </Link>
         <Link
           href="/admin/messages"
           className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
         >
           <h3 className="font-medium text-gold-dark">Contact Customer</h3>
-          <p className="mt-2 text-sm text-text-muted">
-            Send texts, read replies, and call a customer from the studio
-            number.
-          </p>
         </Link>
         <Link
           href="/admin/book-for-customer"
           className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
         >
           <h3 className="font-medium text-gold-dark">Book for Customer</h3>
-          <p className="mt-2 text-sm text-text-muted">
-            Create a customer account, reserve a visit, and send a confirmation
-            link to their email or phone.
-          </p>
         </Link>
         <Link
           href="/admin/pets"
           className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
         >
           <h3 className="font-medium text-gold-dark">Customers & Pets</h3>
-          <p className="mt-2 text-sm text-text-muted">
-            Registered admins and customers, pets, and paid orders. The owner
-            can freeze or delete accounts here.
-          </p>
         </Link>
         <Link
           href="/admin/profile"
           className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
         >
           <h3 className="font-medium text-gold-dark">My Admin Profile</h3>
-          <p className="mt-2 text-sm text-text-muted">
-            Your name, role, and work contact details.
-          </p>
         </Link>
         {showTeam ? (
           <Link
@@ -96,10 +62,6 @@ export default async function AdminDashboardPage() {
             className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
           >
             <h3 className="font-medium text-gold-dark">Admin Team</h3>
-            <p className="mt-2 text-sm text-text-muted">
-              Add admins, confirm access, and remove accounts. Only the owner
-              can do this.
-            </p>
           </Link>
         ) : null}
         <Link
@@ -107,9 +69,6 @@ export default async function AdminDashboardPage() {
           className="rounded-2xl border border-lavender/30 bg-cream p-6 transition hover:border-gold/40"
         >
           <h3 className="font-medium text-gold-dark">Preview Customer Account</h3>
-          <p className="mt-2 text-sm text-text-muted">
-            See what customers see in their profile and inbox.
-          </p>
         </Link>
       </div>
     </div>

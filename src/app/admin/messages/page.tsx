@@ -7,11 +7,6 @@ export default function AdminMessagesPage() {
       <h2 className="text-2xl font-semibold text-gold-dark">
         Contact Customer
       </h2>
-      <p className="mt-2 text-sm text-text-muted">
-        Send a text from the studio number. Incoming studio calls send a text
-        automatically: unknown numbers get the website links, known guests get
-        a shorter reply-and-book text. Replies are forwarded to your phone.
-      </p>
       <p className="mt-2">
         <Link
           href="/admin/messages/preview"

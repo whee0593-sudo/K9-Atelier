@@ -17,11 +17,6 @@ export default async function BookForCustomerPage({
       <h2 className="text-2xl font-semibold text-gold-dark">
         Book for a customer
       </h2>
-      <p className="mt-2 text-sm text-text-muted">
-        Create or reuse a customer account, reserve a visit, and send a
-        confirmation link to their email or phone. They are not charged when
-        they confirm.
-      </p>
       <p className="mt-2">
         <Link
           href="/admin/book-for-customer/preview"

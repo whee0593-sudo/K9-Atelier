@@ -20,10 +20,6 @@ export default async function AdminVaccinationsPage() {
           <p className="text-sm text-text">
             Staff access is required to review customer vaccination uploads.
           </p>
-          <p className="mt-2 text-sm text-text-muted">
-            Sign in with your team email at the customer login page. If you
-            still see this message, your account may not be set up as staff yet.
-          </p>
           <Link
             href="/login?next=/admin/vaccinations"
             className="mt-4 inline-block text-sm font-medium text-gold-dark underline"
@@ -40,11 +36,6 @@ export default async function AdminVaccinationsPage() {
       <h2 className="text-2xl font-semibold text-gold-dark">
         Vaccination Review
       </h2>
-      <p className="mt-2 text-sm text-text-muted">
-        Review uploaded rabies certificates or vaccination records. These files
-        are optional and do not block booking. Use Confirm / Decline only for
-        appointments that still need staff review.
-      </p>
       <VaccinationReviewPanel />
     </div>
   );

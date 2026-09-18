@@ -7,10 +7,6 @@ export default function FinancePreviewPage() {
         Preview only · July sample revenue
       </p>
       <h2 className="text-2xl font-semibold text-gold-dark">Finance</h2>
-      <p className="mt-2 text-sm text-text-muted">
-        Sample paid visits from last month. Switch Day, Week, Quarter, or Year.
-        Service, tips, and tax stay in separate totals.
-      </p>
       <div className="mt-8">
         <FinanceReport preview />
       </div>

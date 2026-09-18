@@ -159,10 +159,6 @@ export function AdminCalendar({
   return (
     <section id="calendar">
       <h3 className="text-lg font-medium text-gold-dark">Calendar</h3>
-      <p className="mt-1 text-sm text-text-muted">
-        Gray days are in the past or fully booked. White days still have room.
-        Click a day to see every booking.
-      </p>
 
       {error ? (
         <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

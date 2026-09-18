@@ -70,9 +70,6 @@ export function CustomerAdminNotesEditor({
   return (
     <section>
       <h3 className="text-base font-medium text-gold-dark">Customer record</h3>
-      <p className="mt-1 text-sm text-text-muted">
-        Admin only. These notes stay with this customer.
-      </p>
       <label htmlFor={fieldId} className="sr-only">
         Admin notes
       </label>

@@ -17,8 +17,6 @@ describe("StaffBookingDatePicker", () => {
     );
     assert.match(html, /role="dialog"/);
     assert.match(html, /Choose a date/);
-    assert.match(html, /Gray days are in the past or fully booked/);
-    assert.match(html, /Click any day to choose it/);
     assert.match(html, /2 booked/);
     assert.match(html, /4 booked/);
     assert.match(html, /bg-white/);

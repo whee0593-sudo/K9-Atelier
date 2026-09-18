@@ -13,9 +13,6 @@ export default function AdminProfilePage() {
   return (
     <div>
       <h2 className="text-2xl font-semibold text-gold-dark">My Admin Profile</h2>
-      <p className="mt-2 text-sm text-text-muted">
-        {adminConfig.overview.description}
-      </p>
 
       <div className="mt-8 space-y-5 rounded-2xl border border-lavender/30 bg-cream p-6 md:p-8">
         {fields.map((field) => (
@@ -45,9 +42,6 @@ export default function AdminProfilePage() {
             )}
           </div>
         ))}
-        <p className="text-xs text-text-muted">
-          Preview mode — admin profiles will require secure login when live.
-        </p>
         <Link
           href="/admin/messages"
           className="inline-block rounded-xl bg-gold px-6 py-2.5 text-sm font-medium text-white hover:bg-gold-dark"

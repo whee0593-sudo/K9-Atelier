@@ -33,10 +33,6 @@ export function OnTheWayPreview() {
         <h1 className="text-2xl font-semibold text-gold-dark">
           Today — drive order
         </h1>
-        <p className="mt-2 text-sm text-text-muted">
-          Confirmed visits in the order you should drive. Send an on-the-way
-          text when you leave.
-        </p>
         <ul className="mt-6 space-y-4">
           {appointments.map((appointment, index) => {
             const customerLabel =
@@ -135,10 +131,6 @@ export function OnTheWayPreview() {
 
       <section>
         <h2 className="font-display text-3xl text-[#2F2930]">On-the-way text</h2>
-        <p className="font-body mt-2 text-sm text-[#766F75]">
-          Sent to the guest’s mobile when you tap Text: on the way. Sample for{" "}
-          {sample?.petName}.
-        </p>
         <div className="mx-auto mt-6 max-w-sm rounded-[28px] border border-[#E7DED2] bg-[#F3EEE6] px-4 py-6">
           <p className="text-center text-[11px] uppercase tracking-[0.14em] text-[#766F75]">
             Messages

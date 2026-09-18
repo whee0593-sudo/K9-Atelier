@@ -32,11 +32,6 @@ export default async function AdminFinancePage() {
   return (
     <div>
       <h2 className="text-2xl font-semibold text-gold-dark">Finance</h2>
-      <p className="mt-2 text-sm text-text-muted">
-        Paid visits only. Service, tips, and tax are totaled separately. Florida
-        grooming service is not taxed, so tax stays at $0 unless you later sell
-        retail products.
-      </p>
       <div className="mt-8">
         <FinanceReport />
       </div>
