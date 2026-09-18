@@ -32,6 +32,7 @@ import {
   buildCollectChargePaymentFields,
   collectReceiptPaymentLabel,
 } from "@/lib/charges/tender";
+import { shouldShowCollectReferralCode } from "@/lib/referrals/collect-code";
 import type { ChargeTender } from "@/lib/charges/types";
 import type {
   AppointmentChargeRecord,
@@ -69,12 +70,14 @@ export function CollectCheckout({
   appointmentId,
   kind,
   preview = false,
+  previewFirstVisit = false,
   initialStep = "review",
   brandLinks,
 }: {
   appointmentId: string;
   kind: ChargeKind;
   preview?: boolean;
+  previewFirstVisit?: boolean;
   initialStep?: Step;
   brandLinks?: {
     websiteUrl: string;
@@ -120,6 +123,7 @@ export function CollectCheckout({
     if (preview) {
       const body = buildPreviewCollectContext({
         paid: initialStep === "receipt" || initialStep === "refund",
+        firstVisit: previewFirstVisit,
       });
       setContext(body);
       setLineItems(
@@ -202,7 +206,7 @@ export function CollectCheckout({
     } finally {
       setLoading(false);
     }
-  }, [appointmentId, kind, preview, initialStep]);
+  }, [appointmentId, kind, preview, previewFirstVisit, initialStep]);
 
   useEffect(() => {
     void load();
@@ -327,6 +331,7 @@ export function CollectCheckout({
           applyNewClientDiscount: true,
           canUseCredit: false,
           referralCode: code.toUpperCase(),
+          canEnterReferralCode: true,
         },
       });
       setReferralCode(code.toUpperCase());
@@ -441,7 +446,10 @@ export function CollectCheckout({
           referralMode: kind === "service" ? referralMode : "none",
           referralCustomDollars: Number(referralCustom) || 0,
           referralCode:
-            kind === "service" ? referralCode.trim() || undefined : undefined,
+            kind === "service" &&
+            shouldShowCollectReferralCode(context.referral)
+              ? referralCode.trim() || undefined
+              : undefined,
         }),
       });
       const body = (await response.json()) as {
@@ -1048,45 +1056,49 @@ function PayStep({
         Tip {formatChargeMoney(tipAmount)}
       </p>
 
-      <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
-        Referral code
-      </p>
-      <label className="font-body mt-2 block text-sm text-ink" htmlFor="collect-referral-code">
-        Have a friend&apos;s referral code?
-      </label>
-      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <input
-          id="collect-referral-code"
-          type="text"
-          autoComplete="off"
-          value={referralCode}
-          disabled={busy || referralCodeStatus === "applied"}
-          onChange={(event) => onReferralCodeChange(event.target.value)}
-          onBlur={() => {
-            if (referralCode.trim() && referralCodeStatus !== "applied") {
-              onApplyReferralCode();
-            }
-          }}
-          className="w-full rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm uppercase tracking-[0.08em] text-ink disabled:opacity-70"
-          placeholder="PRINCE-PENNY-S"
-        />
-        <button
-          type="button"
-          disabled={busy || !referralCode.trim() || referralCodeStatus === "applied"}
-          onClick={onApplyReferralCode}
-          className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-sm border border-champagne px-4 text-[10px] font-medium uppercase tracking-[0.14em] text-ink disabled:opacity-50"
-        >
-          {referralCodeStatus === "applied" ? "Applied" : "Apply code"}
-        </button>
-      </div>
-      {referralCodeMessage ? (
-        <p
-          className={`font-body mt-2 text-sm ${
-            referralCodeStatus === "invalid" ? "text-red-800" : "text-ink"
-          }`}
-        >
-          {referralCodeMessage}
-        </p>
+      {shouldShowCollectReferralCode(context.referral) ? (
+        <>
+          <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+            Referral code
+          </p>
+          <label className="font-body mt-2 block text-sm text-ink" htmlFor="collect-referral-code">
+            Have a friend&apos;s referral code?
+          </label>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              id="collect-referral-code"
+              type="text"
+              autoComplete="off"
+              value={referralCode}
+              disabled={busy || referralCodeStatus === "applied"}
+              onChange={(event) => onReferralCodeChange(event.target.value)}
+              onBlur={() => {
+                if (referralCode.trim() && referralCodeStatus !== "applied") {
+                  onApplyReferralCode();
+                }
+              }}
+              className="w-full rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm uppercase tracking-[0.08em] text-ink disabled:opacity-70"
+              placeholder="PRINCE-PENNY-S"
+            />
+            <button
+              type="button"
+              disabled={busy || !referralCode.trim() || referralCodeStatus === "applied"}
+              onClick={onApplyReferralCode}
+              className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-sm border border-champagne px-4 text-[10px] font-medium uppercase tracking-[0.14em] text-ink disabled:opacity-50"
+            >
+              {referralCodeStatus === "applied" ? "Applied" : "Apply code"}
+            </button>
+          </div>
+          {referralCodeMessage ? (
+            <p
+              className={`font-body mt-2 text-sm ${
+                referralCodeStatus === "invalid" ? "text-red-800" : "text-ink"
+              }`}
+            >
+              {referralCodeMessage}
+            </p>
+          ) : null}
+        </>
       ) : null}
 
       <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">

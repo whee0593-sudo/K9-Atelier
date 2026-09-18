@@ -558,6 +558,7 @@ export type CollectReferralState = {
   applyNewClientDiscount: boolean;
   canUseCredit: boolean;
   referralCode: string | null;
+  canEnterReferralCode: boolean;
 };
 
 export async function getCollectReferralState(input: {
@@ -575,6 +576,7 @@ export async function getCollectReferralState(input: {
       applyNewClientDiscount: false,
       canUseCredit: availableCreditCents > 0,
       referralCode: null,
+      canEnterReferralCode: false,
     };
   }
 
@@ -635,12 +637,16 @@ export async function getCollectReferralState(input: {
       firstVisit &&
       (await householdCompletedService(input.appointmentId)),
   );
+  const canEnterReferralCode = !(await householdHasPaidService(
+    input.customerId,
+  ));
 
   return {
     availableCreditCents,
     applyNewClientDiscount,
     canUseCredit: availableCreditCents > 0 && !applyNewClientDiscount,
     referralCode,
+    canEnterReferralCode,
   };
 }
 

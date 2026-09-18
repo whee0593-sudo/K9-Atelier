@@ -2,7 +2,7 @@ import { catalogChargeGroups, catalogChargeItems } from "@/lib/charges/catalog";
 import type { AppointmentChargeRecord, CollectContext } from "@/lib/charges/types";
 
 export function buildPreviewCollectContext(
-  options: { paid?: boolean } = {},
+  options: { paid?: boolean; firstVisit?: boolean } = {},
 ): CollectContext {
   const petWeightLbs = 18;
   const lineItems = [
@@ -98,11 +98,20 @@ export function buildPreviewCollectContext(
     paidCharges: paidCharge ? [paidCharge] : [],
     stripeConfigured: true,
     stripePublishableKey: "",
-    referral: {
-      availableCreditCents: 10000,
-      applyNewClientDiscount: false,
-      canUseCredit: true,
-      referralCode: null,
-    },
+    referral: options.firstVisit
+      ? {
+          availableCreditCents: 0,
+          applyNewClientDiscount: false,
+          canUseCredit: false,
+          referralCode: null,
+          canEnterReferralCode: true,
+        }
+      : {
+          availableCreditCents: 10000,
+          applyNewClientDiscount: false,
+          canUseCredit: true,
+          referralCode: null,
+          canEnterReferralCode: false,
+        },
   };
 }

@@ -68,6 +68,7 @@ export type CollectContext = {
     applyNewClientDiscount: boolean;
     canUseCredit: boolean;
     referralCode?: string | null;
+    canEnterReferralCode?: boolean;
   };
 };
 
