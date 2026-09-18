@@ -53,19 +53,23 @@ describe("Google Maps travel quotes", () => {
     process.env.GOOGLE_MAPS_API_KEY = "test-maps-key";
     assert.equal(isGoogleMapsConfigured(), true);
 
-    const fetchMock = mock.method(globalThis, "fetch", async (input) => {
-      const url = requestUrl(input);
-      assert.match(url, /maps\.googleapis\.com\/maps\/api\/geocode\/json/);
-      assert.match(url, /key=test-maps-key/);
-      assert.match(url, /components=country%3AUS/);
-      assert.doesNotMatch(url, /nominatim/);
-      return jsonResponse({
-        status: "OK",
-        results: [
-          { geometry: { location: { lat: 26.8234, lng: -80.1386 } } },
-        ],
-      });
-    });
+    const fetchMock = mock.method(
+      globalThis,
+      "fetch",
+      async (input: RequestInfo | URL) => {
+        const url = requestUrl(input);
+        assert.match(url, /maps\.googleapis\.com\/maps\/api\/geocode\/json/);
+        assert.match(url, /key=test-maps-key/);
+        assert.match(url, /components=country%3AUS/);
+        assert.doesNotMatch(url, /nominatim/);
+        return jsonResponse({
+          status: "OK",
+          results: [
+            { geometry: { location: { lat: 26.8234, lng: -80.1386 } } },
+          ],
+        });
+      },
+    );
 
     const point = await geocodeAddress(
       "10800 N Military Trl, Palm Beach Gardens, FL 33410",
@@ -94,7 +98,7 @@ describe("Google Maps travel quotes", () => {
     const fetchMock = mock.method(
       globalThis,
       "fetch",
-      async (input, init) => {
+      async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = requestUrl(input);
         assert.equal(
           url,
@@ -138,7 +142,7 @@ describe("OpenStreetMap fallback", () => {
     assert.equal(isGoogleMapsConfigured(), false);
 
     const urls: string[] = [];
-    mock.method(globalThis, "fetch", async (input) => {
+    mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
       const url = requestUrl(input);
       urls.push(url);
       if (url.includes("nominatim.openstreetmap.org")) {
