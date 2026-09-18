@@ -15,7 +15,7 @@ describe("home first visit guide", () => {
     const details = homeFirstVisitSteps[2];
     assert.equal(details.title, "Complete Your Details");
     assert.match(details.body, /rabies vaccination status/);
-    assert.match(details.body, /You may also add a card on file/);
+    assert.match(details.body, /card on file/);
     assert.match(details.body, /rabies certificate or vaccination record/);
     assert.equal(details.body.includes("If the record needs review"), false);
     assert.equal(details.body.includes("COMPLETE YOUR BOOKING"), false);

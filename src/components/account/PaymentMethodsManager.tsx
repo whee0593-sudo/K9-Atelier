@@ -234,8 +234,8 @@ export function PaymentMethodsManager({
       {methods.length === 0 && !setup ? (
         <div className="rounded-xl border border-dashed border-lavender/50 bg-lavender-light/30 px-4 py-8 text-center text-sm text-text-muted">
           {fromAccountSetup
-            ? "No saved cards yet. You may add a card on file. You are not charged now."
-            : "No saved cards yet. Saving a card is optional — you are not charged when you add it."}
+            ? "No saved cards yet. Add a card on file. You are not charged now."
+            : "No saved cards yet. Add a card before you reserve an appointment."}
         </div>
       ) : (
         <ul className="space-y-3">

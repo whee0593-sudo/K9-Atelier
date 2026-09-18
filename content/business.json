@@ -100,9 +100,9 @@
     }
   },
   "booking": {
-    "requiresPaymentMethod": false,
+    "requiresPaymentMethod": true,
     "chargeAtBooking": false,
-    "paymentMethodNote": "Saving a card is optional. You may add one in your account, when you book, or after your visit. You are not charged when you book — payment is settled after your appointment. Late cancellations and no-shows may be charged to a card on file per our policy.",
+    "paymentMethodNote": "After you choose your appointment date and time, you will add or select a saved card to reserve. You are not charged when you book — payment is settled after your appointment. Late cancellations and no-shows may be charged to that card per our policy.",
     "availableDays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
     "firstBookableDate": "2026-09-20",
     "hoursStart": "09:00",
@@ -180,7 +180,7 @@
         },
         {
           "heading": "5. Payment Method on File",
-          "body": "Saving a payment method is optional. You may add a card in your account, when you book, or after your visit. You are not charged when you book. Payment is settled after your appointment. Late cancellations and no-shows may be charged to a card on file according to the policy above."
+          "body": "A valid payment method is required before you can reserve an appointment. After you choose your appointment date and time, you will add or select which saved card to use for that visit. You are not charged when you book. Payment is settled after your appointment. Late cancellations and no-shows may be charged to the selected card according to the policy above."
         },
         {
           "heading": "6. When a Service Cannot Be Completed",

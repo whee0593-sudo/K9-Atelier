@@ -70,7 +70,7 @@ const cancellationPolicy = {
     },
     {
       heading: "5. Payment Method on File",
-      body: "A payment method on file may be charged for applicable cancellation, rescheduling, or no-show fees. Saving a card is optional.",
+      body: "A valid payment method must remain on file and may be charged for applicable cancellation, rescheduling, or no-show fees.",
     },
     {
       heading: "6. When a Service Cannot Be Completed",
@@ -170,7 +170,7 @@ export default function FaqPage() {
         <FaqParagraphs
           paragraphs={[
             "Appointments are available Monday through Friday, from 9:00 AM to 4:00 PM Eastern Time. Limited weekend availability may be offered by request.",
-            "To begin, create your account and dog profile, confirm rabies vaccination status, and select an available date and time. You may also add a card on file and upload a current rabies certificate or vaccination record.",
+            "To begin, create your account and dog profile, confirm rabies vaccination status, select an available date and time, and add a card on file. You may also upload a current rabies certificate or vaccination record.",
             "You will not be charged at the time of booking.",
           ]}
         />
@@ -216,8 +216,8 @@ export default function FaqPage() {
       a: (
         <FaqParagraphs
           paragraphs={[
-            "Saving a payment method is optional. You may add a card in your account, when you book, or after your visit.",
-            "Your card is not charged at the time of booking. Payment is processed after the appointment is completed. Applicable cancellation, rescheduling, or no-show fees may be charged to a card on file in accordance with our policy.",
+            "A valid payment method is required to reserve an appointment. When booking, you will add or select the card you would like associated with that visit.",
+            "Your card is not charged at the time of booking. Payment is processed after the appointment is completed. Applicable cancellation, rescheduling, or no-show fees may be charged to the selected card in accordance with our policy.",
           ]}
         />
       ),

@@ -5,7 +5,6 @@ import {
   buildAccountNavSummaries,
   formatAccountDate,
   formatCompletionStatus,
-  formatPaymentMethodSummary,
   formatPetNamesSummary,
   formatReferralCodeSummary,
   formatReferralRewardsSummary,
@@ -49,9 +48,6 @@ describe("account nav summaries", () => {
     );
     assert.equal(formatCompletionStatus(true), "Completed");
     assert.equal(formatCompletionStatus(false), "Incomplete");
-    assert.equal(formatPaymentMethodSummary(0), "None");
-    assert.equal(formatPaymentMethodSummary(1), "1 saved");
-    assert.equal(formatPaymentMethodSummary(2), "2 saved");
   });
 
   it("formats overview, pets, and referral credit summaries", () => {
@@ -147,16 +143,9 @@ describe("account nav summaries", () => {
     assert.equal(summaries.profile, "Completed");
     assert.equal(summaries.addresses, "Completed");
     assert.equal(summaries.pets, "Bella, Max");
-    assert.equal(summaries.payment, "1 saved");
+    assert.equal(summaries.payment, "Completed");
     assert.equal(summaries.referrals, "$18.00");
     assert.equal(summaries.bookings, "Aug 12, 2026");
     assert.equal(summaries.password, null);
-  });
-
-  it("treats a missing saved card as optional, not incomplete", () => {
-    const summaries = buildAccountNavSummaries({
-      paymentMethodCount: 0,
-    });
-    assert.equal(summaries.payment, "None");
   });
 });

@@ -45,14 +45,14 @@ export function AccountSetupChecklist() {
     null;
   const rabiesDone = focusPet ? !petNeedsRabiesStatus(focusPet) : false;
   const paymentDone = hasCard === true;
-  const allDone = rabiesDone;
+  const allDone = rabiesDone && paymentDone;
 
   return (
     <div className="space-y-6">
       <p className="text-sm text-text-muted">
-        Your visit is reserved. Confirm your dog’s rabies vaccination status.
-        You may also add a card on file, and you may upload a rabies certificate
-        or vaccination record. You are not charged now.
+        Your visit is reserved. Confirm your dog’s rabies vaccination status,
+        then save a card on file. You may also upload a rabies certificate or
+        vaccination record. You are not charged now.
       </p>
 
       {loading ? (
@@ -71,7 +71,7 @@ export function AccountSetupChecklist() {
 
       {allDone ? (
         <p className="rounded-xl border border-lavender/40 bg-lavender-light/40 px-4 py-3 text-sm text-text">
-          Vaccination status is on file. Thank you.
+          Vaccination status and payment details are on file. Thank you.
         </p>
       ) : null}
 
@@ -100,8 +100,8 @@ export function AccountSetupChecklist() {
           </p>
           <h3 className="mt-2 font-medium text-text">Payment method</h3>
           <p className="mt-2 text-sm text-text-muted">
-            Optional. Save a card for after the visit. You are not charged when
-            you add it.
+            Save a card for after the visit. You are not charged when you add
+            it.
             {paymentDone ? " A card is already on file." : ""}
           </p>
           <Link

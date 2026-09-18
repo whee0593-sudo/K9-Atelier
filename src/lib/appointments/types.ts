@@ -27,7 +27,7 @@ export type AppointmentWriteInput = {
   addressLat: number;
   addressLon: number;
   estimatedTotal: number;
-  paymentMethodId?: string;
+  paymentMethodId: string;
   customerPhone: string;
   customerFirstName: string;
   customerLastName: string;

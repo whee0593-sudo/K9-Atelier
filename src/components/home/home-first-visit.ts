@@ -12,7 +12,7 @@ export const homeFirstVisitSteps = [
   {
     number: "03",
     title: "Complete Your Details",
-    body: "Confirm your dog’s rabies vaccination status. You may also add a card on file, and you may upload a current rabies certificate or vaccination record.",
+    body: "Confirm your dog’s rabies vaccination status and add a card on file. You may also upload a current rabies certificate or vaccination record.",
   },
   {
     number: "04",

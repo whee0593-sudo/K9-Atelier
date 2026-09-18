@@ -13,8 +13,8 @@ export function HomeBookingCta() {
           A Private Spa Experience, Reserved for Your Dog.
         </h2>
         <p className="font-body mx-auto mt-5 max-w-2xl text-base leading-relaxed text-taupe">
-          Select an available date and time and confirm your dog’s rabies
-          vaccination status. You may also add a card on file and upload a
+          Select an available date and time, confirm your dog’s rabies
+          vaccination status, and add a card on file. You may also upload a
           current rabies certificate or vaccination record. Your card will not
           be charged when you book.
         </p>

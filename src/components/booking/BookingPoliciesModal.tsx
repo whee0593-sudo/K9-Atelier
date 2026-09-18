@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type RefObject } from "react";
-import { business, formatPrice, getPaymentFaqParagraphs } from "@/lib/business";
+import { business, formatPrice } from "@/lib/business";
 import { bookingSecondaryBtnClass } from "@/components/booking/booking-ui";
 
 export type BookingPolicySectionId =
@@ -243,9 +243,20 @@ export function BookingPoliciesModal({
             onToggle={() => toggleSection("payment")}
           >
             <div className="space-y-4">
-              {getPaymentFaqParagraphs().map((paragraph) => (
-                <p key={paragraph}>{paragraph}</p>
-              ))}
+              <p>
+                A valid payment method is required before you can reserve an
+                appointment.
+              </p>
+              <p>
+                After you choose your appointment date and time, you will add
+                or select which saved card to use for that visit.
+              </p>
+              <p>
+                You are not charged when you book. Payment is settled after
+                your appointment. Late cancellations and no-shows may be
+                charged to the selected card according to our cancellation
+                policy.
+              </p>
             </div>
           </AccordionPanel>
 
