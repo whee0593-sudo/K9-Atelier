@@ -3,6 +3,7 @@ import type { PaymentMethodRecord } from "@/lib/payments/types";
 
 export type ChargeKind = "service" | "no_show" | "cancellation";
 export type ChargeStatus = "pending" | "paid" | "failed";
+export type ChargeTender = "card" | "cash";
 export type ReceiptChannel = "sms" | "email";
 
 export type ReferralChargeCategory =
@@ -46,6 +47,8 @@ export type AppointmentChargeRecord = {
   receiptChannel: ReceiptChannel | null;
   paidAt: string | null;
   refundedAmount: number;
+  paymentMethodId?: string | null;
+  tender?: ChargeTender;
 };
 
 export type CollectContext = {
@@ -65,6 +68,7 @@ export type CollectContext = {
     applyNewClientDiscount: boolean;
     canUseCredit: boolean;
     referralCode?: string | null;
+    canEnterReferralCode?: boolean;
   };
 };
 
@@ -75,6 +79,7 @@ export type CreateChargeInput = {
   tipAmount: number;
   paymentMethodId?: string;
   useNewCard?: boolean;
+  tender?: ChargeTender;
   referralMode?: "full" | "custom" | "none";
   referralCustomDollars?: number;
   referralCode?: string;
