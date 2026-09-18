@@ -21,6 +21,8 @@ import {
   bookingPrimaryBtnClass,
 } from "@/components/booking/booking-ui";
 
+const EMPTY_ADD_ON_IDS: string[] = [];
+
 type Props = {
   pet: PetProfile;
   serviceId?: string | null;
@@ -43,7 +45,7 @@ type Props = {
 export function BookingLocationTimeStep({
   pet,
   serviceId = "",
-  addOnIds = [],
+  addOnIds = EMPTY_ADD_ON_IDS,
   initialAddress,
   initialQuote,
   initialDate,
@@ -110,7 +112,7 @@ export function BookingLocationTimeStep({
     return () => {
       cancelled = true;
     };
-  }, [phase, quote, zip, serviceId, pet.weightLbs, addOnIds]);
+  }, [phase, quote, zip, serviceId, pet.weightLbs, addOnIds.join(",")]);
 
   async function handleCheckArea(e: React.FormEvent) {
     e.preventDefault();

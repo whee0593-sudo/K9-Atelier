@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
+import { hasSupabaseAdminConfig, hasSupabaseConfig } from "@/lib/supabase/env";
 import { estimateServiceDurationMinutes } from "@/lib/services";
 import { getBaseAddressFormatted } from "@/lib/server/base-address";
 import { geocodeBaseAddress } from "@/lib/geo";
@@ -42,7 +42,7 @@ function firstRelation<T>(value: T | T[] | null | undefined): T | null {
 }
 
 export function requireAdminClient() {
-  if (!hasSupabaseAdminConfig()) return null;
+  if (!hasSupabaseConfig() || !hasSupabaseAdminConfig()) return null;
   return createAdminClient();
 }
 
