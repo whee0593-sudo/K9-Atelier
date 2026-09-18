@@ -1,17 +1,17 @@
 "use client";
 
 import React, { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { AdminCalendarMonthGrid } from "@/components/admin/AdminCalendarMonthGrid";
 import type { AdminCalendarDay } from "@/lib/appointments/calendar";
 import {
   buildEmptyOccupancyMonth,
   calendarMonthFromDate,
   currentBusinessCalendarMonth,
-  isAdminCalendarDayMuted,
   shiftCalendarMonth,
+  staffPickerSelectableDates,
 } from "@/lib/appointments/calendar-month";
 import { buildPreviewCalendarMonth } from "@/lib/appointments/calendar-preview";
-import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
 import { formatStaffDateOption } from "@/lib/staff/book-for-customer-schedule";
 
@@ -39,6 +39,7 @@ export function StaffBookingDatePicker({
   defaultOpen?: boolean;
 }) {
   const titleId = useId();
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(defaultOpen);
   const [month, setMonth] = useState(() => monthForPicker(value, openDates));
   const [days, setDays] = useState<AdminCalendarDay[]>(() =>
@@ -50,18 +51,11 @@ export function StaffBookingDatePicker({
         ),
   );
   const [occupancyLoading, setOccupancyLoading] = useState(false);
-  const selectableDates = useMemo(() => {
-    if (openDates.length > 0) return new Set(openDates);
-    return new Set(
-      days
-        .filter(
-          (day) =>
-            isDateBookable(parseDateValue(day.date)) &&
-            !isAdminCalendarDayMuted(day),
-        )
-        .map((day) => day.date),
-    );
-  }, [days, openDates]);
+  const selectableDates = useMemo(() => staffPickerSelectableDates(days), [days]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const loadMonth = useCallback(
     async (nextMonth: string) => {
@@ -113,6 +107,63 @@ export function StaffBookingDatePicker({
     setOpen(true);
   }
 
+  const overlay = open ? (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/40 p-4"
+      role="presentation"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) setOpen(false);
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="pointer-events-auto relative z-[101] max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-lavender/30 bg-cream p-6 shadow-sm"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 id={titleId} className="text-lg font-medium text-gold-dark">
+              Choose a date
+            </h3>
+            <p className="mt-1 text-sm text-text-muted">
+              Gray days are in the past or fully booked. White days still
+              have room. Click a day to book it.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="rounded-xl border border-lavender/40 px-3 py-1.5 text-sm text-text-muted hover:text-text"
+            onClick={() => setOpen(false)}
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="mt-4">
+          <AdminCalendarMonthGrid
+            month={month}
+            days={days}
+            selectedDate={value || null}
+            loading={occupancyLoading && days.length === 0}
+            selectableDates={selectableDates}
+            onPrevMonth={() =>
+              setMonth((current) => shiftCalendarMonth(current, -1))
+            }
+            onNextMonth={() =>
+              setMonth((current) => shiftCalendarMonth(current, 1))
+            }
+            onSelectDate={(date) => {
+              onChange(date);
+              setOpen(false);
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div>
       <button
@@ -135,60 +186,7 @@ export function StaffBookingDatePicker({
         aria-hidden="true"
       />
 
-      {open ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
-          role="presentation"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={titleId}
-            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-lavender/30 bg-cream p-6 shadow-sm"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 id={titleId} className="text-lg font-medium text-gold-dark">
-                  Choose a date
-                </h3>
-                <p className="mt-1 text-sm text-text-muted">
-                  Gray days are in the past or fully booked. White days still
-                  have room. Click a day to book it.
-                </p>
-              </div>
-              <button
-                type="button"
-                className="rounded-xl border border-lavender/40 px-3 py-1.5 text-sm text-text-muted hover:text-text"
-                onClick={() => setOpen(false)}
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="mt-4">
-              <AdminCalendarMonthGrid
-                month={month}
-                days={days}
-                selectedDate={value || null}
-                loading={occupancyLoading && days.length === 0}
-                selectableDates={selectableDates}
-                onPrevMonth={() =>
-                  setMonth((current) => shiftCalendarMonth(current, -1))
-                }
-                onNextMonth={() =>
-                  setMonth((current) => shiftCalendarMonth(current, 1))
-                }
-                onSelectDate={(date) => {
-                  onChange(date);
-                  setOpen(false);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {mounted && overlay ? createPortal(overlay, document.body) : overlay}
     </div>
   );
 }

@@ -7,7 +7,6 @@ import {
   adminCalendarDayButtonClass,
   calendarMonthLeadingBlanks,
   formatCalendarMonthLabel,
-  isAdminCalendarDayMuted,
 } from "@/lib/appointments/calendar-month";
 
 export function AdminCalendarMonthGrid({
@@ -71,7 +70,7 @@ export function AdminCalendarMonthGrid({
             {days.map((day) => {
               const selected = selectedDate === day.date;
               const canSelect = selectableDates
-                ? selectableDates.has(day.date) && !isAdminCalendarDayMuted(day)
+                ? selectableDates.has(day.date)
                 : true;
               return (
                 <button
@@ -81,8 +80,10 @@ export function AdminCalendarMonthGrid({
                     if (!canSelect) return;
                     onSelectDate(day.date);
                   }}
-                  disabled={!canSelect}
-                  className={`${adminCalendarDayButtonClass(day, selected)} disabled:cursor-default disabled:opacity-100`}
+                  aria-disabled={!canSelect}
+                  className={`${adminCalendarDayButtonClass(day, selected)} ${
+                    canSelect ? "" : "cursor-default"
+                  }`}
                 >
                   <span
                     className={`text-sm ${

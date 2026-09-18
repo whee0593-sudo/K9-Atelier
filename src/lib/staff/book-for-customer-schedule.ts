@@ -24,7 +24,8 @@ export function selectableStaffDays(days: StaffAvailabilityDay[]) {
 export function slotsForStaffDate(days: StaffAvailabilityDay[], date: string) {
   if (!date) return [];
   const match = days.find((day) => day.date === date);
-  if (!match?.available) return [];
+  if (!match) return listHourlyStartMinutes();
+  if (!match.available) return [];
   return match.slots;
 }
 

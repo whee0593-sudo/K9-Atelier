@@ -6,7 +6,9 @@ import {
   calendarMonthFromDate,
   formatCalendarMonthLabel,
   isAdminCalendarDayMuted,
+  isStaffPickerDaySelectable,
   shiftCalendarMonth,
+  staffPickerSelectableDates,
 } from "@/lib/appointments/calendar-month";
 
 const openDay = {
@@ -54,5 +56,45 @@ describe("calendar month helpers", () => {
     assert.equal(days[17]?.date, "2026-09-18");
     assert.equal(days[17]?.isToday, true);
     assert.equal(days[20]?.isPast, false);
+  });
+
+  it("keeps a day with a blocked hour selectable for staff booking", () => {
+    const monday = {
+      date: "2026-09-21",
+      isPast: false,
+      isFull: false,
+      closure: {
+        serviceDate: "2026-09-21",
+        closedAllDay: false,
+        closedHours: [12],
+      },
+    };
+    assert.equal(isAdminCalendarDayMuted(monday), true);
+    assert.equal(isStaffPickerDaySelectable(monday), true);
+    assert.equal(
+      isStaffPickerDaySelectable({ ...monday, isFull: true }),
+      false,
+    );
+    assert.equal(
+      isStaffPickerDaySelectable({
+        ...monday,
+        closure: {
+          serviceDate: "2026-09-21",
+          closedAllDay: true,
+          closedHours: [],
+        },
+      }),
+      false,
+    );
+  });
+
+  it("does not lock selectable days to a previously chosen date", () => {
+    const days = buildEmptyOccupancyMonth("2026-09", "2026-09-18");
+    const selectable = staffPickerSelectableDates(days);
+    assert.equal(selectable.has("2026-09-21"), true);
+    assert.equal(selectable.has("2026-09-24"), true);
+    assert.equal(selectable.has("2026-09-22"), true);
+    assert.equal(selectable.has("2026-09-18"), false);
+    assert.equal(selectable.has("2026-09-26"), false);
   });
 });

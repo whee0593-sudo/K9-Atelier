@@ -167,11 +167,10 @@ export function BookForCustomerForm({
   }
 
   useEffect(() => {
-    if (!appointmentDate) return;
-    if (openDays.some((day) => day.date === appointmentDate)) return;
-    setAppointmentDate("");
+    if (!appointmentDate || !slotStartMinutes) return;
+    if (openSlots.some((slot) => String(slot) === slotStartMinutes)) return;
     setSlotStartMinutes("");
-  }, [appointmentDate, openDays]);
+  }, [appointmentDate, openSlots, slotStartMinutes]);
 
   useEffect(() => {
     if (preview) return;

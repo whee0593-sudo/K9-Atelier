@@ -1,4 +1,5 @@
 import type { AdminCalendarDay } from "@/lib/appointments/calendar";
+import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
 
 export const ADMIN_CALENDAR_WEEKDAYS = [
@@ -41,6 +42,24 @@ export function isAdminCalendarDayMuted(
     day.isFull ||
     Boolean(day.closure?.closedAllDay) ||
     Boolean(day.closure?.closedHours.length)
+  );
+}
+
+/**
+ * Staff booking can still use a day that has a blocked hour — remaining
+ * hours stay open. HTML `disabled` is not used for the others; occupancy
+ * gray is only a hint.
+ */
+export function isStaffPickerDaySelectable(
+  day: Pick<AdminCalendarDay, "date" | "isPast" | "isFull" | "closure">,
+) {
+  if (day.isPast || day.isFull || day.closure?.closedAllDay) return false;
+  return isDateBookable(parseDateValue(day.date));
+}
+
+export function staffPickerSelectableDates(days: AdminCalendarDay[]) {
+  return new Set(
+    days.filter(isStaffPickerDaySelectable).map((day) => day.date),
   );
 }
 
