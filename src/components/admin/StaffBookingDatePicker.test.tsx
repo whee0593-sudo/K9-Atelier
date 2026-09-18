@@ -38,4 +38,24 @@ describe("StaffBookingDatePicker", () => {
     assert.match(html, /September 2026/);
     assert.match(html, />21</);
   });
+
+  it("keeps other occupancy days clickable after a date is already chosen", () => {
+    const html = renderToStaticMarkup(
+      <StaffBookingDatePicker
+        value="2026-09-21"
+        openDates={["2026-09-21"]}
+        preview
+        defaultOpen
+        onChange={() => {}}
+      />,
+    );
+    assert.match(html, /z-\[100\]/);
+    assert.match(html, /ring-gold/);
+    assert.match(html, /Mon, Sep 21/);
+    assert.match(html, /1 booked/);
+    assert.match(html, /aria-disabled="false"/);
+    assert.match(html, /aria-disabled="true"/);
+    assert.doesNotMatch(html, / disabled=/);
+    assert.doesNotMatch(html, / disabled>/);
+  });
 });
