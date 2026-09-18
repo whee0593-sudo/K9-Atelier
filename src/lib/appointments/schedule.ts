@@ -75,7 +75,7 @@ export async function loadDayPlans(
   toDate: string,
 ): Promise<{ plans: Map<string, DayPlanRecord> } | ScheduleError> {
   const admin = requireAdminClient();
-  if (!admin) return { error: "misconfigured" as const };
+  if (!admin) return { plans: new Map() };
 
   const { data, error } = await admin
     .from("service_day_plans")
@@ -114,7 +114,7 @@ export async function loadDayClosures(
   toDate: string,
 ): Promise<{ closures: Map<string, DayClosureRecord> } | ScheduleError> {
   const admin = requireAdminClient();
-  if (!admin) return { error: "misconfigured" as const };
+  if (!admin) return { closures: new Map() };
 
   const { data, error } = await admin
     .from("service_day_closures")
@@ -234,7 +234,7 @@ export async function loadOccupiedStopsByDate(
   options?: OccupiedLoadOptions,
 ): Promise<{ byDate: Map<string, OccupiedDay> } | ScheduleError> {
   const admin = requireAdminClient();
-  if (!admin) return { error: "misconfigured" as const };
+  if (!admin) return { byDate: new Map() };
 
   const select =
     "id, appointment_date, address_lat, address_lon, scheduled_start, service_id, add_on_ids, address_zip";
