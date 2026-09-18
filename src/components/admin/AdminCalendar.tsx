@@ -1,10 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { AdminCalendarMonthGrid } from "@/components/admin/AdminCalendarMonthGrid";
 import { AppointmentActionLinks } from "@/components/admin/AppointmentActionLinks";
 import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import type { AdminCalendarDay } from "@/lib/appointments/calendar";
+import {
+  currentBusinessCalendarMonth,
+  shiftCalendarMonth,
+} from "@/lib/appointments/calendar-month";
 import {
   PREVIEW_CALENDAR_MONTH,
   buildPreviewCalendarAppointments,
@@ -15,22 +20,6 @@ import type { ChargeKind } from "@/lib/charges/types";
 import { formatPrice } from "@/lib/business";
 import { formatStaffVisitTiming } from "@/lib/charges/hourly";
 import { formatServiceAddress } from "@/lib/travel";
-
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-function monthLabel(month: string) {
-  const [year, monthText] = month.split("-").map(Number);
-  return new Date(year, monthText - 1, 1).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function shiftMonth(month: string, delta: number) {
-  const [year, monthText] = month.split("-").map(Number);
-  const next = new Date(year, monthText - 1 + delta, 1);
-  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
-}
 
 function formatLongDate(iso: string) {
   return new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", {
@@ -62,16 +51,7 @@ export function AdminCalendar({
   reloadToken?: number;
 }) {
   const [month, setMonth] = useState(() =>
-    preview
-      ? PREVIEW_CALENDAR_MONTH
-      : new Intl.DateTimeFormat("en-CA", {
-          timeZone: "America/New_York",
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-        })
-          .format(new Date())
-          .slice(0, 7),
+    preview ? PREVIEW_CALENDAR_MONTH : currentBusinessCalendarMonth(),
   );
   const [days, setDays] = useState<AdminCalendarDay[]>([]);
   const [today, setToday] = useState("");
@@ -176,11 +156,6 @@ export function AdminCalendar({
     onAppointmentsChanged?.();
   }
 
-  const leadingBlanks = useMemo(() => {
-    if (days.length === 0) return 0;
-    return new Date(`${days[0].date}T12:00:00`).getDay();
-  }, [days]);
-
   return (
     <section id="calendar">
       <h3 className="text-lg font-medium text-gold-dark">Calendar</h3>
@@ -189,83 +164,22 @@ export function AdminCalendar({
         Click a day to see every booking.
       </p>
 
-      <div className="mt-4 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => setMonth((current) => shiftMonth(current, -1))}
-          className="rounded-xl border border-lavender/40 px-3 py-1.5 text-sm text-text"
-        >
-          Previous
-        </button>
-        <p className="text-sm font-medium text-gold-dark">{monthLabel(month)}</p>
-        <button
-          type="button"
-          onClick={() => setMonth((current) => shiftMonth(current, 1))}
-          className="rounded-xl border border-lavender/40 px-3 py-1.5 text-sm text-text"
-        >
-          Next
-        </button>
-      </div>
-
       {error ? (
         <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </p>
       ) : null}
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-lavender/30 bg-cream">
-        <div className="grid grid-cols-7 border-b border-lavender/20 bg-lavender-light/40 text-center text-xs font-medium uppercase tracking-wide text-text-muted">
-          {WEEKDAYS.map((day) => (
-            <div key={day} className="px-1 py-2">
-              {day}
-            </div>
-          ))}
-        </div>
-        {loadingMonth ? (
-          <p className="px-4 py-8 text-sm text-text-muted">Loading calendar…</p>
-        ) : (
-          <div className="grid grid-cols-7">
-            {Array.from({ length: leadingBlanks }).map((_, index) => (
-              <div key={`blank-${index}`} className="min-h-16 bg-lavender-light/20" />
-            ))}
-            {days.map((day) => {
-              const muted =
-                day.isPast ||
-                day.isFull ||
-                Boolean(day.closure?.closedAllDay) ||
-                Boolean(day.closure?.closedHours.length);
-              const selected = selectedDate === day.date;
-              return (
-                <button
-                  key={day.date}
-                  type="button"
-                  onClick={() => setSelectedDate(day.date)}
-                  className={`min-h-16 border-t border-l border-lavender/15 px-1.5 py-2 text-left ${
-                    muted ? "bg-lavender-light/70 text-text-muted" : "bg-white text-text"
-                  } ${selected ? "ring-2 ring-inset ring-gold" : ""}`}
-                >
-                  <span
-                    className={`text-sm ${
-                      day.isToday ? "font-semibold text-gold-dark" : ""
-                    }`}
-                  >
-                    {Number(day.date.slice(-2))}
-                  </span>
-                  {day.closureLabel ? (
-                    <span className="mt-1 block text-[10px] font-medium uppercase tracking-wide text-gold-dark">
-                      {day.closureLabel}
-                    </span>
-                  ) : null}
-                  {day.appointmentCount > 0 ? (
-                    <span className="mt-1 block text-[11px]">
-                      {day.appointmentCount} booked
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-        )}
+      <div className="mt-4">
+        <AdminCalendarMonthGrid
+          month={month}
+          days={days}
+          selectedDate={selectedDate}
+          loading={loadingMonth}
+          onPrevMonth={() => setMonth((current) => shiftCalendarMonth(current, -1))}
+          onNextMonth={() => setMonth((current) => shiftCalendarMonth(current, 1))}
+          onSelectDate={setSelectedDate}
+        />
       </div>
 
       <div className="mt-6">

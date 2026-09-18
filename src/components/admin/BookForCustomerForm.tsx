@@ -2,17 +2,16 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { StaffBookingDatePicker } from "@/components/admin/StaffBookingDatePicker";
 import { formatHourLabel } from "@/lib/appointments/closures";
-import { listHourlyStartMinutes } from "@/lib/booking-schedule";
 import { formatPrice } from "@/lib/business";
 import {
   allBookableServices,
   getServicePriceEstimate,
   isServiceAvailableForPet,
 } from "@/lib/services";
-import { getUpcomingBookableDates } from "@/lib/booking-slots";
 import {
-  formatStaffDateOption,
+  fallbackStaffScheduleDays,
   selectableStaffDays,
   slotsForStaffDate,
   staffScheduleHint,
@@ -77,13 +76,7 @@ export function BookForCustomerForm({
   const [zip, setZip] = useState("");
   const [quoteState, setQuoteState] = useState<QuoteState>({ status: "idle" });
   const [days, setDays] = useState<AvailabilityDay[]>(() =>
-    preview
-      ? getUpcomingBookableDates(20).map((day) => ({
-          date: day.value,
-          available: true,
-          slots: listHourlyStartMinutes(),
-        }))
-      : [],
+    fallbackStaffScheduleDays(),
   );
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
@@ -140,7 +133,7 @@ export function BookForCustomerForm({
   async function handleQuote() {
     setError(null);
     setQuoteState({ status: "loading" });
-    setDays([]);
+    setDays(fallbackStaffScheduleDays());
     setAppointmentDate("");
     setSlotStartMinutes("");
     try {
@@ -192,7 +185,7 @@ export function BookForCustomerForm({
       setAvailabilityLoading(false);
       setAvailabilityLoaded(false);
       setAvailabilityError(null);
-      setDays([]);
+      setDays(fallbackStaffScheduleDays());
       return;
     }
 
@@ -218,8 +211,7 @@ export function BookForCustomerForm({
           days?: AvailabilityDay[];
         };
         if (!response.ok || !body.days) {
-          setAvailabilityError(body.error ?? "Could not load available times.");
-          setDays([]);
+          setDays(fallbackStaffScheduleDays());
           setAvailabilityLoaded(true);
           return;
         }
@@ -228,8 +220,7 @@ export function BookForCustomerForm({
       } catch (error) {
         if (controller.signal.aborted) return;
         console.error("Book for customer availability failed:", error);
-        setAvailabilityError("Could not load available times.");
-        setDays([]);
+        setDays(fallbackStaffScheduleDays());
         setAvailabilityLoaded(true);
       } finally {
         if (!controller.signal.aborted) {
@@ -604,26 +595,16 @@ export function BookForCustomerForm({
           <label className={labelClass} htmlFor="appointment-date">
             Date
           </label>
-          <select
+          <StaffBookingDatePicker
             id="appointment-date"
-            className={fieldClass}
             value={appointmentDate}
-            onChange={(event) => {
-              setAppointmentDate(event.target.value);
+            openDates={openDays.map((day) => day.date)}
+            preview={preview}
+            onChange={(date) => {
+              setAppointmentDate(date);
               setSlotStartMinutes("");
             }}
-            disabled={availabilityLoading}
-            required
-          >
-            <option value="">
-              {availabilityLoading ? "Loading dates…" : "Select a date"}
-            </option>
-            {openDays.map((day) => (
-              <option key={day.date} value={day.date}>
-                {formatStaffDateOption(day.date)}
-              </option>
-            ))}
-          </select>
+          />
         </div>
         <div>
           <label className={labelClass} htmlFor="appointment-slot">
