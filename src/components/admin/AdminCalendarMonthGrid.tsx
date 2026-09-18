@@ -14,7 +14,6 @@ export function AdminCalendarMonthGrid({
   days,
   selectedDate,
   loading = false,
-  selectableDates,
   onPrevMonth,
   onNextMonth,
   onSelectDate,
@@ -23,7 +22,6 @@ export function AdminCalendarMonthGrid({
   days: AdminCalendarDay[];
   selectedDate: string | null;
   loading?: boolean;
-  selectableDates?: ReadonlySet<string>;
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onSelectDate: (date: string) => void;
@@ -52,7 +50,7 @@ export function AdminCalendarMonthGrid({
         </button>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-lavender/30 bg-cream">
+      <div className="mt-4 rounded-2xl border border-lavender/30 bg-cream">
         <div className="grid grid-cols-7 border-b border-lavender/20 bg-lavender-light/40 text-center text-xs font-medium uppercase tracking-wide text-text-muted">
           {ADMIN_CALENDAR_WEEKDAYS.map((day) => (
             <div key={day} className="px-1 py-2">
@@ -69,21 +67,16 @@ export function AdminCalendarMonthGrid({
             ))}
             {days.map((day) => {
               const selected = selectedDate === day.date;
-              const canSelect = selectableDates
-                ? selectableDates.has(day.date)
-                : true;
               return (
                 <button
                   key={day.date}
                   type="button"
-                  onClick={() => {
-                    if (!canSelect) return;
+                  data-calendar-date={day.date}
+                  onClick={(event) => {
+                    event.stopPropagation();
                     onSelectDate(day.date);
                   }}
-                  aria-disabled={!canSelect}
-                  className={`${adminCalendarDayButtonClass(day, selected)} ${
-                    canSelect ? "" : "cursor-default"
-                  }`}
+                  className={`${adminCalendarDayButtonClass(day, selected)} relative z-[1] cursor-pointer touch-manipulation`}
                 >
                   <span
                     className={`text-sm ${
