@@ -44,10 +44,16 @@ export function BookingExperienceStep({
   });
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setIncludeMembersOnly(Boolean(user));
-    });
+    try {
+      const supabase = createClient();
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        setIncludeMembersOnly(Boolean(user));
+      }).catch(() => {
+        setIncludeMembersOnly(false);
+      });
+    } catch {
+      setIncludeMembersOnly(false);
+    }
   }, []);
 
   return (
@@ -57,10 +63,10 @@ export function BookingExperienceStep({
       </button>
 
       <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
-        Select an Experience
+        Care
       </p>
       <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
-        Choose the care experience you would like us to reserve for {pet.name}.
+        Choose the care {pet.name} should receive.
       </h2>
 
       <div className="mt-10 space-y-4">

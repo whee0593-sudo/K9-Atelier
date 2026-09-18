@@ -23,8 +23,8 @@ import {
 
 type Props = {
   pet: PetProfile;
-  serviceId: string;
-  addOnIds: string[];
+  serviceId?: string | null;
+  addOnIds?: string[];
   initialAddress?: ServiceAddress | null;
   initialQuote?: TravelQuote | null;
   initialDate?: string | null;
@@ -42,8 +42,8 @@ type Props = {
 
 export function BookingLocationTimeStep({
   pet,
-  serviceId,
-  addOnIds,
+  serviceId = "",
+  addOnIds = [],
   initialAddress,
   initialQuote,
   initialDate,
@@ -80,10 +80,10 @@ export function BookingLocationTimeStep({
           lat: String(quote!.lat),
           lon: String(quote!.lon),
           zip: zip.trim(),
-          serviceId,
           weightLbs: String(pet.weightLbs),
-          addOnIds: addOnIds.join(","),
         });
+        if (serviceId) params.set("serviceId", serviceId);
+        if (addOnIds.length > 0) params.set("addOnIds", addOnIds.join(","));
         const res = await fetch(`/api/booking/availability?${params}`, {
           credentials: "include",
         });
@@ -135,6 +135,9 @@ export function BookingLocationTimeStep({
       }
 
       setQuote(data.quote);
+      if (data.quote.withinServiceArea && data.quote.lat != null && data.quote.lon != null) {
+        setPhase("schedule");
+      }
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -207,14 +210,14 @@ export function BookingLocationTimeStep({
           ← Back to address
         </button>
         <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
-          Choose Your Appointment
+          Date &amp; Time
         </p>
         <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
-          Available private appointments for {pet.name}.
+          Choose a date and start time for {pet.name}.
         </h2>
         <p className="font-body mt-4 text-sm text-taupe">
-          Monday–Friday · 9:00 AM–4:00 PM Eastern · Choose an available start
-          hour. Arrival is estimated for our mobile route and may vary slightly.
+          Monday–Friday · 9:00 AM–4:00 PM Eastern. Arrival is estimated for our
+          mobile route and may vary slightly.
         </p>
         <div className="mt-8">
           <DateTimeStep
@@ -239,16 +242,15 @@ export function BookingLocationTimeStep({
       </button>
 
       <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
-        Location
+        Date &amp; Time
       </p>
       <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
-        Where Shall We Meet You?
+        Where shall we visit {pet.name}?
       </h2>
       <p className="font-body mt-4 max-w-2xl text-sm leading-relaxed text-taupe">
-        K9 Atelier provides complimentary travel within our primary{" "}
-        {freeRadiusMiles}-mile service area. Extended appointments up to
-        approximately {business.serviceArea.maxDistanceMiles} miles may be
-        accommodated with a travel fee.
+        Enter the appointment address so we can open the calendar. Complimentary
+        travel is included within {freeRadiusMiles} miles; visits up to{" "}
+        {business.serviceArea.maxDistanceMiles} miles may include a travel fee.
       </p>
 
       <form onSubmit={handleCheckArea} className="mt-8 space-y-5">

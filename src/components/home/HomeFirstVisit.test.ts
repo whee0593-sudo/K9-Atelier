@@ -12,10 +12,9 @@ describe("home first visit guide", () => {
   });
 
   it("uses rabies confirmation wording", () => {
-    const details = homeFirstVisitSteps[2];
-    assert.equal(details.title, "Complete Your Details");
+    const details = homeFirstVisitSteps[0];
+    assert.equal(details.title, "Tell Us About Your Dog");
     assert.match(details.body, /rabies vaccination status/);
-    assert.match(details.body, /card on file/);
     assert.match(details.body, /rabies certificate or vaccination record/);
     assert.equal(details.body.includes("If the record needs review"), false);
     assert.equal(details.body.includes("COMPLETE YOUR BOOKING"), false);

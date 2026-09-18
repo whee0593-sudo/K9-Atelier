@@ -1,6 +1,5 @@
-import { BookPageGate } from "@/components/booking/BookPageGate";
-import { BookingFlow } from "@/components/booking/BookingFlow";
 import { Container } from "@/components/luxury/Container";
+import { BookingFlow } from "@/components/booking/BookingFlow";
 
 type Props = {
   searchParams: Promise<{ ref?: string }>;
@@ -25,11 +24,9 @@ export default async function BookPage({ searchParams }: Props) {
         </p>
       </header>
 
-      <BookPageGate>
-        <div className="mx-auto mt-10 max-w-2xl">
-          <BookingFlow initialReferralCode={initialReferralCode} />
-        </div>
-      </BookPageGate>
+      <div className="mx-auto mt-10 max-w-2xl">
+        <BookingFlow initialReferralCode={initialReferralCode} />
+      </div>
     </Container>
   );
 }

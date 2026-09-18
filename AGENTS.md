@@ -15,7 +15,7 @@ Standard commands are in `package.json`: `npm run dev` (→ http://localhost:300
   - Or set env `SITE_PRIVACY_MODE=false` to disable the gate entirely for local dev (see `isPrivacyModeEnabled` in `src/lib/site-access.ts`).
   - Secrets and the private mobile-service base address are never stored in `business.json`. Put `SITE_ACCESS_PASSWORD`, `SITE_PREVIEW_SHARE_TOKEN`, and `SITE_BASE_ADDRESS` in `.env.local`; `.env*.local` is gitignored.
 - **The homepage (`/`) is a minimal portal** (logo + "Book Service" / "Online Shop" buttons), not a long marketing page. Rich content lives on `/services`, `/book`, `/service-area`, etc. There is no `/home` route.
-- **Booking requires "customer login" first** (`/book` shows a "Customer login required" gate). This is the `localStorage` stub above, not real auth.
+- **Booking is a 6-step guest flow** on `/book`: dog details → date & time (address then calendar) → care/service → owner details + login password → payment method on file (no charge) → confirm. Confirming saves the household/dog profile and sends email + SMS. Existing customers can sign in during the owner step.
 - **`npm run lint` is not usable out of the box.** No ESLint config is committed, so `next lint` drops into an interactive "How would you like to configure ESLint?" prompt and cannot run non-interactively. `next build` compiles and type-checks fine regardless.
 - **Do not run `npm run build` while `npm run dev` is running.** The production build overwrites the shared `.next` directory and breaks the running dev server with `MODULE_NOT_FOUND` / `Cannot find module './xxx.js'` 500s. To recover: stop dev, `rm -rf .next`, then `npm run dev` again.
 - Deployment target is Vercel (push to `main` auto-deploys). See `DEPLOY.md` / `VERCEL-404-FIX.md`.
