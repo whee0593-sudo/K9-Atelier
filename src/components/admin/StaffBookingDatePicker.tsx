@@ -4,11 +4,15 @@ import React, { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { AdminCalendarMonthGrid } from "@/components/admin/AdminCalendarMonthGrid";
 import type { AdminCalendarDay } from "@/lib/appointments/calendar";
 import {
+  buildEmptyOccupancyMonth,
   calendarMonthFromDate,
   currentBusinessCalendarMonth,
+  isAdminCalendarDayMuted,
   shiftCalendarMonth,
 } from "@/lib/appointments/calendar-month";
 import { buildPreviewCalendarMonth } from "@/lib/appointments/calendar-preview";
+import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
+import { todayInBusinessTimezone } from "@/lib/sms/schedule";
 import { formatStaffDateOption } from "@/lib/staff/book-for-customer-schedule";
 
 function monthForPicker(value: string, openDates: string[]) {
@@ -23,7 +27,6 @@ export function StaffBookingDatePicker({
   onChange,
   openDates,
   disabled = false,
-  loading = false,
   preview = false,
   defaultOpen = false,
 }: {
@@ -32,7 +35,6 @@ export function StaffBookingDatePicker({
   onChange: (date: string) => void;
   openDates: string[];
   disabled?: boolean;
-  loading?: boolean;
   preview?: boolean;
   defaultOpen?: boolean;
 }) {
@@ -42,16 +44,28 @@ export function StaffBookingDatePicker({
   const [days, setDays] = useState<AdminCalendarDay[]>(() =>
     preview
       ? buildPreviewCalendarMonth(monthForPicker(value, openDates)).days
-      : [],
+      : buildEmptyOccupancyMonth(
+          monthForPicker(value, openDates),
+          todayInBusinessTimezone(),
+        ),
   );
   const [occupancyLoading, setOccupancyLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const selectableDates = useMemo(() => new Set(openDates), [openDates]);
+  const selectableDates = useMemo(() => {
+    if (openDates.length > 0) return new Set(openDates);
+    return new Set(
+      days
+        .filter(
+          (day) =>
+            isDateBookable(parseDateValue(day.date)) &&
+            !isAdminCalendarDayMuted(day),
+        )
+        .map((day) => day.date),
+    );
+  }, [days, openDates]);
 
   const loadMonth = useCallback(
     async (nextMonth: string) => {
       setOccupancyLoading(true);
-      setError(null);
       if (preview) {
         setDays(buildPreviewCalendarMonth(nextMonth).days);
         setOccupancyLoading(false);
@@ -66,14 +80,12 @@ export function StaffBookingDatePicker({
           days?: AdminCalendarDay[];
         };
         if (!response.ok || !body.days) {
-          setError(body.error ?? "Could not load the calendar.");
-          setDays([]);
+          setDays(buildEmptyOccupancyMonth(nextMonth, todayInBusinessTimezone()));
           return;
         }
         setDays(body.days);
       } catch {
-        setError("Could not load the calendar.");
-        setDays([]);
+        setDays(buildEmptyOccupancyMonth(nextMonth, todayInBusinessTimezone()));
       } finally {
         setOccupancyLoading(false);
       }
@@ -112,11 +124,7 @@ export function StaffBookingDatePicker({
         aria-expanded={open}
         onClick={openPicker}
       >
-        {loading
-          ? "Loading dates…"
-          : value
-            ? formatStaffDateOption(value)
-            : "Select a date"}
+        {value ? formatStaffDateOption(value) : "Select a date"}
       </button>
       <input
         tabIndex={-1}
@@ -159,18 +167,12 @@ export function StaffBookingDatePicker({
               </button>
             </div>
 
-            {error ? (
-              <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {error}
-              </p>
-            ) : null}
-
             <div className="mt-4">
               <AdminCalendarMonthGrid
                 month={month}
                 days={days}
                 selectedDate={value || null}
-                loading={occupancyLoading}
+                loading={occupancyLoading && days.length === 0}
                 selectableDates={selectableDates}
                 onPrevMonth={() =>
                   setMonth((current) => shiftCalendarMonth(current, -1))

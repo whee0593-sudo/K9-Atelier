@@ -20,5 +20,6 @@ describe("BookForCustomerForm preview schedule", () => {
     assert.match(html, /id="appointment-date"/);
     assert.match(html, /Select a date/);
     assert.match(html, /Studio dates are listed/);
+    assert.doesNotMatch(html, /Could not load available dates/);
   });
 });

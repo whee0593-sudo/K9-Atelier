@@ -58,3 +58,28 @@ export function calendarMonthLeadingBlanks(days: Array<{ date: string }>) {
   if (days.length === 0) return 0;
   return new Date(`${days[0]!.date}T12:00:00`).getDay();
 }
+
+/** Month grid with occupancy counts, used when the live admin calendar cannot load. */
+export function buildEmptyOccupancyMonth(
+  month: string,
+  today: string,
+): AdminCalendarDay[] {
+  const [yearText, monthText] = month.split("-");
+  const year = Number(yearText);
+  const monthIndex = Number(monthText) - 1;
+  const last = new Date(year, monthIndex + 1, 0).getDate();
+  const days: AdminCalendarDay[] = [];
+  for (let day = 1; day <= last; day += 1) {
+    const date = `${month}-${String(day).padStart(2, "0")}`;
+    days.push({
+      date,
+      appointmentCount: 0,
+      isPast: date < today,
+      isFull: false,
+      isToday: date === today,
+      closure: null,
+      closureLabel: null,
+    });
+  }
+  return days;
+}

@@ -24,4 +24,18 @@ describe("StaffBookingDatePicker", () => {
     assert.match(html, /bg-lavender-light\/70/);
     assert.doesNotMatch(html, /type="date"/);
   });
+
+  it("still shows a month grid when live occupancy cannot load", () => {
+    const html = renderToStaticMarkup(
+      <StaffBookingDatePicker
+        value=""
+        openDates={["2026-09-21"]}
+        defaultOpen
+        onChange={() => {}}
+      />,
+    );
+    assert.match(html, /Choose a date/);
+    assert.match(html, /September 2026/);
+    assert.match(html, />21</);
+  });
 });

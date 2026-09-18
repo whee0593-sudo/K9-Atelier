@@ -211,7 +211,6 @@ export function BookForCustomerForm({
           days?: AvailabilityDay[];
         };
         if (!response.ok || !body.days) {
-          setAvailabilityError(body.error ?? "Could not load available times.");
           setDays(fallbackStaffScheduleDays());
           setAvailabilityLoaded(true);
           return;
@@ -221,7 +220,6 @@ export function BookForCustomerForm({
       } catch (error) {
         if (controller.signal.aborted) return;
         console.error("Book for customer availability failed:", error);
-        setAvailabilityError("Could not load available times.");
         setDays(fallbackStaffScheduleDays());
         setAvailabilityLoaded(true);
       } finally {
@@ -601,8 +599,6 @@ export function BookForCustomerForm({
             id="appointment-date"
             value={appointmentDate}
             openDates={openDays.map((day) => day.date)}
-            disabled={availabilityLoading}
-            loading={availabilityLoading}
             preview={preview}
             onChange={(date) => {
               setAppointmentDate(date);

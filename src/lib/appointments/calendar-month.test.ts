@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   adminCalendarDayButtonClass,
+  buildEmptyOccupancyMonth,
   calendarMonthFromDate,
   formatCalendarMonthLabel,
   isAdminCalendarDayMuted,
@@ -43,5 +44,15 @@ describe("calendar month helpers", () => {
       /bg-lavender-light\/70/,
     );
     assert.match(adminCalendarDayButtonClass(openDay, true), /ring-gold/);
+  });
+
+  it("builds a local month grid when occupancy data is missing", () => {
+    const days = buildEmptyOccupancyMonth("2026-09", "2026-09-18");
+    assert.equal(days.length, 30);
+    assert.equal(days[0]?.date, "2026-09-01");
+    assert.equal(days[0]?.isPast, true);
+    assert.equal(days[17]?.date, "2026-09-18");
+    assert.equal(days[17]?.isToday, true);
+    assert.equal(days[20]?.isPast, false);
   });
 });

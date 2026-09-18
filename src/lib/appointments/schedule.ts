@@ -236,23 +236,36 @@ export async function loadOccupiedStopsByDate(
   const admin = requireAdminClient();
   if (!admin) return { error: "misconfigured" as const };
 
-  const { data, error } = await admin
+  const select =
+    "id, appointment_date, address_lat, address_lon, scheduled_start, service_id, add_on_ids, address_zip";
+  let data: OccupiedRow[] | null = null;
+  const withPets = await admin
     .from("appointments")
-    .select(
-      "id, appointment_date, address_lat, address_lon, scheduled_start, service_id, add_on_ids, address_zip, pets ( weight_lbs )",
-    )
+    .select(`${select}, pets ( weight_lbs )`)
     .gte("appointment_date", fromDate)
     .lte("appointment_date", toDate)
     .neq("status", "cancelled");
 
-  if (error) {
-    console.error("loadOccupiedStopsByDate failed:", error.message);
-    return { error: "server" as const };
+  if (withPets.error) {
+    console.error("loadOccupiedStopsByDate pets join failed:", withPets.error.message);
+    const withoutPets = await admin
+      .from("appointments")
+      .select(select)
+      .gte("appointment_date", fromDate)
+      .lte("appointment_date", toDate)
+      .neq("status", "cancelled");
+    if (withoutPets.error) {
+      console.error("loadOccupiedStopsByDate failed:", withoutPets.error.message);
+      return { error: "server" as const };
+    }
+    data = (withoutPets.data ?? []) as OccupiedRow[];
+  } else {
+    data = (withPets.data ?? []) as OccupiedRow[];
   }
 
   const exclude = new Set(options?.excludeAppointmentIds ?? []);
   const byDate = new Map<string, { stops: OccupiedAppointment[]; bookedCount: number }>();
-  for (const row of (data ?? []) as OccupiedRow[]) {
+  for (const row of data ?? []) {
     if (row.id && exclude.has(row.id)) continue;
     const current = byDate.get(row.appointment_date) ?? {
       stops: [],
@@ -359,9 +372,21 @@ export async function getAvailabilityForAddress(input: {
     }),
     loadDayClosures(fromDate, toDate),
   ]);
-  if ("error" in plansResult) return plansResult;
-  if ("error" in occupiedResult) return occupiedResult;
-  if ("error" in closuresResult) return closuresResult;
+  if ("error" in plansResult) {
+    console.error("getAvailabilityForAddress plans:", plansResult.error);
+  }
+  if ("error" in occupiedResult) {
+    console.error("getAvailabilityForAddress occupied:", occupiedResult.error);
+  }
+  if ("error" in closuresResult) {
+    console.error("getAvailabilityForAddress closures:", closuresResult.error);
+  }
+
+  const plans = "error" in plansResult ? new Map() : plansResult.plans;
+  const occupiedByDate =
+    "error" in occupiedResult ? new Map() : occupiedResult.byDate;
+  const closures =
+    "error" in closuresResult ? new Map() : closuresResult.closures;
 
   const days = [];
   for (const date of dates) {
@@ -374,18 +399,18 @@ export async function getAvailabilityForAddress(input: {
       continue;
     }
 
-    const closure = closuresResult.closures.get(date) ?? null;
+    const closure = closures.get(date) ?? null;
     if (closure?.closedAllDay) {
       days.push({ date, available: false, slots: [] as number[] });
       continue;
     }
 
-    const occupied = occupiedResult.byDate.get(date) ?? {
+    const occupied = occupiedByDate.get(date) ?? {
       stops: [],
       bookedCount: 0,
     };
 
-    const plan = resolveEffectivePlan(date, plansResult.plans.get(date) ?? null);
+    const plan = resolveEffectivePlan(date, plans.get(date) ?? null);
     const inZone = addressAllowedForPlan(plan, input.zip, input.point);
     if (!inZone) {
       days.push({ date, available: false, slots: [] as number[] });
