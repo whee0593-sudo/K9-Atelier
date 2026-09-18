@@ -1,10 +1,20 @@
-import { parseDateValue } from "@/lib/booking-slots";
+import { listHourlyStartMinutes } from "@/lib/booking-schedule";
+import { getUpcomingBookableDates, parseDateValue } from "@/lib/booking-slots";
 
 export type StaffAvailabilityDay = {
   date: string;
   available: boolean;
   slots: number[];
 };
+
+/** Studio calendar days with standard start hours, before live route availability. */
+export function fallbackStaffScheduleDays(count = 20): StaffAvailabilityDay[] {
+  return getUpcomingBookableDates(count).map((day) => ({
+    date: day.value,
+    available: true,
+    slots: listHourlyStartMinutes(),
+  }));
+}
 
 /** Dates staff can actually book — open and with at least one start hour. */
 export function selectableStaffDays(days: StaffAvailabilityDay[]) {
@@ -40,10 +50,10 @@ export type StaffScheduleHintInput = {
 export function staffScheduleHint(input: StaffScheduleHintInput): string | null {
   if (input.error) return null;
   if (!input.quoteReady) {
-    return "Check the service area first, then choose a service to load start times.";
+    return "Studio dates are listed. Check the service area to confirm the travel fee and remaining hours.";
   }
   if (!input.hasService) {
-    return "Choose a service to load available dates and start times.";
+    return "Choose a service to confirm remaining start times for this address.";
   }
   if (input.loading) {
     return "Loading available times…";

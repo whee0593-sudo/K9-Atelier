@@ -17,4 +17,13 @@ describe("BookForCustomerForm preview schedule", () => {
     assert.doesNotMatch(html, /type="date"/);
     assert.match(html, /Select a date to see available start hours/);
   });
+
+  it("lists studio dates before the service area is checked", () => {
+    const html = renderToStaticMarkup(<BookForCustomerForm />);
+    const first = getUpcomingBookableDates(1)[0];
+    assert.ok(first);
+    assert.match(html, new RegExp(`value="${first.value}"`));
+    assert.match(html, new RegExp(formatStaffDateOption(first.value)));
+    assert.match(html, /Studio dates are listed/);
+  });
 });

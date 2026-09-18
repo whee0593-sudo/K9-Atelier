@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { getUpcomingBookableDates } from "@/lib/booking-slots";
 import {
+  fallbackStaffScheduleDays,
   formatStaffDateOption,
   selectableStaffDays,
   slotsForStaffDate,
@@ -23,6 +25,18 @@ const wednesdayEmpty: StaffAvailabilityDay = {
   available: true,
   slots: [],
 };
+
+describe("fallbackStaffScheduleDays", () => {
+  it("lists upcoming studio days with hourly start times", () => {
+    const first = getUpcomingBookableDates(1)[0];
+    assert.ok(first);
+    const days = fallbackStaffScheduleDays(3);
+    assert.equal(days.length, 3);
+    assert.equal(days[0]?.date, first.value);
+    assert.equal(days[0]?.available, true);
+    assert.ok((days[0]?.slots.length ?? 0) > 0);
+  });
+});
 
 describe("selectableStaffDays", () => {
   it("keeps only open days that still have start hours", () => {
@@ -66,17 +80,17 @@ describe("staffScheduleHint", () => {
     slotCount: 2,
   };
 
-  it("prompts to check the service area before times can load", () => {
+  it("prompts to check the service area after studio dates are listed", () => {
     assert.match(
       staffScheduleHint({ ...ready, quoteReady: false, daysLoaded: false }) ?? "",
-      /service area/i,
+      /studio dates are listed/i,
     );
   });
 
   it("prompts to choose a service after the address is ready", () => {
     assert.match(
       staffScheduleHint({ ...ready, hasService: false, daysLoaded: false }) ?? "",
-      /service/i,
+      /choose a service/i,
     );
   });
 

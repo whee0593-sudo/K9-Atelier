@@ -3,15 +3,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatHourLabel } from "@/lib/appointments/closures";
-import { listHourlyStartMinutes } from "@/lib/booking-schedule";
 import { formatPrice } from "@/lib/business";
 import {
   allBookableServices,
   getServicePriceEstimate,
   isServiceAvailableForPet,
 } from "@/lib/services";
-import { getUpcomingBookableDates } from "@/lib/booking-slots";
 import {
+  fallbackStaffScheduleDays,
   formatStaffDateOption,
   selectableStaffDays,
   slotsForStaffDate,
@@ -77,13 +76,7 @@ export function BookForCustomerForm({
   const [zip, setZip] = useState("");
   const [quoteState, setQuoteState] = useState<QuoteState>({ status: "idle" });
   const [days, setDays] = useState<AvailabilityDay[]>(() =>
-    preview
-      ? getUpcomingBookableDates(20).map((day) => ({
-          date: day.value,
-          available: true,
-          slots: listHourlyStartMinutes(),
-        }))
-      : [],
+    fallbackStaffScheduleDays(),
   );
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
@@ -140,7 +133,7 @@ export function BookForCustomerForm({
   async function handleQuote() {
     setError(null);
     setQuoteState({ status: "loading" });
-    setDays([]);
+    setDays(fallbackStaffScheduleDays());
     setAppointmentDate("");
     setSlotStartMinutes("");
     try {
@@ -192,7 +185,7 @@ export function BookForCustomerForm({
       setAvailabilityLoading(false);
       setAvailabilityLoaded(false);
       setAvailabilityError(null);
-      setDays([]);
+      setDays(fallbackStaffScheduleDays());
       return;
     }
 
@@ -219,7 +212,7 @@ export function BookForCustomerForm({
         };
         if (!response.ok || !body.days) {
           setAvailabilityError(body.error ?? "Could not load available times.");
-          setDays([]);
+          setDays(fallbackStaffScheduleDays());
           setAvailabilityLoaded(true);
           return;
         }
@@ -229,7 +222,7 @@ export function BookForCustomerForm({
         if (controller.signal.aborted) return;
         console.error("Book for customer availability failed:", error);
         setAvailabilityError("Could not load available times.");
-        setDays([]);
+        setDays(fallbackStaffScheduleDays());
         setAvailabilityLoaded(true);
       } finally {
         if (!controller.signal.aborted) {
