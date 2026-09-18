@@ -38,7 +38,6 @@ import {
   photoMarketingConsentCopy,
   smsConsentCopy,
 } from "@/lib/notifications";
-import { vaccinationBookingNeedsAdminConfirmation } from "@/lib/vaccinations/booking";
 import { CreativeBookingPolicy } from "@/components/booking/CreativeBookingPolicy";
 import type { BookingPolicySectionId } from "@/components/booking/BookingPoliciesModal";
 import {
@@ -176,9 +175,6 @@ export function BookingReviewStep({
   const creativePolicy = bookingIncludesCreativeColoring(addOnIds)
     ? getCreativeBookingPolicy()
     : undefined;
-  const pendingVaccinationReview = vaccinationBookingNeedsAdminConfirmation(
-    pet.vaccinationBookingStatus,
-  );
 
   useEffect(() => {
     let cancelled = false;
@@ -603,17 +599,6 @@ export function BookingReviewStep({
         <CreativeBookingPolicy policy={creativePolicy} className="mt-6" />
       )}
 
-      {pendingVaccinationReview && (
-        <p
-          className="font-body mt-6 rounded-xl border border-champagne/50 bg-dusty-lavender/20 px-4 py-3 text-sm leading-relaxed text-ink"
-          role="status"
-        >
-          {pet.name}&apos;s vaccination record is still under review. You can
-          submit this appointment now. We will notify you once the vaccination
-          record is reviewed and your appointment is confirmed.
-        </p>
-      )}
-
       <div className="mt-8">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
@@ -738,11 +723,7 @@ export function BookingReviewStep({
         onClick={() => void handleReserve()}
         className={`${bookingPrimaryBtnClass} mt-8`}
       >
-        {loading
-          ? "Saving…"
-          : pendingVaccinationReview
-            ? "Submit for Review"
-            : "Reserve Appointment"}
+        {loading ? "Saving…" : "Reserve Appointment"}
       </button>
 
       <button
@@ -777,7 +758,7 @@ export function BookingConfirmationView({
     <section className="text-center">
       <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
         {pendingReview
-          ? "Vaccination Record Received"
+          ? "Appointment Received"
           : "Your Appointment Is Confirmed"}
       </p>
       <h2 className="font-display mt-5 text-4xl text-ink md:text-5xl">
@@ -796,7 +777,7 @@ export function BookingConfirmationView({
         </p>
         <p className="mt-6 text-sm leading-relaxed text-taupe">
           {pendingReview
-            ? "Your selected appointment is pending while we review your dog’s vaccination record. We will notify you as soon as your appointment is confirmed."
+            ? "Your selected appointment is pending confirmation. We will notify you once it is confirmed."
             : "Your appointment has been reserved. You can view the details at any time in your account."}
         </p>
       </div>

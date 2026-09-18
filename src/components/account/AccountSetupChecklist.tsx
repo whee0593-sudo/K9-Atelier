@@ -6,7 +6,7 @@ import { useCustomerPets } from "@/lib/pets/use-customer-pets";
 import { fetchCustomerPaymentMethods } from "@/lib/payments/client";
 import {
   paymentSetupHref,
-  petNeedsVaccinationRecord,
+  petNeedsRabiesStatus,
   petsSetupHref,
   readRememberedSetupPetId,
 } from "@/lib/account-setup";
@@ -40,18 +40,19 @@ export function AccountSetupChecklist() {
 
   const focusPet =
     pets.find((pet) => pet.id === petId) ??
-    pets.find(petNeedsVaccinationRecord) ??
+    pets.find(petNeedsRabiesStatus) ??
     pets[0] ??
     null;
-  const vaccineDone = focusPet ? !petNeedsVaccinationRecord(focusPet) : false;
+  const rabiesDone = focusPet ? !petNeedsRabiesStatus(focusPet) : false;
   const paymentDone = hasCard === true;
-  const allDone = vaccineDone && paymentDone;
+  const allDone = rabiesDone && paymentDone;
 
   return (
     <div className="space-y-6">
       <p className="text-sm text-text-muted">
-        Your visit is reserved. Upload a current rabies certificate or
-        vaccination record, then save a card on file. You are not charged now.
+        Your visit is reserved. Confirm your dog’s rabies vaccination status,
+        then save a card on file. You may also upload a rabies certificate or
+        vaccination record. You are not charged now.
       </p>
 
       {loading ? (
@@ -70,7 +71,7 @@ export function AccountSetupChecklist() {
 
       {allDone ? (
         <p className="rounded-xl border border-lavender/40 bg-lavender-light/40 px-4 py-3 text-sm text-text">
-          Vaccination and payment details are on file. Thank you.
+          Vaccination status and payment details are on file. Thank you.
         </p>
       ) : null}
 
@@ -79,18 +80,18 @@ export function AccountSetupChecklist() {
           <p className="text-xs font-medium uppercase tracking-[0.14em] text-gold-dark">
             Step 1
           </p>
-          <h3 className="mt-2 font-medium text-text">Vaccination record</h3>
+          <h3 className="mt-2 font-medium text-text">Rabies vaccination</h3>
           <p className="mt-2 text-sm text-text-muted">
             {focusPet
-              ? `Upload a current record for ${focusPet.name}.`
-              : "Open your pet profile and upload a current record."}
-            {vaccineDone ? " A record is already on file." : ""}
+              ? `Confirm ${focusPet.name}’s rabies status. You may also upload a current rabies certificate or vaccination record.`
+              : "Open your pet profile and confirm rabies vaccination status."}
+            {rabiesDone ? " Rabies status is already confirmed." : ""}
           </p>
           <Link
             href={petsSetupHref(focusPet?.id ?? petId)}
             className="mt-4 inline-flex rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white hover:bg-gold-dark"
           >
-            {vaccineDone ? "Review pet profile" : "Add vaccination record"}
+            {rabiesDone ? "Review pet profile" : "Confirm rabies status"}
           </Link>
         </li>
         <li className="rounded-2xl border border-lavender/30 bg-cream p-5">

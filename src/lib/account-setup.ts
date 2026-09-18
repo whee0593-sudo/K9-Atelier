@@ -1,4 +1,5 @@
 import type { PetProfile } from "@/lib/pets";
+import { petHasConfirmedRabiesStatus } from "@/lib/vaccinations/booking";
 
 export const ACCOUNT_SETUP_PATH = "/account/setup";
 export const ACCOUNT_SETUP_PET_STORAGE_KEY = "k9-account-setup-pet";
@@ -24,10 +25,8 @@ export function readRememberedSetupPetId() {
   return window.sessionStorage.getItem(ACCOUNT_SETUP_PET_STORAGE_KEY);
 }
 
-export function petNeedsVaccinationRecord(pet: PetProfile) {
-  if (pet.vaccineRecordUploaded) return false;
-  const status = pet.vaccinationBookingStatus ?? "missing";
-  return status === "missing" || status === "needs_attention";
+export function petNeedsRabiesStatus(pet: PetProfile) {
+  return !petHasConfirmedRabiesStatus(pet);
 }
 
 export function petToExpandForSetup(
@@ -37,5 +36,5 @@ export function petToExpandForSetup(
   if (requestedPetId && pets.some((pet) => pet.id === requestedPetId)) {
     return requestedPetId;
   }
-  return pets.find(petNeedsVaccinationRecord)?.id ?? pets[0]?.id ?? null;
+  return pets.find(petNeedsRabiesStatus)?.id ?? pets[0]?.id ?? null;
 }

@@ -1,4 +1,5 @@
 import type { PetRecord, PetRow, PetWriteInput } from "@/lib/pets/types";
+import { parsePetRabiesStatus } from "@/lib/pets/types";
 import type { PetProfile } from "@/lib/pets";
 import { getPetAgeYears } from "@/lib/pet-age";
 import {
@@ -20,6 +21,7 @@ export function mapPetRowToRecord(row: PetRow): PetRecord {
     temperamentNotes: row.temperament_notes,
     healthComfortNotes: row.health_comfort_notes,
     groomingPreferences: row.grooming_preferences,
+    rabiesStatus: parsePetRabiesStatus(row.rabies_status),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -39,9 +41,11 @@ export function mapPetRecordToUiProfile(record: PetRecord): PetProfile {
     temperament: record.temperamentNotes ?? undefined,
     medicalNotes: record.healthComfortNotes ?? undefined,
     groomingPreferences: record.groomingPreferences ?? undefined,
+    rabiesStatus: parsePetRabiesStatus(record.rabiesStatus),
     vaccineExpiration: record.vaccinationExpirationDate ?? undefined,
     vaccinationBookingStatus: record.vaccinationBookingStatus ?? "missing",
     vaccineRecordUploaded: vaccinationHasUpload(record),
+    vaccinationLatestRecordId: record.vaccinationLatestRecordId ?? null,
   };
 }
 
@@ -68,6 +72,7 @@ export function mapPetProfileToWriteInput(pet: PetProfile): PetWriteInput {
     temperamentNotes: pet.temperament ?? null,
     healthComfortNotes: pet.medicalNotes ?? null,
     groomingPreferences: pet.groomingPreferences ?? null,
+    rabiesStatus: parsePetRabiesStatus(pet.rabiesStatus),
   };
 }
 
@@ -84,6 +89,7 @@ export function mapValidatedInputToInsertRow(
     temperament_notes: input.temperamentNotes ?? null,
     health_comfort_notes: input.healthComfortNotes ?? null,
     grooming_preferences: input.groomingPreferences ?? null,
+    rabies_status: parsePetRabiesStatus(input.rabiesStatus),
   };
 }
 
@@ -108,6 +114,9 @@ export function mapValidatedInputToUpdateRow(
   }
   if (input.groomingPreferences !== undefined) {
     row.grooming_preferences = input.groomingPreferences;
+  }
+  if (input.rabiesStatus !== undefined) {
+    row.rabies_status = parsePetRabiesStatus(input.rabiesStatus);
   }
 
   return row;

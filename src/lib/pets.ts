@@ -1,4 +1,5 @@
 import { formatPetAgeLabel, getPetAgeYears } from "@/lib/pet-age";
+import type { PetRabiesStatus } from "@/lib/pets/types";
 import type { VaccinationBookingStatus } from "@/lib/vaccinations/types";
 import { petProfileReadyToBook } from "@/lib/vaccinations/booking";
 
@@ -20,9 +21,11 @@ export type PetProfile = {
   medicalNotes?: string;
   groomingPreferences?: string;
   adminServiceNotes?: string;
+  rabiesStatus?: PetRabiesStatus | null;
   vaccineExpiration?: string;
   vaccinationBookingStatus?: VaccinationBookingStatus;
   vaccineRecordUploaded: boolean;
+  vaccinationLatestRecordId?: string | null;
 };
 
 export const demoPetProfiles: PetProfile[] = [
@@ -33,6 +36,7 @@ export const demoPetProfiles: PetProfile[] = [
     weightLbs: 12,
     dateOfBirth: "2017-05-18",
     sex: "Female, Spayed",
+    rabiesStatus: "current",
     vaccineRecordUploaded: true,
     vaccinationBookingStatus: "current",
     vaccineExpiration: "2026-11-01",

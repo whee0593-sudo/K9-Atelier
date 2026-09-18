@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { PetProfileFieldsForm } from "@/components/account/PetProfileFieldsForm";
+import { RabiesStatusSummary } from "@/components/account/RabiesStatusSummary";
 import { mapPetProfileToWriteInput, mapPetRecordToUiProfile } from "@/lib/pets/map";
 import { normalizePetProfile, type PetProfile } from "@/lib/pets";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
@@ -196,6 +197,7 @@ function StaffPetEditor({
         }}
         petPersisted
         vaccinationUploading={uploading}
+        vaccinationAudience="admin"
         onVaccinationUpload={handleVaccinationUpload}
       />
       <label className="block text-sm font-medium text-text">
@@ -278,6 +280,7 @@ export function StaffCustomerPets({
           temperamentNotes: input.temperamentNotes ?? null,
           healthComfortNotes: input.healthComfortNotes ?? null,
           groomingPreferences: input.groomingPreferences ?? null,
+          rabiesStatus: input.rabiesStatus ?? null,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           adminServiceNotes: "",
@@ -345,6 +348,12 @@ export function StaffCustomerPets({
               <p className="font-medium text-text">
                 {pet.name} · {pet.breed}
               </p>
+              <div className="mt-3 rounded-xl border border-lavender/30 bg-lavender-light/20 px-4 py-4">
+                <RabiesStatusSummary
+                  pet={mapPetRecordToUiProfile(pet)}
+                  statusLabel="Rabies Status"
+                />
+              </div>
               <StaffPetEditor
                 customerId={customerId}
                 pet={pet}

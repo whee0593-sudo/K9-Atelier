@@ -24,9 +24,12 @@ import { isStripeConfigured } from "@/lib/stripe/config";
 import { dollarsToCents } from "@/lib/charges/money";
 import type { ChargeKind, ChargeLineItem } from "@/lib/charges/types";
 import { mapPetRowToRecord } from "@/lib/pets/map";
-import type { PetRow } from "@/lib/pets/types";
+import { PET_SELECT, type PetRow } from "@/lib/pets/types";
 import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
-import { vaccinationReadyToBook } from "@/lib/vaccinations/booking";
+import {
+  petHasConfirmedRabiesStatus,
+  vaccinationStatusSnapshotForBooking,
+} from "@/lib/vaccinations/booking";
 import {
   allBookableServices,
   estimateServiceDurationMinutes,
@@ -631,9 +634,7 @@ async function addDogToVisit(
   const admin = createAdminClient();
   const { data: petRow, error: petError } = await admin
     .from("pets")
-    .select(
-      "id, customer_id, name, breed, weight_lbs, date_of_birth, approximate_age_years, sex, temperament_notes, health_comfort_notes, grooming_preferences, archived_at, created_at, updated_at",
-    )
+    .select(PET_SELECT)
     .eq("id", input.petId)
     .eq("customer_id", userId)
     .is("archived_at", null)
@@ -648,7 +649,7 @@ async function addDogToVisit(
   const [pet] = await attachVaccinationSummaries([
     mapPetRowToRecord(petRow as PetRow),
   ]);
-  if (!vaccinationReadyToBook(pet.vaccinationBookingStatus)) {
+  if (!petHasConfirmedRabiesStatus(pet)) {
     return { error: "conflict" as const };
   }
 
@@ -686,8 +687,8 @@ async function addDogToVisit(
     return { error: "server" as const };
   }
 
-  const vaccinationStatus = pet.vaccinationBookingStatus ?? "missing";
-  const status = "pending_confirmation";
+  const vaccinationStatus = vaccinationStatusSnapshotForBooking(pet);
+  const status = "confirmed";
 
   const { data, error } = await admin
     .from("appointments")
@@ -716,7 +717,7 @@ async function addDogToVisit(
       payment_method_id: paymentMethod.id,
       vaccination_status_at_booking: vaccinationStatus,
       status,
-      confirmed_at: null,
+      confirmed_at: new Date().toISOString(),
     })
     .select(CHANGE_SELECT)
     .single();

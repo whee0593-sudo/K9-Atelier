@@ -1,7 +1,43 @@
 import type { PetRecord } from "@/lib/pets/types";
+import {
+  parsePetRabiesStatus,
+  type PetRabiesStatus,
+} from "@/lib/pets/types";
 import type { PetProfile } from "@/lib/pets";
 import type { VaccinationBookingStatus } from "@/lib/vaccinations/types";
 
+export { parsePetRabiesStatus };
+export type { PetRabiesStatus };
+
+export const RABIES_STATUS_OPTIONS: Array<{
+  value: PetRabiesStatus;
+  label: string;
+}> = [
+  { value: "current", label: "Current rabies vaccination" },
+  {
+    value: "medical_exemption",
+    label: "Veterinarian-issued medical exemption",
+  },
+];
+
+export function rabiesStatusDisplayLabel(status: PetRabiesStatus) {
+  return status === "medical_exemption"
+    ? "Veterinary Medical Exemption"
+    : "Current";
+}
+
+export function petHasConfirmedRabiesStatus(pet: {
+  rabiesStatus?: PetRabiesStatus | null;
+  vaccineRecordUploaded?: boolean;
+  vaccinationHasUpload?: boolean;
+  vaccinationBookingStatus?: VaccinationBookingStatus;
+}) {
+  if (parsePetRabiesStatus(pet.rabiesStatus)) return true;
+  if (pet.vaccineRecordUploaded || pet.vaccinationHasUpload) return true;
+  return vaccinationReadyToBook(pet.vaccinationBookingStatus);
+}
+
+/** File-based vaccine status still used as a legacy compatibility fallback. */
 export function vaccinationReadyToBook(
   status: VaccinationBookingStatus | undefined,
 ) {
@@ -12,25 +48,48 @@ export function vaccinationReadyToBook(
   );
 }
 
+/** Rabies documents no longer require staff confirmation before booking. */
 export function vaccinationBookingNeedsAdminConfirmation(
-  status: VaccinationBookingStatus | undefined,
+  _status?: VaccinationBookingStatus,
 ) {
-  return status === "needs_review";
+  return false;
 }
 
 export function vaccinationBookingConfirmedImmediately(
   status: VaccinationBookingStatus | undefined,
 ) {
-  return status === "current" || status === "expiring_soon";
+  return !vaccinationBookingNeedsAdminConfirmation(status);
 }
 
 export function vaccinationHasUpload(
-  record: Pick<PetRecord, "vaccinationHasUpload" | "vaccinationBookingStatus">,
+  record: Pick<
+    PetRecord,
+    "vaccinationHasUpload" | "vaccinationBookingStatus"
+  > & {
+    vaccineRecordUploaded?: boolean;
+  },
 ) {
   if (record.vaccinationHasUpload != null) {
     return record.vaccinationHasUpload;
   }
+  if (record.vaccineRecordUploaded != null) {
+    return record.vaccineRecordUploaded;
+  }
   return (record.vaccinationBookingStatus ?? "missing") !== "missing";
+}
+
+export function vaccinationStatusSnapshotForBooking(pet: {
+  rabiesStatus?: PetRabiesStatus | null;
+  vaccinationBookingStatus?: VaccinationBookingStatus;
+  vaccinationHasUpload?: boolean;
+  vaccineRecordUploaded?: boolean;
+}): VaccinationBookingStatus {
+  if (!petHasConfirmedRabiesStatus(pet)) {
+    return pet.vaccinationBookingStatus ?? "missing";
+  }
+  const fileStatus = pet.vaccinationBookingStatus;
+  if (fileStatus && fileStatus !== "missing") return fileStatus;
+  return "current";
 }
 
 export function vaccinationStatusLabel(status: VaccinationBookingStatus) {
@@ -50,9 +109,16 @@ export function vaccinationStatusLabel(status: VaccinationBookingStatus) {
 }
 
 export function petProfileReadyToBook(pet: PetProfile) {
-  return vaccinationReadyToBook(pet.vaccinationBookingStatus);
+  return petHasConfirmedRabiesStatus(pet);
 }
 
 export function petProfileVaccinationLabel(pet: PetProfile) {
-  return vaccinationStatusLabel(pet.vaccinationBookingStatus ?? "missing");
+  const status = parsePetRabiesStatus(pet.rabiesStatus);
+  if (status) return rabiesStatusDisplayLabel(status);
+  if (petHasConfirmedRabiesStatus(pet)) return "Current";
+  return "Confirm rabies status";
+}
+
+export function petProfileRabiesRecordLabel(pet: Pick<PetProfile, "vaccineRecordUploaded">) {
+  return pet.vaccineRecordUploaded ? "View Document" : "Not uploaded";
 }

@@ -6,7 +6,7 @@ import {
   requireAuthenticatedUser,
 } from "@/lib/pets/auth";
 import { mapPetRowToRecord } from "@/lib/pets/map";
-import type { PetRecord, PetRow } from "@/lib/pets/types";
+import { PET_SELECT, type PetRecord, type PetRow } from "@/lib/pets/types";
 import {
   detectVaccinationMimeType,
   extensionForMime,
@@ -144,9 +144,7 @@ export async function uploadPetVaccination(
 
   const { data: refreshedPet, error: refreshError } = await supabase
     .from("pets")
-    .select(
-      "id, customer_id, name, breed, weight_lbs, date_of_birth, approximate_age_years, sex, temperament_notes, health_comfort_notes, grooming_preferences, archived_at, created_at, updated_at",
-    )
+    .select(PET_SELECT)
     .eq("id", petId)
     .maybeSingle();
 
@@ -282,4 +280,65 @@ export async function uploadStaffPetVaccination(
 export async function getPetVaccinationSummaryForPet(petId: string) {
   const supabase = await createAuthenticatedSupabaseClient();
   return fetchPetVaccinationSummary(supabase, petId);
+}
+
+export async function createOwnVaccinationFileSignedUrl(petId: string): Promise<
+  | { url: string; mimeType: string; filename: string | null }
+  | { error: "unauthenticated" | "not_found" | "server" }
+> {
+  const user = await requireAuthenticatedUser();
+  if (!user) return { error: "unauthenticated" };
+
+  const supabase = await createAuthenticatedSupabaseClient();
+  const { data: petRow, error: petError } = await supabase
+    .from("pets")
+    .select("id")
+    .eq("id", petId)
+    .eq("customer_id", user.id)
+    .is("archived_at", null)
+    .maybeSingle();
+
+  if (petError) {
+    console.error(
+      "createOwnVaccinationFileSignedUrl pet lookup failed:",
+      petError.message,
+    );
+    return { error: "server" };
+  }
+  if (!petRow) return { error: "not_found" };
+
+  const { data: record, error: recordError } = await supabase
+    .from("pet_vaccination_records")
+    .select("storage_path, mime_type, original_filename")
+    .eq("pet_id", petId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (recordError) {
+    console.error(
+      "createOwnVaccinationFileSignedUrl record lookup failed:",
+      recordError.message,
+    );
+    return { error: "server" };
+  }
+  if (!record) return { error: "not_found" };
+
+  const { data: signed, error: signError } = await supabase.storage
+    .from(VACCINATION_BUCKET)
+    .createSignedUrl(record.storage_path, 120);
+
+  if (signError || !signed?.signedUrl) {
+    console.error(
+      "createOwnVaccinationFileSignedUrl sign failed:",
+      signError?.message ?? "missing url",
+    );
+    return { error: "server" };
+  }
+
+  return {
+    url: signed.signedUrl,
+    mimeType: record.mime_type,
+    filename: record.original_filename,
+  };
 }
