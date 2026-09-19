@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { PetProfile } from "@/lib/pets";
 import type { AppointmentRecord } from "@/lib/appointments/types";
@@ -31,12 +31,63 @@ import { BookingConfirmStep } from "@/components/booking/BookingConfirmStep";
 import { BookingConfirmationView } from "@/components/booking/BookingReviewStep";
 import { CreativePairingModal } from "@/components/booking/CreativePairingModal";
 import { bookingBackLinkClass } from "@/components/booking/booking-ui";
-import { reportBookAppointmentConversion } from "@/lib/google-ads";
+import { trackGoogleAdsBookingConversion } from "@/lib/google-ads";
 import { createDraftBookingPet, isPersistedPetId } from "@/lib/booking-flow";
 import { createCustomerPet } from "@/lib/pets/client";
 import { mapPetProfileToWriteInput } from "@/lib/pets/map";
 import { createClient } from "@/lib/supabase/client";
 import type { PaymentMethodRecord } from "@/lib/payments/types";
+
+const BOOKING_SUCCESS_SESSION_KEY = "k9-booking-success";
+
+type BookingSuccessSnapshot = {
+  appointment: AppointmentRecord;
+  pet: PetProfile;
+  service: BookableService;
+  appointmentDate: string;
+  appointmentTime: string;
+  address: ServiceAddress;
+};
+
+function readBookingSuccessSnapshot(): BookingSuccessSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(BOOKING_SUCCESS_SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as BookingSuccessSnapshot;
+    if (
+      !parsed?.appointment?.id ||
+      !parsed.pet ||
+      !parsed.service ||
+      !parsed.appointmentDate ||
+      !parsed.appointmentTime ||
+      !parsed.address
+    ) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeBookingSuccessSnapshot(snapshot: BookingSuccessSnapshot) {
+  window.sessionStorage.setItem(
+    BOOKING_SUCCESS_SESSION_KEY,
+    JSON.stringify(snapshot),
+  );
+}
+
+function clearBookingSuccessSnapshot() {
+  window.sessionStorage.removeItem(BOOKING_SUCCESS_SESSION_KEY);
+}
+
+function isReloadNavigation() {
+  const nav = performance.getEntriesByType("navigation")[0] as
+    | PerformanceNavigationTiming
+    | undefined;
+  return nav?.type === "reload";
+}
 
 export function BookingFlow({
   initialReferralCode = "",
@@ -79,6 +130,21 @@ export function BookingFlow({
     setPoliciesSection(section);
     setPoliciesOpen(true);
   }
+
+  useEffect(() => {
+    const snapshot = readBookingSuccessSnapshot();
+    if (snapshot && isReloadNavigation()) {
+      setSelectedPet(snapshot.pet);
+      setSelectedService(snapshot.service);
+      setAppointmentDate(snapshot.appointmentDate);
+      setAppointmentTime(snapshot.appointmentTime);
+      setAddress(snapshot.address);
+      setCreatedAppointment(snapshot.appointment);
+      setReserved(true);
+      return;
+    }
+    clearBookingSuccessSnapshot();
+  }, []);
 
   function resetFromDog() {
     setSelectedService(null);
@@ -273,6 +339,7 @@ export function BookingFlow({
         appointmentTime={createdAppointment?.appointmentTime ?? appointmentTime}
         address={address}
         appointmentStatus={createdAppointment?.status}
+        appointmentId={createdAppointment?.id}
         celebrate
       />
     );
@@ -429,10 +496,19 @@ export function BookingFlow({
             initialReferralCode={initialReferralCode}
             onBack={() => setPaymentMethod(null)}
             onReserved={(appointment, pet) => {
+              trackGoogleAdsBookingConversion(appointment.id);
+              writeBookingSuccessSnapshot({
+                appointment,
+                pet,
+                service: selectedService,
+                appointmentDate,
+                appointmentTime:
+                  appointment.appointmentTime || appointmentTime,
+                address,
+              });
               setSelectedPet(pet);
               setCreatedAppointment(appointment);
               setReserved(true);
-              reportBookAppointmentConversion(appointment.id);
             }}
           />
         )}

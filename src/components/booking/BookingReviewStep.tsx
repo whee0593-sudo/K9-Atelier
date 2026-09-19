@@ -4,6 +4,7 @@ import { Elements } from "@stripe/react-stripe-js";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { formatPrice } from "@/lib/business";
+import { trackGoogleAdsBookingConversion } from "@/lib/google-ads";
 import {
   bookingIncludesCreativeColoring,
   formatServicePrice,
@@ -745,6 +746,7 @@ export function BookingConfirmationView({
   appointmentTime,
   address,
   appointmentStatus,
+  appointmentId,
   celebrate = false,
 }: {
   pet: PetProfile;
@@ -753,9 +755,15 @@ export function BookingConfirmationView({
   appointmentTime: string;
   address: ServiceAddress;
   appointmentStatus?: AppointmentRecord["status"];
+  appointmentId?: string;
   celebrate?: boolean;
 }) {
   const pendingReview = appointmentStatus === "pending_confirmation";
+
+  useEffect(() => {
+    if (!appointmentId) return;
+    trackGoogleAdsBookingConversion(appointmentId);
+  }, [appointmentId]);
 
   return (
     <section className="relative text-center">
