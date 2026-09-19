@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  BOOKING_SPA_GROUP_NAME,
   BOOKING_STEPS,
   DEFAULT_AVAILABILITY_SERVICE_ID,
   bookingCareChoicesForService,
+  bookingCareRowsForCategory,
   bookingDurationMinutes,
   createDraftBookingPet,
   getBookingCareCategories,
@@ -82,6 +84,30 @@ describe("booking flow helpers", () => {
         (service) => service.id,
       ),
       ["hand-stripping"],
+    );
+  });
+
+  it("folds the three spa rituals into one Spa group", () => {
+    const category = getBookingCareCategories(18).find(
+      (item) => item.id === "bath-show-spa",
+    );
+    assert.ok(category);
+    const rows = bookingCareRowsForCategory(category.services);
+    assert.deepEqual(
+      rows.map((row) =>
+        row.kind === "service" ? row.service.id : BOOKING_SPA_GROUP_NAME,
+      ),
+      ["signature-bath-care", "long-coat-show-care", "Spa"],
+    );
+    const spa = rows.find((row) => row.kind === "spa-group");
+    assert.ok(spa && spa.kind === "spa-group");
+    assert.deepEqual(
+      spa.services.map((service) => service.id),
+      [
+        "dead-sea-mud-bath",
+        "aromatherapy-oil-bath",
+        "sensitive-skin-treatment",
+      ],
     );
   });
 

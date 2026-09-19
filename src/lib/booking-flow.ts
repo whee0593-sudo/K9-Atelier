@@ -3,6 +3,7 @@ import {
   getBookableServicesForPet,
   groupServicesByCategory,
   isCreativeColoringCategory,
+  isSpaService,
   type BookableService,
 } from "@/lib/services";
 import { coloringOptionPriceLabel } from "@/lib/service-page";
@@ -78,6 +79,34 @@ export type BookingCareChoice = {
   description: string;
   priceLabel: string;
 };
+
+export const BOOKING_SPA_GROUP_ID = "spa";
+export const BOOKING_SPA_GROUP_NAME = "Spa";
+
+export type BookingCareRow =
+  | { kind: "service"; service: BookableService }
+  | { kind: "spa-group"; services: BookableService[] };
+
+export function bookingCareRowsForCategory(
+  services: BookableService[],
+): BookingCareRow[] {
+  const rows: BookingCareRow[] = [];
+  const spaServices: BookableService[] = [];
+
+  for (const service of services) {
+    if (isSpaService(service.id)) {
+      spaServices.push(service);
+    } else {
+      rows.push({ kind: "service", service });
+    }
+  }
+
+  if (spaServices.length) {
+    rows.push({ kind: "spa-group", services: spaServices });
+  }
+
+  return rows;
+}
 
 export function bookingCareChoicesForService(service: BookableService): BookingCareChoice[] {
   if (isCreativeColoringCategory(service.categoryId) && service.options?.length) {

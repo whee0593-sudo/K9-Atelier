@@ -5,16 +5,21 @@ import {
   formatServicePrice,
   getServicePriceEstimate,
   isCreativeColoringCategory,
-  isSpaService,
   type BookableService,
   type ServiceOption,
 } from "@/lib/services";
 import {
+  BOOKING_SPA_GROUP_ID,
+  BOOKING_SPA_GROUP_NAME,
   bookingCareChoicesForService,
+  bookingCareRowsForCategory,
   getBookingCareCategories,
   nextExpandedCareCategoryId,
 } from "@/lib/booking-flow";
-import { coloringOptionDisplayNote } from "@/lib/service-page";
+import {
+  coloringOptionDisplayNote,
+  getSpaTreatmentsIntro,
+} from "@/lib/service-page";
 import {
   getCategoryDisplayName,
   getServiceDisplayDescription,
@@ -56,7 +61,6 @@ function CareServiceCard({
     service.id,
     service.description,
   );
-  const isSpa = isSpaService(service.id);
 
   return (
     <article
@@ -93,7 +97,7 @@ function CareServiceCard({
         onClick={() => onSelect(service)}
         className={`${bookingPrimaryBtnClass} mt-6`}
       >
-        {selected ? "Selected" : isSpa ? "Explore" : "Select"}
+        {selected ? "Selected" : "Select"}
       </button>
     </article>
   );
@@ -162,6 +166,8 @@ export function BookingExperienceStep({
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(
     null,
   );
+  const [expandedSpa, setExpandedSpa] = useState(false);
+  const spaIntro = getSpaTreatmentsIntro();
   const categories = getBookingCareCategories(pet.weightLbs, {
     includeMembersOnly,
   });
@@ -182,6 +188,7 @@ export function BookingExperienceStep({
   function handleCategoryToggle(categoryId: string) {
     setExpandedCategoryId((current) => {
       const next = nextExpandedCareCategoryId(current, categoryId);
+      if (next !== current) setExpandedSpa(false);
       if (next && typeof document !== "undefined") {
         queueMicrotask(() => {
           document
@@ -193,9 +200,24 @@ export function BookingExperienceStep({
     });
   }
 
+  function handleSpaToggle() {
+    setExpandedSpa((open) => {
+      const next = !open;
+      if (next && typeof document !== "undefined") {
+        queueMicrotask(() => {
+          document
+            .getElementById(`care-group-btn-${BOOKING_SPA_GROUP_ID}`)
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
+      return next;
+    });
+  }
+
   function handleServiceSelect(service: BookableService, optionName?: string) {
     onSelect(service, optionName);
     setExpandedCategoryId(null);
+    setExpandedSpa(false);
   }
 
   return (
@@ -271,32 +293,103 @@ export function BookingExperienceStep({
                   id={`care-category-${category.id}`}
                   className="mt-3 space-y-3"
                 >
-                  {category.services.flatMap((service) => {
+                  {bookingCareRowsForCategory(category.services).map((row) => {
+                    if (row.kind === "spa-group") {
+                      const selectedSpa = row.services.find(
+                        (service) => service.id === selectedServiceId,
+                      );
+                      const selectedSpaName = selectedSpa
+                        ? getServiceDisplayName(
+                            selectedSpa.id,
+                            selectedSpa.name,
+                          )
+                        : null;
+
+                      return (
+                        <div key={BOOKING_SPA_GROUP_ID}>
+                          <button
+                            type="button"
+                            id={`care-group-btn-${BOOKING_SPA_GROUP_ID}`}
+                            aria-expanded={expandedSpa}
+                            aria-controls={`care-group-${BOOKING_SPA_GROUP_ID}`}
+                            onClick={handleSpaToggle}
+                            className={`${bookingCardClass} relative w-full ${
+                              selectedSpa && !expandedSpa
+                                ? bookingCardSelectedClass
+                                : ""
+                            }`}
+                          >
+                            <span
+                              aria-hidden="true"
+                              className="pointer-events-none absolute right-6 top-6 font-display text-2xl leading-none text-ink md:right-8 md:top-8"
+                            >
+                              {expandedSpa ? "−" : "+"}
+                            </span>
+                            <h4 className="font-body pr-10 text-left text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+                              {BOOKING_SPA_GROUP_NAME}
+                            </h4>
+                            {spaIntro?.note && expandedSpa && (
+                              <p className="font-body mt-3 pr-10 text-left text-sm leading-relaxed text-taupe">
+                                {spaIntro.note}
+                              </p>
+                            )}
+                            {selectedSpaName && !expandedSpa && (
+                              <p className="font-body mt-3 pr-10 text-left text-sm text-ink">
+                                {selectedSpaName} selected
+                              </p>
+                            )}
+                          </button>
+                          {expandedSpa && (
+                            <div
+                              id={`care-group-${BOOKING_SPA_GROUP_ID}`}
+                              className="mt-3 space-y-3"
+                            >
+                              {row.services.map((service) => (
+                                <CareServiceCard
+                                  key={service.id}
+                                  pet={pet}
+                                  service={service}
+                                  selected={selectedServiceId === service.id}
+                                  onSelect={handleServiceSelect}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    const service = row.service;
                     const choices = bookingCareChoicesForService(service);
                     if (choices.some((choice) => choice.optionName)) {
-                      return (service.options ?? []).map((option) => (
-                        <CareColorOptionCard
-                          key={`${service.id}:${option.name}`}
-                          pet={pet}
-                          service={service}
-                          option={option}
-                          selected={
-                            selectedServiceId === service.id &&
-                            selectedOptionName === option.name
-                          }
-                          onSelect={handleServiceSelect}
-                        />
-                      ));
+                      return (
+                        <div key={service.id} className="space-y-3">
+                          {(service.options ?? []).map((option) => (
+                            <CareColorOptionCard
+                              key={`${service.id}:${option.name}`}
+                              pet={pet}
+                              service={service}
+                              option={option}
+                              selected={
+                                selectedServiceId === service.id &&
+                                selectedOptionName === option.name
+                              }
+                              onSelect={handleServiceSelect}
+                            />
+                          ))}
+                        </div>
+                      );
                     }
-                    return [
+
+                    return (
                       <CareServiceCard
                         key={service.id}
                         pet={pet}
                         service={service}
                         selected={selectedServiceId === service.id}
                         onSelect={handleServiceSelect}
-                      />,
-                    ];
+                      />
+                    );
                   })}
                 </div>
               )}
