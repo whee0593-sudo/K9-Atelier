@@ -21,8 +21,7 @@ export function HomeHero() {
             {business.brand.tagline}
           </h1>
           <p className="font-body mt-6 max-w-xl text-base leading-relaxed text-taupe md:text-[17px]">
-            Award-winning grooming, brought directly to your door for a calm,
-            private, one-on-one appointment.
+            {business.brand.lead}
           </p>
           <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
             <BookServiceLink className={heroCtaClass}>

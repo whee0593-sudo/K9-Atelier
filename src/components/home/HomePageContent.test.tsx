@@ -22,6 +22,11 @@ describe("home page content", () => {
     assert.match(source, /Ask a Question/);
     assert.match(source, /href="\/contact"/);
     assert.match(source, /heroCtaClass/);
+    assert.match(source, /business\.brand\.lead/);
+    assert.equal(
+      source.includes("Award-winning grooming, brought directly"),
+      false,
+    );
     assert.equal(source.includes("variant=\"secondary\""), false);
     assert.equal(source.includes("Discover the Experience"), false);
     assert.equal(source.includes("/#first-visit"), false);
