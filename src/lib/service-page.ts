@@ -142,7 +142,7 @@ export const SERVICE_CATEGORIES: readonly ServiceCategory[] = [
     navLabel: "Hand Stripping",
     directoryName: "Hand Stripping",
     directoryDescription: "Traditional coat maintenance",
-    showStartingPrice: false,
+    showStartingPrice: true,
     serviceIds: HAND_STRIPPING_IDS,
     layout: "cards",
     pageTitle: HAND_STRIPPING_PAGE_TITLE,
@@ -388,6 +388,14 @@ export function categoryStartingPriceLabel(serviceIds: readonly string[]) {
 
 export function directoryPriceLabel(category: ServiceCategory) {
   if (!category.showStartingPrice) return null;
+  const services = getServicesByIds(category.serviceIds);
+  if (
+    services.length === 1 &&
+    services[0]?.pricingType === "hourly" &&
+    services[0].hourlyRate != null
+  ) {
+    return serviceCardPriceValue(services[0]);
+  }
   return categoryStartingPriceLabel(category.serviceIds);
 }
 
