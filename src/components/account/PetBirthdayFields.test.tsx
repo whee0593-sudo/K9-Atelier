@@ -22,4 +22,17 @@ describe("PetBirthdayFields", () => {
     assert.match(html, new RegExp(`max="${latestAllowedDateOfBirth()}"`));
     assert.equal(html.includes("value=\"0019"), false);
   });
+
+  it("does not wrap the unknown-date copy in a label, so only the box toggles", () => {
+    const html = renderToStaticMarkup(
+      <PetBirthdayFields pet={createDraftBookingPet()} onChange={() => {}} />,
+    );
+
+    assert.match(
+      html,
+      /<span[^>]*>I don(?:&apos;|&#x27;)t know the exact date<\/span>/,
+    );
+    assert.equal(/<label[^>]*>I don/.test(html), false);
+    assert.match(html, /aria-labelledby="/);
+  });
 });

@@ -149,19 +149,19 @@ export function PetBirthdayFields({
         </div>
       )}
 
-      <label
-        htmlFor={unknownCheckboxId}
-        className="flex min-h-[44px] items-start gap-3 text-sm text-text"
-      >
+      <div className="flex items-start gap-3 text-sm text-text">
         <input
           id={unknownCheckboxId}
           type="checkbox"
           checked={unknownDob}
           onChange={(event) => handleUnknownToggle(event.target.checked)}
-          className="mt-1 rounded border-lavender"
+          aria-labelledby={`${unknownCheckboxId}-copy`}
+          className="mt-1 size-4 shrink-0 rounded border-lavender"
         />
-        <span>I don&apos;t know the exact date</span>
-      </label>
+        <span id={`${unknownCheckboxId}-copy`}>
+          I don&apos;t know the exact date
+        </span>
+      </div>
 
       {unknownDob && (
         <div>
