@@ -11,6 +11,7 @@ import { CreativeOptionDetail } from "@/components/booking/CreativeOptionDetail"
 type Props = {
   creativeService: BookableService;
   requiredBaseServices: BookableService[];
+  initialColorOption?: string | null;
   onComplete: (baseServiceId: string, colorOption: string) => void;
   onBack: () => void;
 };
@@ -55,13 +56,14 @@ function BaseServicePricing({ service }: { service: BookableService }) {
 export function CreativePairingModal({
   creativeService,
   requiredBaseServices,
+  initialColorOption = null,
   onComplete,
   onBack,
 }: Props) {
-  const [step, setStep] = useState<Step>("color");
+  const [step, setStep] = useState<Step>(initialColorOption ? "base" : "color");
   const [selectedBaseId, setSelectedBaseId] = useState<string | null>(null);
   const [selectedColorOption, setSelectedColorOption] = useState<string | null>(
-    null,
+    initialColorOption,
   );
 
   function handleBack() {

@@ -7,11 +7,14 @@ import {
   isCreativeColoringCategory,
   isSpaService,
   type BookableService,
+  type ServiceOption,
 } from "@/lib/services";
 import {
+  bookingCareChoicesForService,
   getBookingCareCategories,
   nextExpandedCareCategoryId,
 } from "@/lib/booking-flow";
+import { coloringOptionDisplayNote } from "@/lib/service-page";
 import {
   getCategoryDisplayName,
   getServiceDisplayDescription,
@@ -30,7 +33,8 @@ import {
 type Props = {
   pet: PetProfile;
   selectedServiceId: string | null;
-  onSelect: (service: BookableService) => void;
+  selectedOptionName?: string | null;
+  onSelect: (service: BookableService, optionName?: string) => void;
   onContinue: (service?: BookableService) => void;
   onBack: () => void;
 };
@@ -95,9 +99,61 @@ function CareServiceCard({
   );
 }
 
+function CareColorOptionCard({
+  pet,
+  service,
+  option,
+  selected,
+  onSelect,
+}: {
+  pet: PetProfile;
+  service: BookableService;
+  option: ServiceOption;
+  selected: boolean;
+  onSelect: (service: BookableService, optionName: string) => void;
+}) {
+  const note = coloringOptionDisplayNote(option.note);
+
+  return (
+    <article
+      className={`${bookingCardClass} ${selected ? bookingCardSelectedClass : ""}`}
+    >
+      <h4 className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+        {option.name}
+      </h4>
+      {option.description && (
+        <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
+          {option.description}
+        </p>
+      )}
+      <p className="font-body mt-6 text-[10px] font-medium uppercase tracking-[0.14em] text-taupe">
+        For {pet.name}
+      </p>
+      <p className="font-display mt-2 text-2xl text-ink">
+        {option.consultationRequired
+          ? "Consultation"
+          : option.priceFrom != null
+            ? `From ${formatPrice(option.priceFrom)}`
+            : "—"}
+      </p>
+      {note && (
+        <p className="font-body mt-2 text-sm text-taupe">{note}</p>
+      )}
+      <button
+        type="button"
+        onClick={() => onSelect(service, option.name)}
+        className={`${bookingPrimaryBtnClass} mt-6`}
+      >
+        {selected ? "Selected" : "Select"}
+      </button>
+    </article>
+  );
+}
+
 export function BookingExperienceStep({
   pet,
   selectedServiceId,
+  selectedOptionName = null,
   onSelect,
   onContinue,
   onBack,
@@ -137,8 +193,8 @@ export function BookingExperienceStep({
     });
   }
 
-  function handleServiceSelect(service: BookableService) {
-    onSelect(service);
+  function handleServiceSelect(service: BookableService, optionName?: string) {
+    onSelect(service, optionName);
     setExpandedCategoryId(null);
   }
 
@@ -166,10 +222,13 @@ export function BookingExperienceStep({
             category.name,
           );
           const selectedName = selectedInCategory
-            ? getServiceDisplayName(
-                selectedInCategory.id,
-                selectedInCategory.name,
-              )
+            ? selectedOptionName &&
+              isCreativeColoringCategory(selectedInCategory.categoryId)
+              ? selectedOptionName
+              : getServiceDisplayName(
+                  selectedInCategory.id,
+                  selectedInCategory.name,
+                )
             : null;
 
           return (
@@ -212,15 +271,33 @@ export function BookingExperienceStep({
                   id={`care-category-${category.id}`}
                   className="mt-3 space-y-3"
                 >
-                  {category.services.map((service) => (
-                    <CareServiceCard
-                      key={service.id}
-                      pet={pet}
-                      service={service}
-                      selected={selectedServiceId === service.id}
-                      onSelect={handleServiceSelect}
-                    />
-                  ))}
+                  {category.services.flatMap((service) => {
+                    const choices = bookingCareChoicesForService(service);
+                    if (choices.some((choice) => choice.optionName)) {
+                      return (service.options ?? []).map((option) => (
+                        <CareColorOptionCard
+                          key={`${service.id}:${option.name}`}
+                          pet={pet}
+                          service={service}
+                          option={option}
+                          selected={
+                            selectedServiceId === service.id &&
+                            selectedOptionName === option.name
+                          }
+                          onSelect={handleServiceSelect}
+                        />
+                      ));
+                    }
+                    return [
+                      <CareServiceCard
+                        key={service.id}
+                        pet={pet}
+                        service={service}
+                        selected={selectedServiceId === service.id}
+                        onSelect={handleServiceSelect}
+                      />,
+                    ];
+                  })}
                 </div>
               )}
             </div>

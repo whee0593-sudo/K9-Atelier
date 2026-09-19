@@ -2,7 +2,10 @@ import {
   estimateServiceDurationMinutes,
   getBookableServicesForPet,
   groupServicesByCategory,
+  isCreativeColoringCategory,
+  type BookableService,
 } from "@/lib/services";
+import { coloringOptionPriceLabel } from "@/lib/service-page";
 import type { PetProfile } from "@/lib/pets";
 
 export const BOOKING_STEPS = [
@@ -65,4 +68,36 @@ export function nextExpandedCareCategoryId(
   clickedCategoryId: string,
 ): string | null {
   return currentExpandedId === clickedCategoryId ? null : clickedCategoryId;
+}
+
+export type BookingCareChoice = {
+  key: string;
+  service: BookableService;
+  optionName?: string;
+  title: string;
+  description: string;
+  priceLabel: string;
+};
+
+export function bookingCareChoicesForService(service: BookableService): BookingCareChoice[] {
+  if (isCreativeColoringCategory(service.categoryId) && service.options?.length) {
+    return service.options.map((option) => ({
+      key: `${service.id}:${option.name}`,
+      service,
+      optionName: option.name,
+      title: option.name,
+      description: option.description ?? "",
+      priceLabel: coloringOptionPriceLabel(option),
+    }));
+  }
+
+  return [
+    {
+      key: service.id,
+      service,
+      title: service.name,
+      description: service.description,
+      priceLabel: "",
+    },
+  ];
 }
