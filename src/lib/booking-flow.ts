@@ -1,4 +1,8 @@
-import { estimateServiceDurationMinutes } from "@/lib/services";
+import {
+  estimateServiceDurationMinutes,
+  getBookableServicesForPet,
+  groupServicesByCategory,
+} from "@/lib/services";
 import type { PetProfile } from "@/lib/pets";
 
 export const BOOKING_STEPS = [
@@ -44,4 +48,21 @@ export function isPersistedPetId(id: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     id,
   );
+}
+
+export function getBookingCareCategories(
+  weightLbs: number,
+  options: { includeMembersOnly?: boolean } = {},
+) {
+  return groupServicesByCategory(
+    getBookableServicesForPet(weightLbs, options),
+  );
+}
+
+/** Toggle one open category; selecting a service always returns to the closed list. */
+export function nextExpandedCareCategoryId(
+  currentExpandedId: string | null,
+  clickedCategoryId: string,
+): string | null {
+  return currentExpandedId === clickedCategoryId ? null : clickedCategoryId;
 }

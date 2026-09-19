@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   formatServicePrice,
-  getBookableServicesForPet,
   getServicePriceEstimate,
   isCreativeColoringCategory,
   isSpaService,
   type BookableService,
 } from "@/lib/services";
 import {
+  getBookingCareCategories,
+  nextExpandedCareCategoryId,
+} from "@/lib/booking-flow";
+import {
+  getCategoryDisplayName,
   getServiceDisplayDescription,
   getServiceDisplayName,
 } from "@/lib/service-display";
@@ -31,6 +35,66 @@ type Props = {
   onBack: () => void;
 };
 
+function CareServiceCard({
+  pet,
+  service,
+  selected,
+  onSelect,
+}: {
+  pet: PetProfile;
+  service: BookableService;
+  selected: boolean;
+  onSelect: (service: BookableService) => void;
+}) {
+  const estimate = getServicePriceEstimate(service, pet.weightLbs);
+  const displayName = getServiceDisplayName(service.id, service.name);
+  const description = getServiceDisplayDescription(
+    service.id,
+    service.description,
+  );
+  const isSpa = isSpaService(service.id);
+
+  return (
+    <article
+      className={`${bookingCardClass} ${selected ? bookingCardSelectedClass : ""}`}
+    >
+      <h4 className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+        {displayName}
+      </h4>
+      <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
+        {description}
+      </p>
+      <p className="font-body mt-6 text-[10px] font-medium uppercase tracking-[0.14em] text-taupe">
+        For {pet.name}
+      </p>
+      {estimate && (
+        <>
+          <p className="font-display mt-2 text-2xl text-ink">
+            From {formatPrice(estimate.from)}
+          </p>
+          {estimate.durationLabel && (
+            <p className="font-body mt-2 text-sm text-taupe">
+              Approximately {estimate.durationLabel}
+            </p>
+          )}
+        </>
+      )}
+      {!estimate && (
+        <p className="font-body mt-2 text-sm text-taupe">
+          {formatServicePrice(service, pet.weightLbs)}
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={() => onSelect(service)}
+        className={`${bookingPrimaryBtnClass} mt-6`}
+      >
+        {selected ? "Selected" : isSpa ? "Explore" : "Select"}
+      </button>
+    </article>
+  );
+}
+
 export function BookingExperienceStep({
   pet,
   selectedServiceId,
@@ -39,7 +103,10 @@ export function BookingExperienceStep({
   onBack,
 }: Props) {
   const [includeMembersOnly, setIncludeMembersOnly] = useState(false);
-  const services = getBookableServicesForPet(pet.weightLbs, {
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(
+    null,
+  );
+  const categories = getBookingCareCategories(pet.weightLbs, {
     includeMembersOnly,
   });
 
@@ -56,6 +123,17 @@ export function BookingExperienceStep({
     }
   }, []);
 
+  function handleCategoryToggle(categoryId: string) {
+    setExpandedCategoryId((current) =>
+      nextExpandedCareCategoryId(current, categoryId),
+    );
+  }
+
+  function handleServiceSelect(service: BookableService) {
+    onSelect(service);
+    setExpandedCategoryId(null);
+  }
+
   return (
     <section>
       <button type="button" onClick={onBack} className={bookingBackLinkClass}>
@@ -70,60 +148,73 @@ export function BookingExperienceStep({
       </h2>
 
       <div className="mt-10 space-y-4">
-        {services.map((service) => {
-          const selected = selectedServiceId === service.id;
-          const estimate = getServicePriceEstimate(service, pet.weightLbs);
-          const displayName = getServiceDisplayName(service.id, service.name);
-          const description = getServiceDisplayDescription(
-            service.id,
-            service.description,
+        {categories.map((category) => {
+          const expanded = expandedCategoryId === category.id;
+          const selectedInCategory = category.services.find(
+            (service) => service.id === selectedServiceId,
           );
-          const isSpa = isSpaService(service.id);
+          const categoryName = getCategoryDisplayName(
+            category.id,
+            category.name,
+          );
+          const selectedName = selectedInCategory
+            ? getServiceDisplayName(
+                selectedInCategory.id,
+                selectedInCategory.name,
+              )
+            : null;
 
           return (
-            <article
-              key={service.id}
-              className={`${bookingCardClass} ${
-                selected ? bookingCardSelectedClass : ""
-              }`}
-            >
-              <h3 className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
-                {displayName}
-              </h3>
-              <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
-                {description}
-              </p>
-              <p className="font-body mt-6 text-[10px] font-medium uppercase tracking-[0.14em] text-taupe">
-                For {pet.name}
-              </p>
-              {estimate && (
-                <>
-                  <p className="font-display mt-2 text-2xl text-ink">
-                    From {formatPrice(estimate.from)}
-                  </p>
-                  {estimate.durationLabel && (
-                    <p className="font-body mt-2 text-sm text-taupe">
-                      Approximately {estimate.durationLabel}
-                    </p>
-                  )}
-                </>
-              )}
-              {!estimate && (
-                <p className="font-body mt-2 text-sm text-taupe">
-                  {formatServicePrice(service, pet.weightLbs)}
-                </p>
-              )}
+            <div key={category.id}>
               <button
                 type="button"
-                onClick={() => {
-                  onSelect(service);
-                  onContinue(service);
-                }}
-                className={`${bookingPrimaryBtnClass} mt-6`}
+                aria-expanded={expanded}
+                aria-controls={`care-category-${category.id}`}
+                onClick={() => handleCategoryToggle(category.id)}
+                className={`${bookingCardClass} relative w-full ${
+                  selectedInCategory && !expanded
+                    ? bookingCardSelectedClass
+                    : ""
+                }`}
               >
-                {selected ? "Selected" : isSpa ? "Explore" : "Select"}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-6 top-6 font-display text-2xl leading-none text-ink md:right-8 md:top-8"
+                >
+                  {expanded ? "−" : "+"}
+                </span>
+                <h3 className="font-body pr-10 text-left text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+                  {categoryName}
+                </h3>
+                {category.note && expanded && (
+                  <p className="font-body mt-3 pr-10 text-left text-sm leading-relaxed text-taupe">
+                    {category.note}
+                  </p>
+                )}
+                {selectedName && !expanded && (
+                  <p className="font-body mt-3 pr-10 text-left text-sm text-ink">
+                    {selectedName} selected
+                  </p>
+                )}
               </button>
-            </article>
+
+              {expanded && (
+                <div
+                  id={`care-category-${category.id}`}
+                  className="mt-3 space-y-3"
+                >
+                  {category.services.map((service) => (
+                    <CareServiceCard
+                      key={service.id}
+                      pet={pet}
+                      service={service}
+                      selected={selectedServiceId === service.id}
+                      onSelect={handleServiceSelect}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
