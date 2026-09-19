@@ -29,8 +29,27 @@ describe("service directory layout", () => {
     assert.match(directory, /lg:grid-cols-3/);
     assert.match(directory, /lg:last:col-start-2/);
     assert.match(directory, /md:last:justify-self-center/);
-    assert.match(directory, /font-display text-3xl/);
-    assert.equal(directory.includes("font-display text-3xl text-ink uppercase"), false);
+    assert.match(directory, /servicesCategoryTitleClass/);
+    assert.match(directory, /servicesBodyClass/);
+    assert.match(directory, /servicesPriceClass/);
+    assert.equal(directory.includes("uppercase"), false);
     assert.equal(directory.includes("Haircuts · Hand stripping"), false);
+  });
+});
+
+describe("services landing typography", () => {
+  const typeScale = readFileSync(
+    new URL("../../components/services/services-type.ts", import.meta.url),
+    "utf8",
+  );
+
+  it("keeps brand fonts, readable body size, and ink/taupe contrast", () => {
+    assert.match(typeScale, /font-display/);
+    assert.match(typeScale, /font-body/);
+    assert.match(typeScale, /text-base/);
+    assert.match(typeScale, /md:text-\[17px\]/);
+    assert.match(typeScale, /text-ink/);
+    assert.match(typeScale, /text-taupe/);
+    assert.equal(typeScale.includes("text-sm"), false);
   });
 });

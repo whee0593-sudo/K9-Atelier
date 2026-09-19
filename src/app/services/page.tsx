@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 
 export default function ServicesPage() {
   return (
-    <div>
+    <div className="overflow-x-clip">
       <ServicesHashRedirect />
       <ServicesHero />
       <ServiceDirectory />
