@@ -19,7 +19,7 @@ export function HomeFirstVisit() {
               className="border-t border-champagne/55 pt-6 text-left"
             >
               <p className="font-body text-[11px] font-medium uppercase tracking-[0.2em] text-champagne">
-                {step.number}
+                {step.number} —
               </p>
               <h3 className="font-body mt-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-ink">
                 {step.title}
