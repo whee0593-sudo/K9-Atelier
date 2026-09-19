@@ -266,7 +266,7 @@ export default function FaqPage() {
         <FaqParagraphs
           paragraphs={[
             "Yes. Every dog featured on this website was groomed and styled by me, and all original photos were taken by me.",
-            "For a clean and consistent presentation, some images have been digitally edited to remove distracting backgrounds and standardize the setting. The grooming results shown are my own work.",
+            "For a clean and consistent presentation, some images have been digitally edited to remove distracting backgrounds and standardize the setting.",
           ]}
         />
       ),
