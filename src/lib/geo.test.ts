@@ -79,17 +79,29 @@ describe("Google Maps travel quotes", () => {
     assert.equal(fetchMock.mock.callCount(), 1);
   });
 
-  it("returns null when Google Geocoding denies the key", async () => {
+  it("falls back to Nominatim when Google denies the key", async () => {
     process.env.GOOGLE_MAPS_API_KEY = "test-maps-key";
-    mock.method(globalThis, "fetch", async () =>
-      jsonResponse({
-        status: "REQUEST_DENIED",
-        error_message: "This API project is not authorized to use this API.",
-      }),
-    );
+    const urls: string[] = [];
+    mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
+      const url = requestUrl(input);
+      urls.push(url);
+      if (url.includes("maps.googleapis.com")) {
+        return jsonResponse({
+          status: "REQUEST_DENIED",
+          error_message: "This API project is not authorized to use this API.",
+        });
+      }
+      if (url.includes("nominatim.openstreetmap.org")) {
+        return jsonResponse([{ lat: "26.93", lon: "-80.09" }]);
+      }
+      throw new Error(`Unexpected URL ${url}`);
+    });
 
     const point = await geocodeAddress("1 Main St, Jupiter, FL 33458");
-    assert.equal(point, null);
+    assert.deepEqual(point, { lat: 26.93, lon: -80.09 });
+    assert.equal(urls.length, 2);
+    assert.match(urls[0]!, /maps\.googleapis\.com/);
+    assert.match(urls[1]!, /nominatim\.openstreetmap\.org/);
   });
 
   it("computes driving miles with Routes API traffic-unaware distance", async () => {
@@ -125,7 +137,34 @@ describe("Google Maps travel quotes", () => {
     assert.equal(fetchMock.mock.callCount(), 1);
   });
 
-  it("does not fall back to OpenStreetMap while a Maps key is configured", async () => {
+  it("falls back to OSRM when Google Routes is unavailable", async () => {
+    process.env.GOOGLE_MAPS_API_KEY = "test-maps-key";
+    const urls: string[] = [];
+    mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
+      const url = requestUrl(input);
+      urls.push(url);
+      if (url.includes("routes.googleapis.com")) {
+        return jsonResponse(
+          { error: { status: "PERMISSION_DENIED", message: "API not enabled" } },
+          403,
+        );
+      }
+      if (url.includes("router.project-osrm.org")) {
+        return jsonResponse({ code: "Ok", routes: [{ distance: 16093.44 }] });
+      }
+      throw new Error(`Unexpected URL ${url}`);
+    });
+
+    const miles = await drivingDistanceMiles(
+      { lat: 26.82, lon: -80.14 },
+      { lat: 26.93, lon: -80.1 },
+    );
+    assert.equal(miles, 10);
+    assert.match(urls[0]!, /routes\.googleapis\.com/);
+    assert.match(urls[1]!, /router\.project-osrm\.org/);
+  });
+
+  it("does not fall back to OpenStreetMap for a Google zero-result address", async () => {
     process.env.GOOGLE_MAPS_API_KEY = "test-maps-key";
     mock.method(globalThis, "fetch", async () =>
       jsonResponse({ status: "ZERO_RESULTS", results: [] }),

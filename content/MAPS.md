@@ -13,9 +13,11 @@
 
 打开 [Google Cloud Console](https://console.cloud.google.com/) → 你们收到 API key 邮件的那个项目：
 
-1. **APIs & Services → Library**，启用：
+1. **APIs & Services → Library**，启用（钥匙加进 Vercel 还不够，这两个必须点 Enable）：
    - **Geocoding API**（把地址变成坐标）
    - **Routes API**（算开车距离）
+
+   没开的话，正式站会先试 Google，失败后再退回原来的免费地图。路费要完全按 Google 算，必须把这两个打开。
 2. **APIs & Services → Credentials** → 打开这把 key：
    - **API restrictions**：只允许上面这两个（不要开成不限制）
    - **Application restrictions**：选 **None**  

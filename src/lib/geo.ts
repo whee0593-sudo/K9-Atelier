@@ -2,7 +2,10 @@ export type GeoPoint = { lat: number; lon: number };
 
 const METERS_PER_MILE = 1609.344;
 
-type NextFetchInit = RequestInit & { next?: { revalidate?: number } };
+type NextFetchInit = RequestInit & {
+  next?: { revalidate?: number };
+  cache?: RequestCache;
+};
 
 type GoogleGeocodeResponse = {
   status?: string;
@@ -16,6 +19,10 @@ type GoogleRoutesResponse = {
   routes?: Array<{ distanceMeters?: number }>;
   error?: { message?: string; status?: string };
 };
+
+type GoogleLookup<T> =
+  | { ok: true; value: T }
+  | { ok: false; retryable: boolean; status?: string };
 
 let cachedBasePoint: GeoPoint | null | undefined;
 
@@ -35,6 +42,14 @@ function metersToMiles(meters: number) {
   return meters / METERS_PER_MILE;
 }
 
+function isRetryableGoogleStatus(status?: string) {
+  return (
+    status === "REQUEST_DENIED" ||
+    status === "OVER_QUERY_LIMIT" ||
+    status === "UNKNOWN_ERROR"
+  );
+}
+
 async function readJson<T>(res: Response): Promise<T | null> {
   try {
     return (await res.json()) as T;
@@ -43,7 +58,7 @@ async function readJson<T>(res: Response): Promise<T | null> {
   }
 }
 
-async function geocodeWithGoogle(query: string): Promise<GeoPoint | null> {
+async function geocodeWithGoogle(query: string): Promise<GoogleLookup<GeoPoint>> {
   const key = googleMapsApiKey();
   const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
   url.searchParams.set("address", query);
@@ -54,7 +69,7 @@ async function geocodeWithGoogle(query: string): Promise<GeoPoint | null> {
 
   const res = await fetch(url.toString(), {
     headers: { Accept: "application/json" },
-    next: { revalidate: 86400 },
+    cache: "no-store",
   } as NextFetchInit);
 
   const data = await readJson<GoogleGeocodeResponse>(res);
@@ -62,7 +77,7 @@ async function geocodeWithGoogle(query: string): Promise<GeoPoint | null> {
     console.error(
       `Google Geocoding failed (${res.status}) ${data?.error_message || data?.status || ""}`.trim(),
     );
-    return null;
+    return { ok: false, retryable: true, status: data?.status || String(res.status) };
   }
 
   if (data.status !== "OK") {
@@ -71,14 +86,20 @@ async function geocodeWithGoogle(query: string): Promise<GeoPoint | null> {
         data.error_message ? `: ${data.error_message}` : ""
       }`,
     );
-    return null;
+    return {
+      ok: false,
+      retryable: isRetryableGoogleStatus(data.status),
+      status: data.status,
+    };
   }
 
   const location = data.results?.[0]?.geometry?.location;
   const lat = Number(location?.lat);
   const lon = Number(location?.lng);
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  return { lat, lon };
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return { ok: false, retryable: false, status: "INVALID_RESULT" };
+  }
+  return { ok: true, value: { lat, lon } };
 }
 
 async function geocodeWithNominatim(query: string): Promise<GeoPoint | null> {
@@ -104,7 +125,12 @@ async function geocodeWithNominatim(query: string): Promise<GeoPoint | null> {
 
 export async function geocodeAddress(query: string): Promise<GeoPoint | null> {
   if (googleMapsApiKey()) {
-    return geocodeWithGoogle(query);
+    const google = await geocodeWithGoogle(query);
+    if (google.ok) return google.value;
+    if (!google.retryable) return null;
+    console.warn(
+      `Google Geocoding unavailable (${google.status || "unknown"}); falling back to OpenStreetMap`,
+    );
   }
   return geocodeWithNominatim(query);
 }
@@ -134,7 +160,7 @@ async function drivingDistanceWithGoogle(
       languageCode: "en-US",
       units: "IMPERIAL",
     }),
-    next: { revalidate: 0 },
+    cache: "no-store",
   } as NextFetchInit);
 
   const data = await readJson<GoogleRoutesResponse>(res);
@@ -172,7 +198,9 @@ export async function drivingDistanceMiles(
   to: GeoPoint,
 ): Promise<number | null> {
   if (googleMapsApiKey()) {
-    return drivingDistanceWithGoogle(from, to);
+    const miles = await drivingDistanceWithGoogle(from, to);
+    if (miles != null) return miles;
+    console.warn("Google Routes unavailable; falling back to OpenStreetMap routing");
   }
   return drivingDistanceWithOsrm(from, to);
 }
