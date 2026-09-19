@@ -36,10 +36,6 @@ export default async function AdminTeamPage() {
           <p className="text-sm text-text">
             Only the owner can add or remove admin accounts.
           </p>
-          <p className="mt-2 text-sm text-text-muted">
-            Ask Penny at penny@k9atelier.com if you need admin access for
-            someone else.
-          </p>
         </div>
       </div>
     );
@@ -48,9 +44,6 @@ export default async function AdminTeamPage() {
   return (
     <div>
       <h2 className="text-2xl font-semibold text-gold-dark">Admin Team</h2>
-      <p className="mt-2 text-sm text-text-muted">
-        You are the owner. New admins stay pending until you confirm them.
-      </p>
       <div className="mt-8">
         <AdminTeamPanel />
       </div>

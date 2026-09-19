@@ -183,10 +183,6 @@ function CustomerHistory({
             </a>
           ) : null}
         </div>
-        <p className="mt-2 text-sm text-text-muted">
-          Guests do not keep a saved address book. Addresses come from booked
-          visits. Use Book for customer to add or change a visit address.
-        </p>
         {!history ? (
           <p className="mt-3 text-sm text-text-muted">Loading addresses…</p>
         ) : addresses.length === 0 ? (
@@ -559,10 +555,6 @@ export function CustomerRecordCard({
               <h3 className="text-base font-medium text-gold-dark">
                 Account access
               </h3>
-              <p className="mt-2 text-sm text-text-muted">
-                Freeze blocks sign-in. Delete permanently removes this login,
-                pet profiles, cards on file, and appointment history.
-              </p>
               <div className="mt-4 flex flex-wrap gap-2">{renderOwnerActions()}</div>
             </section>
           ) : null}

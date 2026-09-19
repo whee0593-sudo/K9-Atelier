@@ -276,12 +276,6 @@ export function AppointmentReviewPanel() {
 
       <section>
         <h3 className="text-lg font-medium text-gold-dark">Route days</h3>
-        <p className="mt-1 text-sm text-text-muted">
-          Lock a day to one area, or leave it on Auto so the first booking that
-          day sets the neighborhood. Close the full day or individual start
-          hours when you are unavailable — existing appointments stay on the
-          calendar.
-        </p>
         {schedule.length === 0 ? (
           <p className="mt-4 text-sm text-text-muted">
             No upcoming bookable days yet.
@@ -547,10 +541,6 @@ export function AppointmentReviewPanel() {
 
       <section>
         <h3 className="text-lg font-medium text-gold-dark">Today — drive order</h3>
-        <p className="mt-1 text-sm text-text-muted">
-          Confirmed visits in the order you should drive. Send an on-the-way
-          text when you leave.
-        </p>
         {todayAppointments.length === 0 ? (
           <div className="mt-4 rounded-2xl border border-lavender/30 bg-cream p-8 text-center">
             <p className="text-sm text-text-muted">

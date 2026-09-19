@@ -9,10 +9,6 @@ export default function AppointmentChangePreviewPage() {
       <h2 className="text-2xl font-semibold text-gold-dark">
         Change appointment
       </h2>
-      <p className="text-sm text-text-muted">
-        Reschedule, cancel, or change the dogs on this visit. Review any fee
-        before you confirm.
-      </p>
       <AppointmentChangeForm appointmentId="preview-on-the-way-maple" preview />
     </div>
   );

@@ -20,9 +20,6 @@ export default function ReceiptMessagePreviewPage() {
 
       <section>
         <h1 className="font-display text-3xl text-[#2F2930]">Thank-you text</h1>
-        <p className="font-body mt-2 text-sm text-[#766F75]">
-          Sent automatically to the guest’s mobile after payment succeeds.
-        </p>
         <div className="mx-auto mt-6 max-w-sm rounded-[28px] border border-[#E7DED2] bg-[#F3EEE6] px-4 py-6">
           <p className="text-center text-[11px] uppercase tracking-[0.14em] text-[#766F75]">
             Messages
@@ -35,10 +32,6 @@ export default function ReceiptMessagePreviewPage() {
 
       <section>
         <h2 className="font-display text-3xl text-[#2F2930]">Email receipt</h2>
-        <p className="font-body mt-2 text-sm text-[#766F75]">
-          Sent when the guest taps Send receipt by email. Subject:{" "}
-          {email.subject}
-        </p>
         <div className="mt-6 overflow-hidden rounded-[8px] border border-[#E7DED2] bg-[#FAF6EF]">
           <iframe
             title="Customer receipt email"
