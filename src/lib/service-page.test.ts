@@ -172,7 +172,11 @@ describe("service page helpers", () => {
     assert.equal(bySlug["bath-coat-care"], "From $90");
     assert.equal(bySlug["full-groom"], serviceStartingPriceLabel(groom!));
     assert.equal(bySlug["full-groom"], "From $140");
-    assert.equal(bySlug["hand-stripping"], null);
+    assert.equal(
+      bySlug["hand-stripping"],
+      serviceCardPriceValue(getServiceById("hand-stripping")!),
+    );
+    assert.equal(bySlug["hand-stripping"], "$160 / hour");
     assert.equal(bySlug.spa, "From $140");
     assert.equal(bySlug.color, "From $50");
     assert.equal(bySlug["specialty-care"], null);
@@ -201,6 +205,16 @@ describe("service page helpers", () => {
       SERVICE_CATEGORIES.find((category) => category.slug === "hand-stripping")
         ?.directoryDescription,
       "Traditional coat maintenance",
+    );
+    assert.equal(
+      SERVICE_CATEGORIES.find((category) => category.slug === "hand-stripping")
+        ?.showStartingPrice,
+      true,
+    );
+    assert.equal(
+      SERVICE_CATEGORIES.find((category) => category.slug === "specialty-care")
+        ?.showStartingPrice,
+      false,
     );
     assert.deepEqual([...HAND_STRIPPING_IDS], ["hand-stripping"]);
     assert.deepEqual([...SPA_IDS], [

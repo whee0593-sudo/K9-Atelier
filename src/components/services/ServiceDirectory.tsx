@@ -7,9 +7,9 @@ import {
 
 export function ServiceDirectory() {
   return (
-    <section aria-label="Service directory" className="bg-ivory pb-16 md:pb-24">
+    <section aria-label="Service directory" className="bg-ivory pb-20 pt-2 md:pb-24 md:pt-3 lg:pb-28">
       <Container>
-        <ul className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 lg:grid-cols-3 lg:gap-x-8 lg:gap-y-10">
           {SERVICE_CATEGORIES.map((category) => {
             const price = directoryPriceLabel(category);
             return (
@@ -19,20 +19,25 @@ export function ServiceDirectory() {
               >
                 <Link
                   href={category.path}
-                  className="group flex h-full flex-col border border-gray-line/80 bg-ivory p-8 transition duration-500 hover:border-champagne focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne motion-reduce:transition-none"
+                  className="group flex h-full flex-col border border-gray-line bg-ivory px-7 py-8 transition duration-500 hover:border-champagne focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne motion-reduce:transition-none md:px-8 md:py-9"
                 >
-                  <h2 className="font-display text-3xl text-ink">
+                  <h2 className="font-display text-[1.75rem] leading-[1.15] font-medium text-ink md:text-3xl">
                     {category.directoryName}
                   </h2>
-                  <p className="font-body mt-4 flex-1 text-sm leading-relaxed text-taupe">
+                  <p className="font-body mt-3 text-base leading-[1.65] text-taupe">
                     {category.directoryDescription}
                   </p>
                   {price ? (
-                    <p className="font-body mt-6 text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
+                    <p className="font-body mt-5 min-h-[1.5rem] text-base font-medium tracking-[0.01em] text-ink md:min-h-[1.7rem] md:text-[17px]">
                       {price}
                     </p>
-                  ) : null}
-                  <span className="font-body mt-6 inline-flex min-h-[48px] items-center text-[11px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition duration-500 group-hover:text-ink motion-reduce:transition-none">
+                  ) : (
+                    <div
+                      className="mt-5 min-h-[1.5rem] md:min-h-[1.7rem]"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span className="font-body mt-auto inline-flex min-h-[48px] items-center pt-7 text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition duration-500 group-hover:text-ink motion-reduce:transition-none md:pt-8">
                     Explore
                     <span
                       aria-hidden="true"

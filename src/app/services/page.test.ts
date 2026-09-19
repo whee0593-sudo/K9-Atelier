@@ -29,7 +29,9 @@ describe("service directory layout", () => {
     assert.match(directory, /lg:grid-cols-3/);
     assert.match(directory, /lg:last:col-start-2/);
     assert.match(directory, /md:last:justify-self-center/);
-    assert.match(directory, /font-display text-3xl/);
+    assert.match(directory, /font-display/);
+    assert.match(directory, /md:text-3xl/);
+    assert.match(directory, /mt-auto/);
     assert.equal(directory.includes("font-display text-3xl text-ink uppercase"), false);
     assert.equal(directory.includes("Haircuts · Hand stripping"), false);
   });
