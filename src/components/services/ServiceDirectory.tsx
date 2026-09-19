@@ -19,7 +19,7 @@ export function ServiceDirectory() {
               >
                 <Link
                   href={category.path}
-                  className="group flex h-full min-h-[17.25rem] flex-col border border-gray-line/80 bg-ivory px-7 py-8 transition duration-500 hover:border-champagne focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne motion-reduce:transition-none md:min-h-[18.5rem] md:px-8 md:py-9"
+                  className="group flex h-full flex-col border border-gray-line bg-ivory px-7 py-8 transition duration-500 hover:border-champagne focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne motion-reduce:transition-none md:px-8 md:py-9"
                 >
                   <h2 className="font-display text-[1.75rem] leading-[1.15] font-medium text-ink md:text-3xl">
                     {category.directoryName}
@@ -28,11 +28,16 @@ export function ServiceDirectory() {
                     {category.directoryDescription}
                   </p>
                   {price ? (
-                    <p className="font-body mt-5 text-base font-medium tracking-[0.01em] text-ink md:text-[17px]">
+                    <p className="font-body mt-5 min-h-[1.5rem] text-base font-medium tracking-[0.01em] text-ink md:min-h-[1.7rem] md:text-[17px]">
                       {price}
                     </p>
-                  ) : null}
-                  <span className="font-body mt-auto inline-flex min-h-[48px] items-center pt-8 text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition duration-500 group-hover:text-ink motion-reduce:transition-none">
+                  ) : (
+                    <div
+                      className="mt-5 min-h-[1.5rem] md:min-h-[1.7rem]"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span className="font-body mt-auto inline-flex min-h-[48px] items-center pt-7 text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition duration-500 group-hover:text-ink motion-reduce:transition-none md:pt-8">
                     Explore
                     <span
                       aria-hidden="true"
