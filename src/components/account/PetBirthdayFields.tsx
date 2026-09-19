@@ -3,11 +3,14 @@
 import React, { useId, useState } from "react";
 import type { PetProfile } from "@/lib/pets";
 import {
+  earliestAllowedDateOfBirth,
   formatDateOfBirthDisplay,
   formatPetAgeLabel,
   getPetAgeYears,
   getPetBirthDateHeading,
   getPetBirthDateLabel,
+  latestAllowedDateOfBirth,
+  nextDateOfBirthFromInput,
   usesApproximateBirthDate,
   validateDateOfBirth,
 } from "@/lib/pet-age";
@@ -73,18 +76,15 @@ export function PetBirthdayFields({
   }
 
   function handleExactDateChange(value: string) {
-    if (!value) {
-      setDobError(null);
+    const next = nextDateOfBirthFromInput(value);
+    setDobError(next.error);
+    if (next.commit === undefined) return;
+    if (next.commit === null) {
       onChange({ dateOfBirth: null });
       return;
     }
-
-    const error = validateDateOfBirth(value);
-    setDobError(error);
-    if (error) return;
-
     onChange({
-      dateOfBirth: value,
+      dateOfBirth: next.commit,
       approximateDateOfBirth: null,
       approximateAgeYears: null,
       ageYears: undefined,
@@ -123,9 +123,18 @@ export function PetBirthdayFields({
           <input
             id={dobInputId}
             type="date"
-            value={pet.dateOfBirth ?? ""}
-            max={new Date().toISOString().slice(0, 10)}
+            defaultValue={pet.dateOfBirth ?? ""}
+            min={earliestAllowedDateOfBirth()}
+            max={latestAllowedDateOfBirth()}
             onChange={(event) => handleExactDateChange(event.target.value)}
+            onBlur={(event) => {
+              const value = event.target.value;
+              if (!value) {
+                setDobError(null);
+                return;
+              }
+              setDobError(validateDateOfBirth(value));
+            }}
             className={inputClassName}
           />
           <p className={noteClassName}>

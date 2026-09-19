@@ -1,6 +1,47 @@
 import type { PetProfile } from "@/lib/pets";
 
-const MAX_DOG_AGE_YEARS = 30;
+export const MAX_DOG_AGE_YEARS = 30;
+
+export function formatIsoDateLocal(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function latestAllowedDateOfBirth(today = new Date()): string {
+  return formatIsoDateLocal(today);
+}
+
+export function earliestAllowedDateOfBirth(today = new Date()): string {
+  const oldest = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  oldest.setFullYear(oldest.getFullYear() - MAX_DOG_AGE_YEARS);
+  return formatIsoDateLocal(oldest);
+}
+
+/**
+ * Chrome date inputs emit padded years (0002, 0019) while the year is
+ * still being typed. Those should not update a controlled value or flash
+ * a validation error.
+ */
+export function dateOfBirthInputYearLooksComplete(value: string): boolean {
+  const parsed = parseDateOfBirth(value);
+  if (!parsed) return false;
+  return parsed.getFullYear() >= 1000;
+}
+
+export function nextDateOfBirthFromInput(value: string): {
+  commit: string | null | undefined;
+  error: string | null;
+} {
+  if (!value) return { commit: null, error: null };
+  if (!dateOfBirthInputYearLooksComplete(value)) {
+    return { commit: undefined, error: null };
+  }
+  const error = validateDateOfBirth(value);
+  if (error) return { commit: undefined, error };
+  return { commit: value, error: null };
+}
 
 export function parseDateOfBirth(value: string | null | undefined): Date | null {
   if (!value) return null;
