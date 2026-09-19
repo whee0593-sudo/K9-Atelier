@@ -1,18 +1,18 @@
 export const homeFirstVisitSteps = [
   {
     number: "01",
-    title: "Create Your Profile",
-    body: "Tell us about you and your dog.",
+    title: "Tell Us About Your Dog",
+    body: "Share your dog’s details, including rabies vaccination status. You may also upload a current rabies certificate or vaccination record.",
   },
   {
     number: "02",
-    title: "Choose an Appointment",
-    body: "Select an available service, date, and time.",
+    title: "Choose Date & Time",
+    body: "Enter your address and select an available appointment on the calendar.",
   },
   {
     number: "03",
-    title: "Complete Your Details",
-    body: "Confirm your dog’s rabies vaccination status and add a card on file. You may also upload a current rabies certificate or vaccination record.",
+    title: "Care, Profile & Card",
+    body: "Choose the service, add your details and a login password, then leave a card on file. You are not charged when you book.",
   },
   {
     number: "04",

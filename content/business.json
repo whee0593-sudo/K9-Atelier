@@ -102,7 +102,7 @@
   "booking": {
     "requiresPaymentMethod": true,
     "chargeAtBooking": false,
-    "paymentMethodNote": "After you choose your appointment date and time, you will add or select a saved card to reserve. You are not charged when you book — payment is settled after your appointment. Late cancellations and no-shows may be charged to that card per our policy.",
+    "paymentMethodNote": "Saving a payment method is how the appointment is reserved. You are not charged when you book — payment is settled after your appointment. Late cancellations and no-shows may be charged to that card per our policy.",
     "availableDays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
     "firstBookableDate": "2026-09-20",
     "hoursStart": "09:00",

@@ -39,6 +39,7 @@ import {
   smsConsentCopy,
 } from "@/lib/notifications";
 import { CreativeBookingPolicy } from "@/components/booking/CreativeBookingPolicy";
+import { BookingConfetti } from "@/components/booking/BookingConfetti";
 import type { BookingPolicySectionId } from "@/components/booking/BookingPoliciesModal";
 import {
   bookingBackLinkClass,
@@ -744,6 +745,7 @@ export function BookingConfirmationView({
   appointmentTime,
   address,
   appointmentStatus,
+  celebrate = false,
 }: {
   pet: PetProfile;
   serviceName: string;
@@ -751,11 +753,13 @@ export function BookingConfirmationView({
   appointmentTime: string;
   address: ServiceAddress;
   appointmentStatus?: AppointmentRecord["status"];
+  celebrate?: boolean;
 }) {
   const pendingReview = appointmentStatus === "pending_confirmation";
 
   return (
-    <section className="text-center">
+    <section className="relative text-center">
+      <BookingConfetti active={celebrate && !pendingReview} />
       <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
         {pendingReview
           ? "Appointment Received"
@@ -778,7 +782,7 @@ export function BookingConfirmationView({
         <p className="mt-6 text-sm leading-relaxed text-taupe">
           {pendingReview
             ? "Your selected appointment is pending confirmation. We will notify you once it is confirmed."
-            : "Your appointment has been reserved. You can view the details at any time in your account."}
+            : "Your appointment is reserved. A confirmation email and text are on the way, and this visit is saved to your household profile."}
         </p>
       </div>
 

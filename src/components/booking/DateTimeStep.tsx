@@ -7,7 +7,6 @@ import {
   parseDateValue,
   toDateValue,
 } from "@/lib/booking-slots";
-import { business } from "@/lib/business";
 import { formatHourLabel } from "@/lib/appointments/closures";
 import styles from "./datetime-step.module.css";
 
@@ -165,28 +164,6 @@ export function DateTimeStep({
       className={`${playfair.variable} ${cormorant.variable} ${jost.variable}`}
     >
       <div className={styles.card}>
-        <div className={styles.brand}>
-          <p className={styles.wordmark}>{business.brand.wordmark}</p>
-          <p className={styles.subline}>{business.brand.lockup}</p>
-        </div>
-
-        <div className={styles.steps} aria-label="Booking progress">
-          <div className={`${styles.step} ${styles.stepDone}`}>
-            <div className={styles.stepCircle}>1</div>
-            <span className={styles.stepLabel}>Your Pet</span>
-          </div>
-          <div className={styles.stepConnector} />
-          <div className={`${styles.step} ${styles.stepDone}`}>
-            <div className={styles.stepCircle}>2</div>
-            <span className={styles.stepLabel}>Your Service</span>
-          </div>
-          <div className={styles.stepConnector} />
-          <div className={`${styles.step} ${styles.stepActive}`}>
-            <div className={styles.stepCircle}>3</div>
-            <span className={styles.stepLabel}>Your Time</span>
-          </div>
-        </div>
-
         <h1 className={styles.title}>Select Date &amp; Time</h1>
         <p className={styles.routeNote}>
           Choose an available start hour. Arrival is estimated for our mobile

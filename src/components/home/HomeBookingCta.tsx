@@ -13,10 +13,8 @@ export function HomeBookingCta() {
           A Private Spa Experience, Reserved for Your Dog.
         </h2>
         <p className="font-body mx-auto mt-5 max-w-2xl text-base leading-relaxed text-taupe">
-          Select an available date and time, confirm your dog’s rabies
-          vaccination status, and add a card on file. You may also upload a
-          current rabies certificate or vaccination record. Your card will not
-          be charged when you book.
+          Select a date and time, tell us about your dog, and leave a card on
+          file. Your card will not be charged when you book.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[11px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink">

@@ -8,6 +8,8 @@ export const RATE_LIMITS = {
   notify: { limit: 5, windowMs: 10 * 60 * 1000 },
   frozenCheck: { limit: 20, windowMs: 10 * 60 * 1000 },
   travelFee: { limit: 20, windowMs: 10 * 60 * 1000 },
+  bookingAvailability: { limit: 40, windowMs: 10 * 60 * 1000 },
+  bookingRegister: { limit: 8, windowMs: 10 * 60 * 1000 },
   staffBooking: { limit: 20, windowMs: 10 * 60 * 1000 },
   confirmAccount: { limit: 20, windowMs: 10 * 60 * 1000 },
 } as const;

@@ -53,7 +53,11 @@ export async function notifyCustomerAppointmentSubmitted(
     text: email.text,
     html: email.html,
   });
-  await sendAppointmentSubmittedSms(appointment, customer);
+  if (appointment.status === "confirmed") {
+    await sendAppointmentConfirmedSms(appointment, customer);
+  } else {
+    await sendAppointmentSubmittedSms(appointment, customer);
+  }
 }
 
 export async function notifyCustomerAppointmentConfirmed(

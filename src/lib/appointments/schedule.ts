@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
+import { hasSupabaseAdminConfig, hasSupabaseConfig } from "@/lib/supabase/env";
 import { estimateServiceDurationMinutes } from "@/lib/services";
 import { getBaseAddressFormatted } from "@/lib/server/base-address";
 import { geocodeBaseAddress } from "@/lib/geo";
@@ -42,7 +42,7 @@ function firstRelation<T>(value: T | T[] | null | undefined): T | null {
 }
 
 export function requireAdminClient() {
-  if (!hasSupabaseAdminConfig()) return null;
+  if (!hasSupabaseConfig() || !hasSupabaseAdminConfig()) return null;
   return createAdminClient();
 }
 
@@ -75,7 +75,7 @@ export async function loadDayPlans(
   toDate: string,
 ): Promise<{ plans: Map<string, DayPlanRecord> } | ScheduleError> {
   const admin = requireAdminClient();
-  if (!admin) return { error: "misconfigured" as const };
+  if (!admin) return { plans: new Map() };
 
   const { data, error } = await admin
     .from("service_day_plans")
@@ -114,7 +114,7 @@ export async function loadDayClosures(
   toDate: string,
 ): Promise<{ closures: Map<string, DayClosureRecord> } | ScheduleError> {
   const admin = requireAdminClient();
-  if (!admin) return { error: "misconfigured" as const };
+  if (!admin) return { closures: new Map() };
 
   const { data, error } = await admin
     .from("service_day_closures")
@@ -234,7 +234,7 @@ export async function loadOccupiedStopsByDate(
   options?: OccupiedLoadOptions,
 ): Promise<{ byDate: Map<string, OccupiedDay> } | ScheduleError> {
   const admin = requireAdminClient();
-  if (!admin) return { error: "misconfigured" as const };
+  if (!admin) return { byDate: new Map() };
 
   const select =
     "id, appointment_date, address_lat, address_lon, scheduled_start, service_id, add_on_ids, address_zip";

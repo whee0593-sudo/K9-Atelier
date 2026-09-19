@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuthenticatedUser } from "@/lib/pets/auth";
-import { estimateServiceDurationMinutes } from "@/lib/services";
+import { bookingDurationMinutes } from "@/lib/booking-flow";
 import {
   assignArrivalWindow,
   getAvailabilityForAddress,
@@ -8,6 +7,7 @@ import {
 } from "@/lib/appointments/schedule";
 import { listHourlyStartMinutes } from "@/lib/booking-schedule";
 import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
+import { enforceIpRateLimit } from "@/lib/rate-limit";
 
 function readPoint(url: URL) {
   const lat = Number(url.searchParams.get("lat"));
@@ -17,10 +17,8 @@ function readPoint(url: URL) {
 }
 
 export async function GET(request: Request) {
-  const user = await requireAuthenticatedUser();
-  if (!user) {
-    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
-  }
+  const limited = enforceIpRateLimit(request, "bookingAvailability");
+  if (limited) return limited;
 
   const url = new URL(request.url);
   const point = readPoint(url);
@@ -32,9 +30,9 @@ export async function GET(request: Request) {
     .map((id) => id.trim())
     .filter(Boolean);
 
-  if (!point || !zip || !serviceId || !Number.isFinite(weightLbs)) {
+  if (!point || !zip || !Number.isFinite(weightLbs)) {
     return NextResponse.json(
-      { error: "Address and service details are required." },
+      { error: "Address details are required." },
       { status: 400 },
     );
   }
@@ -50,7 +48,7 @@ export async function GET(request: Request) {
   const result = await getAvailabilityForAddress({
     point,
     zip,
-    durationMinutes: estimateServiceDurationMinutes(serviceId, weightLbs, addOnIds),
+    durationMinutes: bookingDurationMinutes(serviceId, weightLbs, addOnIds),
     base,
   });
 
@@ -65,10 +63,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const user = await requireAuthenticatedUser();
-  if (!user) {
-    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
-  }
+  const limited = enforceIpRateLimit(request, "bookingAvailability");
+  if (limited) return limited;
 
   let body: {
     lat?: number;
@@ -102,7 +98,6 @@ export async function POST(request: Request) {
   if (
     !point ||
     !zip ||
-    !serviceId ||
     !date ||
     typeof slotStartMinutes !== "number" ||
     !listHourlyStartMinutes().includes(slotStartMinutes) ||
@@ -133,7 +128,7 @@ export async function POST(request: Request) {
     date,
     point,
     zip,
-    durationMinutes: estimateServiceDurationMinutes(serviceId, weightLbs, addOnIds),
+    durationMinutes: bookingDurationMinutes(serviceId, weightLbs, addOnIds),
     slotStartMinutes,
     base,
   });

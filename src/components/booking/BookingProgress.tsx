@@ -1,10 +1,5 @@
-const STEPS = [
-  { id: 1, short: "Your Dog", label: "01 Your Dog" },
-  { id: 2, short: "Experience", label: "02 Experience" },
-  { id: 3, short: "Care", label: "03 Care" },
-  { id: 4, short: "Location & Time", label: "04 Location & Time" },
-  { id: 5, short: "Confirm", label: "05 Confirm" },
-] as const;
+import React from "react";
+import { BOOKING_STEPS } from "@/lib/booking-flow";
 
 type Props = {
   currentStep: number;
@@ -17,7 +12,7 @@ export function BookingProgress({ currentStep }: Props) {
       className="border-b border-gray-line/70 pb-6"
     >
       <ol className="flex flex-wrap gap-x-4 gap-y-3">
-        {STEPS.map((step) => {
+        {BOOKING_STEPS.map((step) => {
           const completed = currentStep > step.id;
           const current = currentStep === step.id;
 
