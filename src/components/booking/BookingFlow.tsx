@@ -118,12 +118,14 @@ export function BookingFlow({
     setSelectedPet(nextPet);
   }
 
-  function handleServiceSelect(service: BookableService) {
+  function handleServiceSelect(service: BookableService, optionName?: string) {
     setSelectedService(service);
     setServiceConfirmed(false);
     setCareOptionsConfirmed(false);
     setSelectedAddOnIds([]);
-    setAddOnOptions({});
+    setAddOnOptions(
+      optionName ? { [service.id]: optionName } : {},
+    );
     setOwner(null);
     setPaymentMethod(null);
   }
@@ -317,6 +319,11 @@ export function BookingFlow({
         <BookingExperienceStep
           pet={selectedPet}
           selectedServiceId={selectedService?.id ?? null}
+          selectedOptionName={
+            selectedService && isCreativeServiceSelection(selectedService)
+              ? addOnOptions[selectedService.id] ?? null
+              : null
+          }
           onSelect={handleServiceSelect}
           onContinue={handleExperienceContinue}
           onBack={() => {
@@ -332,6 +339,7 @@ export function BookingFlow({
         <CreativePairingModal
           creativeService={creativeService}
           requiredBaseServices={getRequiredBaseServicesForCreative()}
+          initialColorOption={addOnOptions[creativeService.id] ?? null}
           onComplete={handleCreativeComplete}
           onBack={() => setShowCreativePairing(false)}
         />

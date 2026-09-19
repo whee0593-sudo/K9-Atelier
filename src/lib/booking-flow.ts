@@ -2,7 +2,11 @@ import {
   estimateServiceDurationMinutes,
   getBookableServicesForPet,
   groupServicesByCategory,
+  isCreativeColoringCategory,
+  isSpaService,
+  type BookableService,
 } from "@/lib/services";
+import { coloringOptionPriceLabel } from "@/lib/service-page";
 import type { PetProfile } from "@/lib/pets";
 
 export const BOOKING_STEPS = [
@@ -65,4 +69,64 @@ export function nextExpandedCareCategoryId(
   clickedCategoryId: string,
 ): string | null {
   return currentExpandedId === clickedCategoryId ? null : clickedCategoryId;
+}
+
+export type BookingCareChoice = {
+  key: string;
+  service: BookableService;
+  optionName?: string;
+  title: string;
+  description: string;
+  priceLabel: string;
+};
+
+export const BOOKING_SPA_GROUP_ID = "spa";
+export const BOOKING_SPA_GROUP_NAME = "Spa";
+
+export type BookingCareRow =
+  | { kind: "service"; service: BookableService }
+  | { kind: "spa-group"; services: BookableService[] };
+
+export function bookingCareRowsForCategory(
+  services: BookableService[],
+): BookingCareRow[] {
+  const rows: BookingCareRow[] = [];
+  const spaServices: BookableService[] = [];
+
+  for (const service of services) {
+    if (isSpaService(service.id)) {
+      spaServices.push(service);
+    } else {
+      rows.push({ kind: "service", service });
+    }
+  }
+
+  if (spaServices.length) {
+    rows.push({ kind: "spa-group", services: spaServices });
+  }
+
+  return rows;
+}
+
+export function bookingCareChoicesForService(service: BookableService): BookingCareChoice[] {
+  if (isCreativeColoringCategory(service.categoryId) && service.options?.length) {
+    return service.options.map((option) => ({
+      key: `${service.id}:${option.name}`,
+      service,
+      optionName: option.name,
+      title: option.name,
+      description: option.description ?? "",
+      priceLabel: coloringOptionPriceLabel(option),
+    }));
+  }
+
+  return [
+    {
+      key: service.id,
+      service,
+      title: service.name,
+      description: service.description,
+      priceLabel: "",
+    },
+  ];
 }

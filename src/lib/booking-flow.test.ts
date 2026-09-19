@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  BOOKING_SPA_GROUP_NAME,
   BOOKING_STEPS,
   DEFAULT_AVAILABILITY_SERVICE_ID,
+  bookingCareChoicesForService,
+  bookingCareRowsForCategory,
   bookingDurationMinutes,
   createDraftBookingPet,
   getBookingCareCategories,
@@ -82,6 +85,53 @@ describe("booking flow helpers", () => {
       ),
       ["hand-stripping"],
     );
+  });
+
+  it("folds the three spa rituals into one Spa group", () => {
+    const category = getBookingCareCategories(18).find(
+      (item) => item.id === "bath-show-spa",
+    );
+    assert.ok(category);
+    const rows = bookingCareRowsForCategory(category.services);
+    assert.deepEqual(
+      rows.map((row) =>
+        row.kind === "service" ? row.service.id : BOOKING_SPA_GROUP_NAME,
+      ),
+      ["signature-bath-care", "long-coat-show-care", "Spa"],
+    );
+    const spa = rows.find((row) => row.kind === "spa-group");
+    assert.ok(spa && spa.kind === "spa-group");
+    assert.deepEqual(
+      spa.services.map((service) => service.id),
+      [
+        "dead-sea-mud-bath",
+        "aromatherapy-oil-bath",
+        "sensitive-skin-treatment",
+      ],
+    );
+  });
+
+  it("lists every creative coloring option instead of the first price only", () => {
+    const category = getBookingCareCategories(18).find(
+      (item) => item.id === "creative-accent-coloring",
+    );
+    assert.ok(category);
+    const choices = category.services.flatMap((service) =>
+      bookingCareChoicesForService(service),
+    );
+    assert.deepEqual(
+      choices.map((choice) => choice.title),
+      [
+        "Temporary Fun",
+        "Ears & Tail Accent",
+        "Paws & Boots Accent",
+        "Custom Creative Design",
+      ],
+    );
+    assert.equal(choices[0]?.priceLabel, "From $50");
+    assert.equal(choices[1]?.priceLabel, "From $100 / section");
+    assert.equal(choices[2]?.priceLabel, "From $350");
+    assert.equal(choices[3]?.priceLabel, "Consultation required");
   });
 
   it("toggles a care category open and closed", () => {
