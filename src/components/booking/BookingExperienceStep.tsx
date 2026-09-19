@@ -124,9 +124,17 @@ export function BookingExperienceStep({
   }, []);
 
   function handleCategoryToggle(categoryId: string) {
-    setExpandedCategoryId((current) =>
-      nextExpandedCareCategoryId(current, categoryId),
-    );
+    setExpandedCategoryId((current) => {
+      const next = nextExpandedCareCategoryId(current, categoryId);
+      if (next && typeof document !== "undefined") {
+        queueMicrotask(() => {
+          document
+            .getElementById(`care-category-btn-${next}`)
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
+      return next;
+    });
   }
 
   function handleServiceSelect(service: BookableService) {
@@ -165,13 +173,14 @@ export function BookingExperienceStep({
             : null;
 
           return (
-            <div key={category.id}>
+            <div key={category.id} className="scroll-mt-28">
               <button
                 type="button"
+                id={`care-category-btn-${category.id}`}
                 aria-expanded={expanded}
                 aria-controls={`care-category-${category.id}`}
                 onClick={() => handleCategoryToggle(category.id)}
-                className={`${bookingCardClass} relative w-full ${
+                className={`${bookingCardClass} relative w-full scroll-mt-28 ${
                   selectedInCategory && !expanded
                     ? bookingCardSelectedClass
                     : ""
