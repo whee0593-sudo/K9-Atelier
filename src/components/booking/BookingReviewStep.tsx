@@ -358,7 +358,7 @@ export function BookingReviewStep({
         ← Make a Change
       </button>
 
-      <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+      <p className="font-body mt-8 text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
         Review &amp; Reserve
       </p>
       <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
@@ -370,7 +370,7 @@ export function BookingReviewStep({
 
       <div className={`${bookingNoticeClass} mt-8 space-y-6`}>
         <div>
-          <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
             {pet.name}
           </p>
           <p className="font-body mt-1 text-sm text-ink">
@@ -379,7 +379,7 @@ export function BookingReviewStep({
         </div>
 
         <div className="border-t border-gray-line/70 pt-6">
-          <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
             {displayServiceName}
           </p>
           <p className="font-body mt-3 text-sm text-ink">
@@ -443,7 +443,7 @@ export function BookingReviewStep({
       </div>
 
       <div className={`${bookingNoticeClass} mt-6 space-y-4`}>
-        <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+        <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
           Referral Code
         </p>
         <label className={bookingLabelClass} htmlFor="referral-code">
@@ -518,7 +518,7 @@ export function BookingReviewStep({
       </div>
 
       <div className={`${bookingNoticeClass} mt-6 space-y-4`}>
-        <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+        <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
           Payment Method for This Appointment
         </p>
         {paymentMethods.length === 0 && !cardSetup ? (
@@ -602,7 +602,7 @@ export function BookingReviewStep({
       )}
 
       <div className="mt-8">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
             <span className={bookingLabelClass}>First Name *</span>
             <input
@@ -644,7 +644,7 @@ export function BookingReviewStep({
             aria-required="true"
             className="mt-0.5 size-4 shrink-0 accent-deep-lavender"
           />
-          <span className="font-body text-xs leading-relaxed text-taupe">
+          <span className="font-body min-w-0 text-[13px] leading-relaxed text-taupe">
             {smsConsentCopy} See our{" "}
             <Link
               href="/privacy"
@@ -673,7 +673,7 @@ export function BookingReviewStep({
             aria-required="true"
             className="mt-0.5 size-4 shrink-0 accent-deep-lavender"
           />
-          <span className="font-body text-xs leading-relaxed text-taupe">
+          <span className="font-body min-w-0 text-[13px] leading-relaxed text-taupe">
             {photoMarketingConsentCopy}
           </span>
         </label>
@@ -688,7 +688,7 @@ export function BookingReviewStep({
             aria-required="true"
             className="mt-0.5 size-4 shrink-0 accent-deep-lavender"
           />
-          <span className="font-body text-xs leading-relaxed text-taupe">
+          <span className="font-body min-w-0 text-[13px] leading-relaxed text-taupe">
             I have read and agree to the{" "}
             <PolicyTermButton onOpen={() => onOpenPolicy("cancellation")}>
               cancellation
@@ -768,7 +768,7 @@ export function BookingConfirmationView({
   return (
     <section className="relative text-center">
       <BookingConfetti active={celebrate && !pendingReview} />
-      <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+      <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
         {pendingReview
           ? "Appointment Received"
           : "Your Appointment Is Confirmed"}

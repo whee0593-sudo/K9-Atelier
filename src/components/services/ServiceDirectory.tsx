@@ -15,11 +15,11 @@ export function ServiceDirectory() {
             return (
               <li
                 key={category.slug}
-                className="min-h-0 md:last:col-span-2 md:last:w-[calc((100%-2rem)/2)] md:last:justify-self-center lg:last:col-span-1 lg:last:col-start-2 lg:last:w-auto lg:last:justify-self-stretch"
+                className="min-h-0 w-full md:last:col-span-2 md:last:w-[calc((100%-2rem)/2)] md:last:justify-self-center lg:last:col-span-1 lg:last:col-start-2 lg:last:w-auto lg:last:justify-self-stretch"
               >
                 <Link
                   href={category.path}
-                  className="group flex h-full flex-col border border-gray-line bg-ivory px-7 py-8 transition duration-500 hover:border-champagne focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne motion-reduce:transition-none md:px-8 md:py-9"
+                  className="group flex h-full w-full flex-col border border-gray-line bg-ivory px-7 py-8 transition duration-500 hover:border-champagne focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne motion-reduce:transition-none md:px-8 md:py-9"
                 >
                   <h2 className="font-display text-[1.75rem] leading-[1.15] font-medium text-ink md:text-3xl">
                     {category.directoryName}

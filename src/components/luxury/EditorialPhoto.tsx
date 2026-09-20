@@ -4,6 +4,7 @@ type Props = {
   src: string;
   alt: string;
   className?: string;
+  imageClassName?: string;
   sizes?: string;
   priority?: boolean;
 };
@@ -12,6 +13,7 @@ export function EditorialPhoto({
   src,
   alt,
   className = "",
+  imageClassName = "max-h-[80vh]",
   sizes = "(min-width: 768px) 50vw, 100vw",
   priority = false,
 }: Props) {
@@ -26,7 +28,7 @@ export function EditorialPhoto({
         height={2000}
         priority={priority}
         sizes={sizes}
-        className="h-auto max-h-[80vh] w-auto max-w-full object-contain object-top"
+        className={`h-auto w-auto max-w-full object-contain object-top ${imageClassName}`}
       />
     </div>
   );

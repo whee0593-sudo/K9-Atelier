@@ -140,7 +140,7 @@ export function BookingPaymentStep({
       <button type="button" onClick={onBack} className={bookingBackLinkClass}>
         ← Back
       </button>
-      <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+      <p className="font-body mt-8 text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
         Payment
       </p>
       <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
@@ -154,7 +154,7 @@ export function BookingPaymentStep({
       </p>
 
       <div className={`${bookingNoticeClass} mt-8 space-y-4`}>
-        <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+        <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
           No charge at booking
         </p>
         <p className="font-body text-sm leading-relaxed text-taupe">

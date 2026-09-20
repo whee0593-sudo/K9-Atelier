@@ -211,7 +211,7 @@ export function BookingLocationTimeStep({
         <button type="button" onClick={() => setPhase("address")} className={bookingBackLinkClass}>
           ← Back to address
         </button>
-        <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+        <p className="font-body mt-8 text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
           Date &amp; Time
         </p>
         <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
@@ -243,7 +243,7 @@ export function BookingLocationTimeStep({
         ← Back
       </button>
 
-      <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+      <p className="font-body mt-8 text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
         Date &amp; Time
       </p>
       <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
@@ -269,8 +269,8 @@ export function BookingLocationTimeStep({
             autoComplete="street-address"
           />
         </div>
-        <div className="grid gap-5 sm:grid-cols-3">
-          <div className="sm:col-span-1">
+        <div className="grid gap-5 md:grid-cols-3">
+          <div>
             <label htmlFor="city" className={bookingLabelClass}>
               City
             </label>
@@ -331,7 +331,7 @@ export function BookingLocationTimeStep({
         <div className={`${bookingNoticeClass} mt-8`}>
           {quote.fee === 0 ? (
             <>
-              <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+              <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
                 Your Address Is Within Our Complimentary Service Area
               </p>
               <p className="font-display mt-3 text-2xl text-ink">{city}</p>
@@ -341,7 +341,7 @@ export function BookingLocationTimeStep({
             </>
           ) : (
             <>
-              <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+              <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
                 Extended Service Area
               </p>
               <p className="font-body mt-3 text-sm text-taupe">

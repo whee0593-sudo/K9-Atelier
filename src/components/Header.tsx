@@ -21,7 +21,7 @@ const navLinkBase =
   "inline-flex min-h-[44px] items-center justify-center rounded-sm border-0 px-4 font-body text-[13px] font-medium uppercase tracking-[0.16em] transition duration-500";
 
 const menuBtnClass =
-  "inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm border-0 px-4 font-body text-[12px] font-medium uppercase tracking-[0.14em] transition duration-500";
+  "inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm border-0 px-2 font-body text-[12px] font-medium uppercase tracking-[0.14em] transition duration-500 md:px-4";
 
 function isNavItemActive(href: string, pathname: string) {
   const path = href.split("#")[0];
@@ -67,10 +67,10 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-line/70 bg-ivory/95 backdrop-blur-sm">
-      <Container className="flex items-center justify-between gap-6 py-4 md:py-5">
+      <Container className="flex items-center justify-between gap-2 py-3 md:gap-6 md:py-5">
         <Link
           href="/"
-          className="flex shrink-0 items-center gap-3"
+          className="flex min-w-0 shrink items-center gap-2 md:gap-3"
           onClick={closeMenu}
         >
           <Image
@@ -78,16 +78,16 @@ export function Header() {
             alt={business.brand.name}
             width={52}
             height={52}
-            className="rounded-full"
+            className="h-11 w-11 shrink-0 rounded-full md:h-[52px] md:w-[52px]"
             priority
           />
-          <span className="inline whitespace-nowrap font-body text-[14px] font-semibold uppercase tracking-[0.14em] text-[#3A3236] sm:tracking-[0.2em]">
+          <span className="inline whitespace-nowrap font-body text-[13px] font-semibold uppercase tracking-[0.12em] text-[#3A3236] sm:text-[14px] sm:tracking-[0.14em] md:tracking-[0.2em]">
             {business.brand.name}
           </span>
         </Link>
 
         {isBooking ? (
-          <p className="font-body text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
+          <p className="hidden font-body text-[12px] font-medium uppercase tracking-[0.14em] text-taupe min-[400px]:inline">
             Booking
           </p>
         ) : (
@@ -119,8 +119,8 @@ export function Header() {
             {open ? "Close" : "Menu"}
           </button>
         ) : (
-          <div className="flex items-center gap-3">
-            <CustomerAuthLink className="inline-flex min-h-[50px] items-center justify-center rounded-sm bg-deep-lavender px-6 text-[12px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink" />
+          <div className="flex shrink-0 items-center gap-2 md:gap-3">
+            <CustomerAuthLink className="inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-sm bg-deep-lavender px-4 text-[12px] font-medium uppercase tracking-[0.12em] text-ivory transition duration-500 hover:bg-ink md:min-h-[50px] md:px-6 md:tracking-[0.16em]" />
             <button
               type="button"
               className={

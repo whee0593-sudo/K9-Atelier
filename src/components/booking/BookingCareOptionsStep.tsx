@@ -54,13 +54,13 @@ function CareOptionCard({
     <article
       className={`${bookingCardClass} ${selected ? bookingCardSelectedClass : ""}`}
     >
-      <h3 className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+      <h3 className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
         {title}
       </h3>
       <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
         {description}
       </p>
-      <p className="font-body mt-4 text-[10px] font-medium uppercase tracking-[0.14em] text-taupe">
+      <p className="font-body mt-4 text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
         {priceLabel}
       </p>
       <button
@@ -110,7 +110,7 @@ export function BookingCareOptionsStep({
         ← Back
       </button>
 
-      <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+      <p className="font-body mt-8 text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
         Care Options
       </p>
       <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
@@ -122,7 +122,7 @@ export function BookingCareOptionsStep({
 
       {showGentleNotice && senior && (
         <div className={`${bookingNoticeClass} mt-8`}>
-          <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
             A Little Extra Time for {pet.name}
           </p>
           <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
@@ -165,13 +165,13 @@ export function BookingCareOptionsStep({
 
         {creative && (
           <article className={bookingCardClass}>
-            <h3 className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+            <h3 className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
               {getServiceDisplayName(creative.id, creative.name)}
             </h3>
             <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
               {getServiceDisplayDescription(creative.id, creative.description)}
             </p>
-            <p className="font-body mt-4 text-[10px] font-medium uppercase tracking-[0.14em] text-taupe">
+            <p className="font-body mt-4 text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
               From {formatPrice(100)}
             </p>
             <button
@@ -214,7 +214,7 @@ export function BookingCareOptionsStep({
 
       {dematting && (
         <div className={`${bookingNoticeClass} mt-8`}>
-          <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
             Coat Condition
           </p>
           <p className="font-body mt-3 text-sm leading-relaxed text-taupe">

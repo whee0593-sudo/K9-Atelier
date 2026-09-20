@@ -98,7 +98,7 @@ export function BookingDogStep({ draftPet, onDraftChange, onContinue }: Props) {
 
   return (
     <section>
-      <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+      <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
         Your Dog
       </p>
       <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
@@ -115,7 +115,7 @@ export function BookingDogStep({ draftPet, onDraftChange, onContinue }: Props) {
 
       {readyExisting.length > 0 ? (
         <div className="mt-8 space-y-4">
-          <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
             Dogs already in your profile
           </p>
           <ul className="space-y-3">
@@ -126,7 +126,7 @@ export function BookingDogStep({ draftPet, onDraftChange, onContinue }: Props) {
                   onClick={() => void onContinue(pet)}
                   className={`${bookingCardClass} w-full hover:border-champagne/60`}
                 >
-                  <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+                  <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
                     {pet.name}
                   </p>
                   <p className="font-display mt-2 text-2xl text-ink">{pet.breed}</p>
@@ -149,7 +149,7 @@ export function BookingDogStep({ draftPet, onDraftChange, onContinue }: Props) {
       ) : null}
 
       <div className={`${bookingNoticeClass} mt-8 space-y-5`}>
-        <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+        <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
           {readyExisting.length > 0 ? "Or add another dog" : "Dog details"}
         </p>
         <PetProfileFieldsForm
@@ -173,7 +173,7 @@ export function BookingDogStep({ draftPet, onDraftChange, onContinue }: Props) {
       </div>
 
       {!loggedIn ? (
-        <p className="font-body mt-6 text-xs text-taupe">
+        <p className="font-body mt-6 text-[13px] leading-relaxed text-taupe">
           Already have an account?{" "}
           <Link href="/login?next=/book" className="text-ink underline">
             Sign in

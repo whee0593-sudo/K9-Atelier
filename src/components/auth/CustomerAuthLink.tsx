@@ -15,28 +15,33 @@ export function CustomerAuthLink({
   const [label, setLabel] = useState("Login");
 
   useEffect(() => {
-    const supabase = createClient();
+    let subscription: { unsubscribe: () => void } | undefined;
 
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setHref("/account");
-        setLabel("My Account");
-      }
-    });
+    try {
+      const supabase = createClient();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setHref("/account");
-        setLabel("My Account");
-      } else {
-        setHref("/login");
-        setLabel("Login");
-      }
-    });
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+          setHref("/account");
+          setLabel("My Account");
+        }
+      });
 
-    return () => subscription.unsubscribe();
+      const listener = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          setHref("/account");
+          setLabel("My Account");
+        } else {
+          setHref("/login");
+          setLabel("Login");
+        }
+      });
+      subscription = listener.data.subscription;
+    } catch {
+      // Preview without Supabase still shows Login.
+    }
+
+    return () => subscription?.unsubscribe();
   }, []);
 
   return (
