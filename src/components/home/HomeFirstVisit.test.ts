@@ -32,7 +32,7 @@ describe("home first visit guide", () => {
     );
     assert.equal(
       homeFirstVisitSteps[2].body,
-      "Complete a few details to help us prepare for your visit.",
+      "Complete a few details to help us prepare for your appointment.",
     );
   });
 
