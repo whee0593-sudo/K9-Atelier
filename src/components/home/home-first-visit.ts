@@ -12,7 +12,7 @@ export const homeFirstVisitSteps = [
   {
     number: "03",
     title: "Add a Few Details",
-    body: "Complete a few details to help us prepare for your visit.",
+    body: "Complete a few details to help us prepare for your appointment.",
   },
   {
     number: "04",
