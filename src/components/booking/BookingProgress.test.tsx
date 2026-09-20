@@ -5,13 +5,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { BookingProgress } from "@/components/booking/BookingProgress";
 
 describe("BookingProgress", () => {
-  it("renders the six booking steps and marks the current one", () => {
-    const html = renderToStaticMarkup(<BookingProgress currentStep={2} />);
+  it("renders the seven booking steps and marks the current one", () => {
+    const html = renderToStaticMarkup(<BookingProgress currentStep={3} />);
     assert.match(html, /01 Your Dog/);
     assert.match(html, /02 Date &amp; Time/);
-    assert.match(html, /03 Care/);
-    assert.match(html, /04 Your Details/);
-    assert.match(html, /05 Payment/);
-    assert.match(html, /06 Confirm/);
+    assert.match(html, /03 Add Details/);
+    assert.match(html, /04 Care/);
+    assert.match(html, /05 Your Details/);
+    assert.match(html, /06 Payment/);
+    assert.match(html, /07 Confirm/);
   });
 });

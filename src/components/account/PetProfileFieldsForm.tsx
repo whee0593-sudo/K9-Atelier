@@ -4,6 +4,7 @@ import React from "react";
 import { PetBirthdayFields } from "@/components/account/PetBirthdayFields";
 import { PetScalarFields } from "@/components/account/PetScalarFields";
 import { filterFieldsByAudience, getAccountSection } from "@/lib/account-fields";
+import { isBookingPrepPetFieldId } from "@/lib/booking-flow";
 import type { PetProfile } from "@/lib/pets";
 
 const petSectionFields = filterFieldsByAudience(
@@ -39,6 +40,10 @@ export function PetProfileFieldsForm({
   const bookingLabels =
     "font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe";
   const bookingNotes = "font-body mt-1.5 text-xs text-taupe";
+  const afterBirthdayFields =
+    variant === "booking"
+      ? fieldsAfterBirthday.filter((field) => !isBookingPrepPetFieldId(field.id))
+      : fieldsAfterBirthday;
 
   return (
     <div className="space-y-5">
@@ -64,7 +69,7 @@ export function PetProfileFieldsForm({
         noteClassName={variant === "booking" ? bookingNotes : undefined}
       />
       <PetScalarFields
-        fields={fieldsAfterBirthday}
+        fields={afterBirthdayFields}
         pet={pet}
         onPetChange={onPetChange}
         variant={variant}

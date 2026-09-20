@@ -17,7 +17,12 @@ import {
   type BookableService,
 } from "@/lib/services";
 import { getServiceDisplayName } from "@/lib/service-display";
-import { formatServiceAddress, type ServiceAddress, type TravelQuote } from "@/lib/travel";
+import {
+  formatServiceAddress,
+  streetWithAccessNotes,
+  type ServiceAddress,
+  type TravelQuote,
+} from "@/lib/travel";
 import type { PetProfile } from "@/lib/pets";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 import { createCustomerAppointment } from "@/lib/appointments/client";
@@ -134,7 +139,12 @@ export function BookingConfirmStep({
         serviceName: displayServiceName,
         addOnIds,
         addOnOptions,
-        address,
+        address: {
+          street: streetWithAccessNotes(address),
+          city: address.city,
+          state: address.state,
+          zip: address.zip,
+        },
         travelDistanceMiles: travelQuote.distanceMiles,
         travelFee: travelQuote.fee,
         appointmentDate,
@@ -201,7 +211,31 @@ export function BookingConfirmStep({
           <p className="font-body mt-2 text-sm text-taupe">
             {formatServiceAddress(address)}
           </p>
+          {address.parkingNotes?.trim() ? (
+            <p className="font-body mt-2 text-sm text-taupe">
+              Access · {address.parkingNotes.trim()}
+            </p>
+          ) : null}
         </div>
+
+        {pet.temperament || pet.medicalNotes || pet.groomingPreferences ? (
+          <div className="border-t border-gray-line/70 pt-6">
+            <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+              Preparation notes
+            </p>
+            {pet.temperament ? (
+              <p className="font-body mt-3 text-sm text-ink">{pet.temperament}</p>
+            ) : null}
+            {pet.medicalNotes ? (
+              <p className="font-body mt-2 text-sm text-ink">{pet.medicalNotes}</p>
+            ) : null}
+            {pet.groomingPreferences ? (
+              <p className="font-body mt-2 text-sm text-ink">
+                {pet.groomingPreferences}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="border-t border-gray-line/70 pt-6">
           <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">

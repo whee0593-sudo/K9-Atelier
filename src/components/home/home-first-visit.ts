@@ -11,8 +11,8 @@ export const homeFirstVisitSteps = [
   },
   {
     number: "03",
-    title: "Care, Profile & Card",
-    body: "Choose the service, add your details and a login password, then leave a card on file. You are not charged when you book.",
+    title: "Add a Few Details",
+    body: "Complete a few details to help us prepare for your appointment. Then choose the care, add your profile, and leave a card on file — you are not charged when you book.",
   },
   {
     number: "04",

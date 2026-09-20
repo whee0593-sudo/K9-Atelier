@@ -20,6 +20,16 @@ describe("home first visit guide", () => {
     assert.equal(details.body.includes("COMPLETE YOUR BOOKING"), false);
   });
 
+  it("asks guests to add a few appointment-prep details", () => {
+    const details = homeFirstVisitSteps[2];
+    assert.equal(details.title, "Add a Few Details");
+    assert.match(
+      details.body,
+      /Complete a few details to help us prepare for your appointment/,
+    );
+    assert.match(details.body, /not charged when you book/);
+  });
+
   it("keeps the arrival step private and at-home", () => {
     const arrival = homeFirstVisitSteps[3];
     assert.equal(arrival.title, "The Spa Arrives");

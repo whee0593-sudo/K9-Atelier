@@ -5,6 +5,7 @@ export type ServiceAddress = {
   city: string;
   state: string;
   zip: string;
+  parkingNotes?: string;
 };
 
 export type TravelQuote = {
@@ -21,6 +22,14 @@ export type TravelQuote = {
 
 export function formatServiceAddress(address: ServiceAddress) {
   return `${address.street}, ${address.city}, ${address.state} ${address.zip}`;
+}
+
+/** Persist parking / access notes on the appointment street line. */
+export function streetWithAccessNotes(address: ServiceAddress) {
+  const street = address.street.trim();
+  const notes = address.parkingNotes?.trim();
+  if (!notes) return street;
+  return `${street} (Access: ${notes})`;
 }
 
 /** Pure fee math from one-way miles */

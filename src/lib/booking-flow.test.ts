@@ -3,7 +3,10 @@ import { describe, it } from "node:test";
 import {
   BOOKING_SPA_GROUP_NAME,
   BOOKING_STEPS,
+  BOOKING_FINAL_STEP,
   DEFAULT_AVAILABILITY_SERVICE_ID,
+  getBookingParkingField,
+  getBookingPrepPetFields,
   bookingCareChoicesForService,
   bookingCareRowsForCategory,
   bookingDurationMinutes,
@@ -15,11 +18,29 @@ import {
 import { estimateServiceDurationMinutes } from "@/lib/services";
 
 describe("booking flow helpers", () => {
-  it("defines six public booking steps in the requested order", () => {
+  it("defines seven public booking steps in the requested order", () => {
+    assert.equal(BOOKING_FINAL_STEP, 7);
     assert.deepEqual(
       BOOKING_STEPS.map((step) => step.short),
-      ["Your Dog", "Date & Time", "Care", "Your Details", "Payment", "Confirm"],
+      [
+        "Your Dog",
+        "Date & Time",
+        "Details",
+        "Care",
+        "Your Details",
+        "Payment",
+        "Confirm",
+      ],
     );
+    assert.equal(BOOKING_STEPS[2]?.label, "03 Add Details");
+  });
+
+  it("lists the optional appointment-prep fields", () => {
+    assert.deepEqual(
+      getBookingPrepPetFields().map((field) => field.id),
+      ["temperament", "medicalNotes", "groomingPreferences"],
+    );
+    assert.equal(getBookingParkingField()?.id, "parkingNotes");
   });
 
   it("uses the signature bath duration when no service is chosen yet", () => {

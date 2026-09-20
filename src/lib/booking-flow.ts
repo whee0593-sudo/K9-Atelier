@@ -8,15 +8,29 @@ import {
 } from "@/lib/services";
 import { coloringOptionPriceLabel } from "@/lib/service-page";
 import type { PetProfile } from "@/lib/pets";
+import {
+  filterFieldsByAudience,
+  getAccountSection,
+  type AccountField,
+} from "@/lib/account-fields";
 
 export const BOOKING_STEPS = [
   { id: 1, short: "Your Dog", label: "01 Your Dog" },
   { id: 2, short: "Date & Time", label: "02 Date & Time" },
-  { id: 3, short: "Care", label: "03 Care" },
-  { id: 4, short: "Your Details", label: "04 Your Details" },
-  { id: 5, short: "Payment", label: "05 Payment" },
-  { id: 6, short: "Confirm", label: "06 Confirm" },
+  { id: 3, short: "Details", label: "03 Add Details" },
+  { id: 4, short: "Care", label: "04 Care" },
+  { id: 5, short: "Your Details", label: "05 Your Details" },
+  { id: 6, short: "Payment", label: "06 Payment" },
+  { id: 7, short: "Confirm", label: "07 Confirm" },
 ] as const;
+
+export const BOOKING_PREP_PET_FIELD_IDS = [
+  "temperament",
+  "medicalNotes",
+  "groomingPreferences",
+] as const;
+
+export const BOOKING_FINAL_STEP = BOOKING_STEPS.length;
 
 export const DEFAULT_AVAILABILITY_SERVICE_ID = "signature-bath-care";
 
@@ -129,4 +143,25 @@ export function bookingCareChoicesForService(service: BookableService): BookingC
       priceLabel: "",
     },
   ];
+}
+
+export function isBookingPrepPetFieldId(fieldId: string) {
+  return (BOOKING_PREP_PET_FIELD_IDS as readonly string[]).includes(fieldId);
+}
+
+export function getBookingPrepPetFields(): AccountField[] {
+  const fields = filterFieldsByAudience(
+    getAccountSection("pets")?.fields ?? [],
+    "customer",
+  );
+  return BOOKING_PREP_PET_FIELD_IDS.flatMap((id) => {
+    const field = fields.find((item) => item.id === id);
+    return field ? [field] : [];
+  });
+}
+
+export function getBookingParkingField(): AccountField | undefined {
+  return getAccountSection("addresses")?.fields.find(
+    (field) => field.id === "parkingNotes",
+  );
 }

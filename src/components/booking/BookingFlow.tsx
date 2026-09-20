@@ -20,6 +20,7 @@ import {
 } from "@/components/booking/BookingPoliciesModal";
 import { BookingDogStep } from "@/components/booking/BookingDogStep";
 import { BookingLocationTimeStep } from "@/components/booking/BookingLocationTimeStep";
+import { BookingDetailsStep } from "@/components/booking/BookingDetailsStep";
 import {
   BookingExperienceStep,
   isCreativeServiceSelection,
@@ -32,8 +33,12 @@ import { BookingConfirmationView } from "@/components/booking/BookingReviewStep"
 import { CreativePairingModal } from "@/components/booking/CreativePairingModal";
 import { bookingBackLinkClass } from "@/components/booking/booking-ui";
 import { trackGoogleAdsBookingConversion } from "@/lib/google-ads";
-import { createDraftBookingPet, isPersistedPetId } from "@/lib/booking-flow";
-import { createCustomerPet } from "@/lib/pets/client";
+import {
+  BOOKING_FINAL_STEP,
+  createDraftBookingPet,
+  isPersistedPetId,
+} from "@/lib/booking-flow";
+import { createCustomerPet, updateCustomerPet } from "@/lib/pets/client";
 import { mapPetProfileToWriteInput } from "@/lib/pets/map";
 import { createClient } from "@/lib/supabase/client";
 import type { PaymentMethodRecord } from "@/lib/payments/types";
@@ -100,6 +105,8 @@ export function BookingFlow({
     null,
   );
   const [serviceConfirmed, setServiceConfirmed] = useState(false);
+  const [detailsConfirmed, setDetailsConfirmed] = useState(false);
+  const [detailsSaving, setDetailsSaving] = useState(false);
   const [careOptionsConfirmed, setCareOptionsConfirmed] = useState(false);
   const [showCreativePairing, setShowCreativePairing] = useState(false);
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
@@ -149,6 +156,8 @@ export function BookingFlow({
   function resetFromDog() {
     setSelectedService(null);
     setServiceConfirmed(false);
+    setDetailsConfirmed(false);
+    setDetailsSaving(false);
     setCareOptionsConfirmed(false);
     setSelectedAddOnIds([]);
     setAddOnOptions({});
@@ -182,6 +191,27 @@ export function BookingFlow({
     }
     resetFromDog();
     setSelectedPet(nextPet);
+  }
+
+  async function handleDetailsContinue() {
+    if (!selectedPet) return;
+    setDetailsSaving(true);
+    try {
+      if (isPersistedPetId(selectedPet.id)) {
+        try {
+          const nextPet = await updateCustomerPet(
+            selectedPet.id,
+            mapPetProfileToWriteInput(selectedPet),
+          );
+          setSelectedPet(nextPet);
+        } catch {
+          // Keep the notes in local booking state if the profile save fails.
+        }
+      }
+      setDetailsConfirmed(true);
+    } finally {
+      setDetailsSaving(false);
+    }
   }
 
   function handleServiceSelect(service: BookableService, optionName?: string) {
@@ -305,18 +335,20 @@ export function BookingFlow({
   }
 
   const currentStep = reserved
-    ? 6
+    ? BOOKING_FINAL_STEP
     : !selectedPet
       ? 1
       : !address || !travelQuote || !appointmentDate || !appointmentTime
         ? 2
-        : !serviceConfirmed || !careOptionsConfirmed
+        : !detailsConfirmed
           ? 3
-          : !owner
+          : !serviceConfirmed || !careOptionsConfirmed
             ? 4
-            : !paymentMethod
+            : !owner
               ? 5
-              : 6;
+              : !paymentMethod
+                ? 6
+                : 7;
 
   const creativeService = getCreativeColoringService();
 
@@ -347,7 +379,9 @@ export function BookingFlow({
 
   return (
     <div className="mt-8 space-y-8">
-      {currentStep <= 6 && <BookingProgress currentStep={Math.min(currentStep, 6)} />}
+      {currentStep <= BOOKING_FINAL_STEP && (
+        <BookingProgress currentStep={Math.min(currentStep, BOOKING_FINAL_STEP)} />
+      )}
 
       {currentStep === 1 && (
         <BookingDogStep
@@ -371,7 +405,10 @@ export function BookingFlow({
             resetFromDog();
           }}
           onComplete={(addr, quote, date, time, preference, slotStart) => {
-            setAddress(addr);
+            setAddress((current) => ({
+              ...addr,
+              parkingNotes: current?.parkingNotes,
+            }));
             setTravelQuote(quote);
             setAppointmentDate(date);
             setAppointmentTime(time);
@@ -382,7 +419,32 @@ export function BookingFlow({
         />
       )}
 
-      {currentStep === 3 && selectedPet && !serviceConfirmed && (
+      {currentStep === 3 && selectedPet && (
+        <BookingDetailsStep
+          pet={selectedPet}
+          parkingNotes={address?.parkingNotes ?? ""}
+          onPetChange={(updates) =>
+            setSelectedPet((current) =>
+              current ? { ...current, ...updates } : current,
+            )
+          }
+          onParkingNotesChange={(value) =>
+            setAddress((current) =>
+              current ? { ...current, parkingNotes: value } : current,
+            )
+          }
+          onContinue={handleDetailsContinue}
+          saving={detailsSaving}
+          onBack={() => {
+            setAppointmentDate(null);
+            setAppointmentTime(null);
+            setTimePreference(null);
+            setSlotStartMinutes(null);
+          }}
+        />
+      )}
+
+      {currentStep === 4 && selectedPet && !serviceConfirmed && (
         <BookingExperienceStep
           pet={selectedPet}
           selectedServiceId={selectedService?.id ?? null}
@@ -394,10 +456,7 @@ export function BookingFlow({
           onSelect={handleServiceSelect}
           onContinue={handleExperienceContinue}
           onBack={() => {
-            setAppointmentDate(null);
-            setAppointmentTime(null);
-            setTimePreference(null);
-            setSlotStartMinutes(null);
+            setDetailsConfirmed(false);
           }}
         />
       )}
@@ -412,7 +471,7 @@ export function BookingFlow({
         />
       )}
 
-      {currentStep === 3 &&
+      {currentStep === 4 &&
         selectedPet &&
         selectedService &&
         serviceConfirmed &&
@@ -444,7 +503,7 @@ export function BookingFlow({
         </p>
       ) : null}
 
-      {currentStep === 4 && selectedPet && (
+      {currentStep === 5 && selectedPet && (
         <BookingOwnerStep
           initial={
             owner ?? {
@@ -463,7 +522,7 @@ export function BookingFlow({
         />
       )}
 
-      {currentStep === 5 && (
+      {currentStep === 6 && (
         <BookingPaymentStep
           initialPaymentMethodId={paymentMethod?.id ?? null}
           onBack={() => setOwner(null)}
@@ -471,7 +530,7 @@ export function BookingFlow({
         />
       )}
 
-      {currentStep === 6 &&
+      {currentStep === 7 &&
         selectedPet &&
         selectedService &&
         address &&
@@ -513,7 +572,7 @@ export function BookingFlow({
           />
         )}
 
-      {currentStep <= 6 && (
+      {currentStep <= BOOKING_FINAL_STEP && (
         <div className="border-t border-gray-line/70 pt-6 text-center">
           <p className="font-body text-xs text-taupe">
             Additional care or travel fees may apply where necessary.
