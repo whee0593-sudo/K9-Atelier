@@ -68,7 +68,7 @@ export function Footer() {
                 href={phoneHref}
                 className="font-body mt-5 block text-sm text-ink transition hover:text-deep-lavender"
               >
-                {brand.phone}
+                {brand.phoneDisplay || brand.phone}
               </a>
             ) : null}
             <a
