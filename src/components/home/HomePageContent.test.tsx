@@ -16,6 +16,21 @@ const REMOVED_HOME_SECTIONS = [
 ] as const;
 
 describe("home page content", () => {
+  it("uses the shortened show-groomer hero lead", () => {
+    const business = JSON.parse(
+      readFileSync(new URL("../../../content/business.json", import.meta.url), "utf8"),
+    ) as { brand: { lead: string } };
+
+    assert.equal(
+      business.brand.lead,
+      "Multiple award-winning show groomer specializing in tailored styling, show-level coat care, extra-gentle senior care, and hand stripping.",
+    );
+    assert.equal(
+      business.brand.lead.includes("Private mobile pet spa in Palm Beach County"),
+      false,
+    );
+  });
+
   it("sends the hero secondary button to the contact page", () => {
     const source = readFileSync(new URL("./HomeHero.tsx", import.meta.url), "utf8");
 
