@@ -16,7 +16,7 @@ export function Container({
   return (
     <Tag
       id={id}
-      className={`mx-auto w-full max-w-[1240px] px-5 md:px-12 xl:px-20 ${className}`}
+      className={`mx-auto w-full max-w-[1240px] px-4 md:px-12 xl:px-20 ${className}`}
     >
       {children}
     </Tag>

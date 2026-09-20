@@ -39,6 +39,9 @@ describe("home first visit guide", () => {
   it("renders an em dash after each step number", () => {
     const source = readFileSync(new URL("./HomeFirstVisit.tsx", import.meta.url), "utf8");
     assert.match(source, /\{step\.number\} —/);
+    assert.match(source, /text-\[12px\].*text-champagne/);
+    assert.match(source, /text-\[13px\] font-semibold uppercase/);
+    assert.match(source, /min-h-\[52px\]/);
   });
 
   it("keeps the arrival step one-on-one and at the client’s home", () => {

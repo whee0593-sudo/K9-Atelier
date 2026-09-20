@@ -346,7 +346,7 @@ export function BookingFlow({
   }
 
   return (
-    <div className="mt-8 space-y-8">
+    <div className="mt-8 w-full min-w-0 space-y-8">
       {currentStep <= 6 && <BookingProgress currentStep={Math.min(currentStep, 6)} />}
 
       {currentStep === 1 && (
@@ -515,7 +515,7 @@ export function BookingFlow({
 
       {currentStep <= 6 && (
         <div className="border-t border-gray-line/70 pt-6 text-center">
-          <p className="font-body text-xs text-taupe">
+          <p className="font-body text-[13px] text-taupe">
             Additional care or travel fees may apply where necessary.
           </p>
           <button
@@ -526,7 +526,7 @@ export function BookingFlow({
           >
             View Service Policies
           </button>
-          <p className="font-body mt-4 text-xs text-taupe">
+          <p className="font-body mt-4 text-[13px] text-taupe">
             Need help?{" "}
             <Link href="/contact" className="text-ink underline">
               Contact the Atelier

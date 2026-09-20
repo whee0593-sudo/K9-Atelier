@@ -169,7 +169,7 @@ export function BookingConfirmStep({
       <button type="button" onClick={onBack} className={bookingBackLinkClass}>
         ← Back
       </button>
-      <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+      <p className="font-body mt-8 text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
         Confirm
       </p>
       <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
@@ -182,7 +182,7 @@ export function BookingConfirmStep({
 
       <div className={`${bookingNoticeClass} mt-8 space-y-6`}>
         <div>
-          <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
             Dog
           </p>
           <p className="font-display mt-2 text-2xl text-ink">{pet.name}</p>
@@ -192,7 +192,7 @@ export function BookingConfirmStep({
         </div>
 
         <div className="border-t border-gray-line/70 pt-6">
-          <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
             Date &amp; Time
           </p>
           <p className="font-body mt-3 text-sm text-ink">
@@ -204,7 +204,7 @@ export function BookingConfirmStep({
         </div>
 
         <div className="border-t border-gray-line/70 pt-6">
-          <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
             Care
           </p>
           <p className="font-body mt-3 text-sm text-ink">{displayServiceName}</p>
@@ -224,7 +224,7 @@ export function BookingConfirmStep({
         </div>
 
         <div className="border-t border-gray-line/70 pt-6">
-          <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
             Owner
           </p>
           <p className="font-body mt-3 text-sm text-ink">
@@ -235,7 +235,7 @@ export function BookingConfirmStep({
         </div>
 
         <div className="border-t border-gray-line/70 pt-6">
-          <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
             Payment method on file
           </p>
           <p className="font-body mt-3 text-sm text-ink">
@@ -283,7 +283,7 @@ export function BookingConfirmStep({
       </div>
 
       <div className={`${bookingNoticeClass} mt-6 space-y-4`}>
-        <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+        <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
           Referral Code
         </p>
         <label className={bookingLabelClass} htmlFor="referral-code">

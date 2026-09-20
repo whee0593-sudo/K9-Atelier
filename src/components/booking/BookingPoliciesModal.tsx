@@ -62,7 +62,7 @@ function PolicyRow({
 }) {
   return (
     <div className="flex flex-col gap-1 border-t border-champagne/15 py-3 first:border-t-0 first:pt-0 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
-      <p className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-ink">
+      <p className="font-body text-[12px] font-medium uppercase tracking-[0.14em] text-ink">
         {label}
       </p>
       <p className="font-body text-sm text-taupe sm:text-right">{value}</p>
@@ -79,7 +79,7 @@ function PolicyPriceRow({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-4 border-t border-champagne/15 py-3 first:border-t-0 first:pt-0">
-      <p className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-ink">
+      <p className="font-body text-[12px] font-medium uppercase tracking-[0.14em] text-ink">
         {label}
       </p>
       <p className="font-body shrink-0 text-sm font-medium text-ink">{value}</p>
@@ -119,10 +119,10 @@ function AccordionPanel({
           onClick={onToggle}
           className="flex min-h-[44px] w-full items-center gap-4 px-0 py-4 text-left outline-none transition-colors focus-visible:ring-1 focus-visible:ring-champagne/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ivory"
         >
-          <span className="font-body shrink-0 text-[10px] font-medium tracking-[0.16em] text-champagne">
+          <span className="font-body shrink-0 text-[12px] font-medium tracking-[0.16em] text-champagne">
             {section.number}
           </span>
-          <span className="min-w-0 flex-1 font-body text-[11px] font-medium uppercase tracking-[0.14em] text-ink">
+          <span className="min-w-0 flex-1 font-body text-[12px] font-medium uppercase tracking-[0.14em] text-ink">
             {title}
           </span>
           <span
@@ -221,7 +221,7 @@ export function BookingPoliciesModal({
         className="max-h-[85vh] w-full max-w-[760px] overflow-y-auto rounded-sm border border-gray-line bg-ivory p-5 shadow-sm sm:p-10 lg:p-12"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="font-body text-center text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+        <p className="font-body text-center text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
           Service Policies
         </p>
         <h2

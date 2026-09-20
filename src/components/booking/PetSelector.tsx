@@ -112,7 +112,7 @@ export function PetSelector({
           return (
             <li key={pet.id}>
               <div className={bookingNoticeClass}>
-                <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+                <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
                   {pet.name}&apos;s Profile Needs Attention
                 </p>
                 <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
@@ -141,7 +141,7 @@ export function PetSelector({
                 selected ? bookingCardSelectedClass : "hover:border-champagne/60"
               }`}
             >
-              <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+              <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
                 {pet.name}
               </p>
               <p className="font-display mt-2 text-2xl text-ink">{pet.breed}</p>
@@ -153,7 +153,7 @@ export function PetSelector({
                     : `${pet.weightLbs} lbs`;
                 })()}
               </p>
-              <p className="font-body mt-4 text-[10px] font-medium uppercase tracking-[0.14em] text-champagne">
+              <p className="font-body mt-4 text-[12px] font-medium uppercase tracking-[0.14em] text-champagne">
                 Profile Complete
               </p>
               <span className={`${bookingPrimaryBtnClass} mt-6`}>
@@ -166,7 +166,7 @@ export function PetSelector({
 
       {showAddForm ? (
         <li className={`${bookingNoticeClass} space-y-4`}>
-          <p className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
             New Dog Profile
           </p>
           <PetProfileFieldsForm

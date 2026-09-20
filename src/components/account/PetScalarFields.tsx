@@ -8,7 +8,7 @@ import {
   RABIES_STATUS_OPTIONS,
   type PetRabiesStatus,
 } from "@/lib/vaccinations/booking";
-import { bookingFieldClass } from "@/components/booking/booking-ui";
+import { bookingFieldClass, bookingLabelClass } from "@/components/booking/booking-ui";
 
 type Props = {
   fields: AccountField[];
@@ -29,13 +29,13 @@ function fieldInputClass(variant: "account" | "booking") {
 
 function fieldLabelClass(variant: "account" | "booking") {
   return variant === "booking"
-    ? "font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe"
+    ? bookingLabelClass
     : "block text-sm font-medium text-text";
 }
 
 function fieldNoteClass(variant: "account" | "booking") {
   return variant === "booking"
-    ? "font-body mt-1.5 text-xs leading-relaxed text-taupe"
+    ? "font-body mt-1.5 text-[13px] leading-relaxed text-taupe"
     : "mt-1.5 text-xs leading-relaxed text-text-muted";
 }
 
@@ -170,7 +170,7 @@ export function PetScalarFields({
               <h3
                 className={
                   variant === "booking"
-                    ? "font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender"
+                    ? "font-body text-[12px] font-medium uppercase tracking-[0.14em] text-deep-lavender"
                     : "text-base font-medium text-gold-dark"
                 }
               >
@@ -196,7 +196,7 @@ export function PetScalarFields({
                   const checked = selectedRabiesStatus === option.value;
                   const optionClass =
                     variant === "booking"
-                      ? `flex cursor-pointer items-start gap-3 rounded-sm border px-4 py-3 text-sm transition ${
+                      ? `flex min-h-[52px] w-full cursor-pointer items-start gap-3 rounded-sm border px-4 py-3 text-[13px] leading-relaxed transition ${
                           checked
                             ? "border-deep-lavender bg-dusty-lavender/25 ring-1 ring-champagne/40"
                             : "border-gray-line/80 bg-ivory hover:border-champagne/60"
@@ -242,30 +242,30 @@ export function PetScalarFields({
               <div
                 className={
                   variant === "booking"
-                    ? "mt-2 rounded-sm border border-dashed border-champagne/50 bg-dusty-lavender/15 px-4 py-5"
+                    ? "mt-2 w-full min-w-0 rounded-sm border border-dashed border-champagne/50 bg-dusty-lavender/15 px-4 py-5"
                     : "mt-1.5 rounded-xl border border-dashed border-lavender/60 bg-lavender-light/20 px-4 py-6"
                 }
               >
                 <p
                   className={
                     variant === "booking"
-                      ? "font-body text-sm text-ink"
+                      ? "font-body text-[13px] text-ink"
                       : "text-sm text-text"
                   }
                 >
                   {uploaded ? "On file" : "Not uploaded"}
                 </p>
-                <p className={`${noteClass} mt-1`}>
+                <p className={`${noteClass} mt-1 break-words`}>
                   {field.note ??
                     "Optional · You may upload your dog’s current rabies certificate or vaccination record for your profile."}
                 </p>
                 {!petPersisted ? (
-                  <p className={`${noteClass} mt-3`}>
+                  <p className={`${noteClass} mt-3 break-words`}>
                     Save this pet profile to upload a record, if you would like
                     one on file.
                   </p>
                 ) : null}
-                <div className="mt-4 flex flex-wrap items-center gap-2">
+                <div className="mt-4 flex w-full min-w-0 flex-col gap-3">
                   {canView ? (
                     <button
                       type="button"
@@ -273,7 +273,7 @@ export function PetScalarFields({
                       disabled={viewingRecord}
                       className={
                         variant === "booking"
-                          ? "inline-flex min-h-[36px] items-center justify-center rounded-sm border border-deep-lavender bg-dusty-lavender/30 px-3 py-2 text-[10px] font-medium uppercase tracking-[0.14em] text-ink disabled:opacity-60"
+                          ? "inline-flex min-h-[48px] w-full items-center justify-center rounded-sm border border-deep-lavender bg-dusty-lavender/30 px-4 py-2 text-[12px] font-medium uppercase tracking-[0.14em] text-ink disabled:opacity-60"
                           : "inline-flex items-center justify-center rounded-lg border border-gold bg-lavender-light/60 px-3 py-2 text-xs font-medium text-gold-dark disabled:opacity-60"
                       }
                     >
@@ -291,7 +291,11 @@ export function PetScalarFields({
                       const file = event.target.files?.[0] ?? null;
                       void handleVaccinationFileChange(file);
                     }}
-                    className="max-w-full text-xs text-text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-gold file:px-3 file:py-2 file:text-xs file:font-medium file:text-white disabled:opacity-60"
+                    className={
+                      variant === "booking"
+                        ? "block w-full min-w-0 max-w-full text-base text-taupe file:mr-3 file:inline-flex file:min-h-[48px] file:rounded-sm file:border-0 file:bg-deep-lavender file:px-4 file:text-[12px] file:font-medium file:uppercase file:tracking-[0.14em] file:text-ivory disabled:opacity-60"
+                        : "max-w-full text-xs text-text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-gold file:px-3 file:py-2 file:text-xs file:font-medium file:text-white disabled:opacity-60"
+                    }
                   />
                 </div>
                 {vaccinationUploading && (

@@ -66,13 +66,13 @@ function CareServiceCard({
     <article
       className={`${bookingCardClass} ${selected ? bookingCardSelectedClass : ""}`}
     >
-      <h4 className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+      <h4 className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
         {displayName}
       </h4>
       <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
         {description}
       </p>
-      <p className="font-body mt-6 text-[10px] font-medium uppercase tracking-[0.14em] text-taupe">
+      <p className="font-body mt-6 text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
         For {pet.name}
       </p>
       {estimate && (
@@ -122,7 +122,7 @@ function CareColorOptionCard({
     <article
       className={`${bookingCardClass} ${selected ? bookingCardSelectedClass : ""}`}
     >
-      <h4 className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+      <h4 className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
         {option.name}
       </h4>
       {option.description && (
@@ -130,7 +130,7 @@ function CareColorOptionCard({
           {option.description}
         </p>
       )}
-      <p className="font-body mt-6 text-[10px] font-medium uppercase tracking-[0.14em] text-taupe">
+      <p className="font-body mt-6 text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
         For {pet.name}
       </p>
       <p className="font-display mt-2 text-2xl text-ink">
@@ -226,7 +226,7 @@ export function BookingExperienceStep({
         ← Back
       </button>
 
-      <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+      <p className="font-body mt-8 text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
         Care
       </p>
       <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
@@ -273,7 +273,7 @@ export function BookingExperienceStep({
                 >
                   {expanded ? "−" : "+"}
                 </span>
-                <h3 className="font-body pr-10 text-left text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+                <h3 className="font-body pr-10 text-left text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
                   {categoryName}
                 </h3>
                 {category.note && expanded && (
@@ -325,7 +325,7 @@ export function BookingExperienceStep({
                             >
                               {expandedSpa ? "−" : "+"}
                             </span>
-                            <h4 className="font-body pr-10 text-left text-[10px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+                            <h4 className="font-body pr-10 text-left text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
                               {BOOKING_SPA_GROUP_NAME}
                             </h4>
                             {spaIntro?.note && expandedSpa && (

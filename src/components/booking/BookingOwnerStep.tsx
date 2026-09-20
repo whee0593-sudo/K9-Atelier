@@ -276,7 +276,7 @@ export function BookingOwnerStep({
       <button type="button" onClick={onBack} className={bookingBackLinkClass}>
         ← Back
       </button>
-      <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+      <p className="font-body mt-8 text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
         Your Details
       </p>
       <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
@@ -349,7 +349,7 @@ export function BookingOwnerStep({
 
       {(!showSignIn || loggedIn) && (
         <form onSubmit={(event) => void handleContinue(event)} className="mt-8 space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2">
             <label className="block">
               <span className={bookingLabelClass}>First Name *</span>
               <input
@@ -409,7 +409,7 @@ export function BookingOwnerStep({
                 className={bookingFieldClass}
                 required
               />
-              <span className="font-body mt-2 block text-xs text-taupe">
+              <span className="font-body mt-2 block text-[13px] leading-relaxed text-taupe">
                 At least {MIN_CUSTOMER_PASSWORD_LENGTH} characters. Use this
                 password to sign in and view this appointment later.
               </span>
@@ -424,7 +424,7 @@ export function BookingOwnerStep({
               required
               className="mt-0.5 size-4 shrink-0 accent-deep-lavender"
             />
-            <span className="font-body text-xs leading-relaxed text-taupe">
+            <span className="font-body min-w-0 text-[13px] leading-relaxed text-taupe">
               {smsConsentCopy} See our{" "}
               <Link href="/privacy" className="underline decoration-champagne underline-offset-2">
                 Privacy Policy
@@ -444,7 +444,7 @@ export function BookingOwnerStep({
               required
               className="mt-0.5 size-4 shrink-0 accent-deep-lavender"
             />
-            <span className="font-body text-xs leading-relaxed text-taupe">
+            <span className="font-body min-w-0 text-[13px] leading-relaxed text-taupe">
               {photoMarketingConsentCopy}
             </span>
           </label>
@@ -456,7 +456,7 @@ export function BookingOwnerStep({
               required
               className="mt-0.5 size-4 shrink-0 accent-deep-lavender"
             />
-            <span className="font-body text-xs leading-relaxed text-taupe">
+            <span className="font-body min-w-0 text-[13px] leading-relaxed text-taupe">
               I have read and agree to the{" "}
               <PolicyTermButton onOpen={() => onOpenPolicy("cancellation")}>
                 cancellation

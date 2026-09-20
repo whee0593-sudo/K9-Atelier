@@ -32,6 +32,29 @@ describe("home page content", () => {
     assert.equal(source.includes("/#first-visit"), false);
   });
 
+  it("puts brand copy and CTAs above the mobile hero image", () => {
+    const source = readFileSync(new URL("./HomeHero.tsx", import.meta.url), "utf8");
+
+    const eyebrow = source.indexOf("business.brand.lockup");
+    const tagline = source.indexOf("business.brand.tagline");
+    const lead = source.indexOf("business.brand.lead");
+    const bookCta = source.indexOf("Book an Appointment");
+    const askCta = source.indexOf("Ask a Question");
+    const photo = source.indexOf("<EditorialPhoto");
+    const mobileMeta = source.indexOf("<HeroServiceMeta className=\"md:hidden\"");
+    const desktopMeta = source.indexOf("hidden md:block");
+
+    assert.ok(eyebrow > 0 && eyebrow < tagline);
+    assert.ok(tagline < lead);
+    assert.ok(lead < bookCta);
+    assert.ok(bookCta < askCta);
+    assert.ok(askCta < photo);
+    assert.ok(photo < mobileMeta);
+    assert.ok(desktopMeta > 0);
+    assert.match(source, /imageClassName="max-h-\[46vh\] md:max-h-\[80vh\]"/);
+    assert.match(source, /md:grid-cols-2/);
+  });
+
   it("keeps only the hero and first-visit sections", () => {
     const source = readFileSync(
       new URL("./HomePageContent.tsx", import.meta.url),
