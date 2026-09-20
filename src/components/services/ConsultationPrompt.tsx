@@ -13,8 +13,8 @@ export function ConsultationPrompt() {
             A More Personal Recommendation
           </h2>
           <p className="font-body mx-auto mt-5 max-w-[30rem] text-base leading-[1.7] text-taupe md:text-[17px] md:leading-[1.75]">
-            Tell me a little about your dog and I’ll help you choose the care
-            that suits them best.
+            Tell me what you’d like to achieve, and I’ll recommend the right
+            care for your dog.
           </p>
           <Link
             href={CONSULTATION_PATH}
