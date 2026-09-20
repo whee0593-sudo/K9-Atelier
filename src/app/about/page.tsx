@@ -50,7 +50,7 @@ export default function AboutPage() {
             </h1>
             <div className="font-body mx-auto mt-8 max-w-[44rem] space-y-6 text-lg leading-[1.8] text-taupe md:mt-10 md:text-[1.25rem] md:leading-[1.85]">
               <p>
-                K9 Atelier is the work of Penny, an award-winning groomer whose
+                K9 Atelier is the work of Penny, an award-winning show groomer whose
                 approach has been shaped by professional grooming, show styling,
                 and education since 2010.
               </p>
