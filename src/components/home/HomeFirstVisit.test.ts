@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { homeFirstVisitSteps } from "@/components/home/home-first-visit";
 
@@ -11,19 +12,40 @@ describe("home first visit guide", () => {
     );
   });
 
-  it("uses rabies confirmation wording", () => {
-    const details = homeFirstVisitSteps[0];
-    assert.equal(details.title, "Tell Us About Your Dog");
-    assert.match(details.body, /rabies vaccination status/);
-    assert.match(details.body, /rabies certificate or vaccination record/);
-    assert.equal(details.body.includes("If the record needs review"), false);
-    assert.equal(details.body.includes("COMPLETE YOUR BOOKING"), false);
+  it("uses the first-visit welcome wording", () => {
+    assert.deepEqual(
+      homeFirstVisitSteps.map((step) => step.title),
+      [
+        "Who We’re Welcoming",
+        "Choose Time & Service",
+        "Add a Few Details",
+        "The Spa Arrives",
+      ],
+    );
+    assert.equal(
+      homeFirstVisitSteps[0].body,
+      "Tell us a little about your furry family.",
+    );
+    assert.equal(
+      homeFirstVisitSteps[1].body,
+      "Choose your preferred date, arrival window, and service.",
+    );
+    assert.equal(
+      homeFirstVisitSteps[2].body,
+      "Complete a few details to help us prepare for your visit.",
+    );
   });
 
-  it("keeps the arrival step private and at-home", () => {
+  it("renders an em dash after each step number", () => {
+    const source = readFileSync(new URL("./HomeFirstVisit.tsx", import.meta.url), "utf8");
+    assert.match(source, /\{step\.number\} —/);
+  });
+
+  it("keeps the arrival step one-on-one and at the client’s home", () => {
     const arrival = homeFirstVisitSteps[3];
     assert.equal(arrival.title, "The Spa Arrives");
-    assert.match(arrival.body, /private, one-on-one/);
-    assert.match(arrival.body, /home/);
+    assert.match(arrival.body, /Once confirmed/);
+    assert.match(arrival.body, /come to you/);
+    assert.match(arrival.body, /one-on-one grooming experience/);
   });
 });
