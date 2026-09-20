@@ -43,6 +43,7 @@ describe("gallery wall markup", () => {
     assert.match(html, /k9-gallery-caption-detail/);
     assert.equal(html.includes("SELECTED WORK"), false);
     assert.match(html, /Asian Fusion/);
+    assert.match(html, /Princess look/);
     assert.match(html, /Teddy bear/);
     for (const caption of Object.values(SELECTED_WORK_CAPTIONS)) {
       const pair = `k9-gallery-caption-kicker">${caption.kicker}</span><span class="k9-gallery-caption-detail">${caption.detail}</span>`;

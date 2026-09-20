@@ -242,7 +242,7 @@ describe("gallery captions", () => {
     ]);
     assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[6]), [
       "Yorkshire Terrier",
-      "Asian Fusion",
+      "Princess look",
     ]);
     assert.equal(SELECTED_WORK_CAPTIONS[2]?.detail, "Puppy cut");
     assert.equal(SELECTED_WORK_CAPTIONS[12]?.detail, "Puppy cut");
