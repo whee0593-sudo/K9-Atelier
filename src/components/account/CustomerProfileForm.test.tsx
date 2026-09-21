@@ -46,7 +46,8 @@ describe("customer account helper copy", () => {
       "utf8",
     );
     assert.equal(fieldsForm.includes("{field.note}"), false);
-    assert.match(petFields, /showFieldNotes && field.note/);
+    assert.equal(petFields.includes("{field.note}"), false);
+    assert.equal(petFields.includes("showFieldNotes"), false);
     assert.equal(sectionPage.includes("section.description"), false);
     assert.equal(sectionPage.includes("You can save multiple addresses."), false);
   });

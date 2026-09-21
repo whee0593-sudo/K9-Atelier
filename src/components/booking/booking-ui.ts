@@ -7,9 +7,6 @@ export const bookingEyebrowClass =
 export const bookingAccentLabelClass =
   "font-body text-[12px] font-medium uppercase tracking-[0.14em] text-deep-lavender";
 
-export const bookingHelperClass =
-  "font-body text-[13px] leading-relaxed text-taupe";
-
 export const bookingFieldClass =
   "mt-2 w-full min-h-[52px] min-w-0 rounded-sm border border-gray-line bg-ivory px-4 text-base text-ink outline-none transition focus:border-deep-lavender focus:ring-1 focus:ring-champagne/60";
 

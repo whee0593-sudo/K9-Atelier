@@ -25,7 +25,6 @@ type Props = {
   onChange: (updates: Partial<PetProfile>) => void;
   inputClassName?: string;
   labelClassName?: string;
-  noteClassName?: string;
   showCalculatedAge?: boolean;
 };
 
@@ -38,7 +37,6 @@ export function PetBirthdayFields({
   onChange,
   inputClassName = defaultInputClass(),
   labelClassName = "block text-sm font-medium text-text",
-  noteClassName = "mt-1.5 text-xs text-text-muted",
   showCalculatedAge = true,
 }: Props) {
   const dobInputId = useId();
@@ -137,10 +135,6 @@ export function PetBirthdayFields({
             }}
             className={inputClassName}
           />
-          <p className={noteClassName}>
-            Your dog&apos;s date of birth helps us personalize age-appropriate
-            care and recognize important milestones.
-          </p>
           {dobError && (
             <p className="mt-1.5 text-xs text-red-700" role="alert">
               {dobError}
@@ -177,11 +171,7 @@ export function PetBirthdayFields({
             value={pet.approximateAgeYears ?? ""}
             onChange={(event) => handleApproximateAgeChange(event.target.value)}
             className={inputClassName}
-            aria-describedby={`${approximateInputId}-note`}
           />
-          <p id={`${approximateInputId}-note`} className={noteClassName}>
-            An estimate is perfectly fine — enter your best guess in years.
-          </p>
           {approxError && (
             <p className="mt-1.5 text-xs text-red-700" role="alert">
               {approxError}

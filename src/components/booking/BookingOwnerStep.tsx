@@ -409,10 +409,6 @@ export function BookingOwnerStep({
                 className={bookingFieldClass}
                 required
               />
-              <span className="font-body mt-2 block text-[13px] leading-relaxed text-taupe">
-                At least {MIN_CUSTOMER_PASSWORD_LENGTH} characters. Use this
-                password to sign in and view this appointment later.
-              </span>
             </label>
           ) : null}
 
