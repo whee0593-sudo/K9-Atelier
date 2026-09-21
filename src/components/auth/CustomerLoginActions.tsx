@@ -396,12 +396,6 @@ export function CustomerLoginActions({
             onChange={(event) => setPassword(event.target.value)}
             className={bookingFieldClass}
           />
-          {mode === "signup" ? (
-            <p className="font-body mt-2 text-xs text-taupe">
-              At least {MIN_PASSWORD_LENGTH} characters. We will email a
-              one-time confirmation link.
-            </p>
-          ) : null}
         </div>
       ) : null}
 

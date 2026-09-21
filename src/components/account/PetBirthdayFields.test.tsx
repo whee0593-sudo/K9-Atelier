@@ -35,4 +35,14 @@ describe("PetBirthdayFields", () => {
     assert.equal(/<label[^>]*>I don/.test(html), false);
     assert.match(html, /aria-labelledby="/);
   });
+
+  it("does not add extra helper copy under the birthday fields", () => {
+    const html = renderToStaticMarkup(
+      <PetBirthdayFields pet={createDraftBookingPet()} onChange={() => {}} />,
+    );
+
+    assert.equal(html.includes("age-appropriate"), false);
+    assert.equal(html.includes("important milestones"), false);
+    assert.equal(html.includes("An estimate is perfectly fine"), false);
+  });
 });

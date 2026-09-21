@@ -25,15 +25,43 @@ describe("rabies profile UI", () => {
       <PetProfileFieldsForm pet={pet()} onPetChange={() => undefined} />,
     );
     assert.match(html, /Rabies Vaccination/);
-    assert.match(html, /Florida law/);
+    assert.equal(html.includes("Florida law"), false);
     assert.match(html, /Current rabies vaccination/);
     assert.match(html, /Veterinarian-issued medical exemption/);
     assert.match(html, /Rabies Record/);
-    assert.match(html, /Optional/);
-    assert.match(html, /rabies certificate or vaccination record/);
+    assert.match(html, /PDF, JPG, PNG, WEBP, or HEIC/);
     assert.match(html, /Not uploaded/);
     assert.equal(html.includes("Add later"), false);
     assert.equal(html.includes("Needed before booking"), false);
+    assert.equal(
+      html.includes("Used for service pricing and eligibility"),
+      false,
+    );
+    assert.equal(html.includes("Helps us prepare for a calm, safe visit"), false);
+    assert.equal(
+      html.includes("Include allergies, anxiety, joint issues"),
+      false,
+    );
+    assert.match(html, /Nervous with dryers; prefers gentle handling/);
+    assert.match(html, /Senior dog, arthritis; no hot dryer on legs/);
+    assert.match(html, /Teddy bear face, 1 inch body length/);
+  });
+
+  it("does not show per-field helper notes in the booking form either", () => {
+    const html = renderToStaticMarkup(
+      <PetProfileFieldsForm
+        pet={pet()}
+        onPetChange={() => undefined}
+        variant="booking"
+      />,
+    );
+    assert.equal(
+      html.includes("Used for service pricing and eligibility"),
+      false,
+    );
+    assert.equal(html.includes("age-appropriate"), false);
+    assert.equal(html.includes("Helps us prepare for a calm, safe visit"), false);
+    assert.match(html, /Nervous with dryers; prefers gentle handling/);
   });
 
   it("shows confirmed current status and a missing record", () => {

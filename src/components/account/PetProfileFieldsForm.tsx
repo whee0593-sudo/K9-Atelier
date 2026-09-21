@@ -5,7 +5,6 @@ import { PetBirthdayFields } from "@/components/account/PetBirthdayFields";
 import { PetScalarFields } from "@/components/account/PetScalarFields";
 import {
   bookingFieldClass,
-  bookingHelperClass,
   bookingLabelClass,
 } from "@/components/booking/booking-ui";
 import { filterFieldsByAudience, getAccountSection } from "@/lib/account-fields";
@@ -57,9 +56,6 @@ export function PetProfileFieldsForm({
         }
         labelClassName={
           variant === "booking" ? bookingLabelClass : undefined
-        }
-        noteClassName={
-          variant === "booking" ? `mt-1.5 ${bookingHelperClass}` : undefined
         }
       />
       <PetScalarFields
