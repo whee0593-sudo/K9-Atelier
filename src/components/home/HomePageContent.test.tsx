@@ -23,7 +23,7 @@ describe("home page content", () => {
 
     assert.equal(
       business.brand.lead,
-      "Multiple award-winning show groomer specializing in tailored styling, show-level coat care, extra-gentle senior care, and hand stripping.",
+      "Multiple award-winning show groomer specializing in tailored styling, show-level coat care, extra-gentle senior care and hand stripping.",
     );
     assert.equal(
       business.brand.lead.includes("Private mobile pet spa in Palm Beach County"),
