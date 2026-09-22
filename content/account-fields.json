@@ -204,7 +204,7 @@
           "label": "Grooming Preferences",
           "type": "textarea",
           "required": false,
-          "placeholder": "Teddy bear face, 1 inch body length",
+          "placeholder": "Keep eyelashes, clean around eyes etc.",
           "note": "Style requests, length, or reference from last visit."
         },
         {
