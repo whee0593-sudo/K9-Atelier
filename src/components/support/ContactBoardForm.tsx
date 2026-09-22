@@ -224,9 +224,6 @@ export function ContactBoardForm({
           Email or phone number
           <span className="text-champagne"> *</span>
         </label>
-        <p className="font-body mt-1 text-xs text-taupe">
-          Leave one — whichever is easiest for us to reach you.
-        </p>
         <input
           id="board-contact"
           type="text"
@@ -305,13 +302,11 @@ export function ContactBoardForm({
 
       <div>
         <p className={bookingLabelClass}>Upload Photos</p>
-        <p className="font-body mt-1 text-xs text-taupe">
-          {isConsultation
-            ? "Please upload clear front-facing, side-profile, and close-up coat photos."
-            : "Optional photos to help us understand your question."}{" "}
-          Up to {MAX_SUPPORT_PHOTOS} photos · JPG, JPEG, PNG, or WEBP · 4 MB each
-        </p>
         <div className="mt-3 rounded-sm border border-dashed border-gray-line bg-ivory px-4 py-5">
+          <p className="font-body mb-4 text-center text-xs text-taupe">
+            Up to {MAX_SUPPORT_PHOTOS} photos · JPG, JPEG, PNG, or WEBP · 4 MB
+            each
+          </p>
           {photos.length > 0 ? (
             <ul className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {photos.map((photo) => (

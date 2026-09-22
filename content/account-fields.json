@@ -29,16 +29,14 @@
           "label": "Email",
           "type": "email",
           "required": true,
-          "placeholder": "you@example.com",
-          "note": "Used for booking confirmations and reminders."
+          "placeholder": "you@example.com"
         },
         {
           "id": "phone",
           "label": "Mobile Phone",
           "type": "tel",
           "required": true,
-          "placeholder": "(555) 123-4567",
-          "note": "We may call or text about your appointment day-of."
+          "placeholder": "(555) 123-4567"
         },
         {
           "id": "preferredContact",
@@ -51,8 +49,7 @@
           "id": "emergencyContactHeading",
           "label": "Emergency Contact",
           "type": "section-heading",
-          "required": false,
-          "note": "Optional — someone we can contact if we cannot reach you."
+          "required": false
         },
         {
           "id": "emergencyContactName",
@@ -88,8 +85,7 @@
           "label": "Address Label",
           "type": "text",
           "required": false,
-          "placeholder": "Home",
-          "note": "e.g. Home, Office, Parent's house"
+          "placeholder": "Home, Office, Parent's house"
         },
         {
           "id": "street",
@@ -131,8 +127,7 @@
           "label": "Parking / Access Notes",
           "type": "textarea",
           "required": false,
-          "placeholder": "Driveway on left, gate code 1234",
-          "note": "Helps us find you and set up safely."
+          "placeholder": "Driveway on left, gate code 1234"
         },
         {
           "id": "isDefault",
@@ -168,8 +163,7 @@
           "label": "Weight (lbs)",
           "type": "number",
           "required": true,
-          "placeholder": "12",
-          "note": "Used for service pricing and eligibility (over 45 lbs has limited services)."
+          "placeholder": "12"
         },
         {
           "id": "sex",
@@ -188,24 +182,21 @@
           "label": "Temperament & Handling Notes",
           "type": "textarea",
           "required": false,
-          "placeholder": "Nervous with dryers; prefers gentle handling",
-          "note": "Helps us prepare for a calm, safe visit."
+          "placeholder": "Nervous with dryers; prefers gentle handling"
         },
         {
           "id": "medicalNotes",
           "label": "Health & Comfort Notes",
           "type": "textarea",
           "required": false,
-          "placeholder": "Senior dog, arthritis; no hot dryer on legs",
-          "note": "Include allergies, anxiety, joint issues, or vet restrictions."
+          "placeholder": "Senior dog, arthritis; no hot dryer on legs"
         },
         {
           "id": "groomingPreferences",
           "label": "Grooming Preferences",
           "type": "textarea",
           "required": false,
-          "placeholder": "Keep eyelashes, clean around eyes etc.",
-          "note": "Style requests, length, or reference from last visit."
+          "placeholder": "Keep eyelashes, clean around eyes etc."
         },
         {
           "id": "adminServiceNotes",
@@ -213,15 +204,13 @@
           "type": "textarea",
           "required": false,
           "adminOnly": true,
-          "placeholder": "2026-07-15: Signature Bath, oatmeal shampoo, nail grind…",
-          "note": "Internal use only — record products and services used each visit. Not visible to customers."
+          "placeholder": "2026-07-15: Signature Bath, oatmeal shampoo, nail grind…"
         },
         {
           "id": "vaccineHeading",
           "label": "Rabies Vaccination",
           "type": "section-heading",
-          "required": false,
-          "note": "Dogs 4 months of age or older must have a current rabies vaccination as required by Florida law. A veterinarian-issued medical exemption is accepted where applicable."
+          "required": false
         },
         {
           "id": "rabiesStatus",
@@ -234,15 +223,13 @@
           "label": "Rabies Record",
           "type": "file",
           "required": false,
-          "accept": ".pdf,.jpg,.jpeg,.png,.webp,.heic",
-          "note": "Optional · You may upload your dog’s current rabies certificate or vaccination record for your profile. Accepted formats: PDF, JPG, PNG, WEBP, HEIC. Max 4 MB."
+          "accept": ".pdf,.jpg,.jpeg,.png,.webp,.heic"
         },
         {
           "id": "vaccineExpiration",
           "label": "Record Expiration Date",
           "type": "date",
-          "required": false,
-          "note": "Optional — expiration date on the certificate, if shown."
+          "required": false
         }
       ]
     },
@@ -256,8 +243,7 @@
           "id": "savedCards",
           "label": "Saved Cards",
           "type": "payment-list",
-          "required": true,
-          "note": "Managed securely through Stripe. A valid card is required before you reserve an appointment, and you will select a card for each visit."
+          "required": true
         }
       ]
     },
