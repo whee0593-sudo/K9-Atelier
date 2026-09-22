@@ -8,6 +8,21 @@
 
 文件位置：`public/logo.png`
 
+## 浏览器标签小图标（favicon）
+
+浏览器标签页左边、Google 搜索结果前面的小图。现在用的是圆形狗 logo，不是网页里的大图本身。
+
+要换图标：先换成正方形新图（建议 1024×1024）覆盖 `public/logo.png`，再运行：
+
+```
+npm install --no-save sharp
+npx --yes tsx scripts/generate-favicon.mts
+```
+
+会更新这些文件：`public/favicon.ico`、`public/favicon-32x32.png`、`src/app/icon.png`、`src/app/apple-icon.png`、`public/android-chrome-192x192.png`、`public/android-chrome-512x512.png`。
+
+换完后浏览器常会继续显示旧图标（缓存很久）。硬刷新，或关掉标签再重新打开网站，才能看到新图。
+
 ## 配色方案（典雅温柔）
 
 从 Logo 提取，用于整站统一风格：
