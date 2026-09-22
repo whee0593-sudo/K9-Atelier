@@ -10,6 +10,7 @@
 1. **确认短信** — 预约确认时（若还在等审核，先发一条“已收到”）
 2. **提前三天确认** — 每天纽约时间早上 10 点（周末也发，夏令时/冬令时都是 10 点），请客人回复 YES。这和员工/疫苗通过后的预约成功不是同一件事。
 3. **出发短信** — 后台预约页点 **Text: on the way**
+4. **美容完成第二天回访** — 同一条早上 10 点 Cron 再发一封邮件和一条短信（问好、征求反馈、请写 Google 好评）。只发给昨天已 checkout、还没发过回访、档案里有邮箱或手机号的预约。
 
 ---
 
@@ -37,6 +38,7 @@ A2P 通过时，Twilio 通常已经建好一个 Messaging Service。
 3. `supabase/migrations/20260823160000_customer_sms_inbox.sql` — 后台 Customer Messages 存发出去的短信和客人回复
 4. `supabase/migrations/20260823170000_studio_inbound_calls.sql` — 陌生来电号码，方便发预约/留言短信
 5. `supabase/migrations/20260823180000_staff_sms_reply_targets.sql` — 你从私人手机回短信时，用店号发给最近那位客人
+6. `supabase/migrations/20260922010000_appointment_followup.sql` — 第二天回访邮件/短信已发
 
 若提示 column already exists，说明以前跑过，可以忽略。
 
@@ -102,6 +104,8 @@ Trial 只能发到 Twilio 里验证过的手机号。正式给客人发，账户
 Vercel 用两条各每天一次的 Cron（UTC 14:00 和 15:00）调用 `/api/cron/appointment-reminders`（周末也跑）。免费套餐不允许一条 Cron 一天跑两次。代码只在纽约时间正好早上 10 点时发送，所以夏令时、冬令时都是 10 点。
 
 只给 **3 天后**、员工/疫苗侧已经预约成功（Booked）、还没发过这条短信、档案里有手机号的预约发。请客人回复 YES。改期/取消链接是 `https://K9Atelier.com/account/appointments`。
+
+同一条 Cron 也会给 **昨天已完成美容**（员工已 checkout）、还没发过回访的预约发邮件和短信。邮件主题是 Checking in after [狗名]'s groom，短信和邮件都带 Google 好评链接。取消的预约不发。
 
 客人回复 YES 只记 `customer_confirmed_at`，**不会**改员工确认状态。后台预约右上角会显示 **confirm**。请求头需要 `Authorization: Bearer <CRON_SECRET>`。
 

@@ -114,6 +114,7 @@ export type AppointmentRow = {
   en_route_sms_sent_at?: string | null;
   service_started_at?: string | null;
   service_ended_at?: string | null;
+  followup_sent_at?: string | null;
   pets?: { name: string; breed: string } | { name: string; breed: string }[] | null;
   profiles?: {
     email: string;

@@ -16,6 +16,7 @@ import {
   buildVaccinationVerifiedEmail,
 } from "../src/lib/email/html-templates.ts";
 import { getEmailBrand } from "../src/lib/email/layout.ts";
+import { buildNextDayFollowUpEmail } from "../src/lib/followup/copy.ts";
 import { buildCustomerRemoveDogConfirmationEmail } from "../src/lib/email/remove-dog-confirmation.ts";
 
 const sampleAppointment: AppointmentRecord = {
@@ -133,6 +134,13 @@ const previews = [
       customer,
       remainingAppointments: [{ ...confirmedAppointment, id: "apt-otto", petName: "Otto" }],
       fee: 0,
+    }),
+  },
+  {
+    title: "Customer — Next-day follow-up",
+    ...buildNextDayFollowUpEmail({
+      firstName: "Sarah",
+      petName: "Lychee",
     }),
   },
   {
