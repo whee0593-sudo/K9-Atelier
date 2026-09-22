@@ -146,8 +146,6 @@ export function buildChargeReceiptCardHtml(
       <div style="padding:40px 28px;">
         <div style="text-align:center;">
           ${emailLogoImg({ display: "block" })}
-          <p style="margin:16px 0 0;color:${LAVENDER};font-size:22px;letter-spacing:3px;">${escapeHtml(business.brand.name)}</p>
-          <p style="margin:12px 0 0;color:${LAVENDER};font-size:12px;letter-spacing:2px;font-family:Arial,Helvetica,sans-serif;">${escapeHtml(business.brand.lockup)}</p>
         </div>
         <div style="margin-top:40px;color:${INK};font-family:Arial,Helvetica,sans-serif;">
           <p style="margin:0 0 32px;font-size:16px;line-height:1.6;text-align:left;">${escapeHtml(thankYouLine(petName))}</p>

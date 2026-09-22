@@ -139,8 +139,6 @@ export function buildBrandedEmailHtml(content: BrandedEmailContent) {
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border:1px solid ${c.lavender};border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(77,67,72,0.08);">
         <tr><td style="padding:32px 32px 24px;text-align:center;background:linear-gradient(180deg, ${c.lavenderLight} 0%, #ffffff 100%);">
           ${emailLogoImg({ display: "inline-block" })}
-          <div style="margin-top:12px;font-size:12px;font-weight:600;color:${c.goldDark};letter-spacing:0.24em;text-transform:uppercase;">${escapeHtml(brandName)}</div>
-          <div style="margin-top:4px;font-size:12px;color:${c.textMuted};letter-spacing:0.08em;">${escapeHtml(business.brand.lockup)}</div>
         </td></tr>
         <tr><td style="padding:32px;">
           <h1 style="margin:0 0 18px;color:${c.goldDark};font-size:26px;line-height:1.3;font-weight:600;">${escapeHtml(content.headline)}</h1>
@@ -223,8 +221,6 @@ export function buildCustomerLetterEmailHtml(content: CustomerLetterEmailContent
     <div style="max-width:480px; margin:0 auto; background-color:#ffffff; border:1px solid ${STAFF_EMAIL.border};">
       <div style="background-color:${STAFF_EMAIL.cream}; padding:32px 32px 20px; text-align:center; border-bottom:1px solid ${STAFF_EMAIL.gold};">
         ${emailLogoImg()}
-        <div style="font-size:20px; letter-spacing:4px; color:${STAFF_EMAIL.ink}; font-family:Georgia,'Times New Roman',serif;">${escapeHtml(business.brand.wordmark)}</div>
-        <div style="margin-top:8px;font-size:11px;letter-spacing:0.08em;color:${STAFF_EMAIL.muted};">${escapeHtml(business.brand.lockup)}</div>
       </div>
       <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:14px; line-height:1.8; background:#ffffff;">
         <p style="margin:0 0 14px;">Dear ${escapeHtml(content.greetingName)},</p>
@@ -366,8 +362,6 @@ function customerLetterHeader(subject: string) {
     <div style="max-width:480px; margin:0 auto; background-color:#ffffff; border:1px solid ${STAFF_EMAIL.border};">
       <div style="background-color:${STAFF_EMAIL.cream}; padding:32px 32px 20px; text-align:center; border-bottom:1px solid ${STAFF_EMAIL.gold};">
         ${emailLogoImg()}
-        <div style="font-size:20px; letter-spacing:4px; color:${STAFF_EMAIL.ink}; font-family:Georgia,'Times New Roman',serif;">${escapeHtml(business.brand.wordmark)}</div>
-        <div style="margin-top:8px;font-size:11px;letter-spacing:0.08em;color:${STAFF_EMAIL.muted};">${escapeHtml(business.brand.lockup)}</div>
       </div>`;
 }
 

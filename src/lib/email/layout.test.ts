@@ -65,6 +65,11 @@ function assertCustomerEmailLogo(html: string) {
   assert.match(html, /width="240"/);
   assert.match(html, /height="123"/);
   assert.doesNotMatch(html, /width="120" height="120"/);
+  const logoAt = html.indexOf("email-logo.png");
+  assert.ok(logoAt >= 0);
+  const headerAfterLogo = html.slice(logoAt, logoAt + 400);
+  assert.doesNotMatch(headerAfterLogo, /K9 ATELIER/);
+  assert.doesNotMatch(headerAfterLogo, /Private Mobile Pet Spa/);
 }
 
 describe("customer email logo", () => {

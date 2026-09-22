@@ -133,7 +133,6 @@ function emphasizeAmount(paragraph: string, amountLabel: string | null) {
 export function buildCancelFeeFailedEmailHtml(input: CancelFeeFailedInput) {
   const content = buildCancelFeeFailedEmailContent(input);
   const lockup = business.brand.lockup;
-  const wordmark = business.brand.wordmark;
   const timeRow = content.timeLabel
     ? `<div class="k9-fail-time" style="margin:0;font-size:16px;line-height:1.5;color:${COLORS.ink};white-space:nowrap;">${escapeHtml(content.timeLabel)}</div>`
     : "";
@@ -182,8 +181,6 @@ export function buildCancelFeeFailedEmailHtml(input: CancelFeeFailedInput) {
           <tr>
             <td align="center" class="k9-fail-pad" style="padding:32px 36px 20px;background-color:${COLORS.page};">
               ${emailLogoImg({ className: "k9-fail-logo" })}
-              <div style="font-family:Georgia,'Times New Roman',Times,serif;font-size:20px;letter-spacing:0.18em;color:${COLORS.ink};">${escapeHtml(wordmark)}</div>
-              <div style="margin-top:8px;font-family:Georgia,'Times New Roman',Times,serif;font-size:12px;letter-spacing:0.04em;color:${COLORS.muted};">${escapeHtml(lockup)}</div>
             </td>
           </tr>
           <tr>
