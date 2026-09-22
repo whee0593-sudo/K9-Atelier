@@ -28,11 +28,10 @@
 
 .logo {
   display: block;
-  width: 140px;
-  height: 140px;
-  margin: 0 auto 28px;
-  border-radius: 50%;
-  object-fit: cover;
+  width: min(320px, 82vw);
+  height: auto;
+  margin: 0 auto 36px;
+  object-fit: contain;
 }
 
 .wordmark {

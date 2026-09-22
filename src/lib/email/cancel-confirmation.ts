@@ -213,7 +213,7 @@ export function buildCustomerCancelEmailHtml(input: CancelConfirmationInput) {
     a.k9-cancel-link:focus { outline: 2px solid ${COLORS.gold}; outline-offset: 2px; }
     @media only screen and (max-width: 620px) {
       .k9-cancel-pad { padding-left: 20px !important; padding-right: 20px !important; }
-      .k9-cancel-logo { width: 96px !important; height: 96px !important; }
+      .k9-cancel-logo { width: 200px !important; height: 102px !important; }
     }
   </style>
 </head>

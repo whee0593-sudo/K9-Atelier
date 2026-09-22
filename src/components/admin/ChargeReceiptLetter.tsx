@@ -53,9 +53,9 @@ export function ChargeReceiptLetter({
           <Image
             src={business.brand.logo}
             alt={business.brand.name}
-            width={72}
-            height={72}
-            className="mx-auto"
+            width={1495}
+            height={764}
+            className="mx-auto h-auto w-[180px] sm:w-[220px]"
           />
           <h1 className="font-display mt-4 text-[22px] font-normal tracking-[0.18em] text-[#756578] sm:text-2xl">
             {business.brand.name}

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Cormorant_Garamond, Jost, Playfair_Display } from "next/font/google";
+import { Cormorant_Garamond, Jost } from "next/font/google";
 import { ComingSoonNotifyForm } from "@/components/coming-soon/ComingSoonNotifyForm";
 import styles from "@/components/coming-soon/coming-soon.module.css";
 import { business } from "@/lib/business";
@@ -10,12 +10,6 @@ const cormorant = Cormorant_Garamond({
   weight: ["400", "500", "600"],
   style: ["italic"],
   variable: "--font-cormorant",
-});
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-playfair",
 });
 
 const jost = Jost({
@@ -33,9 +27,6 @@ export const metadata = {
 export default function UnderConstructionPage() {
   const copy = business.site?.underConstruction;
 
-  const wordmark = copy?.wordmark ?? "K9 ATELIER";
-  const subline =
-    copy?.subline ?? "Private Mobile Pet Spa · Palm Beach";
   const headline = copy?.headline ?? "Some things are worth the wait.";
   const lede = copy?.lede ?? [
     "A private atelier experience is being prepared — cage-free, one-on-one, and reserved exclusively for dogs up to 45 lbs.",
@@ -54,7 +45,7 @@ export default function UnderConstructionPage() {
 
   return (
     <div
-      className={`${cormorant.variable} ${playfair.variable} ${jost.variable} relative flex min-h-screen items-center justify-center overflow-x-hidden px-6 py-8`}
+      className={`${cormorant.variable} ${jost.variable} relative flex min-h-screen items-center justify-center overflow-x-hidden px-6 py-8`}
       style={{ background: "#faf6ef", color: "#2e2a24" }}
     >
       <div className={styles.ambient} aria-hidden="true" />
@@ -63,14 +54,11 @@ export default function UnderConstructionPage() {
         <Image
           src={business.brand.logo}
           alt={business.brand.name}
-          width={140}
-          height={140}
+          width={1495}
+          height={764}
           className={styles.logo}
           priority
         />
-
-        <h2 className={styles.wordmark}>{wordmark}</h2>
-        <p className={styles.subline}>{subline}</p>
 
         <div className={styles.rule} />
 

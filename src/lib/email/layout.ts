@@ -8,7 +8,10 @@ export function escapeHtml(value: string) {
     .replace(/"/g, "&quot;");
 }
 
-export const EMAIL_LOGO_SIZE = 120;
+/** Display size for the landscape wordmark in customer emails. */
+export const EMAIL_LOGO_WIDTH = 240;
+export const EMAIL_LOGO_HEIGHT = 123;
+export const EMAIL_LOGO_SIZE = EMAIL_LOGO_WIDTH;
 
 export function getEmailBrand() {
   const c = business.colors;
@@ -26,18 +29,23 @@ export function getEmailBrand() {
 }
 
 export function emailLogoImg(options?: {
+  width?: number;
+  height?: number;
   size?: number;
   className?: string;
   display?: "block" | "inline-block";
 }) {
   const { logoUrl, brandName } = getEmailBrand();
-  const size = options?.size ?? EMAIL_LOGO_SIZE;
+  const width = options?.width ?? options?.size ?? EMAIL_LOGO_WIDTH;
+  const height =
+    options?.height ??
+    Math.round((width * EMAIL_LOGO_HEIGHT) / EMAIL_LOGO_WIDTH);
   const display = options?.display ?? "block";
   const classAttr = options?.className
     ? ` class="${escapeHtml(options.className)}"`
     : "";
   const margin = display === "block" ? "margin:0 auto 12px;" : "";
-  return `<img${classAttr} src="${escapeHtml(logoUrl)}" width="${size}" height="${size}" alt="${escapeHtml(brandName)}" style="display:${display};width:${size}px;height:${size}px;${margin}border:0;"/>`;
+  return `<img${classAttr} src="${escapeHtml(logoUrl)}" width="${width}" height="${height}" alt="${escapeHtml(brandName)}" style="display:${display};width:${width}px;height:${height}px;${margin}border:0;"/>`;
 }
 
 export function emailFooterText() {

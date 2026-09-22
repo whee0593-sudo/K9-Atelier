@@ -239,7 +239,7 @@ export function buildRemoveDogEmailHtml(input: RemoveDogConfirmationInput) {
     a.k9-remove-cta:focus { outline: 2px solid ${COLORS.gold}; outline-offset: 3px; }
     @media only screen and (max-width: 620px) {
       .k9-remove-pad { padding-left: 20px !important; padding-right: 20px !important; }
-      .k9-remove-logo { width: 96px !important; height: 96px !important; }
+      .k9-remove-logo { width: 200px !important; height: 102px !important; }
       .k9-remove-date { white-space: nowrap !important; }
     }
     @media only screen and (max-width: 360px) {

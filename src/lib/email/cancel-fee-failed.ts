@@ -161,7 +161,7 @@ export function buildCancelFeeFailedEmailHtml(input: CancelFeeFailedInput) {
     a.k9-fail-link:focus { outline: 2px solid ${COLORS.gold}; outline-offset: 2px; }
     @media only screen and (max-width: 620px) {
       .k9-fail-pad { padding-left: 20px !important; padding-right: 20px !important; }
-      .k9-fail-logo { width: 96px !important; height: 96px !important; }
+      .k9-fail-logo { width: 200px !important; height: 102px !important; }
     }
     @media only screen and (max-width: 360px) {
       .k9-fail-time { white-space: normal !important; }
