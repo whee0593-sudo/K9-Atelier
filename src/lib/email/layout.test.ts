@@ -13,6 +13,7 @@ import {
   buildVaccinationVerifiedEmail,
 } from "./html-templates";
 import {
+  buildCustomerFollowUpEmailHtml,
   buildCustomerLetterEmailHtml,
   emailLogoImg,
   getEmailBrand,
@@ -142,6 +143,20 @@ describe("customer email logo", () => {
         remainingAppointments: [appointment({ id: "apt-2", petName: "Otto" })],
         fee: 0,
       }).html,
+      buildCustomerFollowUpEmailHtml({
+        subject: "Checking in after Maple's groom",
+        greetingName: "Alex",
+        introParagraphs: [
+          "I just wanted to check in and see how Maple is doing after yesterday's grooming appointment.",
+        ],
+        cta: {
+          href: "https://g.page/r/CecMHxoqcJn8EBM/review",
+          label: "Leave a Google Review",
+        },
+        closingParagraph: "Thank you again for trusting me with Maple.",
+        signoffName: "Penny",
+        signoffLines: ["K9 Atelier", "Private Mobile Pet Spa", "Palm Beach"],
+      }),
     ];
 
     for (const html of templates) {

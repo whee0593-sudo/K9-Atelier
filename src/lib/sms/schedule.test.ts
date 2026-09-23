@@ -5,6 +5,7 @@ import {
   businessDayUtcRange,
   calendarDateInBusinessTimezone,
   hourInBusinessTimezone,
+  yesterdayInBusinessTimezone,
 } from "@/lib/sms/schedule";
 
 describe("SMS schedule helpers", () => {
@@ -17,6 +18,17 @@ describe("SMS schedule helpers", () => {
     assert.equal(hourInBusinessTimezone(new Date("2026-08-23T14:00:00.000Z")), 10);
     assert.equal(hourInBusinessTimezone(new Date("2026-01-15T15:00:00.000Z")), 10);
     assert.equal(hourInBusinessTimezone(new Date("2026-08-22T14:00:00.000Z")), 10);
+  });
+
+  it("returns yesterday in Eastern time across DST", () => {
+    assert.equal(
+      yesterdayInBusinessTimezone(new Date("2026-08-23T14:00:00.000Z")),
+      "2026-08-22",
+    );
+    assert.equal(
+      yesterdayInBusinessTimezone(new Date("2026-01-16T15:00:00.000Z")),
+      "2026-01-15",
+    );
   });
 
   it("reads a business calendar date across the Eastern offset", () => {

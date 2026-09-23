@@ -18,6 +18,11 @@ export function addDaysToIsoDate(dateYmd: string, days: number) {
   return next.toISOString().slice(0, 10);
 }
 
+/** Yesterday's calendar date (YYYY-MM-DD) in the business timezone. */
+export function yesterdayInBusinessTimezone(now = new Date()) {
+  return addDaysToIsoDate(todayInBusinessTimezone(now), -1);
+}
+
 /** Hour 0–23 in the business timezone. */
 export function hourInBusinessTimezone(now = new Date()) {
   const hour = new Intl.DateTimeFormat("en-US", {

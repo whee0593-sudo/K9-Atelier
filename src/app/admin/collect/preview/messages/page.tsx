@@ -3,6 +3,10 @@ import {
   buildAfterVisitThankYouSms,
   buildChargeReceiptEmail,
 } from "@/lib/charges/receipts";
+import {
+  buildNextDayFollowUpEmail,
+  buildNextDayFollowUpSms,
+} from "@/lib/followup/copy";
 
 export default function ReceiptMessagePreviewPage() {
   const context = buildPreviewCollectContext({ paid: true });
@@ -11,6 +15,12 @@ export default function ReceiptMessagePreviewPage() {
 
   const email = buildChargeReceiptEmail(context.appointment, charge);
   const thankYouSms = buildAfterVisitThankYouSms(context.appointment);
+  const followUp = {
+    firstName: context.appointment.customerFirstName,
+    petName: context.appointment.petName,
+  };
+  const followUpEmail = buildNextDayFollowUpEmail(followUp);
+  const followUpSms = buildNextDayFollowUpSms(followUp);
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-10">
@@ -27,6 +37,29 @@ export default function ReceiptMessagePreviewPage() {
           <div className="mt-4 whitespace-pre-wrap rounded-[18px] rounded-bl-md bg-white px-4 py-3 text-[15px] leading-[1.5] break-words text-[#2F2930] shadow-[0_4px_16px_rgba(47,41,48,0.06)]">
             {thankYouSms}
           </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="font-display text-3xl text-[#2F2930]">Next-day follow-up text</h2>
+        <div className="mx-auto mt-6 max-w-sm rounded-[28px] border border-[#E7DED2] bg-[#F3EEE6] px-4 py-6">
+          <p className="text-center text-[11px] uppercase tracking-[0.14em] text-[#766F75]">
+            Messages
+          </p>
+          <div className="mt-4 whitespace-pre-wrap rounded-[18px] rounded-bl-md bg-white px-4 py-3 text-[15px] leading-[1.5] break-words text-[#2F2930] shadow-[0_4px_16px_rgba(47,41,48,0.06)]">
+            {followUpSms}
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="font-display text-3xl text-[#2F2930]">Next-day follow-up email</h2>
+        <div className="mt-6 overflow-hidden rounded-[8px] border border-[#E7DED2] bg-[#FAF6EF]">
+          <iframe
+            title="Next-day follow-up email"
+            srcDoc={followUpEmail.html}
+            className="h-[760px] w-full border-0 bg-[#FAF6EF]"
+          />
         </div>
       </section>
 
