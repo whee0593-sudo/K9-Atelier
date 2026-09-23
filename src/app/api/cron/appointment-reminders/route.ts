@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { sendThreeWeekRebookReminders } from "@/lib/email/rebook-reminders";
 import { sendNextDayFollowUp } from "@/lib/followup/send";
 import { sendThreeDayConfirmRequestSms } from "@/lib/sms/reminders";
 
@@ -18,5 +19,6 @@ export async function GET(request: Request) {
 
   const reminders = await sendThreeDayConfirmRequestSms();
   const followUp = await sendNextDayFollowUp();
-  return NextResponse.json({ reminders, followUp });
+  const rebook = await sendThreeWeekRebookReminders();
+  return NextResponse.json({ reminders, followUp, rebook });
 }
