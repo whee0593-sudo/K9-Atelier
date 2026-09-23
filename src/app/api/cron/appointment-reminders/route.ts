@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { sendThreeWeekRebookReminders } from "@/lib/email/rebook-reminders";
 import { sendThreeDayConfirmRequestSms } from "@/lib/sms/reminders";
 
 export const runtime = "nodejs";
@@ -15,6 +16,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const result = await sendThreeDayConfirmRequestSms();
-  return NextResponse.json(result);
+  const sms = await sendThreeDayConfirmRequestSms();
+  const rebook = await sendThreeWeekRebookReminders();
+  return NextResponse.json({ sms, rebook });
 }
