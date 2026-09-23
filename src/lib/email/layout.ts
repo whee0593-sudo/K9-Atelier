@@ -296,6 +296,53 @@ export function buildCustomerSimpleLetterEmail(
   };
 }
 
+export type CustomerFollowUpEmailContent = {
+  subject: string;
+  greetingName: string;
+  introParagraphs: string[];
+  cta: { href: string; label: string };
+  closingParagraph: string;
+  signoffName: string;
+  signoffLines: string[];
+};
+
+export function buildCustomerFollowUpEmailHtml(
+  content: CustomerFollowUpEmailContent,
+) {
+  const introHtml = content.introParagraphs
+    .map(
+      (paragraph) =>
+        `<p style="margin:0 0 14px;">${escapeHtml(paragraph)}</p>`,
+    )
+    .join("");
+  const signoffHtml = [content.signoffName, ...content.signoffLines]
+    .map((line) => escapeHtml(line))
+    .join("<br/>");
+
+  return `${customerLetterHeader(content.subject)}
+      <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:14px; line-height:1.8; background:#ffffff;">
+        <p style="margin:0 0 14px;">Hi ${escapeHtml(content.greetingName)},</p>
+        ${introHtml}
+        <div style="text-align:center; margin:8px 0 22px;">
+          <a href="${escapeHtml(content.cta.href)}" style="display:inline-block; border:1px solid ${STAFF_EMAIL.gold}; color:${STAFF_EMAIL.gold}; padding:10px 28px; text-decoration:none; font-size:11px; letter-spacing:2px;">${escapeHtml(content.cta.label)}</a>
+        </div>
+        <p style="margin:0 0 22px;">${escapeHtml(content.closingParagraph)}</p>
+        <p style="margin:0;">Warmly,<br/>${signoffHtml}</p>
+      </div>
+      ${customerLetterFooter()}`;
+}
+
+export function buildCustomerFollowUpEmail(
+  content: CustomerFollowUpEmailContent,
+  plainText: string,
+) {
+  return {
+    subject: content.subject,
+    text: plainText,
+    html: buildCustomerFollowUpEmailHtml(content),
+  };
+}
+
 export type CustomerVaccinationApprovedEmailContent = {
   subject: string;
   greetingName: string;
