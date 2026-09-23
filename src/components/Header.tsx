@@ -70,20 +70,17 @@ export function Header() {
       <Container className="flex items-center justify-between gap-2 py-3 md:gap-6 md:py-5">
         <Link
           href="/"
-          className="flex min-w-0 shrink items-center gap-2 md:gap-3"
+          className="flex min-w-0 shrink items-center"
           onClick={closeMenu}
         >
           <Image
             src={business.brand.logo}
             alt={business.brand.name}
-            width={52}
-            height={52}
-            className="h-11 w-11 shrink-0 rounded-full md:h-[52px] md:w-[52px]"
+            width={1495}
+            height={764}
+            className="h-10 w-auto max-w-[168px] md:h-[52px] md:max-w-[220px]"
             priority
           />
-          <span className="inline whitespace-nowrap font-body text-[13px] font-semibold uppercase tracking-[0.12em] text-[#3A3236] sm:text-[14px] sm:tracking-[0.14em] md:tracking-[0.2em]">
-            {business.brand.name}
-          </span>
         </Link>
 
         {isBooking ? (

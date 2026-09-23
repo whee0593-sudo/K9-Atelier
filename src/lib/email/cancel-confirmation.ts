@@ -189,7 +189,6 @@ function emphasizeAmount(paragraph: string, amountLabel: string | null) {
 export function buildCustomerCancelEmailHtml(input: CancelConfirmationInput) {
   const content = buildCustomerCancelEmailContent(input);
   const lockup = business.brand.lockup;
-  const wordmark = business.brand.wordmark;
   const timeRow = content.timeLabel
     ? `<div style="margin:0;font-size:16px;line-height:1.5;color:${COLORS.ink};">${escapeHtml(content.timeLabel)}</div>`
     : "";
@@ -213,7 +212,7 @@ export function buildCustomerCancelEmailHtml(input: CancelConfirmationInput) {
     a.k9-cancel-link:focus { outline: 2px solid ${COLORS.gold}; outline-offset: 2px; }
     @media only screen and (max-width: 620px) {
       .k9-cancel-pad { padding-left: 20px !important; padding-right: 20px !important; }
-      .k9-cancel-logo { width: 96px !important; height: 96px !important; }
+      .k9-cancel-logo { width: 200px !important; height: 102px !important; }
     }
   </style>
 </head>
@@ -231,8 +230,6 @@ export function buildCustomerCancelEmailHtml(input: CancelConfirmationInput) {
           <tr>
             <td align="center" class="k9-cancel-pad" style="padding:32px 36px 20px;background-color:${COLORS.page};">
               ${emailLogoImg({ className: "k9-cancel-logo" })}
-              <div style="font-family:Georgia,'Times New Roman',Times,serif;font-size:20px;letter-spacing:0.18em;color:${COLORS.ink};">${escapeHtml(wordmark)}</div>
-              <div style="margin-top:8px;font-family:Georgia,'Times New Roman',Times,serif;font-size:12px;letter-spacing:0.04em;color:${COLORS.muted};">${escapeHtml(lockup)}</div>
             </td>
           </tr>
           <tr>

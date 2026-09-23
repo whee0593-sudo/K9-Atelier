@@ -53,16 +53,10 @@ export function ChargeReceiptLetter({
           <Image
             src={business.brand.logo}
             alt={business.brand.name}
-            width={72}
-            height={72}
-            className="mx-auto"
+            width={1495}
+            height={764}
+            className="mx-auto h-auto w-[180px] sm:w-[220px]"
           />
-          <h1 className="font-display mt-4 text-[22px] font-normal tracking-[0.18em] text-[#756578] sm:text-2xl">
-            {business.brand.name}
-          </h1>
-          <p className="font-body mt-3 text-[12px] font-medium tracking-[0.08em] text-[#756578]">
-            {business.brand.lockup}
-          </p>
         </header>
 
         <div className="mt-10 space-y-8 text-left font-body text-base leading-[1.6] text-[#2F2930]">

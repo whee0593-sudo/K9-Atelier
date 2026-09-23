@@ -62,18 +62,26 @@ function assertCustomerEmailLogo(html: string) {
   assert.match(html, /https:\/\/k9atelier\.com\/email-logo\.png/);
   assert.doesNotMatch(html, /https:\/\/k9atelier\.com\/logo\.png/);
   assert.doesNotMatch(html, /border-radius:50%/);
+  assert.match(html, /width="240"/);
+  assert.match(html, /height="123"/);
+  assert.doesNotMatch(html, /width="120" height="120"/);
+  const logoAt = html.indexOf("email-logo.png");
+  assert.ok(logoAt >= 0);
+  const headerAfterLogo = html.slice(logoAt, logoAt + 400);
+  assert.doesNotMatch(headerAfterLogo, /K9 ATELIER/);
+  assert.doesNotMatch(headerAfterLogo, /Private Mobile Pet Spa/);
 }
 
 describe("customer email logo", () => {
-  it("points getEmailBrand at the framed email mark", () => {
+  it("points getEmailBrand at the landscape wordmark", () => {
     assert.equal(getEmailBrand().logoUrl, "https://k9atelier.com/email-logo.png");
     assert.match(
       emailLogoImg(),
-      /src="https:\/\/k9atelier\.com\/email-logo\.png"/,
+      /src="https:\/\/k9atelier\.com\/email-logo\.png" width="240" height="123"/,
     );
   });
 
-  it("uses the framed logo in every customer-facing template", () => {
+  it("uses the landscape wordmark in every customer-facing template", () => {
     const letter = buildCustomerLetterEmailHtml({
       subject: "Please confirm your K9 Atelier appointment",
       greetingName: "Alex",
