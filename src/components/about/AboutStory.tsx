@@ -240,33 +240,27 @@ export function AboutStory() {
               </p>
             </div>
 
-            <figure className="relative mt-14 -mx-4 md:mt-20 md:-mx-12 xl:-mx-20">
-              <AboutPhoto
-                {...photos.grooming}
-                sizes="100vw"
-                objectPosition="62% center"
-                className="aspect-[3/2] h-auto w-full object-cover"
-              />
-            </figure>
-
-            <div
-              className="mt-8 -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-champagne md:mx-0 md:mt-16 md:grid md:snap-none md:grid-cols-12 md:items-start md:gap-x-8 md:overflow-visible md:px-0 md:pb-0 lg:mt-20 lg:gap-x-12 [&::-webkit-scrollbar]:hidden"
-              tabIndex={0}
-              role="region"
-              aria-label="Competition photographs"
-            >
-              <figure className="w-[84%] shrink-0 snap-start md:col-span-5 md:mt-16 md:w-auto lg:mt-24">
+            <div className="mt-14 grid grid-cols-1 gap-10 md:mt-20 md:grid-cols-2 md:gap-x-10 md:gap-y-14 lg:gap-x-14 lg:gap-y-16">
+              <figure>
+                <AboutPhoto
+                  {...photos.grooming}
+                  sizes="(min-width: 768px) 50vw, 100vw"
+                  objectPosition="62% center"
+                  className="aspect-[3/2] w-full object-cover"
+                />
+              </figure>
+              <figure>
                 <AboutPhoto
                   {...photos.trophy}
-                  sizes="(min-width: 768px) 40vw, 84vw"
+                  sizes="(min-width: 768px) 50vw, 100vw"
                   objectPosition="72% center"
                   className="aspect-[3/2] w-full object-cover"
                 />
               </figure>
-              <figure className="w-[84%] shrink-0 snap-start md:col-span-6 md:col-start-7 md:w-auto">
+              <figure>
                 <AboutPhoto
                   {...photos.award}
-                  sizes="(min-width: 768px) 46vw, 84vw"
+                  sizes="(min-width: 768px) 50vw, 100vw"
                   objectPosition="center 42%"
                   className="aspect-[6/5] w-full object-cover"
                 />
@@ -274,18 +268,18 @@ export function AboutStory() {
                   2019 · Best in Show · Bichon
                 </figcaption>
               </figure>
+              <figure>
+                <AboutPhoto
+                  {...photos.group}
+                  sizes="(min-width: 768px) 50vw, 100vw"
+                  objectPosition="center center"
+                  className="aspect-[700/433] w-full object-cover"
+                />
+                <figcaption className="font-display mt-3 text-[1.2rem] leading-snug text-taupe italic md:mt-4 md:text-[1.45rem]">
+                  A life shaped by the grooming table.
+                </figcaption>
+              </figure>
             </div>
-
-            <figure className="mt-12 max-w-[16.5rem] sm:max-w-xs md:mt-20 md:max-w-sm">
-              <AboutPhoto
-                {...photos.group}
-                sizes="(min-width: 768px) 384px, 70vw"
-                objectPosition="center center"
-              />
-              <figcaption className="font-display mt-3 text-[1.2rem] leading-snug text-taupe italic md:mt-4 md:text-[1.45rem]">
-                A life shaped by the grooming table.
-              </figcaption>
-            </figure>
           </section>
 
           <section
