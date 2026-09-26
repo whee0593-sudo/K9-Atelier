@@ -196,7 +196,7 @@ function DragHint({ visible }: { visible: boolean }) {
   return (
     <p
       aria-hidden={visible ? undefined : true}
-      className={`k9-gallery-hint font-body text-[10px] uppercase tracking-[0.32em] text-[#1a1020]/70 ${visible ? "k9-gallery-hint-visible" : ""}`}
+      className={`k9-gallery-hint font-body text-[10px] uppercase tracking-[0.32em] text-ink/70 ${visible ? "k9-gallery-hint-visible" : ""}`}
     >
       Drag to explore&nbsp;&nbsp;→
     </p>
