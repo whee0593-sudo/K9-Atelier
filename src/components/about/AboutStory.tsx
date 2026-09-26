@@ -53,9 +53,9 @@ const photos = {
   },
   craft: {
     src: "/images/about/about-craft-detail.jpg",
-    alt: "Penny finishing a detailed facial trim",
-    width: 1460,
-    height: 1078,
+    alt: "A groomer finishing a detailed facial trim on a brown poodle",
+    width: 1600,
+    height: 2400,
   },
 } as const;
 
@@ -339,12 +339,12 @@ export function AboutStory() {
             className="mt-24 md:mt-32 lg:mt-40"
             aria-labelledby="about-craft"
           >
-            <figure className="-mx-4 md:mx-auto md:max-w-[920px]">
+            <figure className="-mx-4 md:mx-auto md:max-w-[640px]">
               <AboutPhoto
                 {...photos.craft}
-                sizes="(min-width: 768px) 920px, 100vw"
-                objectPosition="center 42%"
-                className="aspect-[4/3] w-full object-cover"
+                sizes="(min-width: 768px) 640px, 100vw"
+                objectPosition="center center"
+                className="aspect-[2/3] w-full object-cover"
               />
             </figure>
             <header className="mt-12 max-w-[38rem] md:mt-16 md:ml-auto md:mr-[6%] lg:mt-20">
