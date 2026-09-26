@@ -121,7 +121,7 @@ export function GalleryLightbox({
             className="flex h-[min(64vh,28rem)] w-[min(92vw,36rem)] items-center justify-center border border-champagne/20"
             style={{ backgroundColor: GALLERY_WALL.background }}
           >
-            <p className="font-body px-6 text-center text-[11px] uppercase tracking-[0.18em] text-ivory/45">
+            <p className="font-body px-6 text-center text-[11px] uppercase tracking-[0.18em] text-[#1a1020]/75">
               Photograph not yet available
             </p>
           </div>
