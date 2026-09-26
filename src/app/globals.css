@@ -55,6 +55,12 @@ body {
 }
 
 /* Horizontal museum gallery — scoped to /gallery */
+.k9-gallery-room,
+.k9-gallery-viewport,
+.k9-gallery-track {
+  background-color: var(--color-lavender);
+}
+
 .k9-gallery-viewport {
   position: relative;
   width: 100%;
@@ -66,7 +72,6 @@ body {
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  background-color: #11120a;
 }
 
 .k9-gallery-viewport::-webkit-scrollbar {
@@ -92,20 +97,6 @@ body {
   height: 100%;
   user-select: none;
   -webkit-user-select: none;
-  background-color: #11120a;
-  background-image:
-    radial-gradient(
-      ellipse 80% 52% at 50% 30%,
-      rgba(56, 54, 36, 0.16),
-      transparent 72%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(0, 0, 0, 0.26) 0%,
-      transparent 15%,
-      transparent 84%,
-      rgba(0, 0, 0, 0.32) 100%
-    );
 }
 
 .k9-gallery-track::after {
@@ -119,9 +110,9 @@ body {
   pointer-events: none;
   background: linear-gradient(
     90deg,
-    rgba(28, 22, 14, 0.12),
-    rgba(48, 38, 24, 0.5),
-    rgba(28, 22, 14, 0.12)
+    rgba(77, 67, 72, 0.04),
+    rgba(77, 67, 72, 0.16),
+    rgba(77, 67, 72, 0.04)
   );
 }
 
@@ -169,7 +160,7 @@ body {
   font-weight: 500;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(196, 168, 130, 0.92);
+  color: var(--color-ink);
 }
 
 .k9-gallery-section-lede {
@@ -178,7 +169,7 @@ body {
   font-size: clamp(1.25rem, 3.1vh, 1.55rem);
   font-style: italic;
   line-height: 1.28;
-  color: rgba(251, 247, 239, 0.82);
+  color: var(--color-ink);
 }
 
 .k9-gallery-art,
@@ -262,7 +253,7 @@ body {
   font-weight: 400;
   line-height: 1.15;
   letter-spacing: 0.02em;
-  color: rgba(250, 247, 242, 0.82);
+  color: var(--color-ink);
 }
 
 .k9-gallery-lightbox-caption {

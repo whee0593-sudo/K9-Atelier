@@ -4,6 +4,7 @@ import Image from "next/image";
 import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { GalleryLightboxCaption } from "@/components/gallery/GalleryCaption";
 import {
+  GALLERY_WALL,
   getLightboxItem,
   nextLightboxId,
   prevLightboxId,
@@ -116,8 +117,11 @@ export function GalleryLightbox({
       </button>
       <figure className="flex max-h-full max-w-full flex-col items-center">
         {imageMissing ? (
-          <div className="flex h-[min(64vh,28rem)] w-[min(92vw,36rem)] items-center justify-center border border-champagne/20 bg-[#11120a]">
-            <p className="font-body px-6 text-center text-[11px] uppercase tracking-[0.18em] text-ivory/45">
+          <div
+            className="flex h-[min(64vh,28rem)] w-[min(92vw,36rem)] items-center justify-center border border-champagne/20"
+            style={{ backgroundColor: GALLERY_WALL.background }}
+          >
+            <p className="font-body px-6 text-center text-[11px] uppercase tracking-[0.18em] text-ink/75">
               Photograph not yet available
             </p>
           </div>
