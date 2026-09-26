@@ -339,31 +339,36 @@ export function AboutStory() {
             className="mt-24 md:mt-32 lg:mt-40"
             aria-labelledby="about-craft"
           >
-            <figure className="-mx-4 md:mx-auto md:max-w-[640px]">
-              <AboutPhoto
-                {...photos.craft}
-                sizes="(min-width: 768px) 640px, 100vw"
-                objectPosition="center center"
-                className="aspect-[2/3] w-full object-cover"
-              />
-            </figure>
-            <header className="mt-12 max-w-[38rem] md:mt-16 md:ml-auto md:mr-[6%] lg:mt-20">
-              <AboutEyebrow>The Craft</AboutEyebrow>
-              <h2 id="about-craft" className={headingClass}>
-                The details make the difference.
-              </h2>
-              <div className={`${proseClass} mt-8 md:mt-10`}>
-                <p>
-                  Competition taught me to look beyond the haircut — to
-                  understand balance, structure, coat, movement, and the subtle
-                  details that bring a groom together.
-                </p>
-                <p>
-                  That same attention to detail continues to shape every
-                  appointment today.
-                </p>
-              </div>
-            </header>
+            <div className="grid grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] items-center gap-4 min-[390px]:gap-5 sm:gap-8 md:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] md:gap-12 lg:gap-16">
+              <figure className="min-w-0">
+                <AboutPhoto
+                  {...photos.craft}
+                  sizes="(min-width: 768px) 42vw, 46vw"
+                  objectPosition="center center"
+                  className="aspect-[2/3] w-full object-cover"
+                />
+              </figure>
+              <header className="min-w-0">
+                <AboutEyebrow>The Craft</AboutEyebrow>
+                <h2
+                  id="about-craft"
+                  className="font-display mt-3 text-balance text-[1.45rem] leading-[1.12] font-medium tracking-[-0.02em] text-ink min-[390px]:text-[1.65rem] sm:mt-4 sm:text-[2.15rem] md:mt-5 md:text-[clamp(2.15rem,2.2vw+1rem,3.35rem)]"
+                >
+                  The details make the difference.
+                </h2>
+                <div className="font-body mt-4 max-w-[36rem] space-y-3 text-[13px] leading-[1.65] text-taupe min-[390px]:text-[14px] sm:mt-6 sm:space-y-4 sm:text-[15px] sm:leading-[1.75] md:mt-8 md:space-y-5 md:text-[17px] md:leading-[1.8]">
+                  <p>
+                    Competition taught me to look beyond the haircut — to
+                    understand balance, structure, coat, movement, and the subtle
+                    details that bring a groom together.
+                  </p>
+                  <p>
+                    That same attention to detail continues to shape every
+                    appointment today.
+                  </p>
+                </div>
+              </header>
+            </div>
           </section>
 
           <section
