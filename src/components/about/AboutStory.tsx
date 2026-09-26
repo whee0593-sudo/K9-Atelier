@@ -319,8 +319,8 @@ export function AboutStory() {
                 <AboutPhoto
                   {...photos.teaching}
                   sizes="(min-width: 1024px) 58vw, 100vw"
-                  objectPosition="center 46%"
-                  className="aspect-[4/5] w-full object-cover lg:aspect-auto lg:h-auto"
+                  objectPosition="center 42%"
+                  className="aspect-[1016/1080] w-full object-cover"
                 />
               </figure>
               <header>
@@ -349,8 +349,8 @@ export function AboutStory() {
               <AboutPhoto
                 {...photos.craft}
                 sizes="(min-width: 768px) 920px, 100vw"
-                objectPosition="34% center"
-                className="aspect-[4/5] w-full object-cover md:aspect-[4/3]"
+                objectPosition="center 42%"
+                className="aspect-[4/3] w-full object-cover"
               />
             </figure>
             <header className="mt-12 max-w-[38rem] md:mt-16 md:ml-auto md:mr-[6%] lg:mt-20">
