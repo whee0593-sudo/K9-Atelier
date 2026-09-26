@@ -13,8 +13,8 @@ export const GALLERY_WALL = {
   src: "/images/gallery/museum-wall-numbered.jpg",
   width: 1024,
   height: 682,
-  /** Deep forest / olive-black sampled from the wall edges. */
-  background: "#11120a",
+  /** Museum ink green — a deep gallery wall, lighter than near-black. */
+  background: "#1E5344",
   alt: "Dark museum gallery wall with warm ceiling lights, dark wood trim, a wood floor, and a patterned rug",
 } as const;
 

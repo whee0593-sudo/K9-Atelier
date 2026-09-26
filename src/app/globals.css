@@ -66,7 +66,7 @@ body {
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  background-color: #11120a;
+  background-color: #1e5344;
 }
 
 .k9-gallery-viewport::-webkit-scrollbar {
@@ -92,19 +92,19 @@ body {
   height: 100%;
   user-select: none;
   -webkit-user-select: none;
-  background-color: #11120a;
+  background-color: #1e5344;
   background-image:
     radial-gradient(
-      ellipse 80% 52% at 50% 30%,
-      rgba(56, 54, 36, 0.16),
-      transparent 72%
+      ellipse 80% 52% at 50% 32%,
+      rgba(186, 214, 196, 0.16),
+      transparent 70%
     ),
     linear-gradient(
       180deg,
-      rgba(0, 0, 0, 0.26) 0%,
-      transparent 15%,
-      transparent 84%,
-      rgba(0, 0, 0, 0.32) 100%
+      rgba(8, 28, 22, 0.2) 0%,
+      transparent 18%,
+      transparent 82%,
+      rgba(6, 22, 16, 0.26) 100%
     );
 }
 
