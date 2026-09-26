@@ -55,6 +55,15 @@ body {
 }
 
 /* Horizontal museum gallery — scoped to /gallery */
+.k9-gallery-room,
+.k9-gallery-viewport,
+.k9-gallery-track {
+  background-color: #253d35;
+  background-image: url("/images/gallery/ink-wall.png");
+  background-repeat: repeat;
+  background-size: 420px 420px;
+}
+
 .k9-gallery-viewport {
   position: relative;
   width: 100%;
@@ -66,7 +75,6 @@ body {
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  background-color: #1e5344;
 }
 
 .k9-gallery-viewport::-webkit-scrollbar {
@@ -92,20 +100,18 @@ body {
   height: 100%;
   user-select: none;
   -webkit-user-select: none;
-  background-color: #1e5344;
   background-image:
-    radial-gradient(
-      ellipse 80% 52% at 50% 32%,
-      rgba(186, 214, 196, 0.16),
-      transparent 70%
-    ),
     linear-gradient(
       180deg,
-      rgba(8, 28, 22, 0.2) 0%,
-      transparent 18%,
-      transparent 82%,
-      rgba(6, 22, 16, 0.26) 100%
-    );
+      rgba(196, 168, 130, 0.16) 0%,
+      rgba(196, 168, 130, 0.05) 14%,
+      transparent 32%,
+      transparent 78%,
+      rgba(12, 18, 14, 0.22) 100%
+    ),
+    url("/images/gallery/ink-wall.png");
+  background-repeat: no-repeat, repeat;
+  background-size: auto, 420px 420px;
 }
 
 .k9-gallery-track::after {

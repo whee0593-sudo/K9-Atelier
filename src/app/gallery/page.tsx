@@ -14,7 +14,7 @@ export const metadata = {
 export default function GalleryPage() {
   return (
     <div
-      className="w-full overflow-x-clip pb-12 md:pb-16"
+      className="k9-gallery-room w-full overflow-x-clip pb-12 md:pb-16"
       style={{ backgroundColor: GALLERY_WALL.background }}
     >
       <h1 className="sr-only">Gallery</h1>

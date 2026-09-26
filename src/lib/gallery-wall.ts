@@ -4,17 +4,18 @@
  * Photos are not cropped, masked, or rewritten.
  * Wall portraits are transparent-background framed PNGs so the museum wall shows through.
  *
- * Customer-facing wall paint is CSS (`GALLERY_WALL.background`). Both
- * `museum-wall-numbered.jpg` and `museum-wall.webp` contain visible placement
- * guides and must not be shown to visitors.
+ * Customer-facing wall paint is a muted ink green (`GALLERY_WALL.background`)
+ * with the plaster tile `ink-wall.png`. Both `museum-wall-numbered.jpg` and
+ * `museum-wall.webp` contain visible placement guides and must not be shown
+ * to visitors.
  */
 
 export const GALLERY_WALL = {
   src: "/images/gallery/museum-wall-numbered.jpg",
   width: 1024,
   height: 682,
-  /** Museum ink green — a deep gallery wall, lighter than near-black. */
-  background: "#1E5344",
+  /** Muted museum ink green. The plaster tile adds the wall's surface. */
+  background: "#253D35",
   alt: "Dark museum gallery wall with warm ceiling lights, dark wood trim, a wood floor, and a patterned rug",
 } as const;
 
