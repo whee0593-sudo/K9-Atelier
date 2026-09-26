@@ -18,7 +18,7 @@ const navItems = [
 ] as const;
 
 const navLinkBase =
-  "inline-flex min-h-[44px] items-center justify-center rounded-sm border-0 px-4 font-body text-[13px] font-medium uppercase tracking-[0.16em] transition duration-500";
+  "inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-sm border-0 px-3 font-body text-[13px] font-medium uppercase tracking-[0.16em] transition duration-500 xl:px-4";
 
 const menuBtnClass =
   "inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm border-0 px-2 font-body text-[12px] font-medium uppercase tracking-[0.14em] transition duration-500 md:px-4";
@@ -67,10 +67,10 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-line/70 bg-ivory/95 backdrop-blur-sm">
-      <Container className="flex items-center justify-between gap-2 py-3 md:gap-6 md:py-5">
+      <Container className="flex items-center justify-between gap-3 py-2 md:gap-4 md:py-3 xl:gap-6">
         <Link
           href="/"
-          className="flex min-w-0 shrink items-center"
+          className="flex min-w-0 shrink-0 items-center"
           onClick={closeMenu}
         >
           <Image
@@ -78,7 +78,7 @@ export function Header() {
             alt={business.brand.name}
             width={1495}
             height={764}
-            className="h-10 w-auto max-w-[168px] md:h-[52px] md:max-w-[220px]"
+            className="h-auto w-auto max-h-[4.5rem] max-w-[calc(100vw-15rem)] sm:max-h-20 sm:max-w-none md:max-h-[5.5rem] xl:max-h-[7rem]"
             priority
           />
         </Link>
