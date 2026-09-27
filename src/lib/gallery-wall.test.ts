@@ -225,8 +225,8 @@ describe("gallery captions", () => {
     ]);
     assert.equal(SELECTED_WORK_CAPTIONS[14]?.detail, "Teddy bear");
     assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[16]), [
-      "Pomeranian",
-      "Boo cut with scarf",
+      "Norwich",
+      "Hand strip",
     ]);
     assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[11]), [
       "Bichon",
