@@ -4,8 +4,8 @@
  * Photos are not cropped, masked, or rewritten.
  * Wall portraits are transparent-background framed PNGs so the museum wall shows through.
  *
- * Customer-facing wall paint is the site lavender (`colors.lavender` in
- * `content/business.json`, `#D8D0DD`). Both `museum-wall-numbered.jpg` and
+ * Customer-facing wall paint is the site cream (`colors.cream` /
+ * `--color-ivory`, `#FBF7EF`). Both `museum-wall-numbered.jpg` and
  * `museum-wall.webp` contain visible placement guides and must not be shown
  * to visitors.
  */
@@ -14,8 +14,8 @@ export const GALLERY_WALL = {
   src: "/images/gallery/museum-wall-numbered.jpg",
   width: 1024,
   height: 682,
-  /** Site palette lavender. Matches `colors.lavender` and `--color-lavender`. */
-  background: "#D8D0DD",
+  /** Site page cream. Matches `colors.cream` and `--color-ivory`. */
+  background: "#FBF7EF",
   alt: "Dark museum gallery wall with warm ceiling lights, dark wood trim, a wood floor, and a patterned rug",
 } as const;
 
@@ -251,12 +251,12 @@ export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
     id: 16,
     centerX: 64,
     centerY: 72,
-    displayWidth: 12.6,
+    displayWidth: 15,
     photoSrc: galleryWallPhotoSrc(16),
     photoAlt:
-      "K9 Atelier grooming portfolio — plush white dog in an ornate oval gold frame",
-    photoWidth: 1024,
-    photoHeight: 1536,
+      "K9 Atelier grooming portfolio — Norwich Terrier in a hand-stripped coat, ornate gold frame",
+    photoWidth: 1364,
+    photoHeight: 1153,
     fit: "framed",
   },
   {
@@ -316,7 +316,7 @@ export const SELECTED_WORK_CAPTIONS: Record<number, GalleryCaption> = {
   12: { kicker: "Yorkshire Terrier", detail: "Puppy cut" },
   13: { kicker: "Doodle", detail: "Teddy bear" },
   14: { kicker: "Poodle", detail: "Teddy bear" },
-  16: { kicker: "Pomeranian", detail: "Boo cut with scarf" },
+  16: { kicker: "Norwich", detail: "Hand strip" },
   17: { kicker: "Bichon", detail: "Creative Color Dye" },
 };
 
