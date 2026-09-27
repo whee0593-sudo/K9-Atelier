@@ -54,90 +54,13 @@ body {
   font-family: var(--font-montserrat), Montserrat, Arial, sans-serif;
 }
 
-/* Horizontal museum gallery — scoped to /gallery */
-.k9-gallery-room,
-.k9-gallery-viewport,
-.k9-gallery-track {
-  background-color: var(--color-ivory);
-}
-
-.k9-gallery-viewport {
-  position: relative;
-  width: 100%;
-  height: 71svh;
-  overflow-x: auto;
-  overflow-y: hidden;
-  cursor: grab;
-  touch-action: pan-x pan-y;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.k9-gallery-viewport::-webkit-scrollbar {
-  display: none;
-}
-
-.k9-gallery-viewport[data-dragging="true"] {
-  cursor: grabbing;
-}
-
-@media (min-width: 768px) {
-  .k9-gallery-viewport {
-    height: 75vh;
-    min-height: 620px;
-  }
-}
-
-.k9-gallery-track {
-  position: relative;
-  display: flex;
-  align-items: stretch;
-  width: max-content;
-  height: 100%;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.k9-gallery-track::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  bottom: 6.5%;
-  left: 0;
-  z-index: 1;
-  height: 2px;
-  pointer-events: none;
-  background: linear-gradient(
-    90deg,
-    rgba(77, 67, 72, 0.04),
-    rgba(77, 67, 72, 0.16),
-    rgba(77, 67, 72, 0.04)
-  );
-}
-
-.k9-gallery-track img {
-  -webkit-user-drag: none;
-}
-
-.k9-gallery-selected,
+/* Gallery portraits. The public page is a normal two-column grid.
+   Competition archive styles stay for a later placement. */
 .k9-gallery-competition {
   position: relative;
   flex: 0 0 auto;
   height: 100%;
-}
-
-.k9-gallery-selected {
-  width: 240vh;
-}
-
-.k9-gallery-competition {
   width: 184vh;
-}
-
-.k9-gallery-end {
-  flex: 0 0 12vw;
-  height: 100%;
 }
 
 .k9-gallery-section-title {
@@ -244,6 +167,13 @@ body {
   transform: translateX(-50%);
 }
 
+.k9-gallery-card-caption {
+  display: block;
+  margin-top: 0.85rem;
+  pointer-events: none;
+  text-align: center;
+}
+
 .k9-gallery-caption-kicker,
 .k9-gallery-caption-detail {
   display: block;
@@ -254,6 +184,12 @@ body {
   line-height: 1.15;
   letter-spacing: 0.02em;
   color: var(--color-ink);
+}
+
+.k9-gallery-card-caption .k9-gallery-caption-kicker,
+.k9-gallery-card-caption .k9-gallery-caption-detail {
+  font-size: clamp(1rem, 2.4vw, 1.45rem);
+  line-height: 1.25;
 }
 
 .k9-gallery-lightbox-caption {
@@ -273,26 +209,4 @@ body {
 
 .k9-gallery-lightbox-caption p + p {
   margin-top: 0.15rem;
-}
-
-.k9-gallery-hint {
-  position: absolute;
-  bottom: 9%;
-  left: 50%;
-  z-index: 6;
-  margin: 0;
-  pointer-events: none;
-  opacity: 0;
-  transform: translateX(-50%);
-  transition: opacity 800ms ease;
-}
-
-.k9-gallery-hint-visible {
-  opacity: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .k9-gallery-hint {
-    transition: none;
-  }
 }

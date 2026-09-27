@@ -5,13 +5,12 @@ import React from "react";
 import { GalleryWallCaption } from "@/components/gallery/GalleryCaption";
 import {
   GALLERY_FRAME_SLOTS,
-  GALLERY_SECTION_WIDTH_VH,
   SELECTED_WORK_CAPTIONS,
-  SELECTED_WORK_PRIORITY_IDS,
-  selectedWorkPlacement,
   type GalleryFrameSlot,
   workLightboxId,
 } from "@/lib/gallery-wall";
+
+const PRIORITY_COUNT = 4;
 
 export function SelectedWorkSection({
   onOpen,
@@ -19,27 +18,17 @@ export function SelectedWorkSection({
   onOpen: (id: string, trigger: HTMLElement) => void;
 }) {
   return (
-    <section
-      className="k9-gallery-selected"
-      aria-label="The Work"
-      style={{ width: `${GALLERY_SECTION_WIDTH_VH.selected}vh` }}
-    >
-      <div
-        className="k9-gallery-section-title"
-        style={{ left: "2.4vh", top: "6.5%" }}
-      >
-        <p className="k9-gallery-section-kicker">The Work</p>
-        <p className="k9-gallery-section-lede">Selected work by K9 Atelier</p>
-      </div>
-      {GALLERY_FRAME_SLOTS.map((slot) => (
-        <FramedArtwork
-          key={slot.id}
-          slot={slot}
-          onOpen={onOpen}
-          priority={SELECTED_WORK_PRIORITY_IDS.has(slot.id)}
-        />
+    <ul className="grid list-none grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-8 sm:gap-y-14 md:gap-x-14 md:gap-y-16">
+      {GALLERY_FRAME_SLOTS.map((slot, index) => (
+        <li key={slot.id} className="min-w-0">
+          <FramedArtwork
+            slot={slot}
+            onOpen={onOpen}
+            priority={index < PRIORITY_COUNT}
+          />
+        </li>
       ))}
-    </section>
+    </ul>
   );
 }
 
@@ -52,27 +41,20 @@ function FramedArtwork({
   onOpen: (id: string, trigger: HTMLElement) => void;
   priority: boolean;
 }) {
-  const place = selectedWorkPlacement(slot);
   return (
     <button
       type="button"
       aria-label={`View larger: ${slot.photoAlt}`}
       onClick={(event) => onOpen(workLightboxId(slot.id), event.currentTarget)}
-      className="k9-gallery-art group focus:outline-none focus-visible:ring-1 focus-visible:ring-champagne"
-      style={{
-        left: `${place.centerX}vh`,
-        top: `${place.centerY}%`,
-        width: `${place.displayWidth}vh`,
-        transform: "translate(-50%, -50%)",
-      }}
+      className="group block w-full cursor-pointer text-center focus:outline-none focus-visible:ring-1 focus-visible:ring-champagne"
     >
-      <span className="block overflow-visible transition duration-[350ms] ease-out [filter:drop-shadow(0_10px_18px_rgba(0,0,0,0.30))] hover:z-20 group-hover:scale-[1.012] group-hover:[filter:drop-shadow(0_14px_22px_rgba(0,0,0,0.38))_drop-shadow(0_0_10px_rgba(185,151,98,0.14))] motion-reduce:transition-none motion-reduce:group-hover:scale-100">
+      <span className="block transition duration-[350ms] ease-out [filter:drop-shadow(0_12px_22px_rgba(77,67,72,0.14))] group-hover:[filter:drop-shadow(0_18px_28px_rgba(77,67,72,0.2))] motion-reduce:transition-none">
         <Image
           src={slot.photoSrc}
           alt={slot.photoAlt}
           width={slot.photoWidth}
           height={slot.photoHeight}
-          sizes="(max-width: 767px) 32vw, (max-width: 1099px) 18vw, 16vw"
+          sizes="(max-width: 767px) 46vw, 520px"
           quality={90}
           priority={priority}
           unoptimized
@@ -81,6 +63,7 @@ function FramedArtwork({
         />
       </span>
       <GalleryWallCaption
+        layout="stack"
         caption={SELECTED_WORK_CAPTIONS[slot.id] ?? { kicker: "", detail: "" }}
       />
     </button>

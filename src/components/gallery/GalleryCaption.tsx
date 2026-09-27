@@ -20,13 +20,19 @@ export function GalleryLightboxCaption({
 
 export function GalleryWallCaption({
   caption,
+  layout = "hang",
 }: {
   caption: GalleryCaptionData;
+  layout?: "hang" | "stack";
 }) {
   const [breed, styling] = lightboxCaptionLines(caption);
   if (!breed && !styling) return null;
   return (
-    <span className="k9-gallery-caption">
+    <span
+      className={
+        layout === "stack" ? "k9-gallery-card-caption" : "k9-gallery-caption"
+      }
+    >
       {breed ? <span className="k9-gallery-caption-kicker">{breed}</span> : null}
       {styling ? (
         <span className="k9-gallery-caption-detail">{styling}</span>
