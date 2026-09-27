@@ -53,6 +53,7 @@ describe("about page", () => {
       "about-awards-credentials.jpg",
       "about-teaching.jpg",
       "about-craft-detail.jpg",
+      "about-approach-portrait.jpg",
     ]) {
       assert.equal(story.includes(`/images/about/${file}`), true, file);
     }

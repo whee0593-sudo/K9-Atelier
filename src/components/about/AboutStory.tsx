@@ -57,6 +57,12 @@ const photos = {
     width: 1600,
     height: 2400,
   },
+  approach: {
+    src: "/images/about/about-approach-portrait.jpg",
+    alt: "A cream curly-coated dog sitting in a finished groom",
+    width: 1122,
+    height: 1402,
+  },
 } as const;
 
 const eyebrowClass =
@@ -375,23 +381,41 @@ export function AboutStory() {
             className="mt-24 md:mt-32 lg:mt-40"
             aria-labelledby="about-approach"
           >
-            <header className="max-w-[40rem]">
-              <AboutEyebrow>The K9 Atelier Approach</AboutEyebrow>
-              <h2 id="about-approach" className={headingClass}>
-                Experience, made personal.
-              </h2>
-            </header>
-            <div className={`${proseClass} mt-8 md:mt-10`}>
-              <p>Today, I bring that experience into every K9 Atelier appointment.</p>
-              <p>
-                Each groom is approached individually — considering the dog’s
-                coat, structure, lifestyle, personality, and comfort to create a
-                look that feels polished, natural, and uniquely theirs.
-              </p>
-              <p>
-                For me, thoughtful grooming is not about making every dog look
-                the same. It is about understanding the dog in front of me.
-              </p>
+            <div className="grid grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)] items-center gap-4 min-[390px]:gap-5 sm:gap-8 md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] md:gap-12 lg:gap-16">
+              <header className="min-w-0">
+                <AboutEyebrow>The K9 Atelier Approach</AboutEyebrow>
+                <h2
+                  id="about-approach"
+                  className="font-display mt-3 text-balance text-[1.45rem] leading-[1.12] font-medium tracking-[-0.02em] text-ink min-[390px]:text-[1.65rem] sm:mt-4 sm:text-[2.15rem] md:mt-5 md:text-[clamp(2.15rem,2.2vw+1rem,3.35rem)]"
+                >
+                  Experience, made personal.
+                </h2>
+                <div className="font-body mt-4 max-w-[36rem] space-y-3 text-[13px] leading-[1.65] text-taupe min-[390px]:text-[14px] sm:mt-6 sm:space-y-4 sm:text-[15px] sm:leading-[1.75] md:mt-8 md:space-y-5 md:text-[17px] md:leading-[1.8]">
+                  <p>
+                    Today, I bring that experience into every K9 Atelier
+                    appointment.
+                  </p>
+                  <p>
+                    Each groom is approached individually — considering the
+                    dog’s coat, structure, lifestyle, personality, and comfort
+                    to create a look that feels polished, natural, and uniquely
+                    theirs.
+                  </p>
+                  <p>
+                    For me, thoughtful grooming is not about making every dog
+                    look the same. It is about understanding the dog in front of
+                    me.
+                  </p>
+                </div>
+              </header>
+              <figure className="min-w-0">
+                <AboutPhoto
+                  {...photos.approach}
+                  sizes="(min-width: 768px) 38vw, 44vw"
+                  objectPosition="center center"
+                  className="aspect-[1122/1402] w-full object-cover"
+                />
+              </figure>
             </div>
           </section>
 
