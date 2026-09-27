@@ -1,5 +1,5 @@
 import { GalleryWall } from "@/components/gallery/GalleryWall";
-import { GALLERY_WALL } from "@/lib/gallery-wall";
+import { PageShell } from "@/components/luxury/PageShell";
 
 export const metadata = {
   title: "Gallery · K9 Atelier",
@@ -13,12 +13,12 @@ export const metadata = {
 
 export default function GalleryPage() {
   return (
-    <div
-      className="k9-gallery-room w-full overflow-x-clip pb-12 md:pb-16"
-      style={{ backgroundColor: GALLERY_WALL.background }}
+    <PageShell
+      eyebrow="The Work"
+      title="Gallery"
+      intro="Selected work by K9 Atelier"
     >
-      <h1 className="sr-only">Gallery</h1>
       <GalleryWall />
-    </div>
+    </PageShell>
   );
 }

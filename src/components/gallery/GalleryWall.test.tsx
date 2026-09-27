@@ -10,10 +10,11 @@ import {
 } from "@/lib/gallery-wall";
 
 describe("gallery wall markup", () => {
-  it("renders one horizontal museum track instead of masonry", () => {
+  it("renders a two-column page instead of a horizontal museum track", () => {
     const html = renderToStaticMarkup(<GalleryWall />);
-    assert.match(html, /The Work/);
-    assert.match(html, /Selected work by K9 Atelier/);
+    assert.match(html, /grid-cols-2/);
+    assert.equal(html.includes("This gallery scrolls horizontally"), false);
+    assert.equal(html.includes("Drag to explore"), false);
     assert.equal(html.includes("Grooms by K9 Atelier"), false);
     assert.equal(html.includes("A Study in Coat"), false);
     assert.equal(html.includes("The Craft"), false);
@@ -22,8 +23,6 @@ describe("gallery wall markup", () => {
       false,
     );
     assert.equal(html.includes("Competition Archive"), false);
-    assert.match(html, /This gallery scrolls horizontally/);
-    assert.match(html, /Drag to explore/);
     assert.equal(html.includes("Keepsakes"), false);
     assert.equal(html.includes("Teaching notes and show-day snapshots"), false);
     assert.equal(html.includes("Ribbons and notes from the table"), false);
@@ -50,6 +49,7 @@ describe("gallery wall markup", () => {
       assert.equal(html.includes(pair), true, `${caption.kicker} / ${caption.detail}`);
     }
     assert.equal(html.includes("columns-2"), false);
+    assert.match(html, /k9-gallery-card-caption/);
     for (const src of GALLERY_WALL_GUIDE_ASSETS) {
       assert.equal(html.includes(src), false);
     }
