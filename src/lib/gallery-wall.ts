@@ -4,8 +4,8 @@
  * Photos are not cropped, masked, or rewritten.
  * Wall portraits are transparent-background framed PNGs so the museum wall shows through.
  *
- * Customer-facing wall paint is the site button purple
- * (`--color-deep-lavender`, `#6B596E`). Both `museum-wall-numbered.jpg` and
+ * Customer-facing wall paint is the site cream (`colors.cream` /
+ * `--color-ivory`, `#FBF7EF`). Both `museum-wall-numbered.jpg` and
  * `museum-wall.webp` contain visible placement guides and must not be shown
  * to visitors.
  */
@@ -14,8 +14,8 @@ export const GALLERY_WALL = {
   src: "/images/gallery/museum-wall-numbered.jpg",
   width: 1024,
   height: 682,
-  /** Site button purple. Matches `--color-deep-lavender`. */
-  background: "#6B596E",
+  /** Site page cream. Matches `colors.cream` and `--color-ivory`. */
+  background: "#FBF7EF",
   alt: "Dark museum gallery wall with warm ceiling lights, dark wood trim, a wood floor, and a patterned rug",
 } as const;
 
