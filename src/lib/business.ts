@@ -18,6 +18,17 @@ export function getBrandPhoneTelHref() {
   return digits.length >= 8 ? `tel:+${digits}` : null;
 }
 
+/** schema.org telephone, e.g. +1-561-593-3335. */
+export function getBrandSchemaTelephone() {
+  const href = getBrandPhoneTelHref();
+  if (!href) return undefined;
+  const digits = href.replace(/\D/g, "");
+  const national =
+    digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : "";
+  if (national.length !== 10) return href.replace(/^tel:/, "");
+  return `+1-${national.slice(0, 3)}-${national.slice(3, 6)}-${national.slice(6)}`;
+}
+
 export function getBrandWebsiteUrl() {
   return business.brand.website?.trim() || "https://k9atelier.com";
 }
@@ -84,8 +95,23 @@ export function formatDuration(min: number, max?: number) {
 export function getCommunitiesServedLabel() {
   return (
     business.serviceArea.communitiesServed ??
-    "West Palm Beach · Palm Beach Gardens · Jupiter"
+    "Palm Beach · Jupiter · Palm Beach Gardens · West Palm Beach"
   );
+}
+
+export function getCommunitiesServed() {
+  return getCommunitiesServedLabel()
+    .split(" · ")
+    .map((name) => name.trim())
+    .filter(Boolean);
+}
+
+/** Footer line, e.g. "Serving Palm Beach, Jupiter, Palm Beach Gardens & West Palm Beach." */
+export function getServiceAreaFooterSentence() {
+  const parts = getCommunitiesServed();
+  if (parts.length === 0) return "Serving Palm Beach.";
+  if (parts.length === 1) return `Serving ${parts[0]}.`;
+  return `Serving ${parts.slice(0, -1).join(", ")} & ${parts.at(-1)}.`;
 }
 
 function getCommunitiesServedProse() {

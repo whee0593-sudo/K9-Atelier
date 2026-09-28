@@ -1,3 +1,4 @@
+import React from "react";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { Container } from "@/components/luxury/Container";
 import { SectionIntro } from "@/components/luxury/SectionIntro";

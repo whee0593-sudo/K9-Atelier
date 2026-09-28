@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import {
   business,
@@ -7,6 +8,7 @@ import {
   getBrandPhoneTelHref,
   getBrandSearchName,
   getGoogleWriteReviewUrl,
+  getServiceAreaFooterSentence,
 } from "@/lib/business";
 import { Container } from "@/components/luxury/Container";
 
@@ -61,7 +63,7 @@ export function Footer() {
               Private, cage-free mobile dog grooming for dogs up to 45 lbs.
             </p>
             <p className="font-body mt-1.5 text-[12px] font-medium leading-relaxed text-taupe">
-              Serving Jupiter, Palm Beach Gardens & West Palm Beach.
+              {getServiceAreaFooterSentence()}
             </p>
             {brand.phone && phoneHref ? (
               <a
