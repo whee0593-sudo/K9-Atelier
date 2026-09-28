@@ -1,17 +1,14 @@
 import React from "react";
-import { business, getBrandPhoneTelHref, getBrandSearchName, getCommunitiesServedLabel } from "@/lib/business";
-
-function e164Phone() {
-  const href = getBrandPhoneTelHref();
-  return href ? href.replace("tel:", "") : undefined;
-}
+import {
+  business,
+  getBrandSchemaTelephone,
+  getBrandSearchName,
+  getCommunitiesServed,
+} from "@/lib/business";
 
 export function LocalBusinessJsonLd() {
   const { brand, booking, serviceArea } = business;
-  const communities = getCommunitiesServedLabel()
-    .split(" · ")
-    .map((name) => name.trim())
-    .filter(Boolean);
+  const communities = getCommunitiesServed();
   const sameAs = [
     brand.social.facebookUrl,
     business.site.underConstruction?.instagramUrl,
@@ -34,7 +31,7 @@ export function LocalBusinessJsonLd() {
     url: brand.website,
     image: `${brand.website}${brand.logo}`,
     email: brand.email,
-    telephone: e164Phone(),
+    telephone: getBrandSchemaTelephone(),
     priceRange: "$90–$350+",
     address: {
       "@type": "PostalAddress",
@@ -45,6 +42,10 @@ export function LocalBusinessJsonLd() {
     areaServed: communities.map((name) => ({
       "@type": "City",
       name,
+      containedInPlace: {
+        "@type": "State",
+        name: "Florida",
+      },
     })),
     openingHoursSpecification: [
       {

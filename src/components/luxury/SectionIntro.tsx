@@ -1,3 +1,4 @@
+import React from "react";
 import { Eyebrow } from "./Eyebrow";
 
 type Props = {

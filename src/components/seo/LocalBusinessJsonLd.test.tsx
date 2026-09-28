@@ -52,7 +52,7 @@ describe("LocalBusiness structured data", () => {
     assert.equal(business.name, getBrandSearchName());
     assert.equal(business.name, "K9 Atelier Mobile Pet Spa");
     assert.equal(business.url, "https://k9atelier.com");
-    assert.equal(business.telephone, "+15615933335");
+    assert.equal(business.telephone, "+1-561-593-3335");
     assert.equal(business.review, undefined);
     assert.equal(business.aggregateRating, undefined);
 
@@ -65,5 +65,44 @@ describe("LocalBusiness structured data", () => {
     assert.equal(serialized.includes('"Review"'), false);
     assert.equal(serialized.includes('"AggregateRating"'), false);
     assert.equal(serialized.includes('"reviewRating"'), false);
+  });
+});
+
+describe("LocalBusiness entity fields", () => {
+  it("publishes name, url, telephone, hours, and Florida cities served", () => {
+    const data = parseJsonLd();
+    const graph = data["@graph"] as JsonLdNode[];
+    const entity = graph.find((node) => typesOf(node).includes("LocalBusiness"));
+    assert.ok(entity);
+
+    assert.equal(entity.name, getBrandSearchName());
+    assert.equal(entity.name, "K9 Atelier Mobile Pet Spa");
+    assert.equal(entity.url, "https://k9atelier.com");
+    assert.equal(entity.telephone, "+1-561-593-3335");
+
+    const hours = entity.openingHoursSpecification as JsonLdNode[];
+    assert.equal(hours.length, 1);
+    assert.equal(hours[0]["@type"], "OpeningHoursSpecification");
+    assert.deepEqual(hours[0].dayOfWeek, [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+    ]);
+    assert.equal(hours[0].opens, "09:00");
+    assert.equal(hours[0].closes, "16:00");
+
+    const areas = entity.areaServed as JsonLdNode[];
+    assert.deepEqual(
+      areas.map((area) => area.name),
+      ["Palm Beach", "Jupiter", "Palm Beach Gardens", "West Palm Beach"],
+    );
+    for (const area of areas) {
+      assert.equal(area["@type"], "City");
+      const state = area.containedInPlace as JsonLdNode;
+      assert.equal(state["@type"], "State");
+      assert.equal(state.name, "Florida");
+    }
   });
 });

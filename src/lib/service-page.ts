@@ -21,9 +21,11 @@ export const ADD_ONS_PATH = "/services/add-ons";
 export const FEES_POLICIES_PATH = "/faq#fees-policies";
 export const CONSULTATION_PATH = "/contact?inquiry=grooming-consultation";
 
-export const SERVICES_PAGE_TITLE = "Services · K9 Atelier";
+export const SERVICES_PAGE_TITLE =
+  "Mobile Dog Grooming Services in Palm Beach | K9 Atelier";
 export const SERVICES_PAGE_DESCRIPTION =
-  "A considered menu of private mobile grooming — bath and coat care, full grooming, hand stripping, spa rituals, color, specialty care, and finishing add-ons in Palm Beach.";
+  "Explore K9 Atelier\u2019s private mobile dog grooming services in Palm Beach, including full grooming, coat care, hand stripping, spa treatments and specialty care.";
+export const SERVICES_PAGE_CANONICAL = "https://k9atelier.com/services";
 
 export const FULL_GROOM_PAGE_TITLE = "Full Grooming | K9 Atelier";
 export const FULL_GROOM_PAGE_DESCRIPTION =
@@ -86,6 +88,20 @@ export type ServiceCategorySlug =
   | "color"
   | "specialty-care"
   | "add-ons";
+
+/** Concise lines shown only on the /services directory cards. */
+export const SERVICES_DIRECTORY_DESCRIPTIONS: Record<
+  ServiceCategorySlug,
+  string
+> = {
+  "bath-coat-care": "Bathing · Coat & skin maintenance",
+  "full-groom": "Haircuts · Styling · Coat care",
+  "hand-stripping": "Traditional wire-coat maintenance",
+  spa: "Skin · Coat · Wellness",
+  color: "Pet-safe color artistry",
+  "specialty-care": "Senior · Extra-gentle comfort care",
+  "add-ons": "Finishing · Coat support",
+};
 
 export type ServiceCategory = {
   slug: ServiceCategorySlug;

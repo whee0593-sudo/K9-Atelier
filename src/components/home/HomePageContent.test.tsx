@@ -1,6 +1,17 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { Footer } from "@/components/Footer";
+import { HomePageContent } from "@/components/home/HomePageContent";
+import { metadata } from "@/app/page";
+import {
+  HOME_PAGE_CANONICAL,
+  HOME_PAGE_DESCRIPTION,
+  HOME_PAGE_TITLE,
+} from "@/lib/home-seo";
+import { business, getCommunitiesServedLabel } from "@/lib/business";
 
 const REMOVED_HOME_SECTIONS = [
   "HomeAboutTeaser",
@@ -70,14 +81,17 @@ describe("home page content", () => {
     assert.match(source, /md:grid-cols-2/);
   });
 
-  it("keeps only the hero and first-visit sections", () => {
+  it("places service discovery between the hero and first visit", () => {
     const source = readFileSync(
       new URL("./HomePageContent.tsx", import.meta.url),
       "utf8",
     );
 
-    assert.match(source, /<HomeHero \/>/);
-    assert.match(source, /<HomeFirstVisit \/>/);
+    const hero = source.indexOf("<HomeHero />");
+    const services = source.indexOf("<HomeServices />");
+    const firstVisit = source.indexOf("<HomeFirstVisit />");
+
+    assert.ok(hero >= 0 && services > hero && firstVisit > services);
 
     for (const section of REMOVED_HOME_SECTIONS) {
       assert.equal(
@@ -86,5 +100,86 @@ describe("home page content", () => {
         `homepage still references ${section}`,
       );
     }
+  });
+});
+
+describe("homepage SEO", () => {
+  it("sets the Palm Beach title, description, and canonical", () => {
+    assert.equal(metadata.title, HOME_PAGE_TITLE);
+    assert.equal(
+      metadata.title,
+      "Mobile Dog Grooming in Palm Beach | K9 Atelier",
+    );
+    assert.equal(metadata.description, HOME_PAGE_DESCRIPTION);
+    assert.equal(
+      metadata.description,
+      "Private mobile dog grooming in Palm Beach by a multiple award-winning show groomer, specializing in tailored styling, coat care, senior care and hand stripping.",
+    );
+    const page = readFileSync(new URL("../../app/page.tsx", import.meta.url), "utf8");
+    assert.match(
+      page,
+      /<link rel="canonical" href=\{HOME_PAGE_CANONICAL\} \/>/,
+    );
+    assert.match(
+      page,
+      /<meta property="og:url" content=\{HOME_PAGE_CANONICAL\} \/>/,
+    );
+    assert.equal(HOME_PAGE_CANONICAL, "https://k9atelier.com/");
+  });
+
+  it("keeps one H1, the hero introduction, and crawlable service links", () => {
+    const html = renderToStaticMarkup(<HomePageContent />);
+    const h1s = html.match(/<h1\b/g) ?? [];
+
+    assert.equal(h1s.length, 1);
+    assert.match(html, /K9 ATELIER — grooming, elevated\./);
+    assert.match(html, /Private Mobile Pet Spa · Palm Beach/);
+    assert.match(
+      html,
+      /Multiple award-winning show groomer specializing in tailored styling, show-level coat care, extra-gentle senior care and hand stripping\./,
+    );
+    assert.match(html, /Grooming, tailored to the individual\./);
+    assert.match(html, new RegExp(getCommunitiesServedLabel().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.match(
+      html,
+      /Palm Beach · Jupiter · Palm Beach Gardens · West Palm Beach/,
+    );
+
+    const anchors = [...html.matchAll(/<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)].map(
+      (match) => ({
+        href: match[1],
+        text: match[2]
+          .replace(/<[^>]+>/g, " ")
+          .replace(/&amp;/g, "&")
+          .replace(/\s+/g, " ")
+          .trim(),
+      }),
+    );
+    const byHref = (href: string) => anchors.find((anchor) => anchor.href === href);
+
+    assert.match(byHref("/services/full-groom")?.text ?? "", /^Full Grooming\b/);
+    assert.match(byHref("/services/bath-coat-care")?.text ?? "", /^Bath & Coat Care\b/);
+    assert.match(byHref("/services/hand-stripping")?.text ?? "", /^Hand Stripping\b/);
+    assert.match(byHref("/services/spa")?.text ?? "", /^Spa Rituals\b/);
+    assert.match(byHref("/services/spa")?.text ?? "", /Skin · Coat · Wellness/);
+    assert.match(byHref("/services/spa")?.text ?? "", /From \$140/);
+    assert.match(byHref("/services/color")?.text ?? "", /^Creative Color\b/);
+    assert.match(byHref("/services/color")?.text ?? "", /Pet-safe color artistry/);
+    assert.match(byHref("/services/color")?.text ?? "", /From \$50/);
+    assert.match(byHref("/services/specialty-care")?.text ?? "", /^Specialty Care\b/);
+    assert.match(byHref("/services/specialty-care")?.text ?? "", /Senior · Comfort care/);
+  });
+
+  it("shows the public phone and Palm Beach service-area sentence in the footer", () => {
+    const html = renderToStaticMarkup(<Footer />);
+
+    assert.equal(business.brand.phone, "561-593-3335");
+    assert.equal(business.brand.phoneDisplay, "561-593-3335");
+    assert.match(html, /561-593-3335/);
+    assert.match(html, /href="tel:\+15615933335"/);
+    assert.match(
+      html,
+      /Serving Palm Beach, Jupiter, Palm Beach Gardens &amp; West Palm Beach\./,
+    );
   });
 });
