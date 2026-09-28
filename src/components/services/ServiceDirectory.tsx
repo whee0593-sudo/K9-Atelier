@@ -1,7 +1,9 @@
+import React from "react";
 import Link from "next/link";
 import { Container } from "@/components/luxury/Container";
 import {
   SERVICE_CATEGORIES,
+  SERVICES_DIRECTORY_DESCRIPTIONS,
   directoryPriceLabel,
 } from "@/lib/service-page";
 
@@ -25,7 +27,7 @@ export function ServiceDirectory() {
                     {category.directoryName}
                   </h2>
                   <p className="font-body mt-3 text-base leading-[1.65] text-taupe">
-                    {category.directoryDescription}
+                    {SERVICES_DIRECTORY_DESCRIPTIONS[category.slug]}
                   </p>
                   {price ? (
                     <p className="font-body mt-5 min-h-[1.5rem] text-base font-medium tracking-[0.01em] text-ink md:min-h-[1.7rem] md:text-[17px]">

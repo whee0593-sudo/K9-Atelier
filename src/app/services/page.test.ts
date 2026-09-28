@@ -5,11 +5,17 @@ import { describe, it } from "node:test";
 const servicesPage = readFileSync(new URL("./page.tsx", import.meta.url), "utf8");
 
 describe("services directory page", () => {
-  it("keeps the page to hero, directory, consultation, and notes", () => {
-    assert.match(servicesPage, /<ServicesHero \/>/);
-    assert.match(servicesPage, /<ServiceDirectory \/>/);
-    assert.match(servicesPage, /<ConsultationPrompt \/>/);
-    assert.match(servicesPage, /<ServiceNotes \/>/);
+  it("keeps the page to hero, directory, introduction, consultation, and notes", () => {
+    const hero = servicesPage.indexOf("<ServicesHero />");
+    const directory = servicesPage.indexOf("<ServiceDirectory />");
+    const introduction = servicesPage.indexOf("<ServicesIntroduction />");
+    const consultation = servicesPage.indexOf("<ConsultationPrompt />");
+    const notes = servicesPage.indexOf("<ServiceNotes />");
+
+    assert.ok(hero >= 0 && directory > hero);
+    assert.ok(introduction > directory && consultation > introduction);
+    assert.ok(notes > consultation);
+    assert.match(servicesPage, /ServicesJsonLd/);
     assert.equal(servicesPage.includes("Most Requested"), false);
     assert.equal(servicesPage.includes("ServiceCard"), false);
     assert.equal(servicesPage.includes("FeesPoliciesSection"), false);
