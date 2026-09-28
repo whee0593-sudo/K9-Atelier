@@ -59,8 +59,12 @@ export function escapeXml(value: string) {
 export function buildConnectCustomerTwiml(
   customerNumber: string,
   callerId: string,
+  statusCallbackUrl?: string,
 ) {
-  return `<?xml version="1.0" encoding="UTF-8"?><Response><Say>Connecting you to the customer.</Say><Dial callerId="${escapeXml(callerId)}" answerOnBridge="true"><Number>${escapeXml(customerNumber)}</Number></Dial></Response>`;
+  const status = statusCallbackUrl
+    ? ` statusCallback="${escapeXml(statusCallbackUrl)}" statusCallbackMethod="POST" statusCallbackEvent="initiated ringing answered completed"`
+    : "";
+  return `<?xml version="1.0" encoding="UTF-8"?><Response><Say>Connecting you to the customer.</Say><Dial callerId="${escapeXml(callerId)}" answerOnBridge="true"><Number${status}>${escapeXml(customerNumber)}</Number></Dial></Response>`;
 }
 
 export function buildVoiceErrorTwiml(message: string) {

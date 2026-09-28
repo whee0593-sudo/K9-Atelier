@@ -13,6 +13,16 @@ describe("voice bridge", () => {
     assert.match(xml, /<Number>\+15615550131<\/Number>/);
   });
 
+  it("reports the customer leg so the inbox can show Connected", () => {
+    const xml = buildConnectCustomerTwiml(
+      "+15615550131",
+      "+15615933335",
+      "https://k9atelier.com/api/voice/status?leg=customer",
+    );
+    assert.match(xml, /statusCallback="https:\/\/k9atelier.com\/api\/voice\/status\?leg=customer"/);
+    assert.match(xml, /callerId="\+15615933335"/);
+  });
+
   it("rejects a missing or expired bridge token", () => {
     assert.equal(readVoiceBridgeTarget({ to: "+15615550131" }), null);
     assert.equal(

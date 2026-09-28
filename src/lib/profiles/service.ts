@@ -68,7 +68,20 @@ export async function updateOwnProfile(
     return { error: "server" };
   }
   if (!data) return { error: "not_found" };
+  await linkCommunicationHistory(user.id, input.phone);
   return { profile: mapProfileRow(data as CustomerProfileRow) };
+}
+
+async function linkCommunicationHistory(customerId: string, phone: string) {
+  if (!phone) return;
+  try {
+    const { associateCommunicationByPhone } = await import(
+      "@/lib/communication/store"
+    );
+    await associateCommunicationByPhone(customerId, phone);
+  } catch (error) {
+    console.error("associate communication history failed:", error);
+  }
 }
 
 function isDuplicateAuthEmail(message: string) {
@@ -149,5 +162,6 @@ export async function updateStaffCustomerProfile(
     return { error: "server" };
   }
   if (!data) return { error: "not_found" };
+  await linkCommunicationHistory(customerId, input.phone || "");
   return { profile: mapProfileRow(data as CustomerProfileRow) };
 }

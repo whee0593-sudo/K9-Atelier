@@ -138,6 +138,28 @@ Twilio Messaging Service → **Integration** / **A message comes in**：
 
 ---
 
+## 8. Communication 收件箱
+
+后台 **Communication** 把店号的短信和来电放在同一个手机式列表里。已有客人按手机号对上档案（名字、宠物名）。没有档案的号码显示 **Unknown Caller**，仍然可以回复、回拨，之后客人注册或在这里 **Add Customer** 时，旧的短信和来电会自动挂到那个档案上。
+
+在 Supabase SQL Editor 再执行 `supabase/migrations/20260928015000_communication_inbox.sql`。
+
+Twilio 号码继续用现在的入口（不用改来电路由）：
+
+| 事件 | Webhook | Method |
+|------|---------|--------|
+| 来电 | `https://k9atelier.com/api/voice/inbound` | POST |
+| 来电转接结果 | `https://k9atelier.com/api/voice/dial-status` | POST |
+| 外呼状态 | `https://k9atelier.com/api/voice/status` | POST |
+| 来信 | `https://k9atelier.com/api/sms/inbound` | POST |
+| 短信状态 | `https://k9atelier.com/api/sms/status` | POST |
+
+来电仍然转到 `STAFF_VOICE_PHONE`。后台 **Call** / **Call Back** 还是先打你的私人手机，你接起来后再接通对方，对方看到的来电是 `(561) 593-3335`。预约系统发出的自动短信也会记进同一条对话。
+
+号码详情里 **Call status changes** 可以指到 `/api/voice/status`。短信状态回调网站发信时会自己带上，不必额外改 Messaging Service，除非你想在号码上再设一次 `/api/sms/status`。
+
+---
+
 ## 客人手机号从哪来？
 
 预约最后一步填写 **Mobile phone**，并勾选短信同意。号码存进客人档案。

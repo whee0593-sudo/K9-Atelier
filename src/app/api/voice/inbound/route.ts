@@ -1,4 +1,5 @@
 import { after, NextResponse } from "next/server";
+import { recordInboundCall } from "@/lib/communication/store";
 import { siteUrl } from "@/lib/email/resend";
 import { lookupCustomerByPhone } from "@/lib/sms/customer-by-phone";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
@@ -77,6 +78,16 @@ export async function POST(request: Request) {
   }
 
   const phone = normalizePhoneToE164(from) ?? from;
+  try {
+    await recordInboundCall({
+      callSid: params.CallSid ?? "",
+      from,
+      to: params.To ?? "",
+      status: params.CallStatus ?? "ringing",
+    });
+  } catch (error) {
+    console.error("record inbound call failed:", error);
+  }
   const customer = await lookupCustomerByPhone(from);
   const caller = { phone, customer };
   const whisperUrl = buildWhisperUrl(buildWhisperSay(caller));

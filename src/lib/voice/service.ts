@@ -1,4 +1,5 @@
 import { fetchAppointmentAdminRecord } from "@/lib/email/appointment-context";
+import { siteUrl } from "@/lib/email/resend";
 import { createAuthenticatedSupabaseClient } from "@/lib/pets/auth";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
 import { validateAppointmentId } from "@/lib/appointments/validation";
@@ -14,7 +15,7 @@ export async function startStaffOutboundCall(input: {
   customerId?: string;
   phone?: string;
 }): Promise<
-  | { ok: true }
+  | { ok: true; callSid: string | null }
   | {
       error:
         | "unauthenticated"
@@ -50,6 +51,11 @@ export async function startStaffOutboundCall(input: {
   params.set("From", fromNumber);
   params.set("Url", bridgeUrl);
   params.set("Method", "POST");
+  params.set("StatusCallback", siteUrl("/api/voice/status"));
+  params.set("StatusCallbackMethod", "POST");
+  for (const event of ["initiated", "ringing", "answered", "completed"]) {
+    params.append("StatusCallbackEvent", event);
+  }
 
   const response = await fetch(
     `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Calls.json`,
@@ -69,7 +75,22 @@ export async function startStaffOutboundCall(input: {
     return { error: "server" };
   }
 
-  return { ok: true };
+  const payload = (await response.json().catch(() => null)) as { sid?: string } | null;
+  const callSid = payload?.sid?.trim() || null;
+  if (callSid) {
+    try {
+      const { recordOutboundCall } = await import("@/lib/communication/store");
+      await recordOutboundCall({
+        callSid,
+        from: fromNumber,
+        to: customerPhone,
+      });
+    } catch (error) {
+      console.error("record outbound call failed:", error);
+    }
+  }
+
+  return { ok: true, callSid };
 }
 
 async function resolveCustomerPhone(input: {

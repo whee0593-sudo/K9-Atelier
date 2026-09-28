@@ -13,6 +13,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
     BARE_PATHS.includes(pathname) ||
     pathname.startsWith("/admin/collect") ||
     pathname.startsWith("/admin/arrive") ||
+    pathname.startsWith("/admin/communication") ||
     pathname === "/admin/appointments/preview" ||
     pathname === "/admin/appointments/preview/on-the-way" ||
     pathname === "/admin/appointments/preview/change" ||
