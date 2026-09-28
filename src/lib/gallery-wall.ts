@@ -75,34 +75,11 @@ export function galleryWallPhotoSrc(id: number) {
 }
 
 /**
- * Selected-work hang: original portraits, two staggered rows, no overlaps.
+ * Selected-work reading order for the two-column gallery.
+ * Same breed shares a row whenever a pair is available.
  * gallery-01 remains gallery-01.png through gallery-17.png — unused files stay in place.
  */
 export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
-  {
-    id: 1,
-    centerX: 42,
-    centerY: 71.5,
-    displayWidth: 12.6,
-    photoSrc: galleryWallPhotoSrc(1),
-    photoAlt:
-      "K9 Atelier grooming portfolio — Maltese with braided ears in an ornate oval gold frame",
-    photoWidth: 1024,
-    photoHeight: 1536,
-    fit: "framed",
-  },
-  {
-    id: 2,
-    centerX: 46,
-    centerY: 29.5,
-    displayWidth: 16.5,
-    photoSrc: galleryWallPhotoSrc(2),
-    photoAlt:
-      "K9 Atelier grooming portfolio — Yorkshire Terrier in a paisley bandana, ornate gold frame",
-    photoWidth: 1430,
-    photoHeight: 1100,
-    fit: "framed",
-  },
   {
     id: 3,
     centerX: 86,
@@ -128,42 +105,6 @@ export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
     fit: "framed",
   },
   {
-    id: 5,
-    centerX: 96,
-    centerY: 29,
-    displayWidth: 13.4,
-    photoSrc: galleryWallPhotoSrc(5),
-    photoAlt:
-      "K9 Atelier grooming portfolio — white bichon in a red knit scarf, ornate gold frame",
-    photoWidth: 1120,
-    photoHeight: 1404,
-    fit: "framed",
-  },
-  {
-    id: 6,
-    centerX: 152,
-    centerY: 29,
-    displayWidth: 13.2,
-    photoSrc: galleryWallPhotoSrc(6),
-    photoAlt:
-      "K9 Atelier grooming portfolio — Yorkshire Terrier with a Princess look in an ornate oval gold frame",
-    photoWidth: 1141,
-    photoHeight: 1378,
-    fit: "framed",
-  },
-  {
-    id: 7,
-    centerX: 200,
-    centerY: 29.5,
-    displayWidth: 16.2,
-    photoSrc: galleryWallPhotoSrc(7),
-    photoAlt:
-      "K9 Atelier grooming portfolio — white dog with creative color accents in an ornate gold frame",
-    photoWidth: 1403,
-    photoHeight: 1121,
-    fit: "framed",
-  },
-  {
     id: 8,
     centerX: 110,
     centerY: 73,
@@ -176,27 +117,51 @@ export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
     fit: "framed",
   },
   {
-    id: 9,
-    centerX: 134,
-    centerY: 71.5,
-    displayWidth: 12.8,
-    photoSrc: galleryWallPhotoSrc(9),
+    id: 14,
+    centerX: 216,
+    centerY: 73.5,
+    displayWidth: 16,
+    photoSrc: galleryWallPhotoSrc(14),
     photoAlt:
-      "K9 Atelier grooming portfolio — white-and-tan dog in a red polka-dot bandana, ornate gold frame",
-    photoWidth: 1098,
-    photoHeight: 1433,
+      "K9 Atelier grooming portfolio — apricot poodle standing in profile, ornate gold frame",
+    photoWidth: 1374,
+    photoHeight: 1145,
     fit: "framed",
   },
   {
-    id: 10,
-    centerX: 158,
-    centerY: 73.5,
-    displayWidth: 16.5,
-    photoSrc: galleryWallPhotoSrc(10),
+    id: 5,
+    centerX: 96,
+    centerY: 29,
+    displayWidth: 13.4,
+    photoSrc: galleryWallPhotoSrc(5),
     photoAlt:
-      "K9 Atelier grooming portfolio — white-and-brown Shih Tzu with a daily braid in an ornate gold frame",
-    photoWidth: 1374,
-    photoHeight: 1145,
+      "K9 Atelier grooming portfolio — white bichon in a red knit scarf, ornate gold frame",
+    photoWidth: 1120,
+    photoHeight: 1404,
+    fit: "framed",
+  },
+  {
+    id: 17,
+    centerX: 186,
+    centerY: 72,
+    displayWidth: 13.4,
+    photoSrc: galleryWallPhotoSrc(17),
+    photoAlt:
+      "K9 Atelier grooming portfolio — white dog with creative color and coat art, ornate gold frame",
+    photoWidth: 1159,
+    photoHeight: 1356,
+    fit: "framed",
+  },
+  {
+    id: 7,
+    centerX: 200,
+    centerY: 29.5,
+    displayWidth: 16.2,
+    photoSrc: galleryWallPhotoSrc(7),
+    photoAlt:
+      "K9 Atelier grooming portfolio — white dog with creative color accents in an ornate gold frame",
+    photoWidth: 1403,
+    photoHeight: 1121,
     fit: "framed",
   },
   {
@@ -224,6 +189,66 @@ export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
     fit: "framed",
   },
   {
+    id: 2,
+    centerX: 46,
+    centerY: 29.5,
+    displayWidth: 16.5,
+    photoSrc: galleryWallPhotoSrc(2),
+    photoAlt:
+      "K9 Atelier grooming portfolio — Yorkshire Terrier in a paisley bandana, ornate gold frame",
+    photoWidth: 1430,
+    photoHeight: 1100,
+    fit: "framed",
+  },
+  {
+    id: 6,
+    centerX: 152,
+    centerY: 29,
+    displayWidth: 13.2,
+    photoSrc: galleryWallPhotoSrc(6),
+    photoAlt:
+      "K9 Atelier grooming portfolio — Yorkshire Terrier with a Princess look in an ornate oval gold frame",
+    photoWidth: 1141,
+    photoHeight: 1378,
+    fit: "framed",
+  },
+  {
+    id: 1,
+    centerX: 42,
+    centerY: 71.5,
+    displayWidth: 12.6,
+    photoSrc: galleryWallPhotoSrc(1),
+    photoAlt:
+      "K9 Atelier grooming portfolio — Maltese with braided ears in an ornate oval gold frame",
+    photoWidth: 1024,
+    photoHeight: 1536,
+    fit: "framed",
+  },
+  {
+    id: 9,
+    centerX: 134,
+    centerY: 71.5,
+    displayWidth: 12.8,
+    photoSrc: galleryWallPhotoSrc(9),
+    photoAlt:
+      "K9 Atelier grooming portfolio — white-and-tan dog in a red polka-dot bandana, ornate gold frame",
+    photoWidth: 1098,
+    photoHeight: 1433,
+    fit: "framed",
+  },
+  {
+    id: 10,
+    centerX: 158,
+    centerY: 73.5,
+    displayWidth: 16.5,
+    photoSrc: galleryWallPhotoSrc(10),
+    photoAlt:
+      "K9 Atelier grooming portfolio — white-and-brown Shih Tzu with a daily braid in an ornate gold frame",
+    photoWidth: 1374,
+    photoHeight: 1145,
+    fit: "framed",
+  },
+  {
     id: 13,
     centerX: 224,
     centerY: 29,
@@ -236,18 +261,6 @@ export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
     fit: "framed",
   },
   {
-    id: 14,
-    centerX: 216,
-    centerY: 73.5,
-    displayWidth: 16,
-    photoSrc: galleryWallPhotoSrc(14),
-    photoAlt:
-      "K9 Atelier grooming portfolio — apricot poodle standing in profile, ornate gold frame",
-    photoWidth: 1374,
-    photoHeight: 1145,
-    fit: "framed",
-  },
-  {
     id: 16,
     centerX: 64,
     centerY: 72,
@@ -257,18 +270,6 @@ export const GALLERY_FRAME_SLOTS: readonly GalleryFrameSlot[] = [
       "K9 Atelier grooming portfolio — Norwich Terrier in a hand-stripped coat, ornate gold frame",
     photoWidth: 1364,
     photoHeight: 1153,
-    fit: "framed",
-  },
-  {
-    id: 17,
-    centerX: 186,
-    centerY: 72,
-    displayWidth: 13.4,
-    photoSrc: galleryWallPhotoSrc(17),
-    photoAlt:
-      "K9 Atelier grooming portfolio — white dog with creative color and coat art, ornate gold frame",
-    photoWidth: 1159,
-    photoHeight: 1356,
     fit: "framed",
   },
 ];

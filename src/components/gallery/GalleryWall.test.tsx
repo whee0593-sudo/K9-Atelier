@@ -13,6 +13,8 @@ describe("gallery wall markup", () => {
   it("renders a two-column page instead of a horizontal museum track", () => {
     const html = renderToStaticMarkup(<GalleryWall />);
     assert.match(html, /grid-cols-2/);
+    assert.match(html, /grid-rows-subgrid/);
+    assert.match(html, /self-center/);
     assert.equal(html.includes("This gallery scrolls horizontally"), false);
     assert.equal(html.includes("Drag to explore"), false);
     assert.equal(html.includes("Grooms by K9 Atelier"), false);

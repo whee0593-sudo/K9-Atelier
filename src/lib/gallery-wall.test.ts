@@ -33,7 +33,7 @@ describe("gallery wall slots", () => {
     const ids = GALLERY_FRAME_SLOTS.map((slot) => slot.id);
     assert.deepEqual(
       ids,
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17],
+      [3, 4, 8, 14, 5, 17, 7, 11, 12, 2, 6, 1, 9, 10, 13, 16],
     );
 
     for (const slot of GALLERY_FRAME_SLOTS) {
@@ -48,6 +48,30 @@ describe("gallery wall slots", () => {
       assert.ok(slot.photoWidth > 0);
       assert.ok(slot.photoHeight > 0);
     }
+  });
+
+  it("keeps the same breed on one row when a pair is available", () => {
+    const breeds = GALLERY_FRAME_SLOTS.map(
+      (slot) => SELECTED_WORK_CAPTIONS[slot.id]?.kicker,
+    );
+    const rows: Array<[string, string]> = [];
+    for (let i = 0; i < breeds.length; i += 2) {
+      rows.push([breeds[i] ?? "", breeds[i + 1] ?? ""]);
+    }
+
+    assert.deepEqual(
+      rows.filter(([left, right]) => left === right),
+      [
+        ["Poodle", "Poodle"],
+        ["Poodle", "Poodle"],
+        ["Bichon", "Bichon"],
+        ["Bichon", "Bichon"],
+        ["Yorkshire Terrier", "Yorkshire Terrier"],
+        ["Shih Tzu", "Shih Tzu"],
+      ],
+    );
+    assert.deepEqual(rows[5], ["Yorkshire Terrier", "Maltese"]);
+    assert.deepEqual(rows[7], ["Doodle", "Norwich"]);
   });
 
   it("keeps selected-work frames from overlapping, including hover scale", () => {
@@ -122,8 +146,8 @@ describe("gallery lightbox catalog", () => {
   it("keeps the visible gallery catalog to selected work only", () => {
     assert.equal(GALLERY_LIGHTBOX_ITEMS.length, 16);
     assert.equal(SELECTED_WORK_LIGHTBOX_ITEMS.length, 16);
-    assert.equal(GALLERY_LIGHTBOX_ITEMS[0]?.id, "work-01");
-    assert.equal(GALLERY_LIGHTBOX_ITEMS[15]?.id, "work-17");
+    assert.equal(GALLERY_LIGHTBOX_ITEMS[0]?.id, "work-03");
+    assert.equal(GALLERY_LIGHTBOX_ITEMS[15]?.id, "work-16");
     assert.equal(
       GALLERY_LIGHTBOX_ITEMS.some((item) => item.id === "work-15"),
       false,
@@ -147,8 +171,8 @@ describe("gallery lightbox catalog", () => {
   });
 
   it("cycles selected work and competition catalogs independently", () => {
-    assert.equal(nextLightboxId("work-17"), "work-01");
-    assert.equal(prevLightboxId("work-01"), "work-17");
+    assert.equal(nextLightboxId("work-16"), "work-03");
+    assert.equal(prevLightboxId("work-03"), "work-16");
     assert.equal(nextLightboxId("competition-07"), "competition-08");
     assert.equal(nextLightboxId("competition-08"), "competition-01");
     assert.equal(prevLightboxId("competition-01"), "competition-08");
