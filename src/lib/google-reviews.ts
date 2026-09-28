@@ -100,24 +100,30 @@ export async function getGoogleReviews(): Promise<GoogleReviewItem[]> {
       `Google Places review sync: matched ${place.displayName?.text || "K9 Atelier"} (${place.id || "no place id"}) and received ${place.reviews.length} review(s)`,
     );
 
-    return place.reviews.flatMap((review) => {
-      const quote = review.text?.text || review.originalText?.text;
-      if (!quote) return [];
+    return place.reviews
+      .flatMap((review) => {
+        const quote = review.text?.text || review.originalText?.text;
+        if (!quote) return [];
 
-      return [
-        {
-          quote,
-          name: review.authorAttribution?.displayName || "Google Maps reviewer",
-          source: "Google Maps",
-          rating: review.rating,
-          authorUri: review.authorAttribution?.uri,
-          authorPhotoUri: review.authorAttribution?.photoUri,
-          relativePublishTimeDescription: review.relativePublishTimeDescription,
-          publishTime: review.publishTime,
-          googleMapsUri: review.googleMapsUri || place.googleMapsUri,
-        },
-      ];
-    });
+        return [
+          {
+            quote,
+            name: review.authorAttribution?.displayName || "Google Maps reviewer",
+            source: "Google Maps",
+            rating: review.rating,
+            authorUri: review.authorAttribution?.uri,
+            authorPhotoUri: review.authorAttribution?.photoUri,
+            relativePublishTimeDescription: review.relativePublishTimeDescription,
+            publishTime: review.publishTime,
+            googleMapsUri: review.googleMapsUri || place.googleMapsUri,
+          },
+        ];
+      })
+      .sort((a, b) => {
+        const aTime = a.publishTime ? Date.parse(a.publishTime) : 0;
+        const bTime = b.publishTime ? Date.parse(b.publishTime) : 0;
+        return bTime - aTime;
+      });
   } catch (error) {
     console.error("Google Places review sync: unexpected error", error);
     return [];
