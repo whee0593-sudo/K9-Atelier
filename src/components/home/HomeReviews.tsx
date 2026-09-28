@@ -1,6 +1,7 @@
+import React from "react";
 import { Container } from "@/components/luxury/Container";
 import { SectionIntro } from "@/components/luxury/SectionIntro";
-import { StarRating } from "@/components/reviews/StarRating";
+import { ReviewCard } from "@/components/reviews/ReviewCard";
 import { getGoogleProfileUrl, getGoogleWriteReviewUrl } from "@/lib/business";
 import { getGoogleReviews, type GoogleReviewItem } from "@/lib/google-reviews";
 import { reviews } from "@/lib/reviews";
@@ -17,64 +18,9 @@ export async function ReviewsShowcase() {
   return (
     <>
       {items.length > 0 ? (
-        <ul className="grid gap-6 md:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-5 lg:grid-cols-4 lg:gap-6">
           {items.map((item) => (
-            <li
-              key={`${item.name}-${item.quote.slice(0, 24)}`}
-              className="flex flex-col border border-gray-line/80 bg-ivory px-6 py-8"
-            >
-              <div className="flex items-center gap-3">
-                {item.authorPhotoUri ? (
-                  <img
-                    src={item.authorPhotoUri}
-                    alt=""
-                    className="h-10 w-10 rounded-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : null}
-                <div>
-                  {item.authorUri ? (
-                    <a
-                      href={item.authorUri}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-body text-sm font-medium text-ink hover:underline"
-                    >
-                      {item.name}
-                    </a>
-                  ) : (
-                    <p className="font-body text-sm font-medium text-ink">{item.name}</p>
-                  )}
-                  <p className="font-body mt-0.5 text-[10px] uppercase tracking-[0.16em] text-taupe">
-                    {item.source || "Google Maps"}
-                  </p>
-                </div>
-              </div>
-
-              {typeof item.rating === "number" ? (
-                <div className="mt-5"><StarRating rating={item.rating} /></div>
-              ) : null}
-
-              <blockquote className="font-display mt-5 text-xl leading-snug text-ink">
-                &ldquo;{item.quote}&rdquo;
-              </blockquote>
-
-              <div className="mt-6 flex items-center justify-between gap-4">
-                <p className="font-body text-[11px] text-taupe">
-                  {item.relativePublishTimeDescription || ""}
-                </p>
-                {item.googleMapsUri ? (
-                  <a
-                    href={item.googleMapsUri}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe hover:text-ink"
-                  >
-                    View on Google
-                  </a>
-                ) : null}
-              </div>
-            </li>
+            <ReviewCard key={`${item.name}-${item.quote.slice(0, 24)}`} item={item} />
           ))}
         </ul>
       ) : (

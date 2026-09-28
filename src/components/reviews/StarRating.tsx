@@ -1,3 +1,5 @@
+import React from "react";
+
 function Star({ filled }: { filled: boolean }) {
   return (
     <svg
