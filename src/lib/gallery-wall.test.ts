@@ -33,7 +33,7 @@ describe("gallery wall slots", () => {
     const ids = GALLERY_FRAME_SLOTS.map((slot) => slot.id);
     assert.deepEqual(
       ids,
-      [3, 4, 8, 14, 5, 17, 7, 11, 12, 2, 6, 1, 9, 10, 13, 16],
+      [3, 4, 8, 14, 5, 11, 7, 17, 12, 2, 6, 1, 9, 10, 13, 16],
     );
 
     for (const slot of GALLERY_FRAME_SLOTS) {
