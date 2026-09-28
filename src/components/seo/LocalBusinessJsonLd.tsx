@@ -1,3 +1,4 @@
+import React from "react";
 import { business, getBrandPhoneTelHref, getBrandSearchName, getCommunitiesServedLabel } from "@/lib/business";
 import { reviews } from "@/lib/reviews";
 
@@ -22,8 +23,9 @@ export function LocalBusinessJsonLd() {
   const siteId = `${brand.website.replace(/\/$/, "")}/#website`;
   const businessId = `${brand.website.replace(/\/$/, "")}/#business`;
 
+  // LocalBusiness is a Google Review-snippet parent. PetGroomer is not a schema.org type.
   const localBusiness: Record<string, unknown> = {
-    "@type": "PetGroomer",
+    "@type": "LocalBusiness",
     "@id": businessId,
     name: searchName,
     alternateName: brand.name,
