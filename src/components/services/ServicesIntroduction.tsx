@@ -1,6 +1,10 @@
 import React from "react";
 import Link from "next/link";
+import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { Container } from "@/components/luxury/Container";
+
+const introLinkClass =
+  "font-body inline-flex min-h-[48px] items-center justify-center text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne";
 
 export const servicesIntroductionHeading =
   "Care Designed Around the Individual Dog";
@@ -18,15 +22,20 @@ export function ServicesIntroduction() {
           <p className="font-body mx-auto mt-5 max-w-[36rem] text-base leading-[1.7] text-taupe md:text-[17px] md:leading-[1.75]">
             {servicesIntroductionBody}
           </p>
-          <Link
-            href="/about"
-            className="font-body mt-9 inline-flex min-h-[48px] items-center justify-center text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne"
-          >
-            Meet Your Groomer
-            <span aria-hidden="true" className="ml-1.5">
-              →
-            </span>
-          </Link>
+          <div className="mt-9 flex flex-col items-center">
+            <BookServiceLink className={introLinkClass}>
+              Book Your Appointment
+              <span aria-hidden="true" className="ml-1.5">
+                →
+              </span>
+            </BookServiceLink>
+            <Link href="/about" className={introLinkClass}>
+              Meet Your Groomer
+              <span aria-hidden="true" className="ml-1.5">
+                →
+              </span>
+            </Link>
+          </div>
         </div>
       </Container>
     </section>

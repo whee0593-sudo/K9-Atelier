@@ -94,9 +94,13 @@ describe("services page content", () => {
       assert.equal(SERVICES_DIRECTORY_DESCRIPTIONS[slug], description);
     }
 
+    const booking = links.find((item) => item.href === "/book");
     const groomer = links.find((item) => item.href === "/about");
+    assert.ok(booking);
+    assert.match(booking.text, /Book Your Appointment/);
     assert.ok(groomer);
     assert.match(groomer.text, /Meet Your Groomer/);
+    assert.ok(html.indexOf("Book Your Appointment") < html.indexOf("Meet Your Groomer"));
     assert.match(html, /Care Designed Around the Individual Dog/);
   });
 });
