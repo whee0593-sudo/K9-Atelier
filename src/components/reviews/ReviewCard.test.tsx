@@ -48,6 +48,8 @@ describe("review cards", () => {
     assert.equal(html.includes("grid-cols-2"), false);
     assert.equal(html.includes("md:grid-cols-3"), false);
     assert.match(html, /Mark Keinard/);
+    assert.match(html, /Victoria Frutos/);
+    assert.match(html, /What an amazing experience/);
     assert.match(html, /Giancarlo Amyach/);
     assert.match(html, /Huizi Yuan/);
     assert.match(html, /scheduling with Penny again/);
