@@ -22,9 +22,10 @@ const PUBLIC_PATHS = [
 ] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  // These pages are static and have no stored page-specific modification date.
+  // Omit lastModified so the sitemap does not stamp every URL with generation time.
   return PUBLIC_PATHS.map((path) => ({
     url: absoluteSiteUrl(path),
-    lastModified: new Date(),
     changeFrequency: path.startsWith(SERVICES_PATH) ? "weekly" : "monthly",
     priority:
       path === "/"
