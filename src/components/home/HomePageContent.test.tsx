@@ -5,12 +5,12 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Footer } from "@/components/Footer";
 import { HomePageContent } from "@/components/home/HomePageContent";
+import { metadata } from "@/app/page";
 import {
   HOME_PAGE_CANONICAL,
   HOME_PAGE_DESCRIPTION,
   HOME_PAGE_TITLE,
-  metadata,
-} from "@/app/page";
+} from "@/lib/home-seo";
 import { business, getCommunitiesServedLabel } from "@/lib/business";
 
 const REMOVED_HOME_SECTIONS = [

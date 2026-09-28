@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import { HomePageContent } from "@/components/home/HomePageContent";
-
-export const HOME_PAGE_TITLE =
-  "Mobile Dog Grooming in Palm Beach | K9 Atelier";
-export const HOME_PAGE_DESCRIPTION =
-  "Private mobile dog grooming in Palm Beach by a multiple award-winning show groomer, specializing in tailored styling, coat care, senior care and hand stripping.";
-export const HOME_PAGE_CANONICAL = "https://k9atelier.com/";
+import {
+  HOME_PAGE_CANONICAL,
+  HOME_PAGE_DESCRIPTION,
+  HOME_PAGE_TITLE,
+} from "@/lib/home-seo";
 
 export const metadata: Metadata = {
   title: HOME_PAGE_TITLE,
