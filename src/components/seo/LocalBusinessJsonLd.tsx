@@ -5,7 +5,6 @@ import {
   getBrandSearchName,
   getCommunitiesServed,
 } from "@/lib/business";
-import { reviews } from "@/lib/reviews";
 
 export function LocalBusinessJsonLd() {
   const { brand, booking, serviceArea } = business;
@@ -20,7 +19,8 @@ export function LocalBusinessJsonLd() {
   const siteId = `${brand.website.replace(/\/$/, "")}/#website`;
   const businessId = `${brand.website.replace(/\/$/, "")}/#business`;
 
-  // LocalBusiness is a Google Review-snippet parent. PetGroomer is not a schema.org type.
+  // LocalBusiness only. Self-serving Review and AggregateRating markup is omitted
+  // so Google does not treat testimonials about K9 Atelier as review snippets.
   const localBusiness: Record<string, unknown> = {
     "@type": "LocalBusiness",
     "@id": businessId,
@@ -64,38 +64,6 @@ export function LocalBusinessJsonLd() {
   };
 
   if (sameAs.length > 0) localBusiness.sameAs = sameAs;
-
-  if (reviews.items.length > 0) {
-    const rated = reviews.items.filter(
-      (item) => typeof item.rating === "number",
-    );
-    if (rated.length > 0) {
-      const average =
-        rated.reduce((sum, item) => sum + (item.rating ?? 0), 0) / rated.length;
-      localBusiness.aggregateRating = {
-        "@type": "AggregateRating",
-        ratingValue: Number(average.toFixed(1)),
-        reviewCount: rated.length,
-        bestRating: 5,
-        worstRating: 1,
-      };
-    }
-    localBusiness.review = reviews.items.map((item) => ({
-      "@type": "Review",
-      reviewBody: item.quote,
-      author: { "@type": "Person", name: item.name },
-      ...(typeof item.rating === "number"
-        ? {
-            reviewRating: {
-              "@type": "Rating",
-              ratingValue: item.rating,
-              bestRating: 5,
-              worstRating: 1,
-            },
-          }
-        : {}),
-    }));
-  }
 
   const data = {
     "@context": "https://schema.org",
