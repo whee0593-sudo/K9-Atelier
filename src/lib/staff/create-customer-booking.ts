@@ -271,6 +271,14 @@ export async function createStaffCustomerBooking(
       );
       return { error: "server" };
     }
+    try {
+      const { associateCommunicationByPhone } = await import(
+        "@/lib/communication/store"
+      );
+      await associateCommunicationByPhone(userId, input.phone);
+    } catch (error) {
+      console.error("associate communication history failed:", error);
+    }
 
     const { data: petRow, error: petError } = await admin
       .from("pets")

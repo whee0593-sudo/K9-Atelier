@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { recordInboundMessage } from "@/lib/communication/store";
 import { handleInboundCustomerSms } from "@/lib/sms/inbound";
 import { inboundMediaUrls } from "@/lib/sms/inbox-copy";
+import { isStaffPhone } from "@/lib/sms/inbox";
 import { isValidTwilioSignature } from "@/lib/sms/twilio-signature";
 
 export const runtime = "nodejs";
@@ -59,6 +61,21 @@ export async function POST(request: Request) {
   const from = params.From ?? "";
   const body = params.Body ?? "";
   if (!from) return twiml();
+
+  if (!isStaffPhone(from)) {
+    try {
+      await recordInboundMessage({
+        messageSid: params.MessageSid ?? "",
+        from,
+        to: params.To ?? "",
+        body,
+        mediaCount: inboundMediaUrls(params).length,
+        status: params.SmsStatus ?? "received",
+      });
+    } catch (error) {
+      console.error("record inbound message failed:", error);
+    }
+  }
 
   const result = await handleInboundCustomerSms({
     from,

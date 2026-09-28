@@ -1,7 +1,15 @@
+import { siteUrl } from "@/lib/email/resend";
+
 export type SendSmsInput = {
   to: string;
   body: string;
   mediaUrls?: string[];
+};
+
+type TwilioMessageResult = {
+  sid: string;
+  status: string;
+  from: string;
 };
 
 function envValue(name: string) {
@@ -24,10 +32,11 @@ async function postTwilioMessage(input: {
   mediaUrls?: string[];
   from?: string;
   messagingServiceSid?: string;
-}): Promise<boolean> {
+}): Promise<TwilioMessageResult | null> {
   const params = new URLSearchParams();
   params.set("To", input.to);
   params.set("Body", input.body);
+  params.set("StatusCallback", siteUrl("/api/sms/status"));
   for (const url of input.mediaUrls ?? []) {
     if (url.trim()) params.append("MediaUrl", url.trim());
   }
@@ -52,10 +61,19 @@ async function postTwilioMessage(input: {
   if (!response.ok) {
     const errorText = await response.text();
     console.error("Twilio SMS failed:", response.status, errorText);
-    return false;
+    return null;
   }
 
-  return true;
+  const payload = (await response.json().catch(() => null)) as {
+    sid?: string;
+    status?: string;
+    from?: string;
+  } | null;
+  return {
+    sid: payload?.sid?.trim() ?? "",
+    status: payload?.status?.trim() || "queued",
+    from: payload?.from?.trim() ?? "",
+  };
 }
 
 export async function sendSms(input: SendSmsInput): Promise<boolean> {
@@ -77,30 +95,82 @@ export async function sendSms(input: SendSmsInput): Promise<boolean> {
     body: input.body || (mediaUrls.length ? "Photo" : ""),
   };
 
-  if (mediaUrls.length > 0) {
-    const sentMms = fromNumber
-      ? await postTwilioMessage({
-          ...shared,
-          from: fromNumber,
-          mediaUrls,
-        })
-      : await postTwilioMessage({
-          ...shared,
-          messagingServiceSid,
-          mediaUrls,
-        });
-    if (sentMms) return true;
-    console.warn("Twilio MMS failed; sending text without the image");
-    return postTwilioMessage({
-      ...shared,
-      from: fromNumber || undefined,
-      messagingServiceSid: fromNumber ? undefined : messagingServiceSid,
+  const sent = mediaUrls.length
+    ? await sendWithMediaFallback({
+        shared,
+        fromNumber,
+        messagingServiceSid,
+        mediaUrls,
+      })
+    : await postTwilioMessage({
+        ...shared,
+        from: messagingServiceSid ? undefined : fromNumber || undefined,
+        messagingServiceSid: messagingServiceSid || undefined,
+      });
+
+  if (sent) {
+    await rememberOutboundMessage({
+      to: input.to,
+      from: sent.from || fromNumber,
+      body: shared.body,
+      messageSid: sent.sid,
+      status: sent.status,
     });
   }
+  return Boolean(sent);
+}
 
+async function sendWithMediaFallback(input: {
+  shared: {
+    accountSid: string;
+    authToken: string;
+    to: string;
+    body: string;
+  };
+  fromNumber: string;
+  messagingServiceSid: string;
+  mediaUrls: string[];
+}) {
+  const sentMms = input.fromNumber
+    ? await postTwilioMessage({
+        ...input.shared,
+        from: input.fromNumber,
+        mediaUrls: input.mediaUrls,
+      })
+    : await postTwilioMessage({
+        ...input.shared,
+        messagingServiceSid: input.messagingServiceSid,
+        mediaUrls: input.mediaUrls,
+      });
+  if (sentMms) return sentMms;
+  console.warn("Twilio MMS failed; sending text without the image");
   return postTwilioMessage({
-    ...shared,
-    from: messagingServiceSid ? undefined : fromNumber || undefined,
-    messagingServiceSid: messagingServiceSid || undefined,
+    ...input.shared,
+    from: input.fromNumber || undefined,
+    messagingServiceSid: input.fromNumber ? undefined : input.messagingServiceSid,
   });
+}
+
+async function rememberOutboundMessage(input: {
+  to: string;
+  from: string;
+  body: string;
+  messageSid: string;
+  status: string;
+}) {
+  try {
+    const { phonesMatch } = await import("@/lib/sms/phone");
+    const { getStaffVoicePhone } = await import("@/lib/voice/config");
+    if (phonesMatch(input.to, getStaffVoicePhone())) return;
+    const { recordOutboundMessage } = await import("@/lib/communication/store");
+    await recordOutboundMessage({
+      messageSid: input.messageSid,
+      from: input.from,
+      to: input.to,
+      body: input.body,
+      status: input.status,
+    });
+  } catch (error) {
+    console.error("record outbound communication failed:", error);
+  }
 }

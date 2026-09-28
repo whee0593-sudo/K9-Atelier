@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { applyDialOutcome } from "@/lib/communication/store";
+import { parseDurationSeconds } from "@/lib/communication/present";
 import { lookupCustomerByPhone } from "@/lib/sms/customer-by-phone";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
 import { deliverStudioCallerSms } from "@/lib/sms/studio-callers";
@@ -55,6 +57,17 @@ export async function POST(request: Request) {
   const status = params.DialCallStatus ?? "";
 
   if (!isStaffCallingStudio(from)) {
+    try {
+      await applyDialOutcome({
+        callSid: params.CallSid ?? "",
+        from,
+        to: params.To ?? "",
+        dialStatus: status,
+        durationSeconds: parseDurationSeconds(params.DialCallDuration),
+      });
+    } catch (error) {
+      console.error("record dial outcome failed:", error);
+    }
     const phone = normalizePhoneToE164(from) ?? from;
     const customer = await lookupCustomerByPhone(from);
     try {

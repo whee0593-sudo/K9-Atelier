@@ -12,7 +12,9 @@ function isStafflessPreviewPath(pathname: string) {
     pathname === "/admin/pets/preview" ||
     pathname === "/admin/book-for-customer/preview" ||
     pathname === "/admin/collect/preview" ||
-    pathname.startsWith("/admin/collect/preview/")
+    pathname.startsWith("/admin/collect/preview/") ||
+    pathname === "/admin/communication/preview" ||
+    pathname.startsWith("/admin/communication/preview/")
   );
 }
 
@@ -54,8 +56,19 @@ export default async function AdminLayout({
   }
 
   const showTeam = await isOwnerUser();
+  let unreadCount = 0;
+  try {
+    const { getCommunicationBadgeCount } = await import("@/lib/communication/store");
+    unreadCount = await getCommunicationBadgeCount();
+  } catch {
+    unreadCount = 0;
+  }
   return (
-    <AdminChrome banner={<AdminStaffBanner />} showTeam={showTeam}>
+    <AdminChrome
+      banner={<AdminStaffBanner />}
+      showTeam={showTeam}
+      unreadCount={unreadCount}
+    >
       {children}
     </AdminChrome>
   );

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { markCallConnecting } from "@/lib/communication/store";
+import { siteUrl } from "@/lib/email/resend";
 import { isValidTwilioSignature } from "@/lib/sms/twilio-signature";
 import {
   buildConnectCustomerTwiml,
@@ -64,5 +66,19 @@ export async function POST(request: Request) {
     );
   }
 
-  return twiml(buildConnectCustomerTwiml(customerNumber, callerId));
+  if (params.CallSid) {
+    try {
+      await markCallConnecting(params.CallSid);
+    } catch (error) {
+      console.error("mark call connecting failed:", error);
+    }
+  }
+
+  return twiml(
+    buildConnectCustomerTwiml(
+      customerNumber,
+      callerId,
+      siteUrl("/api/voice/status?leg=customer"),
+    ),
+  );
 }

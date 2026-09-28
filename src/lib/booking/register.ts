@@ -118,5 +118,14 @@ export async function registerBookingCustomer(
     };
   }
 
+  try {
+    const { associateCommunicationByPhone } = await import(
+      "@/lib/communication/store"
+    );
+    await associateCommunicationByPhone(data.user.id, input.phone);
+  } catch (error) {
+    console.error("associate communication history failed:", error);
+  }
+
   return { ok: true };
 }
