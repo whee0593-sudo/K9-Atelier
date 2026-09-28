@@ -265,10 +265,13 @@ describe("service page helpers", () => {
   });
 
   it("uses independent Full Groom and Hand Stripping SEO copy", () => {
-    assert.equal(FULL_GROOM_PAGE_TITLE, "Full Grooming | K9 Atelier");
+    assert.equal(
+      FULL_GROOM_PAGE_TITLE,
+      "Full Dog Grooming in Palm Beach | K9 Atelier",
+    );
     assert.equal(
       FULL_GROOM_PAGE_DESCRIPTION,
-      "Custom full grooming and haircuts tailored to coat, lifestyle, and expression. Private mobile grooming serving Jupiter, Palm Beach Gardens and surrounding Palm Beach areas.",
+      "Private mobile full grooming in Palm Beach with custom haircuts and styling tailored to your dog\u2019s coat, lifestyle and individual expression.",
     );
     assert.equal(FULL_GROOM_PAGE_H1, "A Complete Style, Done With Patience.");
     assert.equal(HAND_STRIPPING_PAGE_TITLE, "Hand Stripping | K9 Atelier");

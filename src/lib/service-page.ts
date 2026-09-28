@@ -27,12 +27,37 @@ export const SERVICES_PAGE_DESCRIPTION =
   "Explore K9 Atelier\u2019s private mobile dog grooming services in Palm Beach, including full grooming, coat care, hand stripping, spa treatments and specialty care.";
 export const SERVICES_PAGE_CANONICAL = "https://k9atelier.com/services";
 
-export const FULL_GROOM_PAGE_TITLE = "Full Grooming | K9 Atelier";
+export const FULL_GROOM_PAGE_TITLE =
+  "Full Dog Grooming in Palm Beach | K9 Atelier";
 export const FULL_GROOM_PAGE_DESCRIPTION =
-  "Custom full grooming and haircuts tailored to coat, lifestyle, and expression. Private mobile grooming serving Jupiter, Palm Beach Gardens and surrounding Palm Beach areas.";
+  "Private mobile full grooming in Palm Beach with custom haircuts and styling tailored to your dog\u2019s coat, lifestyle and individual expression.";
 export const FULL_GROOM_PAGE_H1 = "A Complete Style, Done With Patience.";
 export const FULL_GROOM_PAGE_INTRO =
-  "Custom haircuts for coats that need more than a bath.";
+  "Private mobile full grooming in Palm Beach, with custom haircuts and styling for coats that need more than a bath.";
+export const FULL_GROOM_INCLUDED_HEADING = "What\u2019s Included in a Full Groom";
+export const FULL_GROOM_INCLUDED_BODY =
+  "A Full Groom begins with complete bath and coat care, followed by a customized haircut and finishing work selected for your dog\u2019s coat, proportions, lifestyle and preferred look. Styling can range from practical maintenance trims to teddy-bear inspired finishes and breed-appropriate styling.";
+export const FULL_GROOM_STYLING_HEADING = "Styling Tailored to the Individual";
+export const FULL_GROOM_STYLING_BODY =
+  "Every haircut is considered individually, taking into account coat texture, body proportions, maintenance needs and the style you would like to achieve. The goal is a balanced finish that suits the dog rather than a one-style-fits-all approach.";
+
+export const FULL_GROOM_FAQS = [
+  {
+    question: "How often should my dog receive a full groom?",
+    answer:
+      "Grooming frequency depends on coat type, length, lifestyle and the style you would like to maintain. Many haircut-based coats benefit from professional grooming every 3\u20134 weeks.",
+  },
+  {
+    question: "How is the haircut style chosen?",
+    answer:
+      "Your dog\u2019s coat, proportions, maintenance needs and your preferred look are considered when selecting the finished style.",
+  },
+  {
+    question: "How is Full Groom pricing determined?",
+    answer:
+      "Starting prices are based on weight and coat type. Final pricing may vary with coat density, condition, requested style, temperament and additional grooming time required.",
+  },
+] as const;
 
 export const HAND_STRIPPING_PAGE_TITLE = "Hand Stripping | K9 Atelier";
 export const HAND_STRIPPING_PAGE_DESCRIPTION =
