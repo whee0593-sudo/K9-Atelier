@@ -65,11 +65,11 @@ describe("gallery wall slots", () => {
         ["Poodle", "Poodle"],
         ["Poodle", "Poodle"],
         ["Bichon", "Bichon"],
-        ["Bichon", "Bichon"],
         ["Yorkshire Terrier", "Yorkshire Terrier"],
         ["Shih Tzu", "Shih Tzu"],
       ],
     );
+    assert.deepEqual(rows[2], ["Bichon", "Pomeranian"]);
     assert.deepEqual(rows[5], ["Yorkshire Terrier", "Maltese"]);
     assert.deepEqual(rows[7], ["Doodle", "Norwich"]);
   });
@@ -253,8 +253,8 @@ describe("gallery captions", () => {
       "Hand strip",
     ]);
     assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[11]), [
-      "Bichon",
-      "Creative Color Dye",
+      "Pomeranian",
+      "Boo Cut",
     ]);
     assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[9]), [
       "Shih Tzu",
