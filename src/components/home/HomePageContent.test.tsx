@@ -145,15 +145,29 @@ describe("homepage SEO", () => {
       /Palm Beach · Jupiter · Palm Beach Gardens · West Palm Beach/,
     );
 
-    assert.match(html, /<a[^>]+href="\/services\/full-groom"[^>]*>Full Grooming<\/a>/);
-    assert.match(
-      html,
-      /<a[^>]+href="\/services\/bath-coat-care"[^>]*>Bath &amp; Coat Care<\/a>/,
+    const anchors = [...html.matchAll(/<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)].map(
+      (match) => ({
+        href: match[1],
+        text: match[2]
+          .replace(/<[^>]+>/g, " ")
+          .replace(/&amp;/g, "&")
+          .replace(/\s+/g, " ")
+          .trim(),
+      }),
     );
-    assert.match(
-      html,
-      /<a[^>]+href="\/services\/hand-stripping"[^>]*>Hand Stripping<\/a>/,
-    );
+    const byHref = (href: string) => anchors.find((anchor) => anchor.href === href);
+
+    assert.match(byHref("/services/full-groom")?.text ?? "", /^Full Grooming\b/);
+    assert.match(byHref("/services/bath-coat-care")?.text ?? "", /^Bath & Coat Care\b/);
+    assert.match(byHref("/services/hand-stripping")?.text ?? "", /^Hand Stripping\b/);
+    assert.match(byHref("/services/spa")?.text ?? "", /^Spa Rituals\b/);
+    assert.match(byHref("/services/spa")?.text ?? "", /Skin · Coat · Wellness/);
+    assert.match(byHref("/services/spa")?.text ?? "", /From \$140/);
+    assert.match(byHref("/services/color")?.text ?? "", /^Creative Color\b/);
+    assert.match(byHref("/services/color")?.text ?? "", /Pet-safe color artistry/);
+    assert.match(byHref("/services/color")?.text ?? "", /From \$50/);
+    assert.match(byHref("/services/specialty-care")?.text ?? "", /^Specialty Care\b/);
+    assert.match(byHref("/services/specialty-care")?.text ?? "", /Senior · Comfort care/);
   });
 
   it("shows the public phone and Palm Beach service-area sentence in the footer", () => {
