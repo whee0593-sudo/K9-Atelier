@@ -274,11 +274,18 @@ describe("service page helpers", () => {
       "Private mobile full grooming in Palm Beach with custom haircuts and styling tailored to your dog\u2019s coat, lifestyle and individual expression.",
     );
     assert.equal(FULL_GROOM_PAGE_H1, "A Complete Style, Done With Patience.");
-    assert.equal(HAND_STRIPPING_PAGE_TITLE, "Hand Stripping | K9 Atelier");
+    assert.equal(
+      HAND_STRIPPING_PAGE_TITLE,
+      "Hand Stripping Dog Grooming in Palm Beach | K9 Atelier",
+    );
+    assert.equal(
+      HAND_STRIPPING_PAGE_DESCRIPTION,
+      "Professional hand stripping in Palm Beach for wire-coated dogs, preserving natural coat texture, color and protection through traditional coat care.",
+    );
     assert.equal(HAND_STRIPPING_PAGE_H1, "Hand Stripping");
     assert.notEqual(FULL_GROOM_PAGE_TITLE, HAND_STRIPPING_PAGE_TITLE);
     assert.notEqual(FULL_GROOM_PAGE_H1, HAND_STRIPPING_PAGE_H1);
-    assert.match(HAND_STRIPPING_PAGE_DESCRIPTION, /Hand stripping|hand stripping/);
+    assert.match(HAND_STRIPPING_PAGE_DESCRIPTION, /hand stripping/);
     assert.equal(
       absoluteSiteUrl(FULL_GROOM_PATH),
       "https://k9atelier.com/services/full-groom",

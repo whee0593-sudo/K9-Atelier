@@ -8,6 +8,7 @@ import { PriceTiers } from "@/components/services/PriceTiers";
 import { formatPrice } from "@/lib/business";
 import type { BookableService } from "@/lib/services";
 import {
+  BATH_COAT_PATH,
   serviceCardAccessLabel,
   serviceCardBestFor,
   serviceCardPriceValue,
@@ -137,6 +138,29 @@ export function ServiceCard({
   );
 }
 
+function ServiceNote({ service }: { service: BookableService }) {
+  const note = service.note ?? "";
+  const label = "Signature Bath & Care";
+  const index = service.id === "hand-stripping" ? note.indexOf(label) : -1;
+
+  if (index === -1) {
+    return <p className="font-body mt-4 text-sm text-taupe">{note}</p>;
+  }
+
+  return (
+    <p className="font-body mt-4 text-sm text-taupe">
+      {note.slice(0, index)}
+      <Link
+        href={BATH_COAT_PATH}
+        className="text-deep-lavender underline decoration-champagne/70 underline-offset-4 transition hover:text-ink"
+      >
+        {label}
+      </Link>
+      {note.slice(index + label.length)}
+    </p>
+  );
+}
+
 function ServiceDetails({ service }: { service: BookableService }) {
   return (
     <div className="border-t border-gray-line/70 pt-6">
@@ -213,9 +237,7 @@ function ServiceDetails({ service }: { service: BookableService }) {
         </p>
       )}
 
-      {service.note && (
-        <p className="font-body mt-4 text-sm text-taupe">{service.note}</p>
-      )}
+      {service.note && <ServiceNote service={service} />}
 
       {service.policyNote && (
         <p className="font-body mt-4 text-sm text-taupe">

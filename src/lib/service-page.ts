@@ -59,12 +59,47 @@ export const FULL_GROOM_FAQS = [
   },
 ] as const;
 
-export const HAND_STRIPPING_PAGE_TITLE = "Hand Stripping | K9 Atelier";
+export const HAND_STRIPPING_PAGE_TITLE =
+  "Hand Stripping Dog Grooming in Palm Beach | K9 Atelier";
 export const HAND_STRIPPING_PAGE_DESCRIPTION =
-  "Traditional hand stripping for suitable wire-coated breeds, preserving harsh texture, color, and natural coat protection. Private mobile grooming serving Jupiter, Palm Beach Gardens and surrounding Palm Beach areas.";
+  "Professional hand stripping in Palm Beach for wire-coated dogs, preserving natural coat texture, color and protection through traditional coat care.";
 export const HAND_STRIPPING_PAGE_H1 = "Hand Stripping";
 export const HAND_STRIPPING_PAGE_INTRO =
-  "Traditional coat maintenance for wire-coated breeds, preserving harsh texture, color, and natural coat protection.";
+  "Professional hand stripping in Palm Beach for wire-coated breeds, preserving harsh texture, rich color and the coat\u2019s natural protective qualities.";
+export const HAND_STRIPPING_WHAT_HEADING = "What Is Hand Stripping?";
+export const HAND_STRIPPING_WHAT_BODY =
+  "Hand stripping is a traditional grooming technique used to maintain certain wire coats by manually removing mature outer coat that is ready to shed. Rather than cutting the coat shorter with clippers, the finished coat is maintained through careful removal and rotation of mature hair to support its characteristic texture, color and appearance.";
+export const HAND_STRIPPING_COMPARE_HEADING = "Hand Stripping vs. Clipping";
+export const HAND_STRIPPING_COMPARE_BODY =
+  "Hand stripping and clipping create different results on a wire coat. Clipping shortens the existing hair, while hand stripping removes mature outer coat that is ready to release. For suitable coats, traditional hand stripping can help maintain the characteristic texture, color and finish associated with the breed.";
+export const HAND_STRIPPING_SUITABLE_HEADING =
+  "Which Coats Are Suitable for Hand Stripping?";
+export const HAND_STRIPPING_SUITABLE_BODY =
+  "Hand stripping is commonly associated with wire-coated Terriers, Schnauzers and other breeds with a suitable harsh outer coat. Coat condition, previous grooming history, age, skin condition and the desired finish all influence whether hand stripping is appropriate for an individual dog.";
+export const HAND_STRIPPING_SUITABLE_NOTE =
+  "Breeds commonly associated with traditional hand stripping include Norwich Terriers and other wire-coated terriers with suitable coat texture.";
+export const HAND_STRIPPING_MAINTENANCE_HEADING =
+  "How Often Does a Hand-Stripped Coat Need Maintenance?";
+export const HAND_STRIPPING_MAINTENANCE_BODY =
+  "Maintenance frequency depends on the coat cycle, coverage, previous grooming and the desired finish. Some dogs benefit from regular coat rotation to maintain a consistent wire texture, while others are scheduled when sufficient mature coat is ready to be removed.";
+
+export const HAND_STRIPPING_FAQS = [
+  {
+    question: "Does hand stripping hurt?",
+    answer:
+      "When performed on a suitable coat at the appropriate stage of its growth cycle, mature coat is removed carefully and progressively. Coat condition and the individual dog are assessed before and throughout the service.",
+  },
+  {
+    question: "Can every wire-coated dog be hand stripped?",
+    answer:
+      "Not necessarily. Coat texture, previous clipping, age, skin condition and grooming history can affect whether traditional hand stripping is appropriate.",
+  },
+  {
+    question: "How is hand stripping priced?",
+    answer:
+      "Hand stripping is priced by time because coat density, coverage, condition and the amount of mature coat ready for removal vary between dogs.",
+  },
+] as const;
 
 export function absoluteSiteUrl(path: string) {
   const origin = getBrandWebsiteUrl().replace(/\/$/, "");
