@@ -1,4 +1,6 @@
+import { FullGroomJsonLd } from "@/components/seo/FullGroomJsonLd";
 import { CreativeColoringSection } from "@/components/services/CreativeColoringSection";
+import { FullGroomEditorial } from "@/components/services/FullGroomEditorial";
 import { MobileBookBar } from "@/components/services/MobileBookBar";
 import { ServiceCard } from "@/components/services/ServiceCard";
 import { ServicesHashRedirect } from "@/components/services/ServicesHashRedirect";
@@ -29,6 +31,7 @@ export function ServiceCategoryView({ category }: Props) {
 
   return (
     <div className="pb-24 md:pb-0">
+      {category.slug === "full-groom" ? <FullGroomJsonLd /> : null}
       <ServicesHashRedirect />
       <ServicesNav />
       <ServicesSection
@@ -70,6 +73,7 @@ export function ServiceCategoryView({ category }: Props) {
           </div>
         )}
       </ServicesSection>
+      {category.slug === "full-groom" ? <FullGroomEditorial /> : null}
       <MobileBookBar />
     </div>
   );
