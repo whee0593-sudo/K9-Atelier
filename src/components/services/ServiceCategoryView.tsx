@@ -1,6 +1,8 @@
 import { FullGroomJsonLd } from "@/components/seo/FullGroomJsonLd";
+import { HandStrippingJsonLd } from "@/components/seo/HandStrippingJsonLd";
 import { CreativeColoringSection } from "@/components/services/CreativeColoringSection";
 import { FullGroomEditorial } from "@/components/services/FullGroomEditorial";
+import { HandStrippingEditorial } from "@/components/services/HandStrippingEditorial";
 import { MobileBookBar } from "@/components/services/MobileBookBar";
 import { ServiceCard } from "@/components/services/ServiceCard";
 import { ServicesHashRedirect } from "@/components/services/ServicesHashRedirect";
@@ -32,6 +34,7 @@ export function ServiceCategoryView({ category }: Props) {
   return (
     <div className="pb-24 md:pb-0">
       {category.slug === "full-groom" ? <FullGroomJsonLd /> : null}
+      {category.slug === "hand-stripping" ? <HandStrippingJsonLd /> : null}
       <ServicesHashRedirect />
       <ServicesNav />
       <ServicesSection
@@ -74,6 +77,7 @@ export function ServiceCategoryView({ category }: Props) {
         )}
       </ServicesSection>
       {category.slug === "full-groom" ? <FullGroomEditorial /> : null}
+      {category.slug === "hand-stripping" ? <HandStrippingEditorial /> : null}
       <MobileBookBar />
     </div>
   );
