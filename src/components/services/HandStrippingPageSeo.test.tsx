@@ -26,6 +26,7 @@ import {
   HAND_STRIPPING_WHAT_HEADING,
   getServiceById,
   getServiceCategory,
+  serviceCardBestFor,
   serviceCardPriceValue,
   serviceDurationLabel,
   serviceStartingPriceLabel,
@@ -191,6 +192,7 @@ describe("hand stripping page content", () => {
   it("keeps the hourly price and duration sourced from the catalog", () => {
     const service = getServiceById("hand-stripping");
     assert.ok(service);
+    assert.equal(serviceCardBestFor(service), "Wire-coated breeds");
     assert.equal(service.hourlyRate, 160);
     assert.equal(service.pricingType, "hourly");
     assert.equal(serviceStartingPriceLabel(service), "From $160 / hour");
@@ -212,6 +214,8 @@ describe("hand stripping page content", () => {
     const html = renderToStaticMarkup(
       <ServiceCard service={service} headingAs="h2" anchorId="hand-stripping" />,
     );
+    assert.match(html, /Wire-coated breeds/);
+    assert.equal(html.includes("Wire-coated Terriers and Schnauzers"), false);
     assert.match(html, /\$160 \/ hour/);
     assert.match(html, /From \$160 \/ hour/);
     assert.match(html, /1 – 1\.5 hours \(varies by coat texture &amp; coverage\)/);
