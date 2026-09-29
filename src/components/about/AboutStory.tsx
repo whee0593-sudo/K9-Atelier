@@ -1,5 +1,6 @@
+import React, { type ReactNode } from "react";
 import Image from "next/image";
-import type { ReactNode } from "react";
+import Link from "next/link";
 import { Container } from "@/components/luxury/Container";
 
 const awards = [
@@ -76,6 +77,9 @@ const proseClass =
 
 const captionClass =
   "font-body mt-3 text-[11px] font-medium uppercase tracking-[0.18em] text-taupe md:mt-4";
+
+const textLinkClass =
+  "font-body mt-8 inline-flex max-w-full min-h-[48px] items-center justify-center text-center text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne md:mt-10";
 
 function AboutPhoto({
   src,
@@ -424,6 +428,12 @@ export function AboutStory() {
             <p className="font-display mt-10 text-[clamp(1.9rem,2vw+1.15rem,2.85rem)] leading-tight font-normal text-ink italic md:mt-14">
               Grooming, elevated.
             </p>
+            <Link href="/services" className={textLinkClass}>
+              Explore Grooming Services
+              <span aria-hidden="true" className="ml-1.5">
+                →
+              </span>
+            </Link>
           </div>
         </article>
       </Container>
