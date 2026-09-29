@@ -71,7 +71,7 @@ describe("gallery wall slots", () => {
     );
     assert.deepEqual(rows[2], ["Bichon", "Pomeranian"]);
     assert.deepEqual(rows[5], ["Yorkshire Terrier", "Maltese"]);
-    assert.deepEqual(rows[7], ["Doodle", "Norwich"]);
+    assert.deepEqual(rows[7], ["Doodle", "Norwich Terrier"]);
   });
 
   it("keeps selected-work frames from overlapping, including hover scale", () => {
@@ -249,8 +249,8 @@ describe("gallery captions", () => {
     ]);
     assert.equal(SELECTED_WORK_CAPTIONS[14]?.detail, "Teddy bear");
     assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[16]), [
-      "Norwich",
-      "Hand strip",
+      "Norwich Terrier",
+      "Hand Stripping",
     ]);
     assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[11]), [
       "Pomeranian",
@@ -272,8 +272,9 @@ describe("gallery captions", () => {
     assert.equal(SELECTED_WORK_CAPTIONS[12]?.detail, "Puppy cut");
     assert.deepEqual(lightboxCaptionLines(SELECTED_WORK_CAPTIONS[17]), [
       "Bichon",
-      "Creative Color Dye",
+      "Creative Color",
     ]);
+    assert.equal(SELECTED_WORK_CAPTIONS[7]?.detail, "Creative Color");
     assert.equal(SELECTED_WORK_CAPTIONS[15], undefined);
 
     const snapshot = COMPETITION_LIGHTBOX_ITEMS.find(
