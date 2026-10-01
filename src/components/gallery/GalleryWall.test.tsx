@@ -74,6 +74,17 @@ describe("gallery wall markup", () => {
     assert.match(lazy[0] ?? "", /gallery-08\.png/);
     assert.equal(/fetchpriority="high"/i.test(lazy[0] ?? ""), false);
 
+    const rows = [...html.matchAll(/<ul\b[^>]*>/g)].map((match) => match[0]);
+    assert.equal(rows.length, 8);
+    assert.equal(
+      rows.slice(0, 2).some((tag) => tag.includes("content-visibility")),
+      false,
+    );
+    assert.equal(
+      rows.slice(2).every((tag) => tag.includes("content-visibility:hidden")),
+      true,
+    );
+
     for (const tag of imgs) {
       assert.match(tag, /\/_next\/image\?url=%2Fimages%2Fgallery%2Fwall%2Fgallery-/);
       assert.match(tag, /srcset="/i);

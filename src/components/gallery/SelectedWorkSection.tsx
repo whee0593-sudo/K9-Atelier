@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import React from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { GalleryWallCaption } from "@/components/gallery/GalleryCaption";
 import {
   GALLERY_FRAME_SLOTS,
@@ -10,8 +10,17 @@ import {
   workLightboxId,
 } from "@/lib/gallery-wall";
 
-/** First row only. The second row is below the initial mobile viewport. */
+/** First row only. The second row is inside the initial mobile viewport, so it stays lazy rather than preloaded. */
 const PRIORITY_COUNT = 2;
+
+/**
+ * Later rows are below that viewport. Native lazy loading and
+ * content-visibility:auto still request them on this short page, so those
+ * rows stay content-visibility:hidden until they are within one row of the
+ * screen. The img markup stays in the document; only the fetch is delayed.
+ */
+const DEFERRED_ROW_START = 2;
+const DEFERRED_ROW_MARGIN = "240px 0px";
 
 /**
  * Card width in the two-column gallery.
@@ -39,25 +48,96 @@ export function SelectedWorkSection({
   return (
     <div className="flex flex-col gap-y-10 sm:gap-y-14 md:gap-y-16">
       {galleryRows().map((row, rowIndex) => (
-        <ul
-          key={row[0]?.id ?? rowIndex}
-          className="grid list-none grid-cols-2 gap-x-4 sm:gap-x-8 md:gap-x-14"
-        >
-          {row.map((slot, columnIndex) => (
-            <li
-              key={slot.id}
-              className="row-span-2 grid min-w-0 grid-rows-subgrid"
-            >
-              <FramedArtwork
-                slot={slot}
-                onOpen={onOpen}
-                priority={rowIndex * 2 + columnIndex < PRIORITY_COUNT}
-              />
-            </li>
-          ))}
-        </ul>
+        <GalleryRow key={row[0]?.id ?? rowIndex} row={row} rowIndex={rowIndex} onOpen={onOpen} />
       ))}
     </div>
+  );
+}
+
+function GalleryRow({
+  row,
+  rowIndex,
+  onOpen,
+}: {
+  row: GalleryFrameSlot[];
+  rowIndex: number;
+  onOpen: (id: string, trigger: HTMLElement) => void;
+}) {
+  const ref = useRef<HTMLUListElement>(null);
+  const defer = rowIndex >= DEFERRED_ROW_START;
+  const [revealed, setRevealed] = useState(!defer);
+  const [intrinsic, setIntrinsic] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (!defer || revealed) return;
+    const element = ref.current;
+    if (!element) return;
+
+    const measure = () => {
+      const visible = document.querySelector("ul.grid");
+      if (!visible || visible === element) return;
+      const images = [...visible.querySelectorAll("img")];
+      const tallest = Math.max(
+        0,
+        ...images.map((image) => image.getBoundingClientRect().height),
+      );
+      if (tallest <= 0) return;
+      const extra = visible.getBoundingClientRect().height - tallest;
+      const gap = Number.parseFloat(getComputedStyle(element).columnGap) || 0;
+      const column = (element.clientWidth - gap) / 2;
+      const imageHeight = Math.max(
+        ...row.map((slot) => (column * slot.photoHeight) / slot.photoWidth),
+      );
+      setIntrinsic(Math.ceil(imageHeight + extra));
+    };
+
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [defer, revealed, row]);
+
+  useEffect(() => {
+    if (!defer || revealed) return;
+    const element = ref.current;
+    if (!element) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setRevealed(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: DEFERRED_ROW_MARGIN },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [defer, revealed]);
+
+  return (
+    <ul
+      ref={ref}
+      className="grid list-none grid-cols-2 gap-x-4 sm:gap-x-8 md:gap-x-14"
+      style={
+        defer && !revealed
+          ? {
+              contentVisibility: "hidden",
+              containIntrinsicSize: intrinsic
+                ? `auto ${intrinsic}px`
+                : "auto 18rem",
+            }
+          : undefined
+      }
+    >
+      {row.map((slot, columnIndex) => (
+        <li key={slot.id} className="row-span-2 grid min-w-0 grid-rows-subgrid">
+          <FramedArtwork
+            slot={slot}
+            onOpen={onOpen}
+            priority={rowIndex * 2 + columnIndex < PRIORITY_COUNT}
+          />
+        </li>
+      ))}
+    </ul>
   );
 }
 
