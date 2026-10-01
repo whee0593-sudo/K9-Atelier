@@ -133,7 +133,7 @@ export function GalleryLightbox({
             height={item.height}
             quality={90}
             priority
-            sizes="90vw"
+            sizes="(max-width: 767px) 92vw, 896px"
             className="h-auto max-h-[70vh] w-auto max-w-[min(92vw,56rem)] object-contain"
             onError={() => setImageMissing(true)}
           />

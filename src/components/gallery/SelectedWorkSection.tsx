@@ -10,7 +10,18 @@ import {
   workLightboxId,
 } from "@/lib/gallery-wall";
 
-const PRIORITY_COUNT = 4;
+/** First row only. The second row is below the initial mobile viewport. */
+const PRIORITY_COUNT = 2;
+
+/**
+ * Card width in the two-column gallery.
+ * <640: page padding 2rem + 1rem gap. ~182px at a 412px viewport.
+ * 640–767: 2rem padding + 2rem gap.
+ * 768–1279: 6rem padding + 3.5rem gap.
+ * ≥1280: 1240px container, 10rem padding + 3.5rem gap = 512px.
+ */
+const GALLERY_IMAGE_SIZES =
+  "(max-width: 639px) calc((100vw - 3rem) / 2), (max-width: 767px) calc((100vw - 4rem) / 2), (max-width: 1279px) calc((100vw - 9.5rem) / 2), 512px";
 
 function galleryRows() {
   const rows: GalleryFrameSlot[][] = [];
@@ -73,10 +84,10 @@ function FramedArtwork({
             alt={slot.photoAlt}
             width={slot.photoWidth}
             height={slot.photoHeight}
-            sizes="(max-width: 767px) 46vw, 520px"
+            sizes={GALLERY_IMAGE_SIZES}
             quality={90}
             priority={priority}
-            unoptimized
+            fetchPriority={priority ? "high" : undefined}
             draggable={false}
             className="h-auto w-full bg-transparent object-contain"
           />

@@ -56,6 +56,33 @@ describe("gallery wall markup", () => {
       assert.equal(html.includes(src), false);
     }
   });
+
+  it("optimizes portfolio frames and preloads only the first row", () => {
+    const html = renderToStaticMarkup(<GalleryWall />);
+    const imgs = [...html.matchAll(/<img\b[^>]*>/g)].map((match) => match[0]);
+    assert.equal(imgs.length, 16);
+    assert.equal(html.includes("unoptimized"), false);
+
+    const eager = imgs.filter((tag) => !/loading="lazy"/.test(tag));
+    const lazy = imgs.filter((tag) => /loading="lazy"/.test(tag));
+    assert.equal(eager.length, 2);
+    assert.equal(lazy.length, 14);
+    assert.match(eager[0] ?? "", /gallery-03\.png/);
+    assert.match(eager[1] ?? "", /gallery-04\.png/);
+    assert.match(eager[0] ?? "", /fetchpriority="high"/i);
+    assert.match(eager[1] ?? "", /fetchpriority="high"/i);
+    assert.match(lazy[0] ?? "", /gallery-08\.png/);
+    assert.equal(/fetchpriority="high"/i.test(lazy[0] ?? ""), false);
+
+    for (const tag of imgs) {
+      assert.match(tag, /\/_next\/image\?url=%2Fimages%2Fgallery%2Fwall%2Fgallery-/);
+      assert.match(tag, /srcset="/i);
+      assert.match(tag, /sizes="\(max-width: 639px\) calc\(\(100vw - 3rem\) \/ 2\)/);
+      assert.match(tag, /width="\d+"/);
+      assert.match(tag, /height="\d+"/);
+      assert.match(tag, /384w/);
+    }
+  });
 });
 
 describe("gallery lightbox markup", () => {
