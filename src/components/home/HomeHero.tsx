@@ -10,6 +10,14 @@ import { photoFor } from "@/lib/gallery";
 const heroCtaClass =
   "inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-deep-lavender px-8 text-[13px] font-medium uppercase tracking-[0.14em] text-ivory transition duration-500 hover:bg-ink sm:w-auto md:text-[12px] md:tracking-[0.16em]";
 
+/**
+ * The portrait is height-capped and 4:5, so its width is 0.8 × that cap,
+ * and also the column. On a 412×823 phone that is about 303px; at 1.75×
+ * the size ladder step is 640w.
+ */
+const HERO_SIZES =
+  "(max-width: 767px) min(calc(100vw - 2rem), calc(46vh * 0.8)), (max-width: 1279px) min(calc((min(100vw, 1240px) - 10rem) / 2), calc(80vh * 0.8)), min(calc((min(100vw, 1240px) - 14rem) / 2), calc(80vh * 0.8))";
+
 function HeroServiceMeta({ className = "" }: { className?: string }) {
   return (
     <div
@@ -56,7 +64,7 @@ export function HomeHero() {
               priority
               className="shadow-sm"
               imageClassName="max-h-[46vh] md:max-h-[80vh]"
-              sizes="(min-width: 768px) 42vw, 100vw"
+              sizes={HERO_SIZES}
             />
           ) : null}
         </div>

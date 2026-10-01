@@ -78,6 +78,8 @@ describe("home page content", () => {
     assert.ok(photo < mobileMeta);
     assert.ok(desktopMeta > 0);
     assert.match(source, /imageClassName="max-h-\[46vh\] md:max-h-\[80vh\]"/);
+    assert.match(source, /calc\(46vh \* 0\.8\)/);
+    assert.equal(source.includes('sizes="(min-width: 768px) 42vw, 100vw"'), false);
     assert.match(source, /md:grid-cols-2/);
   });
 
