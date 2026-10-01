@@ -11,12 +11,15 @@ const heroCtaClass =
   "inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-deep-lavender px-8 text-[13px] font-medium uppercase tracking-[0.14em] text-ivory transition duration-500 hover:bg-ink sm:w-auto md:text-[12px] md:tracking-[0.16em]";
 
 /**
- * The portrait is height-capped and 4:5, so its width is 0.8 × that cap,
- * and also the column. On a 412×823 phone that is about 303px; at 1.75×
- * the size ladder step is 640w.
+ * CSS sets the box. `sizes` only picks the file for that box.
+ * Desktop is the established 353px portrait. Phones stay on the 46vh cap,
+ * about 303px wide at 412×823 and 311px at 390×844.
  */
 const HERO_SIZES =
-  "(max-width: 767px) min(calc(100vw - 2rem), calc(46vh * 0.8)), (max-width: 1279px) min(calc((min(100vw, 1240px) - 10rem) / 2), calc(80vh * 0.8)), min(calc((min(100vw, 1240px) - 14rem) / 2), calc(80vh * 0.8))";
+  "(max-width: 767px) min(calc(100vw - 2rem), calc(46vh * 0.8)), (max-width: 1279px) min(353px, calc((min(100vw, 1240px) - 10rem) / 2)), min(353px, calc((min(100vw, 1240px) - 14rem) / 2))";
+
+const HERO_IMAGE_CLASS =
+  "aspect-[4/5] !h-auto !w-full max-md:!max-w-[min(calc(100vw-2rem),calc(46vh*0.8))] max-h-[46vh] md:!w-[353px] md:!max-w-[353px] md:max-h-[80vh]";
 
 function HeroServiceMeta({ className = "" }: { className?: string }) {
   return (
@@ -63,7 +66,7 @@ export function HomeHero() {
               alt={heroPhoto.alt}
               priority
               className="shadow-sm"
-              imageClassName="max-h-[46vh] md:max-h-[80vh]"
+              imageClassName={HERO_IMAGE_CLASS}
               sizes={HERO_SIZES}
             />
           ) : null}
