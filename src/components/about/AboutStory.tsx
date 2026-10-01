@@ -1,6 +1,7 @@
 import React, { type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { AboutDeferredPhoto } from "@/components/about/AboutDeferredPhoto";
 import { Container } from "@/components/luxury/Container";
 
 const awards = [
@@ -81,6 +82,22 @@ const captionClass =
 const textLinkClass =
   "font-body mt-8 inline-flex max-w-full min-h-[48px] items-center justify-center text-center text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne md:mt-10";
 
+/**
+ * Show-ring column, not the viewport.
+ * Mobile is the padded container. From 768px the grid is two columns.
+ * At 1280px the container caps at 1240px, so each photo is 512px wide.
+ */
+const SHOW_RING_SIZES =
+  "(min-width: 1280px) 512px, (min-width: 1024px) calc((100vw - 9.5rem) / 2), (min-width: 768px) calc((100vw - 8.5rem) / 2), calc(100vw - 2rem)";
+
+/**
+ * The group photo is only 700px / ~100KB. A 750w derivative is larger than
+ * that file. Cap the mobile slot at 365px so a 1.75x screen selects 640w,
+ * the closest candidate that stays smaller than the source.
+ */
+const GROUP_PHOTO_SIZES =
+  "(min-width: 1280px) 512px, (min-width: 1024px) calc((100vw - 9.5rem) / 2), (min-width: 768px) calc((100vw - 8.5rem) / 2), min(365px, calc(100vw - 2rem))";
+
 function AboutPhoto({
   src,
   alt,
@@ -89,6 +106,7 @@ function AboutPhoto({
   sizes,
   className = "h-auto w-full",
   priority = false,
+  defer = false,
   objectPosition = "center",
 }: {
   src: string;
@@ -98,8 +116,25 @@ function AboutPhoto({
   sizes: string;
   className?: string;
   priority?: boolean;
+  defer?: boolean;
   objectPosition?: string;
 }) {
+  if (defer) {
+    const frameClassName = className
+      .split(/\s+/)
+      .filter((token) => token && token !== "object-cover")
+      .join(" ");
+    return (
+      <AboutDeferredPhoto
+        src={src}
+        alt={alt}
+        sizes={sizes}
+        frameClassName={frameClassName}
+        objectPosition={objectPosition}
+      />
+    );
+  }
+
   return (
     <Image
       src={src}
@@ -108,6 +143,7 @@ function AboutPhoto({
       height={height}
       sizes={sizes}
       priority={priority}
+      fetchPriority={priority ? "high" : undefined}
       quality={90}
       className={className}
       style={{ objectPosition }}
@@ -254,7 +290,8 @@ export function AboutStory() {
               <figure>
                 <AboutPhoto
                   {...photos.grooming}
-                  sizes="(min-width: 768px) 50vw, 100vw"
+                  sizes={SHOW_RING_SIZES}
+                  defer
                   objectPosition="62% center"
                   className="aspect-[3/2] w-full object-cover"
                 />
@@ -262,7 +299,8 @@ export function AboutStory() {
               <figure>
                 <AboutPhoto
                   {...photos.trophy}
-                  sizes="(min-width: 768px) 50vw, 100vw"
+                  sizes={SHOW_RING_SIZES}
+                  defer
                   objectPosition="72% center"
                   className="aspect-[3/2] w-full object-cover"
                 />
@@ -270,7 +308,8 @@ export function AboutStory() {
               <figure>
                 <AboutPhoto
                   {...photos.award}
-                  sizes="(min-width: 768px) 50vw, 100vw"
+                  sizes={SHOW_RING_SIZES}
+                  defer
                   objectPosition="center 42%"
                   className="aspect-[6/5] w-full object-cover"
                 />
@@ -281,7 +320,8 @@ export function AboutStory() {
               <figure>
                 <AboutPhoto
                   {...photos.group}
-                  sizes="(min-width: 768px) 50vw, 100vw"
+                  sizes={GROUP_PHOTO_SIZES}
+                  defer
                   objectPosition="center center"
                   className="aspect-[700/433] w-full object-cover"
                 />
@@ -306,8 +346,10 @@ export function AboutStory() {
               <figure className="max-w-sm lg:max-w-none lg:justify-self-end">
                 <AboutPhoto
                   {...photos.credentials}
-                  sizes="(min-width: 1024px) 416px, 100vw"
+                  sizes="(min-width: 1024px) 416px, min(24rem, calc(100vw - 2rem))"
+                  defer
                   objectPosition="center center"
+                  className="aspect-[960/720] w-full"
                 />
               </figure>
             </div>

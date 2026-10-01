@@ -91,6 +91,29 @@ describe("about page", () => {
     }
   });
 
+  it("keeps the portrait eager and defers the show-ring photographs", () => {
+    const html = renderToStaticMarkup(React.createElement(AboutStory));
+    assert.match(html, /about-professional-portrait\.jpg/);
+    assert.match(html, /fetchpriority="high"/i);
+    assert.equal(html.includes('loading="lazy"'), true);
+
+    const portrait = html.indexOf("about-professional-portrait.jpg");
+    const deferred = html.indexOf("content-visibility:hidden");
+    assert.ok(portrait > -1);
+    assert.ok(deferred > portrait);
+
+    for (const file of [
+      "about-competition-grooming.jpg",
+      "about-2019-trophy.jpg",
+      "about-2019-award.jpg",
+      "about-competition-group.jpg",
+      "about-awards-credentials.jpg",
+    ]) {
+      assert.equal(html.includes(file), true, file);
+    }
+    assert.match(html, /min\(365px, calc\(100vw - 2rem\)\)/);
+  });
+
   it("keeps factual alt text for the photographs on the page", () => {
     for (const alt of [
       "Penny in a black suit beside a white dog, a formal studio portrait",
