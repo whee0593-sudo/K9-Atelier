@@ -343,7 +343,7 @@ export function AboutStory() {
                   Years of craft. Moments of recognition.
                 </h2>
               </header>
-              <figure className="max-w-sm lg:max-w-none lg:justify-self-end">
+              <figure className="w-full max-w-sm lg:max-w-none lg:justify-self-end">
                 <AboutPhoto
                   {...photos.credentials}
                   sizes="(min-width: 1024px) 416px, min(24rem, calc(100vw - 2rem))"
