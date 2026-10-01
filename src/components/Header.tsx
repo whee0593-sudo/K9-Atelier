@@ -23,6 +23,16 @@ const navLinkBase =
 const menuBtnClass =
   "inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm border-0 px-2 font-body text-[12px] font-medium uppercase tracking-[0.14em] transition duration-500 md:px-4";
 
+/**
+ * The wordmark is height-capped; width follows the 1495×764 file.
+ * <640: max-h 4.5rem → 141px, also capped by calc(100vw - 15rem).
+ * 640–767: max-h 5rem → 157px.
+ * 768–1279: max-h 5.5rem → 172px.
+ * ≥1280: max-h 7rem → 219px.
+ */
+const LOGO_SIZES =
+  "(max-width: 639px) min(141px, calc(100vw - 15rem)), (max-width: 767px) 157px, (max-width: 1279px) 172px, 219px";
+
 function isNavItemActive(href: string, pathname: string) {
   const path = href.split("#")[0];
   if (!path || path === "/") {
@@ -78,6 +88,7 @@ export function Header() {
             alt={business.brand.name}
             width={1495}
             height={764}
+            sizes={LOGO_SIZES}
             className="h-auto w-auto max-h-[4.5rem] max-w-[calc(100vw-15rem)] sm:max-h-20 sm:max-w-none md:max-h-[5.5rem] xl:max-h-[7rem]"
             priority
           />
