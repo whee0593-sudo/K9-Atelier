@@ -309,7 +309,7 @@ export const SELECTED_WORK_CAPTIONS: Record<number, GalleryCaption> = {
   4: { kicker: "Poodle", detail: "Asian Fusion" },
   5: { kicker: "Bichon", detail: "Teddy bear" },
   6: { kicker: "Yorkshire Terrier", detail: "Princess look" },
-  7: { kicker: "Bichon", detail: "Creative color" },
+  7: { kicker: "Bichon", detail: "Creative Color" },
   8: { kicker: "Poodle", detail: "German trim" },
   9: { kicker: "Shih Tzu", detail: "Full face" },
   10: { kicker: "Shih Tzu", detail: "Daily braid" },
@@ -317,8 +317,8 @@ export const SELECTED_WORK_CAPTIONS: Record<number, GalleryCaption> = {
   12: { kicker: "Yorkshire Terrier", detail: "Puppy cut" },
   13: { kicker: "Doodle", detail: "Teddy bear" },
   14: { kicker: "Poodle", detail: "Teddy bear" },
-  16: { kicker: "Norwich", detail: "Hand strip" },
-  17: { kicker: "Bichon", detail: "Creative Color Dye" },
+  16: { kicker: "Norwich Terrier", detail: "Hand Stripping" },
+  17: { kicker: "Bichon", detail: "Creative Color" },
 };
 
 export type CompetitionFrameFinish = "gold" | "walnut" | "brass";
