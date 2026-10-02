@@ -8,6 +8,9 @@ import {
   COLOR_PATH,
   FEES_POLICIES_PATH,
   FULL_GROOM_IDS,
+  BATH_COAT_PAGE_DESCRIPTION,
+  BATH_COAT_PAGE_H1,
+  BATH_COAT_PAGE_TITLE,
   FULL_GROOM_PAGE_DESCRIPTION,
   FULL_GROOM_PAGE_H1,
   FULL_GROOM_PAGE_TITLE,
@@ -297,6 +300,24 @@ describe("service page helpers", () => {
     assert.equal(
       absoluteSiteUrl(SERVICES_PATH),
       "https://k9atelier.com/services",
+    );
+  });
+
+  it("uses independent Bath & Coat Care SEO copy", () => {
+    assert.equal(
+      BATH_COAT_PAGE_TITLE,
+      "Bath & Coat Care for Dogs in Palm Beach | K9 Atelier",
+    );
+    assert.equal(
+      BATH_COAT_PAGE_DESCRIPTION,
+      "Private mobile bath and coat care in Palm Beach with professional bathing, drying and coat maintenance tailored to your dog\u2019s skin, coat and grooming needs.",
+    );
+    assert.equal(BATH_COAT_PAGE_H1, "Coat Health, Kept Beautiful.");
+    assert.notEqual(BATH_COAT_PAGE_TITLE, FULL_GROOM_PAGE_TITLE);
+    assert.notEqual(BATH_COAT_PAGE_TITLE, HAND_STRIPPING_PAGE_TITLE);
+    assert.equal(
+      absoluteSiteUrl(BATH_COAT_PATH),
+      "https://k9atelier.com/services/bath-coat-care",
     );
   });
 });
