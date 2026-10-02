@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { CallCustomerButton } from "@/components/admin/CallCustomerButton";
 import {
   STAFF_SMS_MAX_CHARS,
@@ -13,6 +13,97 @@ import {
 import { isValidSmsPhone } from "@/lib/sms/phone";
 import type { StaffSmsInboxItem } from "@/lib/sms/inbox-copy";
 import { buildPreviewStaffMessages } from "@/lib/sms/staff-compose-preview";
+
+export const INITIAL_VISIBLE_RECENT_CALLERS = 2;
+export const RECENT_CALLERS_PAGE_SIZE = 5;
+
+export function nextVisibleRecentCallerCount(current: number, total: number) {
+  return Math.min(total, current + RECENT_CALLERS_PAGE_SIZE);
+}
+
+export function RecentCallersList({
+  callers,
+  sendingIntro,
+  preview = false,
+  onSendText,
+}: {
+  callers: StudioUnknownCaller[];
+  sendingIntro: string | null;
+  preview?: boolean;
+  onSendText: (phone: string) => void;
+}) {
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_RECENT_CALLERS);
+
+  if (callers.length === 0) {
+    return (
+      <p className="mt-4 text-sm text-text-muted">
+        Numbers that call the studio will appear here.
+      </p>
+    );
+  }
+
+  const visibleCallers = callers.slice(0, visibleCount);
+  const hasMore = visibleCount < callers.length;
+
+  return (
+    <>
+      <ul className="mt-5 space-y-3">
+        {visibleCallers.map((caller) => (
+          <li
+            key={`${caller.phone}-${caller.calledAt}`}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-lavender/30 px-4 py-3 text-sm"
+          >
+            <div>
+              <a
+                href={`tel:${caller.phone}`}
+                className="font-medium text-text underline-offset-2 hover:underline"
+              >
+                {caller.label || caller.phone}
+              </a>
+              {caller.label ? (
+                <p className="mt-1 text-xs text-text-muted">{caller.phone}</p>
+              ) : null}
+              <p className="mt-1 text-xs text-text-muted">
+                Called {new Date(caller.calledAt).toLocaleString()}
+                {caller.introSentAt ? " · text sent" : ""}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <CallCustomerButton
+                phone={caller.phone}
+                label="Call back"
+                preview={preview}
+              />
+              <button
+                type="button"
+                disabled={Boolean(sendingIntro)}
+                onClick={() => onSendText(caller.phone)}
+                className="rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text hover:border-gold/40 disabled:opacity-50"
+              >
+                {sendingIntro === caller.phone ? "Sending…" : "Send text"}
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+      {hasMore ? (
+        <div className="mt-3 flex justify-center">
+          <button
+            type="button"
+            onClick={() =>
+              setVisibleCount((current) =>
+                nextVisibleRecentCallerCount(current, callers.length),
+              )
+            }
+            className="rounded-xl border border-lavender/40 px-6 py-2 text-sm font-medium text-text hover:border-gold/40"
+          >
+            More
+          </button>
+        </div>
+      ) : null}
+    </>
+  );
+}
 
 export function AdminMessageComposer({
   preview = false,
@@ -270,53 +361,12 @@ export function AdminMessageComposer({
             {error}
           </p>
         ) : null}
-        {unknownCallers.length === 0 ? (
-          <p className="mt-4 text-sm text-text-muted">
-            Numbers that call the studio will appear here.
-          </p>
-        ) : (
-          <ul className="mt-5 space-y-3">
-            {unknownCallers.map((caller) => (
-              <li
-                key={`${caller.phone}-${caller.calledAt}`}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-lavender/30 px-4 py-3 text-sm"
-              >
-                <div>
-                  <a
-                    href={`tel:${caller.phone}`}
-                    className="font-medium text-text underline-offset-2 hover:underline"
-                  >
-                    {caller.label || caller.phone}
-                  </a>
-                  {caller.label ? (
-                    <p className="mt-1 text-xs text-text-muted">{caller.phone}</p>
-                  ) : null}
-                  <p className="mt-1 text-xs text-text-muted">
-                    Called {new Date(caller.calledAt).toLocaleString()}
-                    {caller.introSentAt ? " · text sent" : ""}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <CallCustomerButton
-                    phone={caller.phone}
-                    label="Call back"
-                    preview={preview}
-                  />
-                  <button
-                    type="button"
-                    disabled={Boolean(sendingIntro)}
-                    onClick={() => void sendIntro(caller.phone)}
-                    className="rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text hover:border-gold/40 disabled:opacity-50"
-                  >
-                    {sendingIntro === caller.phone
-                      ? "Sending…"
-                      : "Send text"}
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        <RecentCallersList
+          callers={unknownCallers}
+          sendingIntro={sendingIntro}
+          preview={preview}
+          onSendText={(phone) => void sendIntro(phone)}
+        />
       </section>
 
       <form
