@@ -101,6 +101,42 @@ export const HAND_STRIPPING_FAQS = [
   },
 ] as const;
 
+export const BATH_COAT_PAGE_TITLE =
+  "Bath & Coat Care for Dogs in Palm Beach | K9 Atelier";
+export const BATH_COAT_PAGE_DESCRIPTION =
+  "Private mobile bath and coat care in Palm Beach with professional bathing, drying and coat maintenance tailored to your dog\u2019s skin, coat and grooming needs.";
+export const BATH_COAT_PAGE_H1 = "Coat Health, Kept Beautiful.";
+export const BATH_COAT_PAGE_INTRO =
+  "Private mobile grooming in Palm Beach, with professional bath and coat care tailored to your dog\u2019s coat and skin.";
+export const BATH_COAT_MORE_HEADING = "More Than a Bath";
+export const BATH_COAT_MORE_BODY =
+  "Professional bath and coat care is designed around the condition, texture and maintenance needs of the individual dog. Each appointment combines thorough cleansing, coat preparation, drying and finishing care to help keep the coat clean, comfortable and manageable between full grooming appointments.";
+export const BATH_COAT_ROUTINE_HEADING = "Routine Coat Maintenance";
+export const BATH_COAT_ROUTINE_BODY =
+  "Regular bath and coat care can help maintain coat condition between haircuts, support easier brushing at home and reduce the buildup of dirt, oil and loose coat. The appropriate schedule depends on coat type, length, lifestyle and the level of maintenance needed.";
+export const BATH_COAT_FULL_GROOM_NOTE =
+  "Dogs that need haircutting or reshaping may be better suited to Full Grooming. That visit includes bath and coat care, then haircutting and styling where needed.";
+export const BATH_COAT_HAND_STRIPPING_NOTE =
+  "Suitable wire-coated dogs may be maintained with traditional hand stripping when that approach fits the coat.";
+
+export const BATH_COAT_FAQS = [
+  {
+    question: "How often should my dog receive bath and coat care?",
+    answer:
+      "Frequency depends on coat type, length, lifestyle and maintenance needs. Some dogs benefit from regular professional coat care between full grooming appointments.",
+  },
+  {
+    question: "Is Bath & Coat Care the same as a Full Groom?",
+    answer:
+      "No. Bath & Coat Care focuses on cleansing, coat preparation, drying and maintenance. A Full Groom includes haircutting and styling in addition to bath and coat care.",
+  },
+  {
+    question: "Can this service help maintain a long coat?",
+    answer:
+      "Yes. For suitable coats, regular professional bathing, drying and coat maintenance can help keep longer coats manageable between larger grooming appointments.",
+  },
+] as const;
+
 export function absoluteSiteUrl(path: string) {
   const origin = getBrandWebsiteUrl().replace(/\/$/, "");
   const normalized = path.startsWith("/") ? path : `/${path}`;
@@ -189,13 +225,11 @@ export const SERVICE_CATEGORIES: readonly ServiceCategory[] = [
     showStartingPrice: true,
     serviceIds: BATH_COAT_IDS,
     layout: "cards",
-    pageTitle: "Bath & Coat Care | K9 Atelier",
-    pageDescription:
-      "Signature bathing and weekly long-coat care, tailored to texture, length, and how your dog lives. Private mobile grooming in Palm Beach.",
+    pageTitle: BATH_COAT_PAGE_TITLE,
+    pageDescription: BATH_COAT_PAGE_DESCRIPTION,
     pageEyebrow: "Bath & Coat Care",
-    pageH1: "Coat Health, Kept Beautiful.",
-    pageIntro:
-      "Foundational bathing and weekly long-coat care, tailored to texture, length, and how your dog lives.",
+    pageH1: BATH_COAT_PAGE_H1,
+    pageIntro: BATH_COAT_PAGE_INTRO,
   },
   {
     slug: "full-groom",

@@ -1,5 +1,7 @@
+import { BathCoatJsonLd } from "@/components/seo/BathCoatJsonLd";
 import { FullGroomJsonLd } from "@/components/seo/FullGroomJsonLd";
 import { HandStrippingJsonLd } from "@/components/seo/HandStrippingJsonLd";
+import { BathCoatEditorial } from "@/components/services/BathCoatEditorial";
 import { CreativeColoringSection } from "@/components/services/CreativeColoringSection";
 import { FullGroomEditorial } from "@/components/services/FullGroomEditorial";
 import { HandStrippingEditorial } from "@/components/services/HandStrippingEditorial";
@@ -33,6 +35,7 @@ export function ServiceCategoryView({ category }: Props) {
 
   return (
     <div className="pb-24 md:pb-0">
+      {category.slug === "bath-coat-care" ? <BathCoatJsonLd /> : null}
       {category.slug === "full-groom" ? <FullGroomJsonLd /> : null}
       {category.slug === "hand-stripping" ? <HandStrippingJsonLd /> : null}
       <ServicesHashRedirect />
@@ -76,6 +79,7 @@ export function ServiceCategoryView({ category }: Props) {
           </div>
         )}
       </ServicesSection>
+      {category.slug === "bath-coat-care" ? <BathCoatEditorial /> : null}
       {category.slug === "full-groom" ? <FullGroomEditorial /> : null}
       {category.slug === "hand-stripping" ? <HandStrippingEditorial /> : null}
       <MobileBookBar />

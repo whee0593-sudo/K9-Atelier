@@ -30,7 +30,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: category.pageDescription,
       url: canonical,
     },
-    ...(category.slug === "full-groom" || category.slug === "hand-stripping"
+    ...(category.slug === "full-groom" ||
+    category.slug === "hand-stripping" ||
+    category.slug === "bath-coat-care"
       ? {
           twitter: {
             title: category.pageTitle,
