@@ -24,6 +24,7 @@ export type StaffSmsInboxItem = {
   petNames: string;
   phone: string;
   body: string;
+  mediaUrls: string[];
   createdAt: string;
 };
 
@@ -34,6 +35,11 @@ export function inboundMediaUrls(params: Record<string, string>) {
     if (url) urls.push(url);
   }
   return urls;
+}
+
+/** Staff browser loads Twilio MMS through the authenticated proxy. */
+export function staffSmsMediaProxyPath(mediaUrl: string) {
+  return `/api/admin/messages/media?url=${encodeURIComponent(mediaUrl)}`;
 }
 
 export function inboundReplyTextForStaff(input: {

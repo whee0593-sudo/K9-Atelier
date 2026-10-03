@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
 import {
   INITIAL_VISIBLE_RECENT_CALLERS,
   RECENT_CALLERS_PAGE_SIZE,
@@ -9,6 +10,7 @@ import {
   nextVisibleRecentCallerCount,
 } from "@/components/admin/AdminMessageComposer";
 import type { StudioUnknownCaller } from "@/lib/sms/staff-compose-copy";
+import { buildPreviewStaffMessages } from "@/lib/sms/staff-compose-preview";
 
 function callers(count: number): StudioUnknownCaller[] {
   return Array.from({ length: count }, (_, index) => ({
@@ -68,5 +70,22 @@ describe("Recent callers list", () => {
 
     assert.match(html, /Numbers that call the studio will appear here/);
     assert.doesNotMatch(html, />More</);
+  });
+});
+
+describe("Admin message inbox photos", () => {
+  it("includes inbound photos in the staff preview inbox", () => {
+    const sample = buildPreviewStaffMessages();
+    const photo = sample.inbox.find((item) => item.mediaUrls.length > 0);
+    assert.ok(photo);
+    assert.equal(photo?.body, "Photo");
+    assert.deepEqual(photo?.mediaUrls, ["/logo.png"]);
+
+    const source = readFileSync(
+      new URL("./AdminMessageComposer.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.match(source, /Customer photo/);
+    assert.match(source, /staffSmsMediaProxyPath/);
   });
 });

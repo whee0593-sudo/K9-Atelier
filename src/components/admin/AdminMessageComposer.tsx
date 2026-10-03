@@ -11,8 +11,16 @@ import {
   type StudioUnknownCaller,
 } from "@/lib/sms/staff-compose-copy";
 import { isValidSmsPhone } from "@/lib/sms/phone";
-import type { StaffSmsInboxItem } from "@/lib/sms/inbox-copy";
+import {
+  staffSmsMediaProxyPath,
+  type StaffSmsInboxItem,
+} from "@/lib/sms/inbox-copy";
 import { buildPreviewStaffMessages } from "@/lib/sms/staff-compose-preview";
+
+function inboxMediaSrc(url: string, preview: boolean) {
+  if (preview || url.startsWith("/")) return url;
+  return staffSmsMediaProxyPath(url);
+}
 
 export const INITIAL_VISIBLE_RECENT_CALLERS = 2;
 export const RECENT_CALLERS_PAGE_SIZE = 5;
@@ -515,7 +523,8 @@ export function AdminMessageComposer({
         </div>
         {inbox.length === 0 ? (
           <p className="mt-3 text-sm text-text-muted">
-            Customer replies appear here. They are also forwarded to your phone.
+            Customer replies and photos appear here. They are also forwarded to
+            your phone.
           </p>
         ) : (
           <ul className="mt-4 space-y-3">
@@ -531,7 +540,28 @@ export function AdminMessageComposer({
                     : ` · ${item.customerName}`}
                   {` · ${item.phone}`}
                 </p>
-                <p className="mt-1 text-text-muted">{item.body}</p>
+                {item.body ? (
+                  <p className="mt-1 whitespace-pre-wrap text-text-muted">{item.body}</p>
+                ) : null}
+                {item.mediaUrls?.length ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {item.mediaUrls.map((url) => (
+                      <a
+                        key={url}
+                        href={inboxMediaSrc(url, preview)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block overflow-hidden rounded-xl border border-lavender/40"
+                      >
+                        <img
+                          src={inboxMediaSrc(url, preview)}
+                          alt="Customer photo"
+                          className="h-36 w-36 object-cover"
+                        />
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
                 <p className="mt-2 text-xs text-text-muted">
                   {new Date(item.createdAt).toLocaleString()}
                 </p>

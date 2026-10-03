@@ -58,6 +58,7 @@ const previewInbox: StaffSmsInboxItem[] = [
     petNames: "Maple, Otto",
     phone: "+15615550123",
     body: "Maple and Otto are almost ready.",
+    mediaUrls: [],
     createdAt: "2026-08-22T14:10:00.000Z",
   },
   {
@@ -67,7 +68,18 @@ const previewInbox: StaffSmsInboxItem[] = [
     petNames: "Maple, Otto",
     phone: "+15615550123",
     body: "Thank you! I’ll meet you at the door.",
+    mediaUrls: [],
     createdAt: "2026-08-22T14:12:00.000Z",
+  },
+  {
+    id: "preview-in-photo",
+    direction: "inbound",
+    customerName: "Maya Patel",
+    petNames: "Bella",
+    phone: "+15615550188",
+    body: "Photo",
+    mediaUrls: ["/logo.png"],
+    createdAt: "2026-08-22T14:20:00.000Z",
   },
 ];
 
