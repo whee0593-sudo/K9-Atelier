@@ -4,6 +4,7 @@ import {
   claimDayPlan,
   getBaseGeoPoint,
 } from "@/lib/appointments/schedule";
+import { buildSameAddressCompanionInsertion } from "@/lib/booking-schedule";
 import {
   mapAppointmentRowToRecord,
 } from "@/lib/appointments/map";
@@ -487,7 +488,8 @@ export async function createStaffCustomerBooking(
     const confirm = createCustomerConfirmToken();
     const confirmExpiresAt = customerConfirmExpiryIso();
     const appointments: AppointmentRecord[] = [];
-    let slotPreference = slotStartMinutes;
+    let previousStart = firstAssignment.insertion.scheduledStart;
+    let previousDuration = firstDurationMinutes;
 
     for (const [index, pet] of input.pets.entries()) {
       const { data: petRow, error: petError } = await admin
@@ -523,23 +525,20 @@ export async function createStaffCustomerBooking(
         pet.weightLbs,
         input.addOnIds,
       );
-      const assignment =
+      const insertion =
         index === 0
-          ? firstAssignment
-          : await assignArrivalWindow({
-              date: appointmentDate,
-              point: destination,
-              zip: address.zip,
+          ? firstAssignment.insertion
+          : buildSameAddressCompanionInsertion(
+              previousStart,
+              previousDuration,
               durationMinutes,
-              slotStartMinutes: slotPreference,
-              base,
-            });
-      if ("error" in assignment) {
-        if (assignment.error === "slot_unavailable") {
-          return { error: "slot_unavailable" };
-        }
-        if (assignment.error === "misconfigured") return { error: "misconfigured" };
-        return { error: "server" };
+            );
+      if (!insertion) {
+        return {
+          error: "slot_unavailable",
+          message:
+            "Not enough time left that day to schedule every dog from the selected start time.",
+        };
       }
 
       const price = getServicePriceEstimate(service, pet.weightLbs);
@@ -563,9 +562,9 @@ export async function createStaffCustomerBooking(
           travel_distance_miles: quote.distanceMiles,
           travel_fee: travelFee,
           appointment_date: appointmentDate,
-          appointment_time: assignment.insertion.appointmentTime,
-          scheduled_start: assignment.insertion.scheduledStart,
-          time_preference: assignment.insertion.usedPreference,
+          appointment_time: insertion.appointmentTime,
+          scheduled_start: insertion.scheduledStart,
+          time_preference: insertion.usedPreference,
           address_lat: destination.lat,
           address_lon: destination.lon,
           timezone: business.booking.timezone,
@@ -598,8 +597,8 @@ export async function createStaffCustomerBooking(
         appointmentRow as AppointmentRow,
       );
       appointments.push(appointment);
-      slotPreference =
-        appointment.scheduledStart ?? assignment.insertion.scheduledStart;
+      previousStart = insertion.scheduledStart;
+      previousDuration = durationMinutes;
     }
 
     const appointment = appointments[0]!;

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   addressAllowedForPlan,
+  buildSameAddressCompanionInsertion,
   findRouteInsertion,
   findRouteInsertionAtHour,
   formatArrivalWindow,
@@ -110,5 +111,20 @@ describe("booking schedule", () => {
 
   it("formats mixed AM/PM windows", () => {
     assert.equal(formatArrivalWindow(11 * 60 + 30, 90), "11:30 AM – 1:00 PM");
+  });
+
+  it("chains same-address companion dogs back-to-back from the first start", () => {
+    const firstStart = 9 * 60;
+    const duration = 90;
+    const second = buildSameAddressCompanionInsertion(firstStart, duration, duration);
+    assert.ok(second);
+    assert.equal(second.scheduledStart, 10 * 60 + 30);
+    const third = buildSameAddressCompanionInsertion(
+      second.scheduledStart,
+      duration,
+      duration,
+    );
+    assert.ok(third);
+    assert.equal(third.scheduledStart, 12 * 60);
   });
 });

@@ -289,6 +289,27 @@ function collectExactStartCandidates(
   return candidates;
 }
 
+/**
+ * Next start for another dog at the same address on the same visit.
+ * The van is already on site, so no travel buffer is added between dogs.
+ */
+export function buildSameAddressCompanionInsertion(
+  previousStart: number,
+  previousDurationMinutes: number,
+  durationMinutes: number,
+): InsertResult | null {
+  const bounds = getDayBounds();
+  const scheduledStart = snapUp(previousStart + previousDurationMinutes);
+  if (scheduledStart < bounds.hoursStart) return null;
+  if (scheduledStart + durationMinutes > bounds.hoursEnd) return null;
+  return {
+    scheduledStart,
+    durationMinutes,
+    appointmentTime: formatArrivalWindow(scheduledStart, durationMinutes),
+    usedPreference: preferenceFromStart(scheduledStart),
+  };
+}
+
 export function findRouteInsertionAtHour(
   base: GeoPoint,
   stops: RouteStop[],

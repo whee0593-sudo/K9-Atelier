@@ -19,7 +19,8 @@ export async function POST(request: Request) {
     if ("error" in result) {
       if (result.error === "slot_unavailable") {
         return staffJsonError(
-          "That start time is no longer available for this address.",
+          result.message ??
+            "That start time is no longer available for this address.",
           409,
         );
       }
