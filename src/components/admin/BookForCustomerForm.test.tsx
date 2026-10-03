@@ -30,4 +30,11 @@ describe("BookForCustomerForm preview schedule", () => {
     assert.match(html, /Weight \(lbs\)/);
     assert.match(html, />Add</);
   });
+
+  it("explains that only email or phone is required", () => {
+    const html = renderToStaticMarkup(<BookForCustomerForm preview />);
+    assert.match(html, /Only an email or mobile phone is required/);
+    assert.match(html, /Send booking link/);
+    assert.doesNotMatch(html, /\srequired(=|>|\s)/);
+  });
 });

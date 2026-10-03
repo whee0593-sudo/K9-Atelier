@@ -28,6 +28,7 @@ import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { isFrozenAuthUser } from "@/lib/auth/frozen-account";
 import { isEmailConfigured, sendEmail, siteUrl } from "@/lib/email/resend";
 import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
+import { digitsOnly } from "@/lib/sms/phone";
 import type { StaffCustomerBookingInput } from "@/lib/staff/create-customer-booking-input";
 import {
   createCustomerConfirmToken,
@@ -35,6 +36,8 @@ import {
   customerConfirmPath,
 } from "@/lib/staff/customer-confirm-token";
 import {
+  buildStaffBookingInviteEmail,
+  buildStaffBookingInviteSms,
   buildStaffCreatedBookingEmail,
   buildStaffCreatedBookingSms,
 } from "@/lib/staff/customer-booking-copy";
@@ -74,9 +77,10 @@ const APPOINTMENT_SELECT = `
 `;
 
 export type StaffCreatedBookingResult = {
-  appointment: AppointmentRecord;
+  mode: "invite" | "booking";
+  appointment: AppointmentRecord | null;
   customer: {
-    id: string;
+    id: string | null;
     email: string;
     firstName: string;
     createdAccount: boolean;
@@ -85,6 +89,10 @@ export type StaffCreatedBookingResult = {
   emailed: boolean;
   texted: boolean;
 };
+
+function phonePlaceholderEmail(phone: string) {
+  return `sms.${digitsOnly(phone)}@customers.k9atelier.com`;
+}
 
 async function findAuthUserByEmail(
   admin: ReturnType<typeof createAdminClient>,
@@ -111,6 +119,24 @@ async function findAuthUserByEmail(
   return { user: null };
 }
 
+async function findCustomerIdByPhone(
+  admin: ReturnType<typeof createAdminClient>,
+  phone: string,
+) {
+  const { data, error } = await admin
+    .from("profiles")
+    .select("id, email")
+    .eq("phone", phone)
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error("findCustomerIdByPhone failed:", error.message);
+    return { error: "server" as const };
+  }
+  if (!data?.id) return { profile: null };
+  return { profile: data as { id: string; email: string | null } };
+}
+
 async function isStaffAccount(
   admin: ReturnType<typeof createAdminClient>,
   userId: string,
@@ -124,6 +150,215 @@ async function isStaffAccount(
     .eq("user_id", userId)
     .maybeSingle();
   return Boolean(data);
+}
+
+async function resolveOrCreateCustomer(
+  admin: ReturnType<typeof createAdminClient>,
+  input: StaffCustomerBookingInput,
+): Promise<
+  | { userId: string; email: string; createdAccount: boolean }
+  | { error: "conflict" | "server"; message?: string }
+> {
+  const accountEmail =
+    input.email ?? (input.phone ? phonePlaceholderEmail(input.phone) : null);
+  if (!accountEmail) {
+    return { error: "conflict", message: "Enter a customer email or mobile phone." };
+  }
+
+  if (input.phone && !input.email) {
+    const byPhone = await findCustomerIdByPhone(admin, input.phone);
+    if ("error" in byPhone) return { error: "server" };
+    if (byPhone.profile) {
+      const { data: authUser, error } = await admin.auth.admin.getUserById(
+        byPhone.profile.id,
+      );
+      if (error || !authUser.user) return { error: "server" };
+      if (isFrozenAuthUser(authUser.user)) {
+        return {
+          error: "conflict",
+          message: "That customer account is frozen. Unfreeze it before booking.",
+        };
+      }
+      const profileEmail =
+        byPhone.profile.email?.trim() ||
+        authUser.user.email ||
+        accountEmail;
+      if (await isStaffAccount(admin, byPhone.profile.id, profileEmail)) {
+        return {
+          error: "conflict",
+          message: "That phone belongs to a staff account.",
+        };
+      }
+      return {
+        userId: byPhone.profile.id,
+        email: profileEmail,
+        createdAccount: false,
+      };
+    }
+  }
+
+  const existing = await findAuthUserByEmail(admin, accountEmail);
+  if ("error" in existing) return { error: "server" };
+
+  if (existing.user) {
+    if (isFrozenAuthUser(existing.user)) {
+      return {
+        error: "conflict",
+        message: "That customer account is frozen. Unfreeze it before booking.",
+      };
+    }
+    if (await isStaffAccount(admin, existing.user.id, accountEmail)) {
+      return {
+        error: "conflict",
+        message: "That email belongs to a staff account.",
+      };
+    }
+    return {
+      userId: existing.user.id,
+      email: accountEmail,
+      createdAccount: false,
+    };
+  }
+
+  const { data, error } = await admin.auth.admin.createUser({
+    email: accountEmail,
+    email_confirm: true,
+    user_metadata: {
+      first_name: input.firstName,
+      last_name: input.lastName,
+      phone: input.phone,
+    },
+    app_metadata: {
+      staff_created: true,
+      unclaimed: true,
+      phone_placeholder_email: !input.email && Boolean(input.phone),
+    },
+  });
+  if (error || !data.user) {
+    console.error("createStaffCustomerBooking createUser failed:", error?.message);
+    return { error: "server" };
+  }
+
+  return {
+    userId: data.user.id,
+    email: accountEmail,
+    createdAccount: true,
+  };
+}
+
+async function sendInviteMessages(
+  input: StaffCustomerBookingInput,
+  bookUrl: string,
+  createdAccount: boolean,
+) {
+  let emailed = false;
+  let texted = false;
+  if (input.notifyEmail && input.email && isEmailConfigured()) {
+    const email = buildStaffBookingInviteEmail({
+      firstName: input.firstName,
+      bookUrl,
+      createdAccount,
+    });
+    emailed = await sendEmail({
+      to: input.email,
+      subject: email.subject,
+      text: email.text,
+      html: email.html,
+    });
+  }
+  if (input.notifySms && input.phone && isSmsConfigured()) {
+    texted = await sendSms({
+      to: input.phone,
+      body: buildStaffBookingInviteSms(bookUrl),
+    });
+  }
+  return { emailed, texted };
+}
+
+async function createStaffCustomerInvite(
+  input: StaffCustomerBookingInput,
+): Promise<
+  | { booking: StaffCreatedBookingResult }
+  | {
+      error: "unauthenticated" | "forbidden" | "conflict" | "misconfigured" | "server";
+      message?: string;
+    }
+> {
+  const session = await getStaffSession();
+  if ("error" in session) return { error: session.error };
+
+  const bookUrl = siteUrl("/book");
+
+  // Phone-only invites can send the public booking link without creating an account.
+  if (!input.email && input.phone) {
+    if (!hasSupabaseAdminConfig()) {
+      const { emailed, texted } = await sendInviteMessages(input, bookUrl, false);
+      return {
+        booking: {
+          mode: "invite",
+          appointment: null,
+          customer: {
+            id: null,
+            email: "",
+            firstName: input.firstName,
+            createdAccount: false,
+          },
+          confirmUrl: bookUrl,
+          emailed,
+          texted,
+        },
+      };
+    }
+  }
+
+  if (!hasSupabaseAdminConfig()) return { error: "misconfigured" };
+
+  try {
+    const admin = createAdminClient();
+    const customer = await resolveOrCreateCustomer(admin, input);
+    if ("error" in customer) return customer;
+
+    const { error: profileError } = await admin
+      .from("profiles")
+      .update({
+        first_name: input.firstName || null,
+        last_name: input.lastName || null,
+        phone: input.phone,
+      })
+      .eq("id", customer.userId);
+    if (profileError) {
+      console.error(
+        "createStaffCustomerInvite profile update failed:",
+        profileError.message,
+      );
+      return { error: "server" };
+    }
+
+    const { emailed, texted } = await sendInviteMessages(
+      input,
+      bookUrl,
+      customer.createdAccount,
+    );
+
+    return {
+      booking: {
+        mode: "invite",
+        appointment: null,
+        customer: {
+          id: customer.userId,
+          email: input.email ?? customer.email,
+          firstName: input.firstName,
+          createdAccount: customer.createdAccount,
+        },
+        confirmUrl: bookUrl,
+        emailed,
+        texted,
+      },
+    };
+  } catch (error) {
+    console.error("createStaffCustomerInvite failed:", error);
+    return { error: "server" };
+  }
 }
 
 export async function createStaffCustomerBooking(
@@ -142,15 +377,35 @@ export async function createStaffCustomerBooking(
       message?: string;
     }
 > {
+  if (input.mode === "invite") {
+    return createStaffCustomerInvite(input);
+  }
+
   const session = await getStaffSession();
   if ("error" in session) return { error: session.error };
   if (!hasSupabaseAdminConfig()) return { error: "misconfigured" };
+
+  const address = input.address;
+  const serviceId = input.serviceId;
+  const serviceName = input.serviceName;
+  const appointmentDate = input.appointmentDate;
+  const slotStartMinutes = input.slotStartMinutes;
+  if (
+    !address ||
+    !serviceId ||
+    !serviceName ||
+    !appointmentDate ||
+    slotStartMinutes == null ||
+    input.pets.length === 0
+  ) {
+    return createStaffCustomerInvite(input);
+  }
 
   const baseFormatted = getBaseAddressFormatted();
   const base = await getBaseGeoPoint();
   if (!baseFormatted || !base) return { error: "misconfigured" };
 
-  const customerQuery = formatServiceAddress(input.address);
+  const customerQuery = formatServiceAddress(address);
   const destination = await geocodeAddress(customerQuery);
   if (!destination) {
     return {
@@ -171,27 +426,25 @@ export async function createStaffCustomerBooking(
     };
   }
 
-  const service = allBookableServices().find(
-    (entry) => entry.id === input.serviceId,
-  );
+  const service = allBookableServices().find((entry) => entry.id === serviceId);
   if (!service) return { error: "conflict", message: "Unknown service." };
 
   const firstPet = input.pets[0];
   if (!firstPet) {
-    return { error: "conflict", message: "Add at least one dog profile." };
+    return createStaffCustomerInvite(input);
   }
 
   const firstDurationMinutes = estimateServiceDurationMinutes(
-    input.serviceId,
+    serviceId,
     firstPet.weightLbs,
     input.addOnIds,
   );
   const firstAssignment = await assignArrivalWindow({
-    date: input.appointmentDate,
+    date: appointmentDate,
     point: destination,
-    zip: input.address.zip,
+    zip: address.zip,
     durationMinutes: firstDurationMinutes,
-    slotStartMinutes: input.slotStartMinutes,
+    slotStartMinutes,
     base,
   });
   if ("error" in firstAssignment) {
@@ -202,11 +455,7 @@ export async function createStaffCustomerBooking(
     return { error: "server" };
   }
 
-  const claimed = await claimDayPlan(
-    input.appointmentDate,
-    input.address.zip,
-    destination,
-  );
+  const claimed = await claimDayPlan(appointmentDate, address.zip, destination);
   if ("error" in claimed) {
     if (claimed.error === "slot_unavailable") return { error: "slot_unavailable" };
     if (claimed.error === "misconfigured") return { error: "misconfigured" };
@@ -215,53 +464,15 @@ export async function createStaffCustomerBooking(
 
   try {
     const admin = createAdminClient();
-    const existing = await findAuthUserByEmail(admin, input.email);
-    if ("error" in existing) return { error: "server" };
-
-    let userId: string;
-    let createdAccount = false;
-
-    if (existing.user) {
-      if (isFrozenAuthUser(existing.user)) {
-        return {
-          error: "conflict",
-          message: "That customer account is frozen. Unfreeze it before booking.",
-        };
-      }
-      if (await isStaffAccount(admin, existing.user.id, input.email)) {
-        return {
-          error: "conflict",
-          message: "That email belongs to a staff account.",
-        };
-      }
-      userId = existing.user.id;
-    } else {
-      const { data, error } = await admin.auth.admin.createUser({
-        email: input.email,
-        email_confirm: true,
-        user_metadata: {
-          first_name: input.firstName,
-          last_name: input.lastName,
-          phone: input.phone,
-        },
-        app_metadata: {
-          staff_created: true,
-          unclaimed: true,
-        },
-      });
-      if (error || !data.user) {
-        console.error("createStaffCustomerBooking createUser failed:", error?.message);
-        return { error: "server" };
-      }
-      userId = data.user.id;
-      createdAccount = true;
-    }
+    const customer = await resolveOrCreateCustomer(admin, input);
+    if ("error" in customer) return customer;
+    const { userId, email: accountEmail, createdAccount } = customer;
 
     const { error: profileError } = await admin
       .from("profiles")
       .update({
-        first_name: input.firstName,
-        last_name: input.lastName,
+        first_name: input.firstName || null,
+        last_name: input.lastName || null,
         phone: input.phone,
       })
       .eq("id", userId);
@@ -276,7 +487,7 @@ export async function createStaffCustomerBooking(
     const confirm = createCustomerConfirmToken();
     const confirmExpiresAt = customerConfirmExpiryIso();
     const appointments: AppointmentRecord[] = [];
-    let slotPreference = input.slotStartMinutes;
+    let slotPreference = slotStartMinutes;
 
     for (const [index, pet] of input.pets.entries()) {
       const { data: petRow, error: petError } = await admin
@@ -308,7 +519,7 @@ export async function createStaffCustomerBooking(
       }
 
       const durationMinutes = estimateServiceDurationMinutes(
-        input.serviceId,
+        serviceId,
         pet.weightLbs,
         input.addOnIds,
       );
@@ -316,9 +527,9 @@ export async function createStaffCustomerBooking(
         index === 0
           ? firstAssignment
           : await assignArrivalWindow({
-              date: input.appointmentDate,
+              date: appointmentDate,
               point: destination,
-              zip: input.address.zip,
+              zip: address.zip,
               durationMinutes,
               slotStartMinutes: slotPreference,
               base,
@@ -341,17 +552,17 @@ export async function createStaffCustomerBooking(
         .insert({
           customer_id: userId,
           pet_id: petRow.id,
-          service_id: input.serviceId,
-          service_name: input.serviceName,
+          service_id: serviceId,
+          service_name: serviceName,
           add_on_ids: input.addOnIds,
           add_on_options: {},
-          address_street: input.address.street,
-          address_city: input.address.city,
-          address_state: input.address.state,
-          address_zip: input.address.zip,
+          address_street: address.street,
+          address_city: address.city,
+          address_state: address.state,
+          address_zip: address.zip,
           travel_distance_miles: quote.distanceMiles,
           travel_fee: travelFee,
-          appointment_date: input.appointmentDate,
+          appointment_date: appointmentDate,
           appointment_time: assignment.insertion.appointmentTime,
           scheduled_start: assignment.insertion.scheduledStart,
           time_preference: assignment.insertion.usedPreference,
@@ -397,7 +608,7 @@ export async function createStaffCustomerBooking(
 
     let emailed = false;
     let texted = false;
-    if (input.notifyEmail && isEmailConfigured()) {
+    if (input.notifyEmail && input.email && isEmailConfigured()) {
       const email = buildStaffCreatedBookingEmail(appointment, {
         firstName: input.firstName,
         confirmUrl,
@@ -410,7 +621,7 @@ export async function createStaffCustomerBooking(
         html: email.html,
       });
     }
-    if (input.notifySms && isSmsConfigured()) {
+    if (input.notifySms && input.phone && isSmsConfigured()) {
       texted = await sendSms({
         to: input.phone,
         body: buildStaffCreatedBookingSms(appointment, confirmUrl, petNames),
@@ -419,10 +630,11 @@ export async function createStaffCustomerBooking(
 
     return {
       booking: {
+        mode: "booking",
         appointment,
         customer: {
           id: userId,
-          email: input.email,
+          email: input.email ?? accountEmail,
           firstName: input.firstName,
           createdAccount,
         },
