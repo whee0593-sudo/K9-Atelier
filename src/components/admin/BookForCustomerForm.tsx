@@ -7,6 +7,7 @@ import { formatHourLabel } from "@/lib/appointments/closures";
 import { formatPrice } from "@/lib/business";
 import {
   allBookableServices,
+  estimateServiceDurationMinutes,
   getServicePriceEstimate,
   isServiceAvailableForPet,
 } from "@/lib/services";
@@ -49,6 +50,21 @@ type SuccessState = {
   appointmentTime: string;
 };
 
+type PetDraft = {
+  key: string;
+  name: string;
+  breed: string;
+  weightLbs: string;
+};
+
+function createPetDraft(): PetDraft {
+  const key =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `pet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return { key, name: "", breed: "", weightLbs: "" };
+}
+
 const fieldClass =
   "mt-1 w-full rounded-xl border border-lavender/40 bg-cream px-4 py-2.5 text-sm text-text";
 const labelClass = "block text-sm font-medium text-text";
@@ -66,9 +82,7 @@ export function BookForCustomerForm({
   const [phone, setPhone] = useState(prefill?.phone ?? "");
   const [notifyEmail, setNotifyEmail] = useState(true);
   const [notifySms, setNotifySms] = useState(true);
-  const [petName, setPetName] = useState("");
-  const [petBreed, setPetBreed] = useState("");
-  const [petWeight, setPetWeight] = useState("");
+  const [pets, setPets] = useState<PetDraft[]>(() => [createPetDraft()]);
   const [serviceId, setServiceId] = useState("");
   const [street, setStreet] = useState("");
   const [city, setCity] = useState("");
@@ -89,16 +103,25 @@ export function BookForCustomerForm({
   const [success, setSuccess] = useState<SuccessState | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const weightLbs = Number(petWeight);
+  const petWeights = useMemo(
+    () =>
+      pets
+        .map((pet) => Number(pet.weightLbs))
+        .filter((weight) => Number.isFinite(weight) && weight > 0),
+    [pets],
+  );
+  const primaryWeightLbs = petWeights[0] ?? Number.NaN;
   const services = useMemo(
     () =>
       allBookableServices().filter(
         (service) =>
           service.bookableAsPrimary &&
-          (!Number.isFinite(weightLbs) ||
-            isServiceAvailableForPet(service.id, weightLbs)),
+          (petWeights.length === 0 ||
+            petWeights.every((weight) =>
+              isServiceAvailableForPet(service.id, weight),
+            )),
       ),
-    [weightLbs],
+    [petWeights],
   );
 
   const selectedService = services.find((service) => service.id === serviceId);
@@ -121,14 +144,43 @@ export function BookForCustomerForm({
     slotCount: openSlots.length,
   });
 
-  const estimate =
-    selectedService && Number.isFinite(weightLbs)
-      ? getServicePriceEstimate(selectedService, weightLbs)
+  const estimatedServiceTotal =
+    selectedService && petWeights.length === pets.length
+      ? petWeights.reduce((sum, weight) => {
+          const estimate = getServicePriceEstimate(selectedService, weight);
+          return sum + (estimate?.from ?? 0);
+        }, 0)
       : null;
   const estimatedTotal =
-    estimate && quoteState.status === "ready"
-      ? Math.round((estimate.from + quoteState.quote.fee) * 100) / 100
+    estimatedServiceTotal != null && quoteState.status === "ready"
+      ? Math.round((estimatedServiceTotal + quoteState.quote.fee) * 100) / 100
       : null;
+  const totalDurationMinutes =
+    selectedService && petWeights.length === pets.length
+      ? petWeights.reduce(
+          (sum, weight) =>
+            sum + estimateServiceDurationMinutes(selectedService.id, weight),
+          0,
+        )
+      : null;
+
+  function updatePet(key: string, field: keyof Omit<PetDraft, "key">, value: string) {
+    setPets((current) =>
+      current.map((pet) =>
+        pet.key === key ? { ...pet, [field]: value } : pet,
+      ),
+    );
+  }
+
+  function addPetRow() {
+    setPets((current) => [...current, createPetDraft()]);
+  }
+
+  function removePetRow(key: string) {
+    setPets((current) =>
+      current.length <= 1 ? current : current.filter((pet) => pet.key !== key),
+    );
+  }
 
   async function handleQuote() {
     setError(null);
@@ -178,8 +230,9 @@ export function BookForCustomerForm({
       quoteLat == null ||
       quoteLon == null ||
       !serviceId ||
-      !Number.isFinite(weightLbs) ||
-      weightLbs <= 0
+      petWeights.length !== pets.length ||
+      totalDurationMinutes == null ||
+      totalDurationMinutes <= 0
     ) {
       setAvailabilityLoading(false);
       setAvailabilityLoaded(false);
@@ -199,7 +252,8 @@ export function BookForCustomerForm({
           lon: String(quoteLon),
           zip,
           serviceId,
-          weightLbs: String(weightLbs),
+          weightLbs: String(primaryWeightLbs),
+          durationMinutes: String(totalDurationMinutes),
         });
         const response = await fetch(`/api/booking/availability?${params}`, {
           credentials: "include",
@@ -230,7 +284,17 @@ export function BookForCustomerForm({
 
     void loadDays();
     return () => controller.abort();
-  }, [preview, quoteLat, quoteLon, serviceId, weightLbs, zip]);
+  }, [
+    preview,
+    quoteLat,
+    quoteLon,
+    serviceId,
+    petWeights,
+    pets.length,
+    primaryWeightLbs,
+    totalDurationMinutes,
+    zip,
+  ]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -268,11 +332,11 @@ export function BookForCustomerForm({
           notifyEmail,
           notifySms,
           verbalConsent,
-          pet: {
-            name: petName,
-            breed: petBreed,
-            weightLbs,
-          },
+          pets: pets.map((pet) => ({
+            name: pet.name,
+            breed: pet.breed,
+            weightLbs: Number(pet.weightLbs),
+          })),
           serviceId,
           appointmentDate,
           slotStartMinutes: Number(slotStartMinutes),
@@ -453,45 +517,85 @@ export function BookForCustomerForm({
         </label>
       </fieldset>
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section className="space-y-4">
+        {pets.map((pet, index) => {
+          const nameId = `pet-name-${pet.key}`;
+          const breedId = `pet-breed-${pet.key}`;
+          const weightId = `pet-weight-${pet.key}`;
+          return (
+            <div key={pet.key} className="space-y-2">
+              {pets.length > 1 ? (
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-text-muted">
+                    Dog {index + 1}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => removePetRow(pet.key)}
+                    className="text-sm text-text-muted hover:text-text"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : null}
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <label className={labelClass} htmlFor={nameId}>
+                    Dog name
+                  </label>
+                  <input
+                    id={nameId}
+                    className={fieldClass}
+                    value={pet.name}
+                    onChange={(event) =>
+                      updatePet(pet.key, "name", event.target.value)
+                    }
+                    required
+                  />
+                </div>
+                <div>
+                  <label className={labelClass} htmlFor={breedId}>
+                    Breed
+                  </label>
+                  <input
+                    id={breedId}
+                    className={fieldClass}
+                    value={pet.breed}
+                    onChange={(event) =>
+                      updatePet(pet.key, "breed", event.target.value)
+                    }
+                    required
+                  />
+                </div>
+                <div>
+                  <label className={labelClass} htmlFor={weightId}>
+                    Weight (lbs)
+                  </label>
+                  <input
+                    id={weightId}
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    className={fieldClass}
+                    value={pet.weightLbs}
+                    onChange={(event) =>
+                      updatePet(pet.key, "weightLbs", event.target.value)
+                    }
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
         <div>
-          <label className={labelClass} htmlFor="pet-name">
-            Dog name
-          </label>
-          <input
-            id="pet-name"
-            className={fieldClass}
-            value={petName}
-            onChange={(event) => setPetName(event.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label className={labelClass} htmlFor="pet-breed">
-            Breed
-          </label>
-          <input
-            id="pet-breed"
-            className={fieldClass}
-            value={petBreed}
-            onChange={(event) => setPetBreed(event.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label className={labelClass} htmlFor="pet-weight">
-            Weight (lbs)
-          </label>
-          <input
-            id="pet-weight"
-            type="number"
-            min="0.1"
-            step="0.1"
-            className={fieldClass}
-            value={petWeight}
-            onChange={(event) => setPetWeight(event.target.value)}
-            required
-          />
+          <button
+            type="button"
+            onClick={addPetRow}
+            className="rounded-xl border border-lavender/40 px-4 py-2 text-sm text-text hover:border-gold/40"
+          >
+            Add
+          </button>
         </div>
       </section>
 

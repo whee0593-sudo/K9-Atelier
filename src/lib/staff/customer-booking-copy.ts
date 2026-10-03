@@ -60,11 +60,21 @@ export function buildStaffCreatedBookingEmail(
   );
 }
 
+function formatPetNameList(names: string[]) {
+  const cleaned = names.map((name) => name.trim()).filter(Boolean);
+  if (cleaned.length === 0) return "your dog";
+  if (cleaned.length === 1) return cleaned[0]!;
+  if (cleaned.length === 2) return `${cleaned[0]} and ${cleaned[1]}`;
+  return `${cleaned.slice(0, -1).join(", ")}, and ${cleaned[cleaned.length - 1]}`;
+}
+
 export function buildStaffCreatedBookingSms(
   appointment: AppointmentRecord,
   confirmUrl: string,
+  petNames: string[] = [appointment.petName],
 ) {
   const dateLabel = formatAppointmentDateLabel(appointment.appointmentDate);
-  return `K9 Atelier reserved a visit for ${appointment.petName} on ${dateLabel} between ${appointment.appointmentTime}. Confirm here: ${confirmUrl} Reply STOP to opt out.`;
+  const petLabel = formatPetNameList(petNames);
+  return `K9 Atelier reserved a visit for ${petLabel} on ${dateLabel} between ${appointment.appointmentTime}. Confirm here: ${confirmUrl} Reply STOP to opt out.`;
 }
 

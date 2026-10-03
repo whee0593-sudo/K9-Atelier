@@ -29,7 +29,7 @@ export type StaffCustomerBookingInput = {
   phone: string;
   notifyEmail: boolean;
   notifySms: boolean;
-  pet: PetWriteInput;
+  pets: PetWriteInput[];
   serviceId: string;
   serviceName: string;
   addOnIds: string[];
@@ -43,6 +43,8 @@ export type StaffCustomerBookingInput = {
   };
   verbalConsent: true;
 };
+
+const MAX_STAFF_BOOKING_PETS = 8;
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -130,19 +132,37 @@ export function validateStaffCustomerBookingInput(
     );
   }
 
-  const petBody = record.pet;
-  let pet: PetWriteInput;
-  try {
-    pet = validateCreatePetInput(petBody);
-  } catch (error) {
-    if (error instanceof PetValidationError) {
-      throw new StaffBookingValidationError(
-        error.message,
-        error.field ? `pet.${error.field}` : "pet",
-      );
-    }
-    throw error;
+  const petsBody = Array.isArray(record.pets)
+    ? record.pets
+    : record.pet != null
+      ? [record.pet]
+      : null;
+  if (!petsBody || petsBody.length === 0) {
+    throw new StaffBookingValidationError(
+      "Add at least one dog profile.",
+      "pets",
+    );
   }
+  if (petsBody.length > MAX_STAFF_BOOKING_PETS) {
+    throw new StaffBookingValidationError(
+      `You can add up to ${MAX_STAFF_BOOKING_PETS} dogs on one booking.`,
+      "pets",
+    );
+  }
+
+  const pets: PetWriteInput[] = petsBody.map((petBody, index) => {
+    try {
+      return validateCreatePetInput(petBody);
+    } catch (error) {
+      if (error instanceof PetValidationError) {
+        throw new StaffBookingValidationError(
+          error.message,
+          error.field ? `pets[${index}].${error.field}` : `pets[${index}]`,
+        );
+      }
+      throw error;
+    }
+  });
 
   const serviceId = readString(record, "serviceId", "Service", 120);
   const service = allBookableServices().find((entry) => entry.id === serviceId);
@@ -152,11 +172,15 @@ export function validateStaffCustomerBookingInput(
       "serviceId",
     );
   }
-  if (!isServiceAvailableForPet(serviceId, pet.weightLbs)) {
-    throw new StaffBookingValidationError(
-      "That service is not available for this dog's weight.",
-      "serviceId",
-    );
+  for (const [index, pet] of pets.entries()) {
+    if (!isServiceAvailableForPet(serviceId, pet.weightLbs)) {
+      throw new StaffBookingValidationError(
+        pets.length > 1
+          ? `That service is not available for dog ${index + 1}'s weight.`
+          : "That service is not available for this dog's weight.",
+        "serviceId",
+      );
+    }
   }
 
   const appointmentDate = readString(
@@ -216,7 +240,7 @@ export function validateStaffCustomerBookingInput(
     phone,
     notifyEmail,
     notifySms,
-    pet,
+    pets,
     serviceId,
     serviceName: service.name,
     addOnIds,

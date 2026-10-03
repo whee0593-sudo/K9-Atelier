@@ -176,28 +176,29 @@ export async function createStaffCustomerBooking(
   );
   if (!service) return { error: "conflict", message: "Unknown service." };
 
-  const price = getServicePriceEstimate(service, input.pet.weightLbs);
-  const estimatedTotal =
-    Math.round(((price?.from ?? 0) + quote.fee) * 100) / 100;
+  const firstPet = input.pets[0];
+  if (!firstPet) {
+    return { error: "conflict", message: "Add at least one dog profile." };
+  }
 
-  const durationMinutes = estimateServiceDurationMinutes(
+  const firstDurationMinutes = estimateServiceDurationMinutes(
     input.serviceId,
-    input.pet.weightLbs,
+    firstPet.weightLbs,
     input.addOnIds,
   );
-  const assignment = await assignArrivalWindow({
+  const firstAssignment = await assignArrivalWindow({
     date: input.appointmentDate,
     point: destination,
     zip: input.address.zip,
-    durationMinutes,
+    durationMinutes: firstDurationMinutes,
     slotStartMinutes: input.slotStartMinutes,
     base,
   });
-  if ("error" in assignment) {
-    if (assignment.error === "slot_unavailable") {
+  if ("error" in firstAssignment) {
+    if (firstAssignment.error === "slot_unavailable") {
       return { error: "slot_unavailable" };
     }
-    if (assignment.error === "misconfigured") return { error: "misconfigured" };
+    if (firstAssignment.error === "misconfigured") return { error: "misconfigured" };
     return { error: "server" };
   }
 
@@ -272,86 +273,127 @@ export async function createStaffCustomerBooking(
       return { error: "server" };
     }
 
-    const { data: petRow, error: petError } = await admin
-      .from("pets")
-      .insert({
-        customer_id: userId,
-        ...mapValidatedInputToInsertRow(input.pet),
-      })
-      .select(PET_SELECT)
-      .single();
-
-    if (petError || !petRow) {
-      console.error(
-        "createStaffCustomerBooking pet insert failed:",
-        petError?.message,
-      );
-      return { error: "server" };
-    }
-
-    try {
-      const { ensurePetReferralCode } = await import("@/lib/referrals/service");
-      await ensurePetReferralCode({
-        petId: petRow.id as string,
-        petName: input.pet.name,
-        ownerCustomerId: userId,
-      });
-    } catch (error) {
-      console.error("createStaffCustomerBooking referral code failed:", error);
-    }
-
     const confirm = createCustomerConfirmToken();
-    const { data: appointmentRow, error: appointmentError } = await admin
-      .from("appointments")
-      .insert({
-        customer_id: userId,
-        pet_id: petRow.id,
-        service_id: input.serviceId,
-        service_name: input.serviceName,
-        add_on_ids: input.addOnIds,
-        add_on_options: {},
-        address_street: input.address.street,
-        address_city: input.address.city,
-        address_state: input.address.state,
-        address_zip: input.address.zip,
-        travel_distance_miles: quote.distanceMiles,
-        travel_fee: quote.fee,
-        appointment_date: input.appointmentDate,
-        appointment_time: assignment.insertion.appointmentTime,
-        scheduled_start: assignment.insertion.scheduledStart,
-        time_preference: assignment.insertion.usedPreference,
-        address_lat: destination.lat,
-        address_lon: destination.lon,
-        timezone: business.booking.timezone,
-        estimated_total: estimatedTotal,
-        new_client_deposit: 0,
-        payment_method_id: null,
-        vaccination_status_at_booking: "missing",
-        status: "pending_confirmation",
-        confirmed_at: null,
-        staff_created: true,
-        customer_confirm_token_hash: confirm.hash,
-        customer_confirm_expires_at: customerConfirmExpiryIso(),
-      })
-      .select(APPOINTMENT_SELECT)
-      .single();
+    const confirmExpiresAt = customerConfirmExpiryIso();
+    const appointments: AppointmentRecord[] = [];
+    let slotPreference = input.slotStartMinutes;
 
-    if (appointmentError || !appointmentRow) {
-      console.error(
-        "createStaffCustomerBooking appointment insert failed:",
-        appointmentError?.code,
-        appointmentError?.message,
-      );
-      if (appointmentError?.code === "23505") {
-        return { error: "slot_unavailable" };
+    for (const [index, pet] of input.pets.entries()) {
+      const { data: petRow, error: petError } = await admin
+        .from("pets")
+        .insert({
+          customer_id: userId,
+          ...mapValidatedInputToInsertRow(pet),
+        })
+        .select(PET_SELECT)
+        .single();
+
+      if (petError || !petRow) {
+        console.error(
+          "createStaffCustomerBooking pet insert failed:",
+          petError?.message,
+        );
+        return { error: "server" };
       }
-      return { error: "server" };
+
+      try {
+        const { ensurePetReferralCode } = await import("@/lib/referrals/service");
+        await ensurePetReferralCode({
+          petId: petRow.id as string,
+          petName: pet.name,
+          ownerCustomerId: userId,
+        });
+      } catch (error) {
+        console.error("createStaffCustomerBooking referral code failed:", error);
+      }
+
+      const durationMinutes = estimateServiceDurationMinutes(
+        input.serviceId,
+        pet.weightLbs,
+        input.addOnIds,
+      );
+      const assignment =
+        index === 0
+          ? firstAssignment
+          : await assignArrivalWindow({
+              date: input.appointmentDate,
+              point: destination,
+              zip: input.address.zip,
+              durationMinutes,
+              slotStartMinutes: slotPreference,
+              base,
+            });
+      if ("error" in assignment) {
+        if (assignment.error === "slot_unavailable") {
+          return { error: "slot_unavailable" };
+        }
+        if (assignment.error === "misconfigured") return { error: "misconfigured" };
+        return { error: "server" };
+      }
+
+      const price = getServicePriceEstimate(service, pet.weightLbs);
+      const travelFee = index === 0 ? quote.fee : 0;
+      const estimatedTotal =
+        Math.round(((price?.from ?? 0) + travelFee) * 100) / 100;
+
+      const { data: appointmentRow, error: appointmentError } = await admin
+        .from("appointments")
+        .insert({
+          customer_id: userId,
+          pet_id: petRow.id,
+          service_id: input.serviceId,
+          service_name: input.serviceName,
+          add_on_ids: input.addOnIds,
+          add_on_options: {},
+          address_street: input.address.street,
+          address_city: input.address.city,
+          address_state: input.address.state,
+          address_zip: input.address.zip,
+          travel_distance_miles: quote.distanceMiles,
+          travel_fee: travelFee,
+          appointment_date: input.appointmentDate,
+          appointment_time: assignment.insertion.appointmentTime,
+          scheduled_start: assignment.insertion.scheduledStart,
+          time_preference: assignment.insertion.usedPreference,
+          address_lat: destination.lat,
+          address_lon: destination.lon,
+          timezone: business.booking.timezone,
+          estimated_total: estimatedTotal,
+          new_client_deposit: 0,
+          payment_method_id: null,
+          vaccination_status_at_booking: "missing",
+          status: "pending_confirmation",
+          confirmed_at: null,
+          staff_created: true,
+          customer_confirm_token_hash: confirm.hash,
+          customer_confirm_expires_at: confirmExpiresAt,
+        })
+        .select(APPOINTMENT_SELECT)
+        .single();
+
+      if (appointmentError || !appointmentRow) {
+        console.error(
+          "createStaffCustomerBooking appointment insert failed:",
+          appointmentError?.code,
+          appointmentError?.message,
+        );
+        if (appointmentError?.code === "23505") {
+          return { error: "slot_unavailable" };
+        }
+        return { error: "server" };
+      }
+
+      const appointment = mapAppointmentRowToRecord(
+        appointmentRow as AppointmentRow,
+      );
+      appointments.push(appointment);
+      slotPreference =
+        appointment.scheduledStart ?? assignment.insertion.scheduledStart;
     }
 
-    const appointment = mapAppointmentRowToRecord(
-      appointmentRow as AppointmentRow,
-    );
+    const appointment = appointments[0]!;
     const confirmUrl = siteUrl(customerConfirmPath(confirm.token));
+    const petNames = appointments.map((entry) => entry.petName);
 
     let emailed = false;
     let texted = false;
@@ -371,7 +413,7 @@ export async function createStaffCustomerBooking(
     if (input.notifySms && isSmsConfigured()) {
       texted = await sendSms({
         to: input.phone,
-        body: buildStaffCreatedBookingSms(appointment, confirmUrl),
+        body: buildStaffCreatedBookingSms(appointment, confirmUrl, petNames),
       });
     }
 
