@@ -49,8 +49,8 @@ describe("about page", () => {
   it("follows Penny’s career from the ring to the atelier", () => {
     for (const line of [
       "About Penny",
-      "A thoughtful approach to the art of grooming.",
-      "Multiple Award-Winning Show Groomer",
+      "Meet Penny",
+      "Founder & Groomer, K9 Atelier",
       "Professional Groomer Since 2010",
       "From the Show Ring",
       "Where precision became instinct.",
@@ -73,6 +73,19 @@ describe("about page", () => {
     ]) {
       assert.equal(story.includes(line), true, line);
     }
+
+    const text = renderToStaticMarkup(React.createElement(AboutStory))
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ");
+    assert.match(
+      text,
+      /Penny is a multiple award-winning professional dog groomer with experience across a wide range of breeds, coat types, and grooming techniques\. As the founder of K9 Atelier, she brings years of all-breed grooming experience to a private, one-on-one mobile grooming experience in Palm Beach\./,
+    );
+    assert.match(
+      text,
+      /Her background includes breed-specific styling, hand stripping, full-coat maintenance, show grooming, creative grooming, and personalized coat care, with an emphasis on preserving coat health while bringing out the character of each breed\./,
+    );
+    assert.doesNotMatch(text, /every size|all sizes|dogs of every|any breed we accept/i);
   });
 
   it("uses the about photographs with descriptive filenames", () => {
@@ -136,12 +149,12 @@ describe("about page metadata", () => {
     assert.equal(metadata.title, ABOUT_PAGE_TITLE);
     assert.equal(
       metadata.title,
-      "About Penny | Award-Winning Dog Groomer | K9 Atelier",
+      "Penny | Award-Winning Dog Groomer in Palm Beach | K9 Atelier",
     );
     assert.equal(metadata.description, ABOUT_PAGE_DESCRIPTION);
     assert.equal(
       metadata.description,
-      "Meet Penny, founder of K9 Atelier and a professional groomer since 2010, with experience in competition grooming, award-winning work and hands-on instruction.",
+      "Meet Penny, founder of K9 Atelier and a multiple award-winning professional dog groomer with extensive all-breed grooming experience, providing private mobile dog grooming in Palm Beach.",
     );
     assert.equal(metadata.alternates?.canonical, ABOUT_PAGE_CANONICAL);
     assert.equal(metadata.alternates?.canonical, "https://k9atelier.com/about");
@@ -152,7 +165,8 @@ describe("about page content", () => {
   it("keeps one H1, the award history, and a crawlable services link", () => {
     const html = renderToStaticMarkup(React.createElement(AboutStory));
     assert.equal((html.match(/<h1\b/g) ?? []).length, 1);
-    assert.match(html, /A thoughtful approach to the art of grooming\./);
+    assert.match(html, /Meet Penny/);
+    assert.match(html, /Founder &amp; Groomer, K9 Atelier/);
 
     const awards = [
       ["2014", "Best in Group", "Pomeranian"],
@@ -198,8 +212,19 @@ describe("about structured data", () => {
     assert.equal(person["@id"], PERSON_ID);
     assert.equal(person.name, "Penny");
     assert.equal(person.url, "https://k9atelier.com/about");
-    assert.equal(person.jobTitle, "Professional Groomer");
+    assert.equal(person.jobTitle, "Professional Dog Groomer");
+    assert.match(
+      String(person.description),
+      /years of all-breed grooming experience/,
+    );
+    assert.match(String(person.description), /Palm Beach/);
+    assert.match(String(person.description), /founder of K9 Atelier/);
+    assert.doesNotMatch(String(person.description), /every size|all sizes|any size/i);
     assert.deepEqual(person.worksFor, { "@id": BUSINESS_ID });
+    assert.deepEqual(person.affiliation, {
+      "@type": "Organization",
+      name: "K9 Atelier",
+    });
     assert.ok(Array.isArray(person.sameAs));
     assert.ok((person.sameAs as string[]).includes("https://instagram.com/k9atelierfl"));
     assert.ok(

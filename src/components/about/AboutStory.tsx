@@ -227,10 +227,10 @@ export function AboutStory() {
               <header className="max-w-[44rem] lg:col-start-2 lg:row-start-1">
                 <AboutEyebrow>About Penny</AboutEyebrow>
                 <h1 id="about-penny" className={headingClass}>
-                  A thoughtful approach to the art of grooming.
+                  Meet Penny
                 </h1>
                 <p className="font-display mt-8 text-[1.35rem] leading-snug text-ink italic md:text-[1.7rem]">
-                  Multiple Award-Winning Show Groomer
+                  Founder & Groomer, K9 Atelier
                 </p>
                 <p className="font-body mt-3 text-[11px] font-medium uppercase tracking-[0.2em] text-deep-lavender md:text-[12px]">
                   Professional Groomer Since 2010
@@ -252,12 +252,18 @@ export function AboutStory() {
 
               <div className={`${proseClass} mt-10 lg:col-start-2 lg:row-start-2 lg:mt-10`}>
                 <p>
-                  I am Penny, the founder and groomer behind K9 Atelier.
+                  Penny is a multiple award-winning professional dog groomer
+                  with experience across a wide range of breeds, coat types,
+                  and grooming techniques. As the founder of K9 Atelier, she
+                  brings years of all-breed grooming experience to a private,
+                  one-on-one mobile grooming experience in Palm Beach.
                 </p>
                 <p>
-                  Since 2010 I have worked as a professional groomer — in the
-                  salon, in competition, and in the classroom. That experience
-                  is where this story begins.
+                  Her background includes breed-specific styling, hand
+                  stripping, full-coat maintenance, show grooming, creative
+                  grooming, and personalized coat care, with an emphasis on
+                  preserving coat health while bringing out the character of
+                  each breed.
                 </p>
               </div>
             </div>
