@@ -83,6 +83,41 @@ const previewUnknownCallers: StudioUnknownCaller[] = [
     introSentAt: "2026-08-22T13:20:05.000Z",
     label: "Bella · Maya",
   },
+  {
+    phone: "+15615550611",
+    calledAt: "2026-08-21T18:10:00.000Z",
+    introSentAt: null,
+  },
+  {
+    phone: "+15615550622",
+    calledAt: "2026-08-21T15:02:00.000Z",
+    introSentAt: "2026-08-21T15:03:00.000Z",
+  },
+  {
+    phone: "+15615550633",
+    calledAt: "2026-08-20T11:40:00.000Z",
+    introSentAt: null,
+  },
+  {
+    phone: "+15615550644",
+    calledAt: "2026-08-19T16:18:00.000Z",
+    introSentAt: null,
+  },
+  {
+    phone: "+15615550655",
+    calledAt: "2026-08-18T09:05:00.000Z",
+    introSentAt: null,
+  },
+  {
+    phone: "+15615550666",
+    calledAt: "2026-08-17T14:44:00.000Z",
+    introSentAt: null,
+  },
+  {
+    phone: "+15615550677",
+    calledAt: "2026-08-16T10:30:00.000Z",
+    introSentAt: null,
+  },
 ];
 
 export function buildPreviewStaffMessages() {
