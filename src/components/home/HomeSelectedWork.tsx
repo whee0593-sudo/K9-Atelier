@@ -6,25 +6,31 @@ import { getGallerySlot, type GalleryFrameSlot } from "@/lib/gallery-wall";
 
 /**
  * `sizes` matches the layout width, not the source file.
- * Container padding is px-4, md:px-12, xl:px-20, max 1240px.
- * Mobile feature / closing images span the content width.
- * The middle pair splits that width with a 1rem gap.
- * md+ is four equal columns:
- *   md  px-12 + gap-x-8 × 3  → (100vw - 12rem) / 4
- *   lg  px-12 + gap-x-12 × 3 → (min(100vw, 1240px) - 15rem) / 4
- *   xl  1080px content, gap-x-14 × 3 → 228px
+ * The section uses the shared Container: max 1240px, px-4 / md:px-12 / xl:px-20.
+ * Mobile is unchanged: feature images span the content width, and the middle
+ * pair splits that width with a 1rem gap.
+ * Desktop keeps one row inside that container, with extra inset on the same
+ * spacing scale (md:px-6, lg:px-12) so the outer frames sit in from the viewport.
+ * Columns are 2fr 2fr 2fr 3fr. Norwich keeps its ratio and uses the wider track.
+ *   md   free = 100vw - 15rem
+ *   lg   free = min(100vw, 1240px) - 21rem
+ *   xl   free = 1240px - 25rem
  */
-const FEATURE_SIZES =
-  "(max-width: 767px) calc(100vw - 2rem), (max-width: 1023px) calc((100vw - 12rem) / 4), (max-width: 1279px) calc((min(100vw, 1240px) - 15rem) / 4), 228px";
+const PORTRAIT_ROW_SIZES =
+  "(max-width: 1023px) calc((100vw - 15rem) * 2 / 9), (max-width: 1279px) calc((min(100vw, 1240px) - 21rem) * 2 / 9), calc((1240px - 25rem) * 2 / 9)";
 
-const PAIR_SIZES =
-  "(max-width: 767px) calc((100vw - 3rem) / 2), (max-width: 1023px) calc((100vw - 12rem) / 4), (max-width: 1279px) calc((min(100vw, 1240px) - 15rem) / 4), 228px";
+const POODLE_SIZES = `(max-width: 767px) calc(100vw - 2rem), ${PORTRAIT_ROW_SIZES}`;
+
+const PAIR_SIZES = `(max-width: 767px) calc((100vw - 3rem) / 2), ${PORTRAIT_ROW_SIZES}`;
+
+const NORWICH_SIZES =
+  "(max-width: 767px) calc(100vw - 2rem), (max-width: 1023px) calc((100vw - 15rem) / 3), (max-width: 1279px) calc((min(100vw, 1240px) - 21rem) / 3), calc((1240px - 25rem) / 3)";
 
 const HOME_SELECTED_WORK = [
-  { id: 4, sizes: FEATURE_SIZES, feature: true },
+  { id: 4, sizes: POODLE_SIZES, feature: true },
   { id: 11, sizes: PAIR_SIZES, feature: false },
   { id: 6, sizes: PAIR_SIZES, feature: false },
-  { id: 16, sizes: FEATURE_SIZES, feature: true },
+  { id: 16, sizes: NORWICH_SIZES, feature: true },
 ] as const;
 
 function selectedSlot(id: number): GalleryFrameSlot {
@@ -59,7 +65,7 @@ export function HomeSelectedWork() {
           </p>
         </div>
 
-        <ul className="mt-10 grid list-none grid-cols-2 items-center gap-x-4 gap-y-8 p-0 md:mt-14 md:grid-cols-4 md:gap-x-8 md:gap-y-0 lg:gap-x-12 xl:gap-x-14">
+        <ul className="mt-10 grid list-none grid-cols-2 items-center gap-x-4 gap-y-8 p-0 md:mt-14 md:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,2fr)_minmax(0,3fr)] md:gap-x-8 md:gap-y-0 md:px-6 lg:gap-x-12 lg:px-12">
           {works.map(({ slot, sizes, feature }) => (
             <li
               key={slot.id}
