@@ -22,26 +22,29 @@ export class StaffBookingValidationError extends Error {
   }
 }
 
+export type StaffCustomerBookingAddress = {
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+};
+
 export type StaffCustomerBookingInput = {
   firstName: string;
   lastName: string;
-  email: string;
-  phone: string;
+  email: string | null;
+  phone: string | null;
   notifyEmail: boolean;
   notifySms: boolean;
+  mode: "invite" | "booking";
   pets: PetWriteInput[];
-  serviceId: string;
-  serviceName: string;
+  serviceId: string | null;
+  serviceName: string | null;
   addOnIds: string[];
-  appointmentDate: string;
-  slotStartMinutes: number;
-  address: {
-    street: string;
-    city: string;
-    state: string;
-    zip: string;
-  };
-  verbalConsent: true;
+  appointmentDate: string | null;
+  slotStartMinutes: number | null;
+  address: StaffCustomerBookingAddress | null;
+  verbalConsent: boolean;
 };
 
 const MAX_STAFF_BOOKING_PETS = 8;
@@ -56,18 +59,35 @@ function assertPlainObject(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function readString(
+function readOptionalString(
   record: Record<string, unknown>,
   key: string,
   field: string,
   maxLength: number,
 ): string {
   const value = record[key];
+  if (value == null || value === "") return "";
   if (typeof value !== "string") {
-    throw new StaffBookingValidationError(`${field} is required.`, field);
+    throw new StaffBookingValidationError(`${field} must be text.`, field);
   }
   const trimmed = value.trim();
-  if (!trimmed || trimmed.length > maxLength) {
+  if (trimmed.length > maxLength) {
+    throw new StaffBookingValidationError(
+      `${field} must be ${maxLength} characters or fewer.`,
+      field,
+    );
+  }
+  return trimmed;
+}
+
+function readString(
+  record: Record<string, unknown>,
+  key: string,
+  field: string,
+  maxLength: number,
+): string {
+  const trimmed = readOptionalString(record, key, field, maxLength);
+  if (!trimmed) {
     throw new StaffBookingValidationError(`${field} is required.`, field);
   }
   return trimmed;
@@ -75,6 +95,22 @@ function readString(
 
 function readBoolean(record: Record<string, unknown>, key: string) {
   return record[key] === true;
+}
+
+function isBlankPetBody(petBody: unknown) {
+  if (petBody == null || typeof petBody !== "object" || Array.isArray(petBody)) {
+    return true;
+  }
+  const pet = petBody as Record<string, unknown>;
+  const name = typeof pet.name === "string" ? pet.name.trim() : "";
+  const breed = typeof pet.breed === "string" ? pet.breed.trim() : "";
+  const weight =
+    typeof pet.weightLbs === "number"
+      ? pet.weightLbs
+      : typeof pet.weightLbs === "string"
+        ? Number(pet.weightLbs)
+        : NaN;
+  return !name && !breed && !(Number.isFinite(weight) && weight > 0);
 }
 
 export function staffCreatedAccountBlockReason(email: string) {
@@ -89,68 +125,71 @@ export function validateStaffCustomerBookingInput(
 ): StaffCustomerBookingInput {
   const record = assertPlainObject(body);
 
-  const firstName = readString(record, "firstName", "First name", 80);
-  const lastName = readString(record, "lastName", "Last name", 80);
-  const email = normalizeStaffEmail(
-    readString(record, "email", "Email", 200),
-  );
-  if (!EMAIL_PATTERN.test(email)) {
+  const firstName = readOptionalString(record, "firstName", "First name", 80);
+  const lastName = readOptionalString(record, "lastName", "Last name", 80);
+
+  const emailRaw = readOptionalString(record, "email", "Email", 200);
+  const email = emailRaw ? normalizeStaffEmail(emailRaw) : null;
+  if (emailRaw && (!email || !EMAIL_PATTERN.test(email))) {
     throw new StaffBookingValidationError(
       "Enter a valid customer email address.",
       "email",
     );
   }
-
-  const ownerBlock = staffCreatedAccountBlockReason(email);
-  if (ownerBlock) {
-    throw new StaffBookingValidationError(ownerBlock, "email");
+  if (email) {
+    const ownerBlock = staffCreatedAccountBlockReason(email);
+    if (ownerBlock) {
+      throw new StaffBookingValidationError(ownerBlock, "email");
+    }
   }
 
-  const phone = normalizePhoneToE164(
-    readString(record, "phone", "Mobile phone", 32),
-  );
-  if (!phone) {
+  const phoneRaw = readOptionalString(record, "phone", "Mobile phone", 32);
+  const phone = phoneRaw ? normalizePhoneToE164(phoneRaw) : null;
+  if (phoneRaw && !phone) {
     throw new StaffBookingValidationError(
-      "Enter a valid US mobile number so we can text the confirmation link.",
+      "Enter a valid US mobile number.",
       "phone",
     );
   }
 
-  const notifyEmail = readBoolean(record, "notifyEmail");
-  const notifySms = readBoolean(record, "notifySms");
-  if (!notifyEmail && !notifySms) {
+  if (!email && !phone) {
     throw new StaffBookingValidationError(
-      "Choose email, text message, or both for the confirmation link.",
-      "notify",
+      "Enter a customer email or mobile phone number.",
+      "contact",
     );
   }
 
-  if (record.verbalConsent !== true) {
+  let notifyEmail = readBoolean(record, "notifyEmail");
+  let notifySms = readBoolean(record, "notifySms");
+  if (!notifyEmail && !notifySms) {
+    notifyEmail = Boolean(email);
+    notifySms = Boolean(phone);
+  }
+  if (notifyEmail && !email) notifyEmail = false;
+  if (notifySms && !phone) notifySms = false;
+  if (!notifyEmail && !notifySms) {
     throw new StaffBookingValidationError(
-      "Confirm that the customer agreed to the policies and to receive this link.",
-      "verbalConsent",
+      "Enter a customer email or mobile phone number to send the booking link.",
+      "contact",
     );
   }
+
+  const verbalConsent = record.verbalConsent === true;
 
   const petsBody = Array.isArray(record.pets)
     ? record.pets
     : record.pet != null
       ? [record.pet]
-      : null;
-  if (!petsBody || petsBody.length === 0) {
-    throw new StaffBookingValidationError(
-      "Add at least one dog profile.",
-      "pets",
-    );
-  }
-  if (petsBody.length > MAX_STAFF_BOOKING_PETS) {
+      : [];
+  const filledPetBodies = petsBody.filter((petBody) => !isBlankPetBody(petBody));
+  if (filledPetBodies.length > MAX_STAFF_BOOKING_PETS) {
     throw new StaffBookingValidationError(
       `You can add up to ${MAX_STAFF_BOOKING_PETS} dogs on one booking.`,
       "pets",
     );
   }
 
-  const pets: PetWriteInput[] = petsBody.map((petBody, index) => {
+  const pets: PetWriteInput[] = filledPetBodies.map((petBody, index) => {
     try {
       return validateCreatePetInput(petBody);
     } catch (error) {
@@ -164,74 +203,104 @@ export function validateStaffCustomerBookingInput(
     }
   });
 
-  const serviceId = readString(record, "serviceId", "Service", 120);
-  const service = allBookableServices().find((entry) => entry.id === serviceId);
-  if (!service || !service.bookableAsPrimary) {
+  const serviceIdRaw = readOptionalString(record, "serviceId", "Service", 120);
+  const service = serviceIdRaw
+    ? allBookableServices().find((entry) => entry.id === serviceIdRaw)
+    : null;
+  if (serviceIdRaw && (!service || !service.bookableAsPrimary)) {
     throw new StaffBookingValidationError(
       "Choose a bookable grooming service.",
       "serviceId",
     );
   }
-  for (const [index, pet] of pets.entries()) {
-    if (!isServiceAvailableForPet(serviceId, pet.weightLbs)) {
-      throw new StaffBookingValidationError(
-        pets.length > 1
-          ? `That service is not available for dog ${index + 1}'s weight.`
-          : "That service is not available for this dog's weight.",
-        "serviceId",
-      );
+  if (service) {
+    for (const [index, pet] of pets.entries()) {
+      if (!isServiceAvailableForPet(service.id, pet.weightLbs)) {
+        throw new StaffBookingValidationError(
+          pets.length > 1
+            ? `That service is not available for dog ${index + 1}'s weight.`
+            : "That service is not available for this dog's weight.",
+          "serviceId",
+        );
+      }
     }
   }
 
-  const appointmentDate = readString(
+  const appointmentDateRaw = readOptionalString(
     record,
     "appointmentDate",
     "Appointment date",
     10,
   );
-  if (!DATE_PATTERN.test(appointmentDate)) {
-    throw new StaffBookingValidationError(
-      "Appointment date must be YYYY-MM-DD.",
-      "appointmentDate",
-    );
-  }
-  if (!isDateBookable(parseDateValue(appointmentDate))) {
-    throw new StaffBookingValidationError(
-      "That date is not available for booking.",
-      "appointmentDate",
-    );
+  let appointmentDate: string | null = null;
+  if (appointmentDateRaw) {
+    if (!DATE_PATTERN.test(appointmentDateRaw)) {
+      throw new StaffBookingValidationError(
+        "Appointment date must be YYYY-MM-DD.",
+        "appointmentDate",
+      );
+    }
+    if (!isDateBookable(parseDateValue(appointmentDateRaw))) {
+      throw new StaffBookingValidationError(
+        "That date is not available for booking.",
+        "appointmentDate",
+      );
+    }
+    appointmentDate = appointmentDateRaw;
   }
 
   const slotStartRaw = record.slotStartMinutes;
-  const slotStartMinutes =
-    typeof slotStartRaw === "number"
-      ? slotStartRaw
-      : typeof slotStartRaw === "string"
-        ? Number(slotStartRaw)
-        : NaN;
-  if (
-    !Number.isInteger(slotStartMinutes) ||
-    !listHourlyStartMinutes().includes(slotStartMinutes)
-  ) {
-    throw new StaffBookingValidationError(
-      "Please choose an available start time.",
-      "slotStartMinutes",
-    );
+  let slotStartMinutes: number | null = null;
+  if (slotStartRaw != null && slotStartRaw !== "") {
+    const parsed =
+      typeof slotStartRaw === "number"
+        ? slotStartRaw
+        : typeof slotStartRaw === "string"
+          ? Number(slotStartRaw)
+          : NaN;
+    if (!Number.isInteger(parsed) || !listHourlyStartMinutes().includes(parsed)) {
+      throw new StaffBookingValidationError(
+        "Please choose an available start time.",
+        "slotStartMinutes",
+      );
+    }
+    slotStartMinutes = parsed;
   }
 
   const addressRecord = record.address;
+  let address: StaffCustomerBookingAddress | null = null;
   if (
-    addressRecord == null ||
-    typeof addressRecord !== "object" ||
-    Array.isArray(addressRecord)
+    addressRecord != null &&
+    typeof addressRecord === "object" &&
+    !Array.isArray(addressRecord)
   ) {
-    throw new StaffBookingValidationError("Address is required.", "address");
+    const addressObj = addressRecord as Record<string, unknown>;
+    const street = readOptionalString(addressObj, "street", "Street", 200);
+    const city = readOptionalString(addressObj, "city", "City", 120);
+    const state = readOptionalString(addressObj, "state", "State", 40);
+    const zip = readOptionalString(addressObj, "zip", "ZIP code", 20);
+    if (street || city || state || zip) {
+      if (!street || !city || !state || !zip) {
+        throw new StaffBookingValidationError(
+          "Complete the street, city, state, and ZIP, or leave the address blank.",
+          "address",
+        );
+      }
+      address = { street, city, state, zip };
+    }
   }
-  const addressObj = addressRecord as Record<string, unknown>;
 
   const addOnIds = Array.isArray(record.addOnIds)
     ? record.addOnIds.filter((id): id is string => typeof id === "string")
     : [];
+
+  const hasCompleteBooking = Boolean(
+    pets.length > 0 &&
+      service &&
+      appointmentDate &&
+      slotStartMinutes != null &&
+      address,
+  );
 
   return {
     firstName,
@@ -240,19 +309,15 @@ export function validateStaffCustomerBookingInput(
     phone,
     notifyEmail,
     notifySms,
+    mode: hasCompleteBooking ? "booking" : "invite",
     pets,
-    serviceId,
-    serviceName: service.name,
+    serviceId: service?.id ?? null,
+    serviceName: service?.name ?? null,
     addOnIds,
     appointmentDate,
     slotStartMinutes,
-    address: {
-      street: readString(addressObj, "street", "Street", 200),
-      city: readString(addressObj, "city", "City", 120),
-      state: readString(addressObj, "state", "State", 40),
-      zip: readString(addressObj, "zip", "ZIP code", 20),
-    },
-    verbalConsent: true,
+    address,
+    verbalConsent,
   };
 }
 

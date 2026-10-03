@@ -39,15 +39,16 @@ type AvailabilityDay = {
 };
 
 type SuccessState = {
+  mode: "invite" | "booking";
   confirmUrl: string;
   emailed: boolean;
   texted: boolean;
   createdAccount: boolean;
   email: string;
   firstName: string;
-  serviceName: string;
-  appointmentDate: string;
-  appointmentTime: string;
+  serviceName: string | null;
+  appointmentDate: string | null;
+  appointmentTime: string | null;
 };
 
 type PetDraft = {
@@ -80,13 +81,13 @@ export function BookForCustomerForm({
   const [lastName, setLastName] = useState(prefill?.lastName ?? "");
   const [email, setEmail] = useState(prefill?.email ?? "");
   const [phone, setPhone] = useState(prefill?.phone ?? "");
-  const [notifyEmail, setNotifyEmail] = useState(true);
-  const [notifySms, setNotifySms] = useState(true);
+  const [notifyEmail, setNotifyEmail] = useState(Boolean(prefill?.email));
+  const [notifySms, setNotifySms] = useState(Boolean(prefill?.phone) || !prefill?.email);
   const [pets, setPets] = useState<PetDraft[]>(() => [createPetDraft()]);
   const [serviceId, setServiceId] = useState("");
   const [street, setStreet] = useState("");
   const [city, setCity] = useState("");
-  const [state, setState] = useState("FL");
+  const [state, setState] = useState("");
   const [zip, setZip] = useState("");
   const [quoteState, setQuoteState] = useState<QuoteState>({ status: "idle" });
   const [days, setDays] = useState<AvailabilityDay[]>(() =>
@@ -301,19 +302,43 @@ export function BookForCustomerForm({
     setError(null);
     setCopied(false);
 
+    const trimmedEmail = email.trim();
+    const trimmedPhone = phone.trim();
+    if (!trimmedEmail && !trimmedPhone) {
+      setError("Enter a customer email or mobile phone number.");
+      return;
+    }
+
+    const filledPets = pets
+      .map((pet) => ({
+        name: pet.name.trim(),
+        breed: pet.breed.trim(),
+        weightLbs: Number(pet.weightLbs),
+      }))
+      .filter(
+        (pet) =>
+          pet.name ||
+          pet.breed ||
+          (Number.isFinite(pet.weightLbs) && pet.weightLbs > 0),
+      );
+
     if (preview) {
+      const inviteOnly = filledPets.length === 0 || !serviceId || !appointmentDate || !slotStartMinutes;
       setSuccess({
-        confirmUrl: "https://k9atelier.com/confirm-account?token=preview",
-        emailed: notifyEmail,
-        texted: notifySms,
-        createdAccount: true,
-        email,
+        mode: inviteOnly ? "invite" : "booking",
+        confirmUrl: inviteOnly
+          ? "https://k9atelier.com/book"
+          : "https://k9atelier.com/confirm-account?token=preview",
+        emailed: notifyEmail && Boolean(trimmedEmail),
+        texted: notifySms && Boolean(trimmedPhone),
+        createdAccount: Boolean(trimmedEmail),
+        email: trimmedEmail,
         firstName,
-        serviceName: selectedService?.name ?? "Grooming",
-        appointmentDate,
+        serviceName: selectedService?.name ?? null,
+        appointmentDate: appointmentDate || null,
         appointmentTime: slotStartMinutes
           ? formatHourLabel(Math.floor(Number(slotStartMinutes) / 60))
-          : "9:00 AM",
+          : null,
       });
       return;
     }
@@ -327,24 +352,26 @@ export function BookForCustomerForm({
         body: JSON.stringify({
           firstName,
           lastName,
-          email,
-          phone,
+          email: trimmedEmail,
+          phone: trimmedPhone,
           notifyEmail,
           notifySms,
           verbalConsent,
-          pets: pets.map((pet) => ({
-            name: pet.name,
-            breed: pet.breed,
-            weightLbs: Number(pet.weightLbs),
-          })),
-          serviceId,
-          appointmentDate,
-          slotStartMinutes: Number(slotStartMinutes),
-          address: { street, city, state, zip },
+          pets: filledPets,
+          serviceId: serviceId || undefined,
+          appointmentDate: appointmentDate || undefined,
+          slotStartMinutes: slotStartMinutes
+            ? Number(slotStartMinutes)
+            : undefined,
+          address:
+            street.trim() || city.trim() || state.trim() || zip.trim()
+              ? { street, city, state, zip }
+              : undefined,
         }),
       });
       const body = (await response.json()) as {
         error?: string;
+        mode?: "invite" | "booking";
         confirmUrl?: string;
         emailed?: boolean;
         texted?: boolean;
@@ -357,27 +384,28 @@ export function BookForCustomerForm({
           serviceName: string;
           appointmentDate: string;
           appointmentTime: string;
-        };
+        } | null;
       };
-      if (!response.ok || !body.confirmUrl || !body.appointment || !body.customer) {
-        throw new Error(body.error ?? "Could not create this booking.");
+      if (!response.ok || !body.confirmUrl || !body.customer) {
+        throw new Error(body.error ?? "Could not send this booking link.");
       }
       setSuccess({
+        mode: body.mode === "booking" ? "booking" : "invite",
         confirmUrl: body.confirmUrl,
         emailed: body.emailed === true,
         texted: body.texted === true,
         createdAccount: body.customer.createdAccount,
         email: body.customer.email,
         firstName: body.customer.firstName,
-        serviceName: body.appointment.serviceName,
-        appointmentDate: body.appointment.appointmentDate,
-        appointmentTime: body.appointment.appointmentTime,
+        serviceName: body.appointment?.serviceName ?? null,
+        appointmentDate: body.appointment?.appointmentDate ?? null,
+        appointmentTime: body.appointment?.appointmentTime ?? null,
       });
     } catch (submitError) {
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "Could not create this booking.",
+          : "Could not send this booking link.",
       );
     } finally {
       setSubmitting(false);
@@ -385,28 +413,47 @@ export function BookForCustomerForm({
   }
 
   if (success) {
+    const displayName = success.firstName.trim() || "the customer";
     return (
       <div className="rounded-2xl border border-lavender/30 bg-cream p-6">
-        <h3 className="font-medium text-gold-dark">Confirmation link ready</h3>
+        <h3 className="font-medium text-gold-dark">
+          {success.mode === "invite" ? "Booking link ready" : "Confirmation link ready"}
+        </h3>
         <p className="mt-2 text-sm text-text">
-          {success.createdAccount
-            ? `A customer account was created for ${success.firstName}.`
-            : `This booking was added to ${success.firstName}'s existing account.`}
+          {success.mode === "invite"
+            ? success.createdAccount
+              ? `A customer account was started for ${displayName}. They can finish the required booking details from the link.`
+              : `${displayName} can finish the required booking details from the link.`
+            : success.createdAccount
+              ? `A customer account was created for ${displayName}.`
+              : `This booking was added to ${displayName}'s existing account.`}
         </p>
-        <p className="mt-2 text-sm text-text-muted">
-          {success.serviceName} on {success.appointmentDate} ·{" "}
-          {success.appointmentTime}
-        </p>
+        {success.mode === "booking" &&
+        success.serviceName &&
+        success.appointmentDate &&
+        success.appointmentTime ? (
+          <p className="mt-2 text-sm text-text-muted">
+            {success.serviceName} on {success.appointmentDate} ·{" "}
+            {success.appointmentTime}
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-text-muted">
+            The customer completes dog details, service, address, and schedule
+            online.
+          </p>
+        )}
         <p className="mt-3 text-sm text-text-muted">
           {success.emailed
-            ? `Email sent to ${success.email}. `
+            ? `Email sent${success.email ? ` to ${success.email}` : ""}. `
             : "Email was not sent. "}
           {success.texted
             ? "A text was sent to their phone."
             : "A text was not sent."}
         </p>
         <label className={`${labelClass} mt-5`} htmlFor="confirm-url">
-          Customer confirmation link
+          {success.mode === "invite"
+            ? "Customer booking link"
+            : "Customer confirmation link"}
         </label>
         <input
           id="confirm-url"
@@ -442,6 +489,11 @@ export function BookForCustomerForm({
       onSubmit={(event) => void handleSubmit(event)}
       className="space-y-8 rounded-2xl border border-lavender/30 bg-cream p-6"
     >
+      <p className="text-sm text-text-muted">
+        Only an email or mobile phone is required. Leave other fields blank and
+        the customer can finish them from the booking link.
+      </p>
+
       <section className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className={labelClass} htmlFor="customer-first-name">
@@ -452,7 +504,6 @@ export function BookForCustomerForm({
             className={fieldClass}
             value={firstName}
             onChange={(event) => setFirstName(event.target.value)}
-            required
           />
         </div>
         <div>
@@ -464,7 +515,6 @@ export function BookForCustomerForm({
             className={fieldClass}
             value={lastName}
             onChange={(event) => setLastName(event.target.value)}
-            required
           />
         </div>
         <div>
@@ -476,8 +526,10 @@ export function BookForCustomerForm({
             type="email"
             className={fieldClass}
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
+            onChange={(event) => {
+              setEmail(event.target.value);
+              if (event.target.value.trim()) setNotifyEmail(true);
+            }}
           />
         </div>
         <div>
@@ -489,15 +541,20 @@ export function BookForCustomerForm({
             type="tel"
             className={fieldClass}
             value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            required
+            onChange={(event) => {
+              setPhone(event.target.value);
+              if (event.target.value.trim()) setNotifySms(true);
+            }}
           />
+          <p className="mt-1 text-xs text-text-muted">
+            Provide email or phone (at least one).
+          </p>
         </div>
       </section>
 
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium text-text">
-          Send confirmation link
+          Send booking link
         </legend>
         <label className="flex items-center gap-2 text-sm text-text">
           <input
@@ -550,7 +607,6 @@ export function BookForCustomerForm({
                     onChange={(event) =>
                       updatePet(pet.key, "name", event.target.value)
                     }
-                    required
                   />
                 </div>
                 <div>
@@ -564,7 +620,6 @@ export function BookForCustomerForm({
                     onChange={(event) =>
                       updatePet(pet.key, "breed", event.target.value)
                     }
-                    required
                   />
                 </div>
                 <div>
@@ -581,7 +636,6 @@ export function BookForCustomerForm({
                     onChange={(event) =>
                       updatePet(pet.key, "weightLbs", event.target.value)
                     }
-                    required
                   />
                 </div>
               </div>
@@ -609,7 +663,6 @@ export function BookForCustomerForm({
             className={fieldClass}
             value={street}
             onChange={(event) => setStreet(event.target.value)}
-            required
           />
         </div>
         <div>
@@ -621,7 +674,6 @@ export function BookForCustomerForm({
             className={fieldClass}
             value={city}
             onChange={(event) => setCity(event.target.value)}
-            required
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -634,7 +686,6 @@ export function BookForCustomerForm({
               className={fieldClass}
               value={state}
               onChange={(event) => setState(event.target.value)}
-              required
             />
           </div>
           <div>
@@ -646,7 +697,6 @@ export function BookForCustomerForm({
               className={fieldClass}
               value={zip}
               onChange={(event) => setZip(event.target.value)}
-              required
             />
           </div>
         </div>
@@ -684,7 +734,6 @@ export function BookForCustomerForm({
               setAppointmentDate("");
               setSlotStartMinutes("");
             }}
-            required
           >
             <option value="">Select a service</option>
             {services.map((service) => (
@@ -719,7 +768,6 @@ export function BookForCustomerForm({
             value={slotStartMinutes}
             onChange={(event) => setSlotStartMinutes(event.target.value)}
             disabled={availabilityLoading}
-            required
           >
             <option value="">
               {availabilityLoading ? "Loading times…" : "Select a time"}
@@ -752,10 +800,9 @@ export function BookForCustomerForm({
           className="mt-1"
           checked={verbalConsent}
           onChange={(event) => setVerbalConsent(event.target.checked)}
-          required
         />
         The customer agreed by phone or in person to the cancellation, payment,
-        photo, and text-message policies, and to receive this confirmation link.
+        photo, and text-message policies, and to receive this booking link.
       </label>
 
       {error ? (
@@ -770,7 +817,7 @@ export function BookForCustomerForm({
           disabled={submitting}
           className="rounded-xl bg-gold px-6 py-2.5 text-sm font-medium text-white hover:bg-gold-dark disabled:opacity-60"
         >
-          {submitting ? "Creating…" : "Create account and booking"}
+          {submitting ? "Sending…" : "Send booking link"}
         </button>
         <Link href="/admin/pets" className="text-sm text-gold-dark hover:underline">
           Back to customers

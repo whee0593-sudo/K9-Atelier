@@ -17,6 +17,10 @@ export default async function BookForCustomerPage({
       <h2 className="text-2xl font-semibold text-gold-dark">
         Book for a customer
       </h2>
+      <p className="mt-2 text-sm text-text-muted">
+        Email or phone is enough to send a booking link. The customer can
+        complete the rest online.
+      </p>
       <p className="mt-2">
         <Link
           href="/admin/book-for-customer/preview"

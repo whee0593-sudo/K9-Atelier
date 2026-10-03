@@ -28,6 +28,7 @@ export function StaffBookingDatePicker({
   disabled = false,
   preview = false,
   defaultOpen = false,
+  required = false,
 }: {
   id?: string;
   value: string;
@@ -36,6 +37,7 @@ export function StaffBookingDatePicker({
   disabled?: boolean;
   preview?: boolean;
   defaultOpen?: boolean;
+  required?: boolean;
 }) {
   const titleId = useId();
   const [mounted, setMounted] = useState(false);
@@ -172,7 +174,7 @@ export function StaffBookingDatePicker({
       </button>
       <input
         tabIndex={-1}
-        required
+        required={required}
         value={value}
         onChange={() => {}}
         className="sr-only"

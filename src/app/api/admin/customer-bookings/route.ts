@@ -38,7 +38,23 @@ export async function POST(request: Request) {
       return mapStaffServiceError(result.error);
     }
 
-    return NextResponse.json(result.booking, { status: 201 });
+    return NextResponse.json(
+      {
+        mode: result.booking.mode,
+        confirmUrl: result.booking.confirmUrl,
+        emailed: result.booking.emailed,
+        texted: result.booking.texted,
+        customer: result.booking.customer,
+        appointment: result.booking.appointment
+          ? {
+              serviceName: result.booking.appointment.serviceName,
+              appointmentDate: result.booking.appointment.appointmentDate,
+              appointmentTime: result.booking.appointment.appointmentTime,
+            }
+          : null,
+      },
+      { status: 201 },
+    );
   } catch (error) {
     if (error instanceof StaffBookingValidationError) {
       return staffJsonError(error.message, 400);

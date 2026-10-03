@@ -98,9 +98,10 @@ describe("staffCreatedAccountBlockReason", () => {
 describe("validateStaffCustomerBookingInput", () => {
   it("accepts a complete staff booking", () => {
     const input = validateStaffCustomerBookingInput(validBody());
+    assert.equal(input.mode, "booking");
     assert.equal(input.email, "ada@example.com");
     assert.equal(input.phone, "+15615550123");
-    assert.equal(input.serviceName.length > 0, true);
+    assert.ok((input.serviceName?.length ?? 0) > 0);
     assert.equal(input.pets.length, 1);
     assert.equal(input.pets[0]?.name, "Bella");
   });
@@ -118,15 +119,33 @@ describe("validateStaffCustomerBookingInput", () => {
     assert.equal(input.pets[1]?.name, "Max");
   });
 
-  it("requires a notify channel", () => {
+  it("accepts an email-only invite with no other fields", () => {
+    const input = validateStaffCustomerBookingInput({
+      email: "ada@example.com",
+    });
+    assert.equal(input.mode, "invite");
+    assert.equal(input.email, "ada@example.com");
+    assert.equal(input.phone, null);
+    assert.equal(input.notifyEmail, true);
+    assert.equal(input.pets.length, 0);
+  });
+
+  it("accepts a phone-only invite with no other fields", () => {
+    const input = validateStaffCustomerBookingInput({
+      phone: "5615550123",
+    });
+    assert.equal(input.mode, "invite");
+    assert.equal(input.phone, "+15615550123");
+    assert.equal(input.email, null);
+    assert.equal(input.notifySms, true);
+  });
+
+  it("requires email or phone", () => {
     assert.throws(
-      () =>
-        validateStaffCustomerBookingInput(
-          validBody({ notifyEmail: false, notifySms: false }),
-        ),
+      () => validateStaffCustomerBookingInput({ firstName: "Ada" }),
       (error: unknown) =>
         error instanceof StaffBookingValidationError &&
-        error.field === "notify",
+        error.field === "contact",
     );
   });
 

@@ -78,3 +78,49 @@ export function buildStaffCreatedBookingSms(
   return `K9 Atelier reserved a visit for ${petLabel} on ${dateLabel} between ${appointment.appointmentTime}. Confirm here: ${confirmUrl} Reply STOP to opt out.`;
 }
 
+export type StaffBookingInviteNotice = {
+  firstName: string;
+  bookUrl: string;
+  createdAccount: boolean;
+};
+
+export function buildStaffBookingInviteEmail(notice: StaffBookingInviteNotice) {
+  const greetingName = notice.firstName.trim() || "there";
+  const subject = "Complete your K9 Atelier booking";
+  const introParagraph = notice.createdAccount
+    ? "K9 Atelier started a booking for you. Open the link below to enter your dog details, choose a service time, and finish your reservation."
+    : "K9 Atelier invited you to finish booking online. Open the link below to enter your details and reserve a visit.";
+  const closingParagraph =
+    "You are not charged when you book. After booking, you can confirm rabies vaccination status and add a card on file in your account.";
+
+  const text = [
+    `Dear ${greetingName},`,
+    "",
+    introParagraph,
+    "",
+    closingParagraph,
+    "",
+    `Complete booking: ${notice.bookUrl}`,
+  ].join("\n");
+
+  return buildCustomerLetterEmail(
+    {
+      subject,
+      greetingName,
+      introParagraph,
+      detailRows: [],
+      estimateNote: "",
+      closingParagraph,
+      cta: {
+        href: notice.bookUrl,
+        label: "COMPLETE BOOKING",
+      },
+    },
+    text,
+  );
+}
+
+export function buildStaffBookingInviteSms(bookUrl: string) {
+  return `K9 Atelier: Finish booking your visit here: ${bookUrl} Reply STOP to opt out.`;
+}
+
