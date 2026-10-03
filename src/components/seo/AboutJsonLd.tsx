@@ -28,8 +28,14 @@ export function AboutJsonLd() {
     "@id": personId,
     name: "Penny",
     url: ABOUT_PAGE_CANONICAL,
-    jobTitle: "Professional Groomer",
+    jobTitle: "Professional Dog Groomer",
+    description:
+      "Penny is a multiple award-winning professional dog groomer with experience across a wide range of breeds, coat types, and grooming techniques. As the founder of K9 Atelier, she brings years of all-breed grooming experience to a private, one-on-one mobile grooming experience in Palm Beach. Her background includes breed-specific styling, hand stripping, full-coat maintenance, show grooming, creative grooming, and personalized coat care, with an emphasis on preserving coat health while bringing out the character of each breed.",
     worksFor: { "@id": businessId },
+    affiliation: {
+      "@type": "Organization",
+      name: brand.name,
+    },
   };
 
   if (sameAs.length > 0) person.sameAs = sameAs;
