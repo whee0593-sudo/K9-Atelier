@@ -94,9 +94,11 @@ describe("home page content", () => {
 
     const hero = source.indexOf("<HomeHero />");
     const services = source.indexOf("<HomeServices />");
+    const selectedWork = source.indexOf("<HomeSelectedWork />");
     const firstVisit = source.indexOf("<HomeFirstVisit />");
 
     assert.ok(hero >= 0 && services > hero && firstVisit > services);
+    assert.ok(selectedWork > services && firstVisit > selectedWork);
 
     for (const section of REMOVED_HOME_SECTIONS) {
       assert.equal(
@@ -173,6 +175,45 @@ describe("homepage SEO", () => {
     assert.match(byHref("/services/color")?.text ?? "", /From \$50/);
     assert.match(byHref("/services/specialty-care")?.text ?? "", /^Specialty Care\b/);
     assert.match(byHref("/services/specialty-care")?.text ?? "", /Senior · Comfort care/);
+    assert.match(byHref("/gallery")?.text ?? "", /View the Gallery/);
+  });
+
+  it("places four lazy selected works between services and the first visit", () => {
+    const html = renderToStaticMarkup(<HomePageContent />);
+    const start = html.indexOf('id="home-selected-work-heading"');
+    const end = html.indexOf('id="first-visit"');
+    assert.ok(start > html.indexOf("Grooming, tailored to the individual."));
+    assert.ok(end > start);
+
+    const section = html.slice(start, end);
+    assert.match(section, /Selected Work/);
+    assert.match(section, /Every coat, considered individually\./);
+    assert.match(section, /href="\/gallery"/);
+    assert.match(section, /View the Gallery/);
+
+    const sources = ["gallery-04.png", "gallery-11.png", "gallery-06.png", "gallery-16.png"];
+    let previous = -1;
+    for (const file of sources) {
+      const index = section.indexOf(file);
+      assert.ok(index > previous, file);
+      previous = index;
+    }
+
+    const images = [...section.matchAll(/<img\b[^>]*>/g)].map((match) => match[0]);
+    assert.equal(images.length, 4);
+    for (const image of images) {
+      assert.match(image, /loading="lazy"/);
+      assert.match(image, /sizes="/);
+      assert.equal(/fetchpriority/i.test(image), false);
+      assert.equal(/\bpriority\b/.test(image), false);
+    }
+
+    const component = readFileSync(
+      new URL("./HomeSelectedWork.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.equal(component.includes("priority"), false);
+    assert.equal(component.includes("preload"), false);
   });
 
   it("shows the public phone and Palm Beach service-area sentence in the footer", () => {
