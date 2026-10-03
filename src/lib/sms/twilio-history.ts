@@ -117,11 +117,16 @@ export async function listTwilioInboundMms(options?: {
   let nextUrl: string | null =
     `https://api.twilio.com/2010-04-01/Accounts/${auth.accountSid}/Messages.json?PageSize=${pageSize}`;
 
+  type TwilioMessagesPage = {
+    messages?: TwilioMessageRow[];
+    next_page_uri?: string | null;
+  };
+
   for (let page = 0; page < pageLimit && nextUrl; page += 1) {
-    const data = await fetchTwilioJson<{
-      messages?: TwilioMessageRow[];
-      next_page_uri?: string | null;
-    }>(nextUrl, auth.authorization);
+    const data: TwilioMessagesPage | null = await fetchTwilioJson<TwilioMessagesPage>(
+      nextUrl,
+      auth.authorization,
+    );
     if (!data) return { error: "server" };
 
     for (const message of data.messages ?? []) {

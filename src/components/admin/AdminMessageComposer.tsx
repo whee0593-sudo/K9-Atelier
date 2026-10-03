@@ -228,6 +228,7 @@ export function AdminMessageComposer({
           petNames: selected?.petNames.join(", ") ?? "",
           phone: to,
           body: buildStaffCustomerSms(message.trim()),
+          mediaUrls: [],
           createdAt: new Date().toISOString(),
         },
         ...current,
