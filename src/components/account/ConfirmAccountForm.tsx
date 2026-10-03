@@ -270,7 +270,7 @@ export function ConfirmAccountForm({ token, preview }: Props) {
       ) : null}
 
       <button type="submit" disabled={submitting} className={bookingPrimaryBtnClass}>
-        {submitting ? "Confirming…" : "Confirm appointment"}
+        {submitting ? "Confirming…" : "Review & Confirm"}
       </button>
     </form>
   );
