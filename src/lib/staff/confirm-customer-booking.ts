@@ -70,6 +70,8 @@ async function loadConfirmAppointment(token: string) {
     .from("appointments")
     .select(APPOINTMENT_SELECT)
     .eq("customer_confirm_token_hash", hash)
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
 
   if (error) {
@@ -196,20 +198,18 @@ export async function confirmStaffCreatedBooking(input: {
       customer_confirm_token_hash: null,
       customer_confirm_expires_at: null,
     })
-    .eq("id", result.appointment.id)
     .eq("customer_confirm_token_hash", hashCustomerConfirmToken(input.token))
-    .select(APPOINTMENT_SELECT)
-    .maybeSingle();
+    .select(APPOINTMENT_SELECT);
 
   if (error) {
     console.error("confirmStaffCreatedBooking update failed:", error.message);
     return { error: "server" };
   }
-  if (!data) {
+  if (!data || data.length === 0) {
     return { error: "not_found" };
   }
 
-  const appointment = mapAppointmentRowToRecord(data as AppointmentRow);
+  const appointment = mapAppointmentRowToRecord(data[0] as AppointmentRow);
   try {
     const contact =
       (await fetchCustomerContact(result.user.id)) ??

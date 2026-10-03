@@ -101,7 +101,21 @@ describe("validateStaffCustomerBookingInput", () => {
     assert.equal(input.email, "ada@example.com");
     assert.equal(input.phone, "+15615550123");
     assert.equal(input.serviceName.length > 0, true);
-    assert.equal(input.pet.name, "Bella");
+    assert.equal(input.pets.length, 1);
+    assert.equal(input.pets[0]?.name, "Bella");
+  });
+
+  it("accepts multiple dog profiles", () => {
+    const input = validateStaffCustomerBookingInput(
+      validBody({
+        pets: [
+          { name: "Bella", breed: "Poodle", weightLbs: 18 },
+          { name: "Max", breed: "Maltese", weightLbs: 12 },
+        ],
+      }),
+    );
+    assert.equal(input.pets.length, 2);
+    assert.equal(input.pets[1]?.name, "Max");
   });
 
   it("requires a notify channel", () => {
@@ -221,6 +235,11 @@ describe("staff-created booking copy", () => {
     const sms = buildStaffCreatedBookingSms(appointment, confirmUrl);
     assert.match(sms, /Bella/);
     assert.match(sms, /confirm-account\?token=abc/);
+    const multiSms = buildStaffCreatedBookingSms(appointment, confirmUrl, [
+      "Bella",
+      "Max",
+    ]);
+    assert.match(multiSms, /Bella and Max/);
   });
 });
 

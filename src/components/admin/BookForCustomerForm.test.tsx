@@ -22,4 +22,12 @@ describe("BookForCustomerForm preview schedule", () => {
     assert.match(html, /Studio dates are listed/);
     assert.doesNotMatch(html, /Could not load available dates/);
   });
+
+  it("shows dog fields with an Add control under the first row", () => {
+    const html = renderToStaticMarkup(<BookForCustomerForm preview />);
+    assert.match(html, /Dog name/);
+    assert.match(html, /Breed/);
+    assert.match(html, /Weight \(lbs\)/);
+    assert.match(html, />Add</);
+  });
 });

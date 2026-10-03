@@ -25,6 +25,7 @@ export async function GET(request: Request) {
   const zip = url.searchParams.get("zip")?.trim() ?? "";
   const serviceId = url.searchParams.get("serviceId")?.trim() ?? "";
   const weightLbs = Number(url.searchParams.get("weightLbs"));
+  const durationOverride = Number(url.searchParams.get("durationMinutes"));
   const addOnIds = (url.searchParams.get("addOnIds") ?? "")
     .split(",")
     .map((id) => id.trim())
@@ -45,10 +46,15 @@ export async function GET(request: Request) {
     );
   }
 
+  const durationMinutes =
+    Number.isFinite(durationOverride) && durationOverride > 0
+      ? durationOverride
+      : bookingDurationMinutes(serviceId, weightLbs, addOnIds);
+
   const result = await getAvailabilityForAddress({
     point,
     zip,
-    durationMinutes: bookingDurationMinutes(serviceId, weightLbs, addOnIds),
+    durationMinutes,
     base,
   });
 
