@@ -110,7 +110,7 @@ export async function listStaffSmsInbox(): Promise<
       "id, direction, phone, body, customer_name, pet_names, media_urls, created_at",
     )
     .order("created_at", { ascending: false })
-    .limit(40);
+    .limit(100);
 
   if (error) {
     console.error("listStaffSmsInbox failed:", error.message);

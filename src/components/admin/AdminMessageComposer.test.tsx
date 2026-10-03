@@ -87,5 +87,7 @@ describe("Admin message inbox photos", () => {
     );
     assert.match(source, /Customer photo/);
     assert.match(source, /staffSmsMediaProxyPath/);
+    assert.match(source, /Import past photos/);
+    assert.match(source, /backfill-photos/);
   });
 });
