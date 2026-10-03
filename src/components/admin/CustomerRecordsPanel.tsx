@@ -93,6 +93,13 @@ function appointmentStatusLabel(status: string) {
   return "Confirmed";
 }
 
+type ServiceAddressParts = {
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+};
+
 function formatAppointmentAddress(appointment: {
   addressStreet: string;
   addressCity: string;
@@ -106,18 +113,215 @@ function formatAppointmentAddress(appointment: {
   return [appointment.addressStreet, withZip].filter(Boolean).join(", ");
 }
 
+function addressKey(address: ServiceAddressParts) {
+  return [address.street, address.city, address.state, address.zip].join("|");
+}
+
 function uniqueServiceAddresses(
   appointments: StaffCustomerHistory["appointments"],
-) {
+): ServiceAddressParts[] {
   const seen = new Set<string>();
-  const addresses: string[] = [];
+  const addresses: ServiceAddressParts[] = [];
   for (const appointment of appointments) {
+    const next: ServiceAddressParts = {
+      street: appointment.addressStreet,
+      city: appointment.addressCity,
+      state: appointment.addressState,
+      zip: appointment.addressZip,
+    };
     const label = formatAppointmentAddress(appointment);
-    if (!label || seen.has(label)) continue;
-    seen.add(label);
-    addresses.push(label);
+    const key = addressKey(next);
+    if (!label || seen.has(key)) continue;
+    seen.add(key);
+    addresses.push(next);
   }
   return addresses;
+}
+
+function addressInputClassName() {
+  return "mt-1.5 w-full rounded-xl border border-lavender/40 bg-cream px-4 py-2.5 text-sm text-text placeholder:text-text-muted/50";
+}
+
+function ServiceAddressEditor({
+  customerId,
+  address,
+  preview = false,
+  onSaved,
+}: {
+  customerId: string;
+  address: ServiceAddressParts;
+  preview?: boolean;
+  onSaved: (from: ServiceAddressParts, to: ServiceAddressParts) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<ServiceAddressParts>(address);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setDraft(address);
+    setEditing(false);
+    setError(null);
+    setSaved(false);
+  }, [address]);
+
+  async function handleSave() {
+    setSaving(true);
+    setError(null);
+    try {
+      if (preview) {
+        onSaved(address, {
+          street: draft.street.trim(),
+          city: draft.city.trim(),
+          state: draft.state.trim(),
+          zip: draft.zip.trim(),
+        });
+        setSaved(true);
+        setEditing(false);
+        return;
+      }
+
+      const response = await fetch(
+        `/api/admin/customers/${customerId}/addresses`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            from: address,
+            to: {
+              street: draft.street,
+              city: draft.city,
+              state: draft.state,
+              zip: draft.zip,
+            },
+          }),
+        },
+      );
+      const body = (await response.json()) as {
+        error?: string;
+        address?: ServiceAddressParts;
+      };
+      if (!response.ok || !body.address) {
+        throw new Error(body.error ?? "Could not save this address.");
+      }
+      onSaved(address, body.address);
+      setSaved(true);
+      setEditing(false);
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Could not save this address.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!editing) {
+    return (
+      <li className="rounded-xl border border-lavender/30 px-4 py-3 text-sm text-text">
+        <div className="flex items-start justify-between gap-3">
+          <p>{formatAppointmentAddress({
+            addressStreet: address.street,
+            addressCity: address.city,
+            addressState: address.state,
+            addressZip: address.zip,
+          })}</p>
+          <button
+            type="button"
+            onClick={() => {
+              setEditing(true);
+              setError(null);
+              setSaved(false);
+            }}
+            className="shrink-0 rounded-xl border border-lavender/40 px-3 py-1.5 text-sm text-text-muted hover:border-gold/40 hover:text-text"
+          >
+            Edit
+          </button>
+        </div>
+        {saved ? (
+          <p className="mt-2 text-xs text-text-muted">Saved</p>
+        ) : null}
+      </li>
+    );
+  }
+
+  return (
+    <li className="rounded-xl border border-lavender/30 px-4 py-4 text-sm">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block text-sm font-medium text-text sm:col-span-2">
+          Street Address
+          <input
+            value={draft.street}
+            onChange={(event) =>
+              setDraft((current) => ({ ...current, street: event.target.value }))
+            }
+            className={addressInputClassName()}
+          />
+        </label>
+        <label className="block text-sm font-medium text-text">
+          City
+          <input
+            value={draft.city}
+            onChange={(event) =>
+              setDraft((current) => ({ ...current, city: event.target.value }))
+            }
+            className={addressInputClassName()}
+          />
+        </label>
+        <label className="block text-sm font-medium text-text">
+          State
+          <input
+            value={draft.state}
+            onChange={(event) =>
+              setDraft((current) => ({ ...current, state: event.target.value }))
+            }
+            className={addressInputClassName()}
+          />
+        </label>
+        <label className="block text-sm font-medium text-text">
+          ZIP
+          <input
+            value={draft.zip}
+            onChange={(event) =>
+              setDraft((current) => ({ ...current, zip: event.target.value }))
+            }
+            className={addressInputClassName()}
+          />
+        </label>
+      </div>
+      {error ? (
+        <p className="mt-3 text-sm text-red-800" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => void handleSave()}
+          disabled={saving}
+          className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+        >
+          {saving ? "Saving…" : "Save Address"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setDraft(address);
+            setEditing(false);
+            setError(null);
+          }}
+          disabled={saving}
+          className="rounded-xl border border-lavender px-4 py-2 text-sm text-text-muted disabled:opacity-60"
+        >
+          Cancel
+        </button>
+      </div>
+    </li>
+  );
 }
 
 function CustomerHistory({
@@ -167,6 +371,35 @@ function CustomerHistory({
 
   const addresses = history ? uniqueServiceAddresses(history.appointments) : [];
 
+  function applyAddressRewrite(
+    from: ServiceAddressParts,
+    to: ServiceAddressParts,
+  ) {
+    setHistory((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        appointments: current.appointments.map((appointment) => {
+          if (
+            appointment.addressStreet !== from.street ||
+            appointment.addressCity !== from.city ||
+            appointment.addressState !== from.state ||
+            appointment.addressZip !== from.zip
+          ) {
+            return appointment;
+          }
+          return {
+            ...appointment,
+            addressStreet: to.street,
+            addressCity: to.city,
+            addressState: to.state,
+            addressZip: to.zip,
+          };
+        }),
+      };
+    });
+  }
+
   return (
     <>
       <section>
@@ -190,14 +423,15 @@ function CustomerHistory({
             No visit addresses yet.
           </p>
         ) : (
-          <ul className="mt-3 space-y-2 text-sm text-text">
+          <ul className="mt-3 space-y-2">
             {addresses.map((address) => (
-              <li
-                key={address}
-                className="rounded-xl border border-lavender/30 px-4 py-3"
-              >
-                {address}
-              </li>
+              <ServiceAddressEditor
+                key={addressKey(address)}
+                customerId={customerId}
+                address={address}
+                preview={preview}
+                onSaved={applyAddressRewrite}
+              />
             ))}
           </ul>
         )}

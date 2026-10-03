@@ -133,7 +133,7 @@ describe("required customer profile fields", () => {
     );
   });
 
-  it("requires a valid email when staff save a customer file", () => {
+  it("requires a valid email when staff change the login email", () => {
     assert.throws(
       () =>
         validateStaffProfileWriteInput({
@@ -153,6 +153,24 @@ describe("required customer profile fields", () => {
       email: "tiafrancavilla@gmail.com",
     });
     assert.equal(input.email, "tiafrancavilla@gmail.com");
+  });
+
+  it("lets staff save a customer file with every field blank", () => {
+    const input = validateStaffProfileWriteInput({
+      firstName: "",
+      lastName: "  ",
+      phone: "",
+      email: "",
+      preferredContact: "",
+      emergencyContactName: "",
+      emergencyContactPhone: "",
+      emergencyContactRelationship: "",
+    });
+    assert.equal(input.firstName, "");
+    assert.equal(input.lastName, "");
+    assert.equal(input.phone, "");
+    assert.equal(input.email, undefined);
+    assert.equal(input.preferredContact, null);
   });
 
   it("exposes staff APIs for every persisted guest account surface", () => {
