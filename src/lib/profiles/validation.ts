@@ -216,13 +216,124 @@ export function validateProfileWriteInput(body: unknown): CustomerProfileWriteIn
   };
 }
 
+function readRequiredAddressPart(
+  record: Record<string, unknown>,
+  key: string,
+  label: string,
+  maxLength: number,
+): string {
+  const value = record[key];
+  if (typeof value !== "string") {
+    throw new ProfileValidationError(`${label} is required.`, key);
+  }
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > maxLength) {
+    throw new ProfileValidationError(`${label} is required.`, key);
+  }
+  return trimmed;
+}
+
+function parseServiceAddress(
+  value: unknown,
+  field: string,
+): {
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+} {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) {
+    throw new ProfileValidationError("Address is required.", field);
+  }
+  const record = value as Record<string, unknown>;
+  return {
+    street: readRequiredAddressPart(record, "street", "Street", 200),
+    city: readRequiredAddressPart(record, "city", "City", 120),
+    state: readRequiredAddressPart(record, "state", "State", 40),
+    zip: readRequiredAddressPart(record, "zip", "ZIP code", 20),
+  };
+}
+
+/** Staff rewrite of visit addresses stored on appointments. */
+export function validateStaffAddressRewriteInput(body: unknown): {
+  from: { street: string; city: string; state: string; zip: string };
+  to: { street: string; city: string; state: string; zip: string };
+} {
+  const record = assertPlainObject(body);
+  return {
+    from: parseServiceAddress(record.from, "from"),
+    to: parseServiceAddress(record.to, "to"),
+  };
+}
+
+/**
+ * Staff may save any subset of customer-file fields. Blank values clear the
+ * column (except email: omit or blank leaves the login email unchanged).
+ */
 export function validateStaffProfileWriteInput(
   body: unknown,
-): CustomerProfileWriteInput & { email: string } {
+): CustomerProfileWriteInput & { email?: string } {
   const record = assertPlainObject(body);
-  const email = validateEmailAddress(record.email);
+
+  let email: string | undefined;
+  if (typeof record.email === "string" && record.email.trim()) {
+    email = validateEmailAddress(record.email);
+  }
+
+  const firstName = readOptionalText(record, "firstName", 80) ?? "";
+  const lastName = readOptionalText(record, "lastName", 80) ?? "";
+
+  const phoneRaw = readOptionalText(record, "phone", 32);
+  let phone = "";
+  if (phoneRaw) {
+    const normalized = normalizePhoneToE164(phoneRaw);
+    if (!normalized) {
+      throw new ProfileValidationError(
+        "Please enter a valid US mobile number.",
+        "phone",
+      );
+    }
+    phone = normalized;
+  }
+
+  const preferredContact = readOptionalText(record, "preferredContact", 40);
+  if (
+    preferredContact &&
+    !PREFERRED_CONTACT_OPTIONS.includes(
+      preferredContact as (typeof PREFERRED_CONTACT_OPTIONS)[number],
+    )
+  ) {
+    throw new ProfileValidationError(
+      "Preferred contact method is invalid.",
+      "preferredContact",
+    );
+  }
+
+  const emergencyContactRelationship = readOptionalText(
+    record,
+    "emergencyContactRelationship",
+    40,
+  );
+  if (
+    emergencyContactRelationship &&
+    !EMERGENCY_RELATIONSHIP_OPTIONS.includes(
+      emergencyContactRelationship as (typeof EMERGENCY_RELATIONSHIP_OPTIONS)[number],
+    )
+  ) {
+    throw new ProfileValidationError(
+      "Relationship is invalid.",
+      "emergencyContactRelationship",
+    );
+  }
+
   return {
-    ...validateProfileWriteInput(body),
-    email,
+    firstName,
+    lastName,
+    phone,
+    preferredContact,
+    emergencyContactName: readOptionalText(record, "emergencyContactName", 80),
+    emergencyContactPhone: readOptionalText(record, "emergencyContactPhone", 32),
+    emergencyContactRelationship,
+    ...(email ? { email } : {}),
   };
 }

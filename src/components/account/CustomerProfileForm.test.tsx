@@ -100,6 +100,8 @@ describe("customer profile required fields", () => {
       /This profile cannot be saved until you complete/,
     );
     assert.doesNotMatch(html, /First Name is required\./);
+    assert.doesNotMatch(html, /text-gold-dark"> \*/);
+    assert.doesNotMatch(html, /required=/);
     assert.match(html, /tiafrancavilla@gmail.com/);
     assert.doesNotMatch(html, /readOnly/);
   });

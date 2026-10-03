@@ -87,11 +87,12 @@ export function CustomerProfileForm({
   const [draft, setDraft] = useState<Draft>(() => toDraft(profile));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const lockEmail = emailReadOnly ?? audience !== "staff";
+  const isStaff = audience === "staff";
+  const lockEmail = emailReadOnly ?? !isStaff;
   const emailValue = lockEmail ? profile.email : draft.email;
   const [requireComplete, setRequireComplete] = useState(
     () =>
-      audience === "customer" &&
+      !isStaff &&
       missingCustomerProfileFieldLabels({
         firstName: profile.firstName,
         lastName: profile.lastName,
@@ -105,7 +106,7 @@ export function CustomerProfileForm({
     setDraft(toDraft(profile));
     setError(null);
     setRequireComplete(
-      audience === "customer" &&
+      !isStaff &&
         missingCustomerProfileFieldLabels({
           firstName: profile.firstName,
           lastName: profile.lastName,
@@ -113,7 +114,7 @@ export function CustomerProfileForm({
           email: profile.email,
         }).length > 0,
     );
-  }, [profile, audience]);
+  }, [profile, isStaff]);
 
   const missing = missingCustomerProfileFieldLabels({
     firstName: draft.firstName,
@@ -121,12 +122,12 @@ export function CustomerProfileForm({
     phone: draft.phone,
     email: emailValue,
   });
-  const fieldErrors = requireComplete
-    ? requiredFieldErrors(draft, emailValue)
-    : {};
-  const incompleteMessage = requireComplete
-    ? formatMissingProfileFieldsMessage(missing, audience)
-    : null;
+  const fieldErrors =
+    !isStaff && requireComplete ? requiredFieldErrors(draft, emailValue) : {};
+  const incompleteMessage =
+    !isStaff && requireComplete
+      ? formatMissingProfileFieldsMessage(missing, audience)
+      : null;
 
   function update<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -135,7 +136,7 @@ export function CustomerProfileForm({
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
-    if (missing.length > 0) {
+    if (!isStaff && missing.length > 0) {
       setRequireComplete(true);
       setError(null);
       setSaved(false);
@@ -149,7 +150,7 @@ export function CustomerProfileForm({
     if (preview) {
       const nextProfile: CustomerProfile = {
         ...profile,
-        email: emailValue.trim(),
+        email: emailValue.trim() || profile.email,
         firstName: draft.firstName.trim(),
         lastName: draft.lastName.trim(),
         phone: draft.phone.trim(),
@@ -170,19 +171,19 @@ export function CustomerProfileForm({
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            lockEmail
-              ? {
-                  firstName: draft.firstName,
-                  lastName: draft.lastName,
-                  phone: draft.phone,
-                  preferredContact: draft.preferredContact,
-                  emergencyContactName: draft.emergencyContactName,
-                  emergencyContactPhone: draft.emergencyContactPhone,
-                  emergencyContactRelationship: draft.emergencyContactRelationship,
-                }
-              : draft,
-          ),
+        body: JSON.stringify(
+          lockEmail
+            ? {
+                firstName: draft.firstName,
+                lastName: draft.lastName,
+                phone: draft.phone,
+                preferredContact: draft.preferredContact,
+                emergencyContactName: draft.emergencyContactName,
+                emergencyContactPhone: draft.emergencyContactPhone,
+                emergencyContactRelationship: draft.emergencyContactRelationship,
+              }
+            : draft,
+        ),
       });
       const body = (await response.json()) as {
         error?: string;
@@ -208,11 +209,12 @@ export function CustomerProfileForm({
     <form className="space-y-5" onSubmit={(event) => void handleSave(event)} noValidate>
       <div>
         <label className="block text-sm font-medium text-text">
-          Email <span className="text-gold-dark">*</span>
+          Email
+          {!isStaff ? <span className="text-gold-dark"> *</span> : null}
         </label>
         <input
           type="email"
-          required
+          required={!isStaff}
           readOnly={lockEmail}
           value={emailValue}
           onChange={
@@ -222,17 +224,20 @@ export function CustomerProfileForm({
           }
           className={`${inputClassName()} ${lockEmail ? "opacity-80" : ""}`}
         />
-        {fieldErrors.email || !emailValue.trim() ? (
+        {fieldErrors.email ? (
+          <p className="mt-1.5 text-xs text-red-800">{fieldErrors.email}</p>
+        ) : !isStaff && !emailValue.trim() ? (
           <p className="mt-1.5 text-xs text-red-800">
-            {fieldErrors.email ?? "An email address is required on this profile."}
+            An email address is required on this profile.
           </p>
         ) : null}
       </div>
       <div className="grid gap-5 sm:grid-cols-2">
         <label className="block text-sm font-medium text-text">
-          First Name <span className="text-gold-dark">*</span>
+          First Name
+          {!isStaff ? <span className="text-gold-dark"> *</span> : null}
           <input
-            required
+            required={!isStaff}
             value={draft.firstName}
             onChange={(event) => update("firstName", event.target.value)}
             aria-invalid={Boolean(fieldErrors.firstName)}
@@ -243,9 +248,10 @@ export function CustomerProfileForm({
           ) : null}
         </label>
         <label className="block text-sm font-medium text-text">
-          Last Name <span className="text-gold-dark">*</span>
+          Last Name
+          {!isStaff ? <span className="text-gold-dark"> *</span> : null}
           <input
-            required
+            required={!isStaff}
             value={draft.lastName}
             onChange={(event) => update("lastName", event.target.value)}
             aria-invalid={Boolean(fieldErrors.lastName)}
@@ -257,10 +263,11 @@ export function CustomerProfileForm({
         </label>
       </div>
       <label className="block text-sm font-medium text-text">
-        Mobile Phone <span className="text-gold-dark">*</span>
+        Mobile Phone
+        {!isStaff ? <span className="text-gold-dark"> *</span> : null}
         <input
           type="tel"
-          required
+          required={!isStaff}
           value={draft.phone}
           onChange={(event) => update("phone", event.target.value)}
           placeholder="(555) 123-4567"
