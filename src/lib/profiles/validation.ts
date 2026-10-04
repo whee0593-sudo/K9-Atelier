@@ -226,3 +226,67 @@ export function validateStaffProfileWriteInput(
     email,
   };
 }
+
+function readRequiredAddressPart(
+  record: Record<string, unknown>,
+  key: string,
+  label: string,
+  maxLength: number,
+): string {
+  const value = record[key];
+  if (typeof value !== "string") {
+    throw new ProfileValidationError(`${label} is required.`, key);
+  }
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > maxLength) {
+    throw new ProfileValidationError(`${label} is required.`, key);
+  }
+  return trimmed;
+}
+
+export function parseServiceAddressInput(
+  value: unknown,
+  field = "address",
+): {
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+} {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) {
+    throw new ProfileValidationError("Address is required.", field);
+  }
+  const record = value as Record<string, unknown>;
+  return {
+    street: readRequiredAddressPart(record, "street", "Street", 200),
+    city: readRequiredAddressPart(record, "city", "City", 120),
+    state: readRequiredAddressPart(record, "state", "State", 40),
+    zip: readRequiredAddressPart(record, "zip", "ZIP code", 20),
+  };
+}
+
+/** Staff create a saved service address on a customer file. */
+export function validateStaffAddressCreateInput(body: unknown): {
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+} {
+  const record = assertPlainObject(body);
+  if ("address" in record) {
+    return parseServiceAddressInput(record.address, "address");
+  }
+  return parseServiceAddressInput(record, "address");
+}
+
+/** Staff rewrite of visit / saved addresses on a customer file. */
+export function validateStaffAddressRewriteInput(body: unknown): {
+  from: { street: string; city: string; state: string; zip: string };
+  to: { street: string; city: string; state: string; zip: string };
+} {
+  const record = assertPlainObject(body);
+  return {
+    from: parseServiceAddressInput(record.from, "from"),
+    to: parseServiceAddressInput(record.to, "to"),
+  };
+}
