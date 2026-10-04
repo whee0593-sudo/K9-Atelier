@@ -12,11 +12,9 @@ export type BookingPolicy = {
 
 export type ServiceOption = {
   name: string;
-  nameZh?: string;
   description?: string;
   priceFrom?: number;
   note?: string;
-  noteZh?: string;
   consultationRequired?: boolean;
 };
 

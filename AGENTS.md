@@ -3,7 +3,7 @@
 Mobile pet grooming marketing + online booking website.
 
 - Stack: Next.js 15 (App Router) + React 19 + TypeScript + Tailwind CSS v4. Package manager: **npm** (`package-lock.json`).
-- No database. Business data (services, pricing, fees, travel/booking rules, privacy settings) lives in `content/business.json` — the single source of truth.
+- No database. Business data (services, pricing, fees, travel/booking rules, privacy settings) lives in `content/business.json` — the single source of truth. On-site display copy is English only (no Chinese mirror `*Zh` fields); user-entered text may still include Chinese.
 - Auth is preview-only, not real: customer/admin "login" is a `localStorage`/cookie stub (see `src/lib/customer-session.ts`, `src/lib/site-access.ts`), and there is no backend user store.
 
 ## Cursor Cloud specific instructions
