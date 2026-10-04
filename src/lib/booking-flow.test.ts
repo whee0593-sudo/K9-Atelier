@@ -7,7 +7,9 @@ import {
   bookingCareChoicesForService,
   bookingCareRowsForCategory,
   bookingDurationMinutes,
+  assignDraftPetId,
   createDraftBookingPet,
+  DRAFT_PET_PLACEHOLDER_ID,
   getBookingCareCategories,
   isPersistedPetId,
   nextExpandedCareCategoryId,
@@ -41,6 +43,15 @@ describe("booking flow helpers", () => {
     const pet = createDraftBookingPet();
     assert.equal(isPersistedPetId(pet.id), false);
     assert.match(pet.id, /^draft-/);
+  });
+
+  it("uses a stable SSR placeholder until a client id is assigned", () => {
+    const pet = createDraftBookingPet(DRAFT_PET_PLACEHOLDER_ID);
+    assert.equal(pet.id, DRAFT_PET_PLACEHOLDER_ID);
+    const assigned = assignDraftPetId(pet);
+    assert.notEqual(assigned.id, DRAFT_PET_PLACEHOLDER_ID);
+    assert.match(assigned.id, /^draft-/);
+    assert.equal(isPersistedPetId(assigned.id), false);
   });
 
   it("recognizes a saved pet uuid", () => {
