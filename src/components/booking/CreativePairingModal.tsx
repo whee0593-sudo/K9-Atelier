@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { business, formatPrice } from "@/lib/business";
 import {
   formatServicePriceFrom,
   type BookableService,
 } from "@/lib/services";
 import { CreativeOptionDetail } from "@/components/booking/CreativeOptionDetail";
+import { lockBodyScroll, unlockBodyScroll } from "@/lib/body-scroll-lock";
 
 type Props = {
   creativeService: BookableService;
@@ -65,6 +66,11 @@ export function CreativePairingModal({
   const [selectedColorOption, setSelectedColorOption] = useState<string | null>(
     initialColorOption,
   );
+
+  useEffect(() => {
+    lockBodyScroll();
+    return () => unlockBodyScroll();
+  }, []);
 
   function handleBack() {
     if (step === "base") {

@@ -3,10 +3,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { business } from "@/lib/business";
 import { Container } from "@/components/luxury/Container";
 import { CustomerAuthLink } from "@/components/auth/CustomerAuthLink";
+import { lockBodyScroll, unlockBodyScroll } from "@/lib/body-scroll-lock";
 
 const navItems = [
   { href: "/", label: "The Atelier" },
@@ -22,7 +23,10 @@ const navLinkBase =
   "inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-sm border-0 px-3 font-body text-[13px] font-medium uppercase tracking-[0.16em] transition duration-500 xl:px-4";
 
 const menuBtnClass =
-  "inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm border-0 px-2 font-body text-[12px] font-medium uppercase tracking-[0.14em] transition duration-500 md:px-4";
+  "inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm border border-gray-line/80 px-3 font-body text-[12px] font-medium uppercase tracking-[0.14em] transition duration-500 md:px-4";
+
+const accountLinkClass =
+  "inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-sm border border-transparent px-3 text-[12px] font-medium uppercase tracking-[0.12em] text-ink transition duration-500 hover:border-gray-line/80 hover:bg-dusty-lavender/30 md:min-h-[50px] md:px-5 md:tracking-[0.16em]";
 
 /**
  * The wordmark is height-capped; width follows the 1495×764 file.
@@ -76,6 +80,16 @@ export function Header() {
 
   const closeMenu = () => setOpen(false);
 
+  useEffect(() => {
+    if (!open) return undefined;
+    lockBodyScroll();
+    return () => unlockBodyScroll();
+  }, [open]);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
   return (
     <header className="sticky top-0 z-50 border-b border-gray-line/70 bg-ivory/95 backdrop-blur-sm">
       <Container className="flex items-center justify-between gap-3 py-2 md:gap-4 md:py-3 xl:gap-6">
@@ -117,8 +131,8 @@ export function Header() {
             type="button"
             className={
               open
-                ? `${menuBtnClass} bg-deep-lavender text-ivory`
-                : `${menuBtnClass} bg-transparent text-ink hover:bg-dusty-lavender/40`
+                ? `${menuBtnClass} border-deep-lavender bg-deep-lavender text-ivory`
+                : `${menuBtnClass} bg-transparent text-ink hover:border-champagne hover:bg-dusty-lavender/40`
             }
             aria-expanded={open}
             aria-controls="mobile-nav"
@@ -129,13 +143,13 @@ export function Header() {
           </button>
         ) : (
           <div className="flex shrink-0 items-center gap-2 md:gap-3">
-            <CustomerAuthLink className="inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-sm bg-deep-lavender px-4 text-[12px] font-medium uppercase tracking-[0.12em] text-ivory transition duration-500 hover:bg-ink md:min-h-[50px] md:px-6 md:tracking-[0.16em]" />
+            <CustomerAuthLink className={accountLinkClass} onNavigate={closeMenu} />
             <button
               type="button"
               className={
                 open
-                  ? `${menuBtnClass} bg-deep-lavender text-ivory lg:hidden`
-                  : `${menuBtnClass} bg-transparent text-ink hover:bg-dusty-lavender/40 lg:hidden`
+                  ? `${menuBtnClass} border-deep-lavender bg-deep-lavender text-ivory lg:hidden`
+                  : `${menuBtnClass} bg-ivory text-ink hover:border-champagne hover:bg-dusty-lavender/40 lg:hidden`
               }
               aria-expanded={open}
               aria-controls="mobile-nav"
@@ -157,7 +171,7 @@ export function Header() {
               : "border-t border-gray-line bg-ivory lg:hidden"
           }
         >
-          <Container className="flex flex-col gap-5 py-6">
+          <Container className="flex max-h-[min(70vh,32rem)] flex-col gap-2 overflow-y-auto py-5">
             {navItems.map((item) => (
               <NavLink
                 key={item.href}

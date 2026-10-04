@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import { business, formatPrice } from "@/lib/business";
 import { bookingSecondaryBtnClass } from "@/components/booking/booking-ui";
+import { lockBodyScroll, unlockBodyScroll } from "@/lib/body-scroll-lock";
 
 export type BookingPolicySectionId =
   | "payment"
@@ -165,7 +166,7 @@ export function BookingPoliciesModal({
       return;
     }
     setOpenSection(initialSection ?? null);
-
+    lockBodyScroll();
     closeRef.current?.focus();
 
     function onKeyDown(e: KeyboardEvent) {
@@ -194,7 +195,10 @@ export function BookingPoliciesModal({
     }
 
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      unlockBodyScroll();
+    };
   }, [open, onClose, initialSection]);
 
   useEffect(() => {
