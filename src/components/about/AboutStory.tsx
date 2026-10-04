@@ -252,18 +252,15 @@ export function AboutStory() {
 
               <div className={`${proseClass} mt-10 lg:col-start-2 lg:row-start-2 lg:mt-10`}>
                 <p>
-                  Penny is a multiple award-winning professional dog groomer
-                  with experience across a wide range of breeds, coat types,
-                  and grooming techniques. As the founder of K9 Atelier, she
-                  brings years of all-breed grooming experience to a private,
-                  one-on-one mobile grooming experience in Palm Beach.
+                  Penny is an award-winning groomer and founder of K9 Atelier,
+                  with experience across many breeds, coat types, and
+                  techniques — bringing private, one-on-one mobile grooming to
+                  Palm Beach.
                 </p>
                 <p>
-                  Her background includes breed-specific styling, hand
-                  stripping, full-coat maintenance, show grooming, creative
-                  grooming, and personalized coat care, with an emphasis on
-                  preserving coat health while bringing out the character of
-                  each breed.
+                  Her work spans breed-specific styling, hand stripping,
+                  full-coat care, show and creative grooming, always with an
+                  eye toward coat health and each dog’s character.
                 </p>
               </div>
             </div>
@@ -281,14 +278,13 @@ export function AboutStory() {
             </header>
             <div className={`${proseClass} mt-8 md:mt-10`}>
               <p>
-                Years of professional grooming and competition shaped the way I
-                see every dog — from coat preparation and structure to balance,
-                proportion, and the smallest finishing details.
+                Years of grooming and competition shaped how I see every dog —
+                coat, structure, balance, and the smallest finishing details.
               </p>
               <p>
-                Competition taught me that a beautiful groom is never simply
-                about following a pattern. It is about understanding the
-                individual dog and bringing out what suits them best.
+                A beautiful groom is never just a pattern. It is about
+                understanding the individual dog and bringing out what suits
+                them best.
               </p>
             </div>
 

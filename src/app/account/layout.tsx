@@ -5,6 +5,7 @@ import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { accountConfig } from "@/lib/account-fields";
 import { getAccountNavSummaries } from "@/lib/account-nav-summaries-load";
 import { readRequestPathname } from "@/lib/request-path";
+import { hasSupabaseConfig } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AccountLayout({
@@ -12,11 +13,16 @@ export default async function AccountLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = await readRequestPathname("/account");
+
+  if (!hasSupabaseConfig()) {
+    redirect(`/login?next=${pathname}`);
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const pathname = await readRequestPathname("/account");
 
   if (!user) {
     redirect(`/login?next=${pathname}`);

@@ -68,7 +68,7 @@ export function Footer() {
             {brand.phone && phoneHref ? (
               <a
                 href={phoneHref}
-                className="font-body mt-5 block text-sm text-ink transition hover:text-deep-lavender"
+                className="font-body mt-5 inline-flex min-h-[44px] items-center text-sm text-ink transition hover:text-deep-lavender"
               >
                 {brand.phoneDisplay || brand.phone}
               </a>
@@ -78,7 +78,7 @@ export function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`Instagram @${instagramHandle}`}
-              className="font-body mt-3 block text-sm text-ink transition hover:text-deep-lavender"
+              className="font-body mt-1 inline-flex min-h-[44px] items-center text-sm text-ink transition hover:text-deep-lavender"
             >
               <span className="text-taupe">Instagram · </span>@{instagramHandle}
             </a>
@@ -87,7 +87,7 @@ export function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`Facebook ${brand.social.facebook}`}
-              className="font-body mt-3 block text-sm text-ink transition hover:text-deep-lavender"
+              className="font-body mt-1 inline-flex min-h-[44px] items-center text-sm text-ink transition hover:text-deep-lavender"
             >
               <span className="text-taupe">Facebook · </span>
               {brand.social.facebook}
@@ -98,7 +98,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Review K9 Atelier on Google"
-                className="font-body mt-3 block text-sm text-ink transition hover:text-deep-lavender"
+                className="font-body mt-1 inline-flex min-h-[44px] items-center text-sm text-ink transition hover:text-deep-lavender"
               >
                 <span className="text-taupe">Google · </span>
                 Review K9 Atelier
@@ -113,12 +113,12 @@ export function Footer() {
             <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-taupe">
               Explore
             </p>
-            <ul className="mt-4 space-y-3">
+            <ul className="mt-4 space-y-1">
               {footerLinks.map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className="font-body text-sm text-ink transition hover:text-deep-lavender"
+                    className="font-body inline-flex min-h-[44px] items-center text-sm text-ink transition hover:text-deep-lavender"
                   >
                     {item.label}
                   </Link>
@@ -134,14 +134,14 @@ export function Footer() {
             {" · "}
             <Link
               href="/privacy"
-              className="underline decoration-champagne/70 underline-offset-4 hover:text-deep-lavender"
+              className="inline-flex min-h-[44px] items-center underline decoration-champagne/70 underline-offset-4 hover:text-deep-lavender"
             >
               Privacy Policy
             </Link>
             {" · "}
             <Link
               href="/terms"
-              className="underline decoration-champagne/70 underline-offset-4 hover:text-deep-lavender"
+              className="inline-flex min-h-[44px] items-center underline decoration-champagne/70 underline-offset-4 hover:text-deep-lavender"
             >
               Terms
             </Link>
