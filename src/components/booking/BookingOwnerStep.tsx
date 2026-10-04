@@ -17,6 +17,7 @@ import {
   photoMarketingConsentCopy,
   smsConsentCopy,
 } from "@/lib/notifications";
+import { REFERRAL_SOURCE_OPTIONS } from "@/lib/profiles/referral-source";
 import {
   MIN_CUSTOMER_PASSWORD_LENGTH,
   formatMissingProfileFieldsMessage,
@@ -77,6 +78,8 @@ export function BookingOwnerStep({
   const [phone, setPhone] = useState(initial.phone);
   const [password, setPassword] = useState("");
   const [signInPassword, setSignInPassword] = useState("");
+  const [referralSource, setReferralSource] = useState("");
+  const [referralName, setReferralName] = useState("");
   const [smsConsent, setSmsConsent] = useState(initial.smsConsent);
   const [photoMarketingConsent, setPhotoMarketingConsent] = useState(
     initial.photoMarketingConsent,
@@ -218,6 +221,11 @@ export function BookingOwnerStep({
           setLoading(false);
           return;
         }
+        if (!referralSource) {
+          setError("Please tell us how you heard about K9 Atelier.");
+          setLoading(false);
+          return;
+        }
         const response = await fetch("/api/booking/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -227,6 +235,9 @@ export function BookingOwnerStep({
             firstName: firstName.trim(),
             lastName: lastName.trim(),
             phone: phone.trim(),
+            referralSource,
+            referralName:
+              referralSource === "referral" ? referralName.trim() : null,
           }),
         });
         const body = (await response.json().catch(() => ({}))) as {
@@ -472,6 +483,49 @@ export function BookingOwnerStep({
               policies.
             </span>
           </label>
+
+          {!loggedIn ? (
+            <div className="min-w-0 space-y-2 pt-2">
+              <label className="block min-w-0" htmlFor="booking-referral-source">
+                <span className={bookingLabelClass}>
+                  How did you hear about K9 Atelier? *
+                </span>
+                <select
+                  id="booking-referral-source"
+                  className={bookingFieldClass}
+                  value={referralSource}
+                  onChange={(event) => setReferralSource(event.target.value)}
+                  required
+                >
+                  <option value="">Select one</option>
+                  {REFERRAL_SOURCE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="font-body text-[13px] leading-relaxed text-taupe">
+                We&apos;d love to know how you found us.
+              </p>
+              {referralSource === "referral" ? (
+                <label className="block min-w-0" htmlFor="booking-referral-name">
+                  <span className={bookingLabelClass}>
+                    Who can we thank for referring you?
+                  </span>
+                  <input
+                    id="booking-referral-name"
+                    type="text"
+                    autoComplete="off"
+                    value={referralName}
+                    onChange={(event) => setReferralName(event.target.value)}
+                    placeholder="Name (optional)"
+                    className={bookingFieldClass}
+                  />
+                </label>
+              ) : null}
+            </div>
+          ) : null}
 
           {error ? (
             <p

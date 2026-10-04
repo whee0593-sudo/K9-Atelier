@@ -1,4 +1,9 @@
 import {
+  isReferralSourceValue,
+  normalizeReferralName,
+  type ReferralSourceValue,
+} from "@/lib/profiles/referral-source";
+import {
   MIN_CUSTOMER_PASSWORD_LENGTH,
   ProfileValidationError,
   missingCustomerProfileFieldLabels,
@@ -12,6 +17,8 @@ export type BookingRegisterInput = {
   firstName: string;
   lastName: string;
   phone: string;
+  referralSource: ReferralSourceValue;
+  referralName: string | null;
 };
 
 function assertPlainObject(value: unknown): Record<string, unknown> {
@@ -76,5 +83,27 @@ export function validateBookingRegisterInput(body: unknown): BookingRegisterInpu
     );
   }
 
-  return { email, password, firstName, lastName, phone };
+  const referralSourceRaw =
+    typeof record.referralSource === "string" ? record.referralSource.trim() : "";
+  if (!referralSourceRaw || !isReferralSourceValue(referralSourceRaw)) {
+    throw new ProfileValidationError(
+      "Please tell us how you heard about K9 Atelier.",
+      "referralSource",
+    );
+  }
+  const referralSource = referralSourceRaw;
+  const referralName = normalizeReferralName(
+    referralSource,
+    record.referralName,
+  );
+
+  return {
+    email,
+    password,
+    firstName,
+    lastName,
+    phone,
+    referralSource,
+    referralName,
+  };
 }

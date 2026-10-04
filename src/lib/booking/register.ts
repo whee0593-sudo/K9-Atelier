@@ -104,6 +104,8 @@ export async function registerBookingCustomer(
       first_name: input.firstName,
       last_name: input.lastName,
       phone: input.phone,
+      referral_source: input.referralSource,
+      referral_name: input.referralName,
     })
     .eq("id", data.user.id);
 
