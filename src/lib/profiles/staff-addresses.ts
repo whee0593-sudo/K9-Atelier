@@ -83,7 +83,10 @@ async function quoteServiceAddress(
   };
 }
 
-async function ensureCustomerExists(customerId: string) {
+async function ensureCustomerExists(customerId: string): Promise<
+  | { ok: true; admin: ReturnType<typeof createAdminClient> }
+  | { ok: false; error: "not_found" | "server" }
+> {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("profiles")
@@ -92,10 +95,10 @@ async function ensureCustomerExists(customerId: string) {
     .maybeSingle();
   if (error) {
     console.error("ensureCustomerExists failed:", error.message);
-    return { error: "server" as const };
+    return { ok: false, error: "server" };
   }
-  if (!data) return { error: "not_found" as const };
-  return { ok: true as const, admin };
+  if (!data) return { ok: false, error: "not_found" };
+  return { ok: true, admin };
 }
 
 export async function listStaffCustomerServiceAddresses(
@@ -108,7 +111,7 @@ export async function listStaffCustomerServiceAddresses(
   if ("error" in session) return session;
 
   const ensured = await ensureCustomerExists(customerId);
-  if ("error" in ensured) return ensured;
+  if (!ensured.ok) return { error: ensured.error };
   const { admin } = ensured;
 
   const [savedResult, visitResult] = await Promise.all([
@@ -194,7 +197,7 @@ export async function addStaffCustomerServiceAddress(
   if ("error" in session) return session;
 
   const ensured = await ensureCustomerExists(customerId);
-  if ("error" in ensured) return ensured;
+  if (!ensured.ok) return { error: ensured.error };
   const { admin } = ensured;
 
   const quote = await quoteServiceAddress(address);
@@ -307,7 +310,7 @@ export async function rewriteStaffCustomerServiceAddress(
   }
 
   const ensured = await ensureCustomerExists(customerId);
-  if ("error" in ensured) return ensured;
+  if (!ensured.ok) return { error: ensured.error };
   const { admin } = ensured;
 
   const quote = await quoteServiceAddress(to);
