@@ -20,16 +20,13 @@ export function BookingProgress({ currentStep }: Props) {
         <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-taupe">
           Step {step.id} of {total}
         </p>
-        <p className="font-body mt-2 text-[12px] font-medium uppercase tracking-[0.14em] text-ink">
-          {step.short}
-        </p>
         <div
-          className="mt-4 h-[2px] overflow-hidden bg-dusty-lavender/70"
+          className="mt-3 h-[2px] overflow-hidden bg-dusty-lavender/70"
           role="progressbar"
           aria-valuemin={1}
           aria-valuemax={total}
           aria-valuenow={step.id}
-          aria-label={`Step ${step.id} of ${total}`}
+          aria-label={`Step ${step.id} of ${total}: ${step.short}`}
         >
           <div
             className="h-full bg-champagne"

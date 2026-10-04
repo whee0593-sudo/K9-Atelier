@@ -175,7 +175,10 @@ export function BookingDogStep({ draftPet, onDraftChange, onContinue }: Props) {
       {!loggedIn ? (
         <p className="font-body mt-6 text-[13px] leading-relaxed text-taupe">
           Already have an account?{" "}
-          <Link href="/login?next=/book" className="text-ink underline">
+          <Link
+            href="/login?next=/book"
+            className="inline-flex min-h-[44px] items-center text-ink underline"
+          >
             Sign in
           </Link>{" "}
           to use a dog already on file.
