@@ -6,6 +6,7 @@ import {
   petReadyToBook,
   type PetProfile,
 } from "@/lib/pets";
+import { isPersistedPetId } from "@/lib/booking-flow";
 import { parsePetRabiesStatus } from "@/lib/vaccinations/booking";
 import { useCustomerPets } from "@/lib/pets/use-customer-pets";
 import { formatPetAgeLabel, getPetAgeYears } from "@/lib/pet-age";
@@ -175,6 +176,7 @@ export function PetSelector({
               setDraftPet((current) => ({ ...current, ...updates }))
             }
             variant="booking"
+            petPersisted={isPersistedPetId(draftPet.id)}
           />
           {draftError ? (
             <p className="font-body text-sm text-red-700" role="alert">

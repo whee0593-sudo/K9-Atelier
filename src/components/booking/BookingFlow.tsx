@@ -32,7 +32,17 @@ import { BookingConfirmationView } from "@/components/booking/BookingReviewStep"
 import { CreativePairingModal } from "@/components/booking/CreativePairingModal";
 import { bookingBackLinkClass } from "@/components/booking/booking-ui";
 import { trackGoogleAdsBookingConversion } from "@/lib/google-ads";
-import { createDraftBookingPet, isPersistedPetId } from "@/lib/booking-flow";
+import {
+  assignDraftPetId,
+  createDraftBookingPet,
+  DRAFT_PET_PLACEHOLDER_ID,
+  isPersistedPetId,
+} from "@/lib/booking-flow";
+import {
+  clearBookingDraftSnapshot,
+  readBookingDraftSnapshot,
+  writeBookingDraftSnapshot,
+} from "@/lib/booking-draft";
 import { createCustomerPet } from "@/lib/pets/client";
 import { mapPetProfileToWriteInput } from "@/lib/pets/map";
 import { createClient } from "@/lib/supabase/client";
@@ -94,7 +104,10 @@ export function BookingFlow({
 }: {
   initialReferralCode?: string;
 }) {
-  const [draftPet, setDraftPet] = useState<PetProfile>(() => createDraftBookingPet());
+  // Stable SSR placeholder avoids hydration mismatch from random draft UUIDs.
+  const [draftPet, setDraftPet] = useState<PetProfile>(() =>
+    createDraftBookingPet(DRAFT_PET_PLACEHOLDER_ID),
+  );
   const [selectedPet, setSelectedPet] = useState<PetProfile | null>(null);
   const [selectedService, setSelectedService] = useState<BookableService | null>(
     null,
@@ -124,6 +137,7 @@ export function BookingFlow({
   const [policiesSection, setPoliciesSection] = useState<
     BookingPolicySectionId | undefined
   >();
+  const [draftReady, setDraftReady] = useState(false);
   const policiesTriggerRef = useRef<HTMLButtonElement>(null);
 
   function openPolicies(section?: BookingPolicySectionId) {
@@ -132,19 +146,83 @@ export function BookingFlow({
   }
 
   useEffect(() => {
-    const snapshot = readBookingSuccessSnapshot();
-    if (snapshot && isReloadNavigation()) {
-      setSelectedPet(snapshot.pet);
-      setSelectedService(snapshot.service);
-      setAppointmentDate(snapshot.appointmentDate);
-      setAppointmentTime(snapshot.appointmentTime);
-      setAddress(snapshot.address);
-      setCreatedAppointment(snapshot.appointment);
+    const success = readBookingSuccessSnapshot();
+    if (success && isReloadNavigation()) {
+      setSelectedPet(success.pet);
+      setSelectedService(success.service);
+      setAppointmentDate(success.appointmentDate);
+      setAppointmentTime(success.appointmentTime);
+      setAddress(success.address);
+      setCreatedAppointment(success.appointment);
       setReserved(true);
+      clearBookingDraftSnapshot();
+      setDraftReady(true);
       return;
     }
     clearBookingSuccessSnapshot();
+
+    const draft = readBookingDraftSnapshot();
+    if (draft) {
+      setDraftPet(assignDraftPetId(draft.draftPet));
+      setSelectedPet(draft.selectedPet);
+      setSelectedService(draft.selectedService);
+      setServiceConfirmed(draft.serviceConfirmed);
+      setCareOptionsConfirmed(draft.careOptionsConfirmed);
+      setSelectedAddOnIds(draft.selectedAddOnIds);
+      setAddOnOptions(draft.addOnOptions);
+      setAddress(draft.address);
+      setTravelQuote(draft.travelQuote);
+      setAppointmentDate(draft.appointmentDate);
+      setAppointmentTime(draft.appointmentTime);
+      setTimePreference(draft.timePreference);
+      setSlotStartMinutes(draft.slotStartMinutes);
+      setOwner(draft.owner);
+      setPaymentMethod(draft.paymentMethod);
+    } else {
+      setDraftPet((current) => assignDraftPetId(current));
+    }
+    setDraftReady(true);
   }, []);
+
+  useEffect(() => {
+    if (!draftReady || reserved) return;
+    writeBookingDraftSnapshot({
+      v: 1,
+      draftPet,
+      selectedPet,
+      selectedService,
+      serviceConfirmed,
+      careOptionsConfirmed,
+      selectedAddOnIds,
+      addOnOptions,
+      address,
+      travelQuote,
+      appointmentDate,
+      appointmentTime,
+      timePreference,
+      slotStartMinutes,
+      owner,
+      paymentMethod,
+    });
+  }, [
+    draftReady,
+    reserved,
+    draftPet,
+    selectedPet,
+    selectedService,
+    serviceConfirmed,
+    careOptionsConfirmed,
+    selectedAddOnIds,
+    addOnOptions,
+    address,
+    travelQuote,
+    appointmentDate,
+    appointmentTime,
+    timePreference,
+    slotStartMinutes,
+    owner,
+    paymentMethod,
+  ]);
 
   function resetFromDog() {
     setSelectedService(null);
@@ -424,9 +502,7 @@ export function BookingFlow({
             addOnOptions={addOnOptions}
             onToggle={toggleAddOn}
             onOptionChange={handleAddOnOptionChange}
-            onContinue={() => {
-              void confirmCareSlot();
-            }}
+            onContinue={() => confirmCareSlot()}
             onBack={() => {
               setServiceConfirmed(false);
               setSelectedAddOnIds([]);
@@ -497,6 +573,7 @@ export function BookingFlow({
             onBack={() => setPaymentMethod(null)}
             onReserved={(appointment, pet) => {
               trackGoogleAdsBookingConversion(appointment.id);
+              clearBookingDraftSnapshot();
               writeBookingSuccessSnapshot({
                 appointment,
                 pet,

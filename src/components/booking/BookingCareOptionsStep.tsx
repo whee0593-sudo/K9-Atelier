@@ -31,7 +31,7 @@ type Props = {
   addOnOptions: Record<string, string>;
   onToggle: (id: string) => void;
   onOptionChange: (addOnId: string, optionName: string) => void;
-  onContinue: () => void;
+  onContinue: () => void | Promise<unknown>;
   onBack: () => void;
 };
 
@@ -85,6 +85,7 @@ export function BookingCareOptionsStep({
   onBack,
 }: Props) {
   const [showCreativeOptions, setShowCreativeOptions] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const addOns = getAvailableAddOns(primaryService.categoryId, primaryService.id);
 
   const standardAddOns = addOns.filter(
@@ -231,10 +232,17 @@ export function BookingCareOptionsStep({
 
       <button
         type="button"
-        onClick={onContinue}
+        disabled={submitting}
+        onClick={() => {
+          if (submitting) return;
+          setSubmitting(true);
+          void Promise.resolve(onContinue()).finally(() => {
+            setSubmitting(false);
+          });
+        }}
         className={`${bookingPrimaryBtnClass} mt-10`}
       >
-        Continue
+        {submitting ? "Checking…" : "Continue"}
       </button>
     </section>
   );
