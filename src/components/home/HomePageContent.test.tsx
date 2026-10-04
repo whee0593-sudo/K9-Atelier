@@ -149,6 +149,10 @@ describe("homepage SEO", () => {
     assert.match(html, new RegExp(getCommunitiesServedLabel().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(
       html,
+      /Jupiter · Palm Beach Gardens · West Palm Beach/,
+    );
+    assert.doesNotMatch(
+      html,
       /Palm Beach · Jupiter · Palm Beach Gardens · West Palm Beach/,
     );
 
@@ -225,7 +229,7 @@ describe("homepage SEO", () => {
     assert.match(html, /href="tel:\+15615933335"/);
     assert.match(
       html,
-      /Serving Palm Beach, Jupiter, Palm Beach Gardens &amp; West Palm Beach\./,
+      /Serving Jupiter, Palm Beach Gardens &amp; West Palm Beach\./,
     );
   });
 });

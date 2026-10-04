@@ -96,7 +96,7 @@ describe("LocalBusiness entity fields", () => {
     const areas = entity.areaServed as JsonLdNode[];
     assert.deepEqual(
       areas.map((area) => area.name),
-      ["Palm Beach", "Jupiter", "Palm Beach Gardens", "West Palm Beach"],
+      ["Jupiter", "Palm Beach Gardens", "West Palm Beach"],
     );
     for (const area of areas) {
       assert.equal(area["@type"], "City");
