@@ -89,6 +89,17 @@ npm run verify:supabase
 
 可重复执行。成功后，Customer record 上的 **Save** 会写入线上数据库。
 
+## 5. 客户服务地址（员工可添加 / 编辑）
+
+让员工在 Registered Accounts 客户档案里保存服务地址（不必先有预约），并编辑已有上门地址。
+
+1. 打开项目 `ceejxoobxxoxqhpujrdz` 的 Supabase Dashboard  
+2. 左侧 → **SQL Editor** → **New query**  
+3. 粘贴 [`migrations/20261004020000_customer_service_addresses.sql`](./migrations/20261004020000_customer_service_addresses.sql) 全文  
+4. 点 **Run**
+
+可重复执行。成功后，客户档案 **Service addresses** 的 **Edit** / **+ Add address** 会写入线上数据库；编辑时也会同步改写匹配的预约地址。
+
 ---
 
 ## 检查清单
@@ -98,5 +109,6 @@ npm run verify:supabase
 - [ ] Magic Link 模板已粘贴；邮件里能看到 6 位验证码
 - [ ] Confirm signup 模板已粘贴
 - [ ] 第二阶段 archive migration 已执行
+- [ ] 客户服务地址 migration 已执行
 - [ ] 在 `/login` 测试密码登录和 OTP 备用方式
 - [ ] Email provider：允许新注册；Confirm email 打开（注册时发一封确认邮件）
