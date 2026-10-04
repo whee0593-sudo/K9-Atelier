@@ -95,7 +95,7 @@ export function formatDuration(min: number, max?: number) {
 export function getCommunitiesServedLabel() {
   return (
     business.serviceArea.communitiesServed ??
-    "Palm Beach · Jupiter · Palm Beach Gardens · West Palm Beach"
+    "Jupiter · Palm Beach Gardens · West Palm Beach"
   );
 }
 

@@ -23,10 +23,10 @@ describe("homepage business facts", () => {
     assert.equal(getBrandSchemaTelephone(), "+1-561-593-3335");
   });
 
-  it("lists homepage communities in Palm Beach order", () => {
+  it("lists homepage communities without standalone Palm Beach", () => {
     assert.equal(
       getServiceAreaFooterSentence(),
-      "Serving Palm Beach, Jupiter, Palm Beach Gardens & West Palm Beach.",
+      "Serving Jupiter, Palm Beach Gardens & West Palm Beach.",
     );
   });
 });
