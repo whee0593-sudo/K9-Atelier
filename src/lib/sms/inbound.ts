@@ -113,6 +113,7 @@ export async function handleInboundCustomerSms(input: {
       mediaCount: mediaUrls.length,
     }),
     customer,
+    mediaUrls,
   });
   await forwardInboundSmsToStaff({
     from: input.from,

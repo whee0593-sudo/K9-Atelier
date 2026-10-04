@@ -20,6 +20,10 @@ export function isStaffPhone(from: string) {
   return phonesMatch(from, getStaffVoicePhone());
 }
 
+function normalizeMediaUrls(mediaUrls?: string[] | null) {
+  return (mediaUrls ?? []).map((url) => url.trim()).filter(Boolean).slice(0, 10);
+}
+
 export async function recordCustomerSms(input: {
   direction: "inbound" | "outbound";
   phone: string;
@@ -28,10 +32,12 @@ export async function recordCustomerSms(input: {
   customerId?: string | null;
   customerName?: string | null;
   petNames?: string[] | string | null;
+  mediaUrls?: string[] | null;
 }) {
   if (!hasSupabaseAdminConfig()) return;
+  const mediaUrls = normalizeMediaUrls(input.mediaUrls);
   const body = input.body.trim();
-  if (!body) return;
+  if (!body && mediaUrls.length === 0) return;
 
   const petNames = Array.isArray(input.petNames)
     ? input.petNames.filter(Boolean).join(", ")
@@ -41,10 +47,11 @@ export async function recordCustomerSms(input: {
   const { error } = await admin.from("customer_sms_messages").insert({
     direction: input.direction,
     phone: normalizePhoneToE164(input.phone) ?? input.phone,
-    body,
+    body: body || (mediaUrls.length === 1 ? "Photo" : `${mediaUrls.length} photos`),
     customer_id: input.customer?.customerId ?? input.customerId ?? null,
     customer_name: input.customer?.name ?? input.customerName ?? null,
     pet_names: petNames || null,
+    media_urls: mediaUrls,
   });
 
   if (error) {
@@ -62,7 +69,7 @@ export async function forwardInboundSmsToStaff(input: {
   if (!staffPhone || !isSmsConfigured()) return false;
   if (isStaffPhone(input.from)) return false;
 
-  const mediaUrls = (input.mediaUrls ?? []).filter(Boolean).slice(0, 10);
+  const mediaUrls = normalizeMediaUrls(input.mediaUrls);
   if (!input.body.trim() && mediaUrls.length === 0) return false;
 
   const customer = input.customer ?? (await lookupCustomerByPhone(input.from));
@@ -100,10 +107,10 @@ export async function listStaffSmsInbox(): Promise<
   const { data, error } = await admin
     .from("customer_sms_messages")
     .select(
-      "id, direction, phone, body, customer_name, pet_names, created_at",
+      "id, direction, phone, body, customer_name, pet_names, media_urls, created_at",
     )
     .order("created_at", { ascending: false })
-    .limit(40);
+    .limit(100);
 
   if (error) {
     console.error("listStaffSmsInbox failed:", error.message);
@@ -118,6 +125,9 @@ export async function listStaffSmsInbox(): Promise<
       petNames: (row.pet_names as string | null)?.trim() || "",
       phone: row.phone as string,
       body: row.body as string,
+      mediaUrls: Array.isArray(row.media_urls)
+        ? (row.media_urls as string[]).filter(Boolean)
+        : [],
       createdAt: row.created_at as string,
     })),
   };

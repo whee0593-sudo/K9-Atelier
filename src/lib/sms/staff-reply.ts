@@ -61,6 +61,7 @@ export async function handleStaffPhoneReply(input: {
     }),
     customer,
     customerName: customer?.name ?? "Unknown",
+    mediaUrls,
   });
 
   const label = formatPetAndOwnerFullLabel({

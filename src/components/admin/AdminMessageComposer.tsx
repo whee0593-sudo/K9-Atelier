@@ -11,8 +11,16 @@ import {
   type StudioUnknownCaller,
 } from "@/lib/sms/staff-compose-copy";
 import { isValidSmsPhone } from "@/lib/sms/phone";
-import type { StaffSmsInboxItem } from "@/lib/sms/inbox-copy";
+import {
+  staffSmsMediaProxyPath,
+  type StaffSmsInboxItem,
+} from "@/lib/sms/inbox-copy";
 import { buildPreviewStaffMessages } from "@/lib/sms/staff-compose-preview";
+
+function inboxMediaSrc(url: string, preview: boolean) {
+  if (preview || url.startsWith("/")) return url;
+  return staffSmsMediaProxyPath(url);
+}
 
 export const INITIAL_VISIBLE_RECENT_CALLERS = 2;
 export const RECENT_CALLERS_PAGE_SIZE = 5;
@@ -123,6 +131,8 @@ export function AdminMessageComposer({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [sendingIntro, setSendingIntro] = useState<string | null>(null);
+  const [importingPhotos, setImportingPhotos] = useState(false);
+  const [importNote, setImportNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (keepCustomer = true) => {
@@ -218,6 +228,7 @@ export function AdminMessageComposer({
           petNames: selected?.petNames.join(", ") ?? "",
           phone: to,
           body: buildStaffCustomerSms(message.trim()),
+          mediaUrls: [],
           createdAt: new Date().toISOString(),
         },
         ...current,
@@ -496,26 +507,87 @@ export function AdminMessageComposer({
       <div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-medium text-text">Texts & replies</h3>
-          <button
-            type="button"
-            onClick={() => {
-              setError(null);
-              void load().catch((loadError: unknown) => {
-                setError(
-                  loadError instanceof Error
-                    ? loadError.message
-                    : "Could not refresh texts.",
-                );
-              });
-            }}
-            className="text-sm font-medium text-gold-dark hover:underline"
-          >
-            Refresh
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={importingPhotos}
+              onClick={() => {
+                setError(null);
+                setImportNote(null);
+                setImportingPhotos(true);
+                void (async () => {
+                  try {
+                    if (preview) {
+                      setImportNote(
+                        "Preview only · live import pulls past Twilio photos into this inbox.",
+                      );
+                      return;
+                    }
+                    const response = await fetch(
+                      "/api/admin/messages/backfill-photos",
+                      { method: "POST", credentials: "include" },
+                    );
+                    const body = (await response.json()) as {
+                      error?: string;
+                      imported?: number;
+                      updated?: number;
+                      skipped?: number;
+                      scanned?: number;
+                    };
+                    if (!response.ok) {
+                      throw new Error(
+                        body.error ?? "Could not import past photos.",
+                      );
+                    }
+                    const imported = body.imported ?? 0;
+                    const updated = body.updated ?? 0;
+                    setImportNote(
+                      imported + updated === 0
+                        ? `Checked ${body.scanned ?? 0} Twilio photo texts. Nothing new to import.`
+                        : `Imported ${imported} new · updated ${updated} existing · skipped ${body.skipped ?? 0}.`,
+                    );
+                    await load();
+                  } catch (importError: unknown) {
+                    setError(
+                      importError instanceof Error
+                        ? importError.message
+                        : "Could not import past photos.",
+                    );
+                  } finally {
+                    setImportingPhotos(false);
+                  }
+                })();
+              }}
+              className="text-sm font-medium text-gold-dark hover:underline disabled:opacity-50"
+            >
+              {importingPhotos ? "Importing…" : "Import past photos"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                void load().catch((loadError: unknown) => {
+                  setError(
+                    loadError instanceof Error
+                      ? loadError.message
+                      : "Could not refresh texts.",
+                  );
+                });
+              }}
+              className="text-sm font-medium text-gold-dark hover:underline"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
+        {importNote ? (
+          <p className="mt-3 text-sm text-text-muted">{importNote}</p>
+        ) : null}
         {inbox.length === 0 ? (
           <p className="mt-3 text-sm text-text-muted">
-            Customer replies appear here. They are also forwarded to your phone.
+            Customer replies and photos appear here. They are also forwarded to
+            your phone. Use Import past photos to pull older Twilio images into
+            this list.
           </p>
         ) : (
           <ul className="mt-4 space-y-3">
@@ -531,7 +603,28 @@ export function AdminMessageComposer({
                     : ` · ${item.customerName}`}
                   {` · ${item.phone}`}
                 </p>
-                <p className="mt-1 text-text-muted">{item.body}</p>
+                {item.body ? (
+                  <p className="mt-1 whitespace-pre-wrap text-text-muted">{item.body}</p>
+                ) : null}
+                {item.mediaUrls?.length ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {item.mediaUrls.map((url) => (
+                      <a
+                        key={url}
+                        href={inboxMediaSrc(url, preview)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block overflow-hidden rounded-xl border border-lavender/40"
+                      >
+                        <img
+                          src={inboxMediaSrc(url, preview)}
+                          alt="Customer photo"
+                          className="h-36 w-36 object-cover"
+                        />
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
                 <p className="mt-2 text-xs text-text-muted">
                   {new Date(item.createdAt).toLocaleString()}
                 </p>

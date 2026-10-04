@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   buildStaffInboundForwardSms,
@@ -42,5 +43,19 @@ describe("staff SMS inbox copy", () => {
       }),
       "K9 ATELIER reply from Bella Jane Doe +15615550131:\n\nPhoto",
     );
+  });
+
+  it("keeps inbound photo URLs on the staff inbox list", () => {
+    const inbox = readFileSync(new URL("./inbox.ts", import.meta.url), "utf8");
+    assert.match(inbox, /media_urls/);
+    assert.match(inbox, /mediaUrls/);
+    const inbound = readFileSync(new URL("./inbound.ts", import.meta.url), "utf8");
+    assert.match(inbound, /mediaUrls,/);
+    const composer = readFileSync(
+      new URL("../../components/admin/AdminMessageComposer.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.match(composer, /Customer photo/);
+    assert.match(composer, /staffSmsMediaProxyPath/);
   });
 });
