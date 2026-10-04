@@ -10,6 +10,9 @@ import { photoFor } from "@/lib/gallery";
 const heroCtaClass =
   "inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-deep-lavender px-8 text-[13px] font-medium uppercase tracking-[0.14em] text-ivory transition duration-500 hover:bg-ink sm:w-auto md:text-[12px] md:tracking-[0.16em]";
 
+const heroSecondaryCtaClass =
+  "inline-flex min-h-[52px] w-full items-center justify-center rounded-sm border border-champagne bg-transparent px-8 text-[13px] font-medium uppercase tracking-[0.14em] text-ink transition duration-500 hover:border-ink sm:w-auto md:text-[12px] md:tracking-[0.16em]";
+
 /**
  * CSS sets the box. `sizes` only picks the file for that box.
  * Desktop is the established 353px portrait. Phones stay on the 46vh cap,
@@ -52,11 +55,11 @@ export function HomeHero() {
             <BookServiceLink className={heroCtaClass}>
               Book an Appointment
             </BookServiceLink>
-            <Link href="/contact" className={heroCtaClass}>
+            <Link href="/contact" className={heroSecondaryCtaClass}>
               Ask a Question
             </Link>
           </div>
-          <HeroServiceMeta className="mt-8 hidden md:block" />
+          <HeroServiceMeta className="mt-6 md:mt-8" />
         </div>
 
         <div className="md:order-2">
@@ -71,8 +74,6 @@ export function HomeHero() {
             />
           ) : null}
         </div>
-
-        <HeroServiceMeta className="md:hidden" />
       </Container>
     </section>
   );
