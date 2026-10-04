@@ -139,6 +139,12 @@ describe("CustomerRecordCard actions", () => {
     assert.match(source, /StaffCustomerPassword/);
     assert.match(source, /StaffCustomerReferrals/);
     assert.match(source, /Service addresses/);
+    assert.match(source, /ServiceAddressEditor/);
+    assert.match(source, /ServiceAddressAddForm/);
+    assert.match(source, /\bEdit\b/);
+    assert.match(source, /\+ Add address/);
+    assert.match(source, /Save Address/);
+    assert.match(source, /\/api\/admin\/customers\/\$\{customerId\}\/addresses/);
 
     const petsSource = readFileSync(
       path.join(process.cwd(), "src/components/admin/StaffCustomerPets.tsx"),
@@ -178,5 +184,75 @@ describe("CustomerRecordCard actions", () => {
     );
     assert.match(referrals, /Referrals/);
     assert.match(referrals, /MILO-TIA/);
+  });
+
+  it("shows Edit and Add address controls on service addresses", () => {
+    const html = renderToStaticMarkup(
+      <CustomerRecordCard
+        customer={sampleCustomer({
+          profile: {
+            id: "44444444-4444-4444-8444-444444444444",
+            email: "tiafrancavilla@gmail.com",
+            firstName: "Tia",
+            lastName: "Francavilla",
+            phone: "+15613466778",
+            preferredContact: "Text Message",
+            emergencyContactName: "",
+            emergencyContactPhone: "",
+            emergencyContactRelationship: "",
+          },
+        })}
+        startOpen
+        preview
+        previewHistory={{
+          appointments: [
+            {
+              id: "77777777-7777-4777-8777-777777777777",
+              customerId: "44444444-4444-4444-8444-444444444444",
+              petId: "55555555-5555-4555-8555-555555555555",
+              petName: "Milo",
+              petBreed: "Yorkie",
+              serviceId: "signature-bath-care",
+              serviceName: "Signature Bath & Care",
+              addOnIds: [],
+              addOnOptions: {},
+              addressStreet: "2100 S Ocean Blvd",
+              addressCity: "Palm Beach",
+              addressState: "FL",
+              addressZip: "33480",
+              travelDistanceMiles: 12,
+              travelFee: 13,
+              appointmentDate: "2026-09-22",
+              appointmentTime: "10–11 AM",
+              scheduledStart: 600,
+              timePreference: "morning",
+              timezone: "America/New_York",
+              estimatedTotal: 140,
+              newClientDeposit: null,
+              vaccinationStatusAtBooking: "needs_review",
+              status: "confirmed",
+              confirmedAt: "2026-09-18T14:00:00.000Z",
+              customerConfirmedAt: null,
+              createdAt: "2026-09-18T14:00:00.000Z",
+              customerEmail: "tiafrancavilla@gmail.com",
+              customerName: null,
+              customerFirstName: "",
+              customerLastName: "",
+              customerPhone: "+15613466778",
+              reminderSmsSentAt: null,
+              enRouteSmsSentAt: null,
+              serviceStartedAt: null,
+              serviceEndedAt: null,
+            },
+          ],
+          orders: [],
+        }}
+        {...cardHandlers}
+      />,
+    );
+    assert.match(html, /Service addresses/);
+    assert.match(html, /2100 S Ocean Blvd/);
+    assert.match(html, />Edit</);
+    assert.match(html, /\+ Add address/);
   });
 });

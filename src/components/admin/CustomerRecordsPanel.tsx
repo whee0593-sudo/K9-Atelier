@@ -93,6 +93,13 @@ function appointmentStatusLabel(status: string) {
   return "Confirmed";
 }
 
+type ServiceAddressParts = {
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+};
+
 function formatAppointmentAddress(appointment: {
   addressStreet: string;
   addressCity: string;
@@ -106,18 +113,335 @@ function formatAppointmentAddress(appointment: {
   return [appointment.addressStreet, withZip].filter(Boolean).join(", ");
 }
 
+function addressKey(address: ServiceAddressParts) {
+  return [address.street, address.city, address.state, address.zip]
+    .map((part) => part.trim().toLowerCase())
+    .join("|");
+}
+
 function uniqueServiceAddresses(
   appointments: StaffCustomerHistory["appointments"],
-) {
+): ServiceAddressParts[] {
   const seen = new Set<string>();
-  const addresses: string[] = [];
+  const addresses: ServiceAddressParts[] = [];
   for (const appointment of appointments) {
+    const next: ServiceAddressParts = {
+      street: appointment.addressStreet,
+      city: appointment.addressCity,
+      state: appointment.addressState,
+      zip: appointment.addressZip,
+    };
     const label = formatAppointmentAddress(appointment);
-    if (!label || seen.has(label)) continue;
-    seen.add(label);
-    addresses.push(label);
+    const key = addressKey(next);
+    if (!label || seen.has(key)) continue;
+    seen.add(key);
+    addresses.push(next);
   }
   return addresses;
+}
+
+function addressInputClassName() {
+  return "mt-1.5 w-full rounded-xl border border-lavender/40 bg-cream px-4 py-2.5 text-sm text-text placeholder:text-text-muted/50";
+}
+
+function ServiceAddressFields({
+  draft,
+  onChange,
+}: {
+  draft: ServiceAddressParts;
+  onChange: (next: ServiceAddressParts) => void;
+}) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <label className="block text-sm font-medium text-text sm:col-span-2">
+        Street Address
+        <input
+          value={draft.street}
+          onChange={(event) =>
+            onChange({ ...draft, street: event.target.value })
+          }
+          className={addressInputClassName()}
+        />
+      </label>
+      <label className="block text-sm font-medium text-text">
+        City
+        <input
+          value={draft.city}
+          onChange={(event) => onChange({ ...draft, city: event.target.value })}
+          className={addressInputClassName()}
+        />
+      </label>
+      <label className="block text-sm font-medium text-text">
+        State
+        <input
+          value={draft.state}
+          onChange={(event) =>
+            onChange({ ...draft, state: event.target.value })
+          }
+          className={addressInputClassName()}
+        />
+      </label>
+      <label className="block text-sm font-medium text-text">
+        ZIP
+        <input
+          value={draft.zip}
+          onChange={(event) => onChange({ ...draft, zip: event.target.value })}
+          className={addressInputClassName()}
+        />
+      </label>
+    </div>
+  );
+}
+
+function ServiceAddressEditor({
+  customerId,
+  address,
+  preview = false,
+  onSaved,
+}: {
+  customerId: string;
+  address: ServiceAddressParts;
+  preview?: boolean;
+  onSaved: (from: ServiceAddressParts, to: ServiceAddressParts) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<ServiceAddressParts>(address);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setDraft(address);
+    setEditing(false);
+    setError(null);
+    setSaved(false);
+  }, [address]);
+
+  async function handleSave() {
+    setSaving(true);
+    setError(null);
+    try {
+      const next = {
+        street: draft.street.trim(),
+        city: draft.city.trim(),
+        state: draft.state.trim(),
+        zip: draft.zip.trim(),
+      };
+      if (preview) {
+        onSaved(address, next);
+        setSaved(true);
+        setEditing(false);
+        return;
+      }
+
+      const response = await fetch(
+        `/api/admin/customers/${customerId}/addresses`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ from: address, to: next }),
+        },
+      );
+      const body = (await response.json()) as {
+        error?: string;
+        address?: ServiceAddressParts;
+      };
+      if (!response.ok || !body.address) {
+        throw new Error(body.error ?? "Could not save this address.");
+      }
+      onSaved(address, body.address);
+      setSaved(true);
+      setEditing(false);
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Could not save this address.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!editing) {
+    return (
+      <li className="rounded-xl border border-lavender/30 px-4 py-3 text-sm text-text">
+        <div className="flex items-start justify-between gap-3">
+          <p>
+            {formatAppointmentAddress({
+              addressStreet: address.street,
+              addressCity: address.city,
+              addressState: address.state,
+              addressZip: address.zip,
+            })}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setEditing(true);
+              setError(null);
+              setSaved(false);
+            }}
+            className="shrink-0 rounded-xl border border-lavender/40 px-3 py-1.5 text-sm text-text-muted hover:border-gold/40 hover:text-text"
+          >
+            Edit
+          </button>
+        </div>
+        {saved ? <p className="mt-2 text-xs text-text-muted">Saved</p> : null}
+      </li>
+    );
+  }
+
+  return (
+    <li className="rounded-xl border border-lavender/30 px-4 py-4 text-sm">
+      <ServiceAddressFields draft={draft} onChange={setDraft} />
+      {error ? (
+        <p className="mt-3 text-sm text-red-800" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => void handleSave()}
+          disabled={saving}
+          className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+        >
+          {saving ? "Saving…" : "Save Address"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setDraft(address);
+            setEditing(false);
+            setError(null);
+          }}
+          disabled={saving}
+          className="rounded-xl border border-lavender px-4 py-2 text-sm text-text-muted disabled:opacity-60"
+        >
+          Cancel
+        </button>
+      </div>
+    </li>
+  );
+}
+
+function ServiceAddressAddForm({
+  customerId,
+  preview = false,
+  onAdded,
+}: {
+  customerId: string;
+  preview?: boolean;
+  onAdded: (address: ServiceAddressParts) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<ServiceAddressParts>({
+    street: "",
+    city: "",
+    state: "FL",
+    zip: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSave() {
+    setSaving(true);
+    setError(null);
+    try {
+      const next = {
+        street: draft.street.trim(),
+        city: draft.city.trim(),
+        state: draft.state.trim(),
+        zip: draft.zip.trim(),
+      };
+      if (preview) {
+        onAdded(next);
+        setDraft({ street: "", city: "", state: "FL", zip: "" });
+        setOpen(false);
+        return;
+      }
+
+      const response = await fetch(
+        `/api/admin/customers/${customerId}/addresses`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(next),
+        },
+      );
+      const body = (await response.json()) as {
+        error?: string;
+        address?: ServiceAddressParts;
+      };
+      if (!response.ok || !body.address) {
+        throw new Error(body.error ?? "Could not add this address.");
+      }
+      onAdded(body.address);
+      setDraft({ street: "", city: "", state: "FL", zip: "" });
+      setOpen(false);
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Could not add this address.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setOpen(true);
+          setError(null);
+        }}
+        className="mt-3 rounded-xl border border-dashed border-gold/50 px-4 py-2 text-sm text-gold-dark hover:border-gold hover:bg-gold/5"
+      >
+        + Add address
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-xl border border-lavender/30 px-4 py-4 text-sm">
+      <p className="text-sm font-medium text-gold-dark">New service address</p>
+      <div className="mt-3">
+        <ServiceAddressFields draft={draft} onChange={setDraft} />
+      </div>
+      {error ? (
+        <p className="mt-3 text-sm text-red-800" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => void handleSave()}
+          disabled={saving}
+          className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+        >
+          {saving ? "Saving…" : "Save Address"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            setError(null);
+          }}
+          disabled={saving}
+          className="rounded-xl border border-lavender px-4 py-2 text-sm text-text-muted disabled:opacity-60"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function CustomerHistory({
@@ -135,6 +459,11 @@ function CustomerHistory({
 }) {
   const [history, setHistory] = useState<StaffCustomerHistory | null>(
     preview ? previewHistory ?? { appointments: [], orders: [] } : null,
+  );
+  const [addresses, setAddresses] = useState<ServiceAddressParts[] | null>(
+    preview
+      ? uniqueServiceAddresses(previewHistory?.appointments ?? [])
+      : null,
   );
   const [error, setError] = useState<string | null>(null);
 
@@ -163,9 +492,84 @@ function CustomerHistory({
     };
   }, [customerId, history, open, preview]);
 
+  useEffect(() => {
+    if (!open || addresses || preview) return;
+    let cancelled = false;
+    void fetch(`/api/admin/customers/${customerId}/addresses`, {
+      credentials: "include",
+    })
+      .then(async (response) => {
+        const body = (await response.json()) as {
+          error?: string;
+          addresses?: ServiceAddressParts[];
+        };
+        if (cancelled) return;
+        if (!response.ok) {
+          // Fall back to visit addresses from history when the saved-address
+          // table is unavailable (e.g. migration not applied yet).
+          if (history) {
+            setAddresses(uniqueServiceAddresses(history.appointments));
+          }
+          return;
+        }
+        setAddresses(body.addresses ?? []);
+      })
+      .catch(() => {
+        if (!cancelled && history) {
+          setAddresses(uniqueServiceAddresses(history.appointments));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [addresses, customerId, history, open, preview]);
+
   if (!open) return null;
 
-  const addresses = history ? uniqueServiceAddresses(history.appointments) : [];
+  function applyAddressRewrite(
+    from: ServiceAddressParts,
+    to: ServiceAddressParts,
+  ) {
+    setAddresses((current) => {
+      const list = current ?? [];
+      return list.map((address) =>
+        addressKey(address) === addressKey(from) ? to : address,
+      );
+    });
+    setHistory((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        appointments: current.appointments.map((appointment) => {
+          if (
+            appointment.addressStreet !== from.street ||
+            appointment.addressCity !== from.city ||
+            appointment.addressState !== from.state ||
+            appointment.addressZip !== from.zip
+          ) {
+            return appointment;
+          }
+          return {
+            ...appointment,
+            addressStreet: to.street,
+            addressCity: to.city,
+            addressState: to.state,
+            addressZip: to.zip,
+          };
+        }),
+      };
+    });
+  }
+
+  function applyAddressAdd(address: ServiceAddressParts) {
+    setAddresses((current) => {
+      const list = current ?? [];
+      if (list.some((item) => addressKey(item) === addressKey(address))) {
+        return list;
+      }
+      return [...list, address];
+    });
+  }
 
   return (
     <>
@@ -183,23 +587,33 @@ function CustomerHistory({
             </a>
           ) : null}
         </div>
-        {!history ? (
+        {addresses == null ? (
           <p className="mt-3 text-sm text-text-muted">Loading addresses…</p>
-        ) : addresses.length === 0 ? (
-          <p className="mt-3 text-sm text-text-muted">
-            No visit addresses yet.
-          </p>
         ) : (
-          <ul className="mt-3 space-y-2 text-sm text-text">
-            {addresses.map((address) => (
-              <li
-                key={address}
-                className="rounded-xl border border-lavender/30 px-4 py-3"
-              >
-                {address}
-              </li>
-            ))}
-          </ul>
+          <>
+            {addresses.length === 0 ? (
+              <p className="mt-3 text-sm text-text-muted">
+                No service addresses yet.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {addresses.map((address) => (
+                  <ServiceAddressEditor
+                    key={addressKey(address)}
+                    customerId={customerId}
+                    address={address}
+                    preview={preview}
+                    onSaved={applyAddressRewrite}
+                  />
+                ))}
+              </ul>
+            )}
+            <ServiceAddressAddForm
+              customerId={customerId}
+              preview={preview}
+              onAdded={applyAddressAdd}
+            />
+          </>
         )}
       </section>
       <section>

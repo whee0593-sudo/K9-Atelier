@@ -29,6 +29,7 @@ const EXPECTED_TABLES = [
   "pets",
   "pet_admin_notes",
   "customer_admin_notes",
+  "customer_service_addresses",
   "pet_vaccination_records",
 ] as const;
 
@@ -41,6 +42,7 @@ const EXPECTED_POLICIES = [
   "pets_archive_own",
   "pet_admin_notes_staff_all",
   "customer_admin_notes_staff_all",
+  "customer_service_addresses_select_own_or_staff",
   "pet_vaccination_records_select_own_or_staff",
   "vaccinations_select_own_or_staff",
 ] as const;
