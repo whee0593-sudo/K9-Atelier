@@ -477,7 +477,9 @@ export async function updateStaffPet(
   const session = await getStaffSession();
   if ("error" in session) return session;
 
-  const supabase = await createAuthenticatedSupabaseClient();
+  // Match createStaffPet / archiveStaffPet: staff writes use the privileged
+  // client so new columns (e.g. rabies_status) are not blocked by column grants.
+  const admin = createAdminClient();
   const updateRow = mapValidatedInputToUpdateRow(input);
 
   if (Object.keys(updateRow).length > 0) {
@@ -490,7 +492,7 @@ export async function updateStaffPet(
       updateRow.date_of_birth = null;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await admin
       .from("pets")
       .update(updateRow)
       .eq("id", petId)
@@ -507,6 +509,8 @@ export async function updateStaffPet(
   }
 
   if (adminServiceNotes !== undefined) {
+    // SECURITY DEFINER RPC still needs the staff JWT so private.is_staff() passes.
+    const supabase = await createAuthenticatedSupabaseClient();
     const { error: notesError } = await supabase.rpc("staff_upsert_pet_admin_notes", {
       p_pet_id: petId,
       p_notes: adminServiceNotes,
@@ -517,33 +521,7 @@ export async function updateStaffPet(
     }
   }
 
-  const { data: petRow, error: reloadError } = await supabase
-    .from("pets")
-    .select(PET_SELECT)
-    .eq("id", petId)
-    .maybeSingle();
-
-  if (reloadError || !petRow) {
-    console.error("updateStaffPet reload failed:", reloadError?.message);
-    return { error: "server" };
-  }
-
-  const [pet] = await attachVaccinationSummaries([
-    mapPetRowToRecord(petRow as PetRow),
-  ]);
-
-  const { data: notesRow } = await supabase
-    .from("pet_admin_notes")
-    .select("notes")
-    .eq("pet_id", petId)
-    .maybeSingle();
-
-  return {
-    pet: {
-      ...pet,
-      adminServiceNotes: notesRow?.notes ?? "",
-    },
-  };
+  return loadStaffPetWithNotes(petId);
 }
 
 async function loadStaffPetWithNotes(
