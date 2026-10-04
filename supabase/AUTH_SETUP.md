@@ -1,24 +1,24 @@
-# Supabase Auth Setup (K9 Atelier)
+# Supabase Auth 设置（K9 Atelier）
 
-One-time Dashboard configuration for Magic Link + OTP login. Required before Phase 3.
+一次性 Dashboard 配置：Magic Link + OTP 登录。进入第三阶段前需要完成。
 
-Project ref: `ceejxoobxxoxqhpujrdz`
+项目 ref：`ceejxoobxxoxqhpujrdz`
 
 ---
 
-## 1. URL Configuration
+## 1. URL 配置
 
 **Dashboard → Authentication → URL Configuration**
 
-| Setting | Value |
-|---------|--------|
+| 设置 | 值 |
+|------|-----|
 | **Site URL** | `https://k9atelier.com` |
 
-Keep production as Site URL. Local dev uses `emailRedirectTo` from the app (see login code), not Site URL.
+生产环境用上面的 Site URL。本地开发走应用里的 `emailRedirectTo`（见登录相关代码），不依赖 Site URL。
 
-### Redirect URLs (allowlist)
+### Redirect URLs（白名单）
 
-Add every URL below (one per line):
+把下面每一行都加进去：
 
 ```
 https://k9atelier.com/auth/callback
@@ -29,72 +29,74 @@ http://localhost:3003/auth/callback
 http://localhost:3004/auth/callback
 ```
 
-When `npm run dev` picks a different port, add that port too before testing Magic Link.
+如果 `npm run dev` 用了别的端口，测 Magic Link 前也把该端口加进白名单。
 
-### Email OTP length
+### Email OTP 位数
 
 **Dashboard → Authentication → Sign In / Providers → Email → Email OTP length**
 
-Set to **6** (shortest allowed; Supabase does **not** support 4-digit email OTP).
+设为 **6**（最短可用；Supabase **不支持** 4 位邮箱 OTP）。
 
-Allowed range: **6–10** digits. The login page input matches this range.
+允许范围：**6–10** 位。登录页输入框按这个范围校验。
 
 ---
 
-## 2. Email Templates
+## 2. 邮件模板
 
 **Dashboard → Authentication → Email Templates**
 
-Copy HTML from:
+从下面文件复制 HTML：
 
-| Template | File | Subject |
-|----------|------|---------|
+| 模板 | 文件 | 主题 |
+|------|------|------|
 | **Magic Link** | [`email-templates/magic-link.html`](./email-templates/magic-link.html) | `Your K9 Atelier sign-in link` |
 | **Confirm signup** | [`email-templates/confirm-signup.html`](./email-templates/confirm-signup.html) | `Welcome to K9 Atelier — confirm your email` |
 | **Reset password** | [`email-templates/reset-password.html`](./email-templates/reset-password.html) | `Reset your K9 Atelier password` |
 
-Both templates include:
+（邮件主题保持英文，因为会发给客人。）
 
-- **`{{ .ConfirmationURL }}`** on the button — respects the app’s `emailRedirectTo` (works on any local port)
-- **`{{ .Token }}`** — 6-digit OTP for manual entry on `/login`
+两个模板都包含：
 
-See [`email-templates/README.md`](./email-templates/README.md) for details.
+- 按钮上的 **`{{ .ConfirmationURL }}`** — 会尊重应用的 `emailRedirectTo`（任意本地端口都能用）
+- **`{{ .Token }}`** — 在 `/login` 手动输入的 6 位 OTP
+
+细节见 [`email-templates/README.md`](./email-templates/README.md)。
 
 ---
 
-## 3. Database migrations (Phase 2 archive fix)
+## 3. 数据库 migrations（第二阶段 archive 修复）
 
-After v5 foundation, apply in order:
+v5 foundation 之后，按顺序执行：
 
 1. [`migrations/20260812143000_phase2_pet_archive.sql`](./migrations/20260812143000_phase2_pet_archive.sql)
 
-Already applied manually during Phase 2 acceptance? Safe to re-run (idempotent).
+第二阶段验收时如果已经手动跑过，也可以再跑（幂等，安全）。
 
-Verify (optional, requires `DATABASE_URL` in `.env.local`):
+可选校验（`.env.local` 里需要 `DATABASE_URL`）：
 
 ```bash
 npm run verify:supabase
 ```
 
-## 4. Customer record notes (admin only)
+## 4. 客户档案备注（仅员工）
 
-This lets staff save private notes on a completed bill and see the same notes on that customer's file.
+让员工能在完成账单时保存私密备注，并在该客户档案里看到同一批备注。
 
-1. Open the Supabase Dashboard for project `ceejxoobxxoxqhpujrdz`
-2. Left sidebar → **SQL Editor** → **New query**
-3. Paste everything in [`migrations/20260917013000_customer_admin_notes.sql`](./migrations/20260917013000_customer_admin_notes.sql)
-4. Click **Run**
+1. 打开项目 `ceejxoobxxoxqhpujrdz` 的 Supabase Dashboard  
+2. 左侧 → **SQL Editor** → **New query**  
+3. 粘贴 [`migrations/20260917013000_customer_admin_notes.sql`](./migrations/20260917013000_customer_admin_notes.sql) 全文  
+4. 点 **Run**
 
-Safe to run more than once. After it succeeds, **Save** on Customer record writes to the live database.
+可重复执行。成功后，Customer record 上的 **Save** 会写入线上数据库。
 
 ---
 
-## Checklist
+## 检查清单
 
 - [ ] Site URL = `https://k9atelier.com`
-- [ ] Redirect URLs include production + localhost callbacks
-- [ ] Magic Link template pasted; email shows 6-digit code
-- [ ] Confirm signup template pasted
-- [ ] Phase 2 archive migration applied
-- [ ] Test password sign-in and OTP fallback on `/login`
-- [ ] Email provider: allow new signups; Confirm email ON (one confirmation email at signup)
+- [ ] Redirect URLs 包含生产 + localhost 回调
+- [ ] Magic Link 模板已粘贴；邮件里能看到 6 位验证码
+- [ ] Confirm signup 模板已粘贴
+- [ ] 第二阶段 archive migration 已执行
+- [ ] 在 `/login` 测试密码登录和 OTP 备用方式
+- [ ] Email provider：允许新注册；Confirm email 打开（注册时发一封确认邮件）

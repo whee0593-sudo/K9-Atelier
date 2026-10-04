@@ -1,37 +1,37 @@
-# Supabase Auth Email Templates (K9 Atelier)
+# Supabase Auth 邮件模板（K9 Atelier）
 
-Paste into **Supabase Dashboard → Authentication → Email Templates**.
+粘贴到 **Supabase Dashboard → Authentication → Email Templates**。
 
-Full setup (redirect URLs, checklist): [`../AUTH_SETUP.md`](../AUTH_SETUP.md)
+完整设置（Redirect URLs、检查清单）：[`../AUTH_SETUP.md`](../AUTH_SETUP.md)
 
 ---
 
-## Files
+## 文件
 
-| Template | HTML file | Subject line |
-|----------|-----------|--------------|
+| 模板 | HTML 文件 | 主题行（英文，发给客人） |
+|------|-----------|--------------------------|
 | Magic Link | [`magic-link.html`](./magic-link.html) | `Your K9 Atelier sign-in link` |
 | Confirm signup | [`confirm-signup.html`](./confirm-signup.html) | `Welcome to K9 Atelier — confirm your email` |
 | Reset password | [`reset-password.html`](./reset-password.html) | `Reset your K9 Atelier password` |
 
-Open each `.html` file, copy all contents, paste into the matching Dashboard template body.
+打开每个 `.html`，复制全部内容，粘贴到 Dashboard 对应模板正文。
 
 ---
 
-## Template variables used
+## 用到的模板变量
 
-| Variable | Purpose |
-|----------|---------|
-| `{{ .ConfirmationURL }}` | Button link — honors app `emailRedirectTo` (correct local port) |
-| `{{ .Token }}` | 6-digit OTP for manual entry on `/login` |
+| 变量 | 用途 |
+|------|------|
+| `{{ .ConfirmationURL }}` | 按钮链接 — 尊重应用的 `emailRedirectTo`（本地端口正确） |
+| `{{ .Token }}` | 在 `/login` 手动输入的 6 位 OTP |
 
-Do **not** use `{{ .SiteURL }}` alone for the sign-in button in local dev; it ignores the port from `npm run dev`.
+本地开发时，登录按钮**不要**只依赖 `{{ .SiteURL }}`；它不会带上 `npm run dev` 的端口。
 
 ---
 
-## Redirect URL allowlist
+## Redirect URL 白名单
 
-Add in **Authentication → URL Configuration**:
+在 **Authentication → URL Configuration** 添加：
 
 ```
 https://k9atelier.com/auth/callback
@@ -42,19 +42,19 @@ http://localhost:3003/auth/callback
 http://localhost:3004/auth/callback
 ```
 
-Site URL stays `https://k9atelier.com`.
+Site URL 保持 `https://k9atelier.com`。
 
-### Email OTP length
+### Email OTP 位数
 
-**Authentication → Sign In / Providers → Email → Email OTP length** = **6** (minimum; 4 digits is not supported by Supabase).
+**Authentication → Sign In / Providers → Email → Email OTP length** = **6**（最小值；Supabase 不支持 4 位）。
 
 ---
 
-## Dashboard checks
+## Dashboard 检查
 
-- [ ] Magic Link body pasted from `magic-link.html`
-- [ ] Confirm signup body pasted from `confirm-signup.html`
-- [ ] Reset password body pasted from `reset-password.html`
-- [ ] Test email shows **Access My Account** button and **6-digit code**
-- [ ] OTP login works on `/login`
-- [ ] Magic Link opens `/auth/callback` on the same port you used to request login
+- [ ] Magic Link 正文已从 `magic-link.html` 粘贴
+- [ ] Confirm signup 正文已从 `confirm-signup.html` 粘贴
+- [ ] Reset password 正文已从 `reset-password.html` 粘贴
+- [ ] 测试邮件显示 **Access My Account** 按钮和 **6 位验证码**
+- [ ] `/login` 上 OTP 登录可用
+- [ ] Magic Link 会打开你发起登录时同一端口的 `/auth/callback`

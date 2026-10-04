@@ -1,80 +1,80 @@
-# Payment Method Policy & Validation
+# 支付方式政策与验证说明
 
-> Customer-facing copy is English. This doc explains the approach for Penny (中文).
+> 网站给客人看的文案是英文。这份说明给 Penny / 内部用。
 
-## Policy (updated)
+## 政策（已更新）
 
-- **Pet profile:** You can save a pet profile without a card on file.
-- **At booking:** After date and time are chosen, a **valid payment method** is required to reserve. The customer adds or selects which saved card to use for that appointment.
-- **At booking:** **No charge** — card is on file only.
-- **After service:** Charge the selected card for the appointment total.
-- **Later charges:** cancellation / no-show fees per the published policy.
-
----
-
-## How do we test if a payment method is valid?
-
-**Recommended: Stripe Setup Intents** (行业里最常用的「只存卡、不扣款」方式)
-
-### Plain language
-
-When the customer enters card details, Stripe talks to the **card network / bank** in real time to check:
-
-- Card number format is correct  
-- Card is not expired  
-- Bank does not immediately decline the card  
-- Sometimes **3D Secure** (bank text/app verification) is required  
-
-If all pass, Stripe saves the card as a **Payment Method** attached to the customer. **No charge** appears on their statement at booking time (Stripe may use a temporary $0 authorization that disappears — normal and invisible to most customers).
-
-This is **much better** than only checking "16 digits look right" on your own — only Stripe/bank can say if the card actually works.
+- **宠物档案：** 可以不绑卡，先保存宠物资料。
+- **预约时：** 选好日期和时间后，必须有一张**有效支付方式**才能锁定预约。客人需添加或选择本次预约要用的已存卡片。
+- **预约时：** **不扣款** — 只是把卡存档。
+- **服务完成后：** 用选定的卡收取该次预约总费用。
+- **后续扣款：** 取消费 / 未到场费按对外公布的政策执行。
 
 ---
 
-## Implementation
+## 怎么判断支付方式是否有效？
 
-See `content/STRIPE.md` for Stripe keys and the SQL to run. The site uses **Setup Intents** so cards are validated and stored without charging at booking.
+**推荐：Stripe Setup Intents**（行业里最常用的「只存卡、不扣款」方式）
 
-Charging after the appointment (and for cancellation / no-show) is a later Stripe PaymentIntent step.
+### 白话说明
 
-### Test mode (before going live)
+客人输入卡信息时，Stripe 会实时向**卡组织 / 银行**核对：
 
-Stripe provides **test card numbers** — no real money:
+- 卡号格式是否正确  
+- 卡是否过期  
+- 银行是否立刻拒卡  
+- 有时需要 **3D Secure**（银行短信 / App 验证）  
 
-| Card number | Result |
-|-------------|--------|
-| `4242 4242 4242 4242` | Success — valid card |
-| `4000 0000 0000 0002` | Declined — simulates invalid/declined |
-| `4000 0025 0000 3155` | Requires 3D Secure authentication |
+全部通过后，Stripe 会把卡存成挂在该客户名下的 **Payment Method**。预约当下**账单上不会出现扣款**（Stripe 有时会做一笔临时 $0 授权，随后消失 — 正常现象，多数客人看不到）。
 
-Use any future expiry, any 3-digit CVC, any ZIP in test mode.
-
-Toggle: Stripe Dashboard → **Test mode** ON while developing.
+这比你自己只检查「看起来像 16 位数字」可靠得多 — 只有 Stripe / 银行能确认这张卡能不能用。
 
 ---
 
-## Alternatives (not recommended as primary)
+## 实现
 
-| Method | Problem |
-|--------|---------|
-| Only check card format yourself | Does not prove card works or has funds |
-| Charge $1 then refund | Extra fees, customer confusion |
-| Manual "send card photo" | Not secure, not PCI compliant |
+密钥与要跑的 SQL 见 `content/STRIPE.md`。网站用 **Setup Intents** 验证并保存卡片，预约时不扣款。
+
+预约后扣款（以及取消费 / 未到场费）是后续的 Stripe PaymentIntent 步骤。
+
+### 测试模式（上线前）
+
+Stripe 提供**测试卡号** — 不会产生真实扣款：
+
+| 卡号 | 结果 |
+|------|------|
+| `4242 4242 4242 4242` | 成功 — 有效卡 |
+| `4000 0000 0000 0002` | 拒卡 — 模拟无效 / 被拒 |
+| `4000 0025 0000 3155` | 需要 3D Secure 验证 |
+
+测试模式可用任意未来有效期、任意 3 位 CVC、任意 ZIP。
+
+开关：Stripe Dashboard → 打开 **Test mode**。
 
 ---
 
-## Legal / policy pages (later)
+## 其他做法（不建议作为主方案）
 
-When live, add to FAQ / Terms:
-
-- Card saved at booking; not charged until [service / cancellation policy]  
-- How to update or remove card  
-- Cancellation/no-show may trigger charge to saved method  
+| 做法 | 问题 |
+|------|------|
+| 只自己检查卡号格式 | 不能证明卡能用或有额度 |
+| 先扣 $1 再退款 | 额外手续费，容易让客人困惑 |
+| 让客人发卡片照片 | 不安全，也不符合 PCI |
 
 ---
 
-## Config source
+## 法律 / 政策页面（以后补）
 
-`content/business.json` → `booking.requiresPaymentMethod`, `booking.chargeAtBooking`, `booking.paymentMethodNote`
+上线后，在 FAQ / Terms 里补充：
 
-*Updated: 2026-07-29*
+- 预约时存卡；在 [服务完成 / 取消政策] 时才扣款  
+- 如何更新或删除卡片  
+- 取消 / 未到场可能对已存支付方式扣款  
+
+---
+
+## 配置来源
+
+`content/business.json` → `booking.requiresPaymentMethod`、`booking.chargeAtBooking`、`booking.paymentMethodNote`
+
+*更新：2026-07-29*
