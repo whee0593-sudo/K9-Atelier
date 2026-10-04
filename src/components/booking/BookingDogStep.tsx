@@ -13,6 +13,7 @@ import {
   petReadyToBook,
   type PetProfile,
 } from "@/lib/pets";
+import { isPersistedPetId } from "@/lib/booking-flow";
 import { mapPetProfileToWriteInput } from "@/lib/pets/map";
 import { PetValidationError, validateCreatePetInput } from "@/lib/pets/validation";
 import { parsePetRabiesStatus } from "@/lib/vaccinations/booking";
@@ -156,6 +157,7 @@ export function BookingDogStep({ draftPet, onDraftChange, onContinue }: Props) {
           pet={draftPet}
           onPetChange={onDraftChange}
           variant="booking"
+          petPersisted={isPersistedPetId(draftPet.id)}
         />
         {error ? (
           <p className="font-body text-sm text-red-700" role="alert">

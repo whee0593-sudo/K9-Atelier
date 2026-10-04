@@ -165,6 +165,7 @@ export function Header() {
       {open && (
         <div
           id="mobile-nav"
+          data-scroll-lock-allow
           className={
             isBooking
               ? "border-t border-gray-line bg-ivory"
