@@ -26,7 +26,9 @@ Mobile pet grooming business. Website at k9atelier.com.
 
 ## User context
 - Owner communicates in 中文 — explain technical terms in plain Chinese.
-- **All customer-facing website copy must be in English** (UI, buttons, pages, emails unless explicitly requested otherwise).
+- **All on-site display copy is English only** (UI, buttons, pages, emails, and `content/business.json` labels). Do not keep Chinese mirror fields (`*Zh`) in business data.
+- User-entered text (names, notes, addresses, etc.) may include Chinese; do not block Chinese input.
+- **Internal docs are Chinese** (`README.md`, `AGENTS.md`, `SETUP.md`, `DEPLOY.md`, `content/*.md`, `supabase/*.md`, etc.). Guest-facing email subjects/bodies in templates stay English.
 
 ## Conventions
 - Minimal, elegant, static-clean visual design
