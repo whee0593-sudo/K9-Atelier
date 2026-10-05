@@ -28,6 +28,7 @@ import {
   mapProfileRow,
   type CustomerProfile,
   type CustomerProfileRow,
+  type CustomerProfileWriteInput,
 } from "@/lib/profiles/types";
 import {
   mapPaymentMethodRow,
@@ -688,4 +689,135 @@ export async function setStaffCustomerPassword(
     return { error: "server" };
   }
   return { ok: true };
+}
+
+const CREATED_PROFILE_SELECT =
+  "id, email, first_name, last_name, phone, preferred_contact, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship";
+
+function isDuplicateAuthEmail(message: string) {
+  return /already been registered|already exists|email address is already/i.test(
+    message,
+  );
+}
+
+function emailLookupPattern(email: string) {
+  return email.replace(/[%_\\]/g, "\\$&");
+}
+
+export async function createStaffCustomer(
+  input: CustomerProfileWriteInput & { email: string },
+): Promise<
+  | { customer: StaffCustomerRecord }
+  | {
+      error: "unauthenticated" | "forbidden" | "conflict" | "server";
+      message?: string;
+    }
+> {
+  const session = await getStaffSession();
+  if ("error" in session) return session;
+
+  const admin = createAdminClient();
+  const email = normalizeStaffEmail(input.email);
+  const staffEmails = await listProtectedStaffEmails(admin);
+  if (isAdminAccountEmail(email, staffEmails)) {
+    return {
+      error: "conflict",
+      message: "That email belongs to a staff account.",
+    };
+  }
+
+  const { data: existingProfiles, error: existingError } = await admin
+    .from("profiles")
+    .select("id")
+    .ilike("email", emailLookupPattern(email))
+    .limit(1);
+  if (existingError) {
+    console.error("createStaffCustomer email lookup failed:", existingError.message);
+    return { error: "server" };
+  }
+  if ((existingProfiles ?? []).length > 0) {
+    return {
+      error: "conflict",
+      message: "That email is already used by another account.",
+    };
+  }
+
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    email_confirm: true,
+    user_metadata: {
+      first_name: input.firstName,
+      last_name: input.lastName,
+      phone: input.phone,
+    },
+    app_metadata: {
+      staff_created: true,
+      unclaimed: true,
+    },
+  });
+  if (error || !data.user) {
+    console.error("createStaffCustomer createUser failed:", error?.message);
+    if (error && isDuplicateAuthEmail(error.message)) {
+      return {
+        error: "conflict",
+        message: "That email is already used by another account.",
+      };
+    }
+    return { error: "server" };
+  }
+
+  const userId = data.user.id;
+  const { data: profileRow, error: profileError } = await admin
+    .from("profiles")
+    .update({
+      email,
+      first_name: input.firstName,
+      last_name: input.lastName,
+      phone: input.phone,
+      preferred_contact: input.preferredContact,
+      emergency_contact_name: input.emergencyContactName,
+      emergency_contact_phone: input.emergencyContactPhone,
+      emergency_contact_relationship: input.emergencyContactRelationship,
+    })
+    .eq("id", userId)
+    .select(CREATED_PROFILE_SELECT)
+    .maybeSingle();
+
+  if (profileError || !profileRow) {
+    console.error(
+      "createStaffCustomer profile update failed:",
+      profileError?.message ?? "profile row missing",
+    );
+    const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
+    if (deleteError) {
+      console.error("createStaffCustomer rollback failed:", deleteError.message);
+    }
+    return { error: "server" };
+  }
+
+  const actorIsOwner = isOwnerEmail(session.user.email);
+  const actionInput = {
+    actorIsOwner,
+    actorUserId: session.user.id,
+    targetUserId: userId,
+    targetEmail: email,
+  };
+
+  return {
+    customer: {
+      profile: mapProfileRow(profileRow as CustomerProfileRow),
+      pets: [],
+      paymentMethods: [],
+      kind: "customer",
+      frozen: false,
+      canDelete: !ownerAccountActionBlockReason({
+        ...actionInput,
+        action: "delete",
+      }),
+      canFreeze: !ownerAccountActionBlockReason({
+        ...actionInput,
+        action: "freeze",
+      }),
+    },
+  };
 }

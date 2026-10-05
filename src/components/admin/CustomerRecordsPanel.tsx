@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { CustomerProfileForm } from "@/components/account/CustomerProfileForm";
+import { CreateCustomerProfileForm } from "@/components/admin/CreateCustomerProfileForm";
 import type { CustomerProfile } from "@/lib/profiles/types";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
 import {
@@ -31,6 +32,12 @@ type LoadState =
       customers: StaffCustomerRecord[];
     }
   | { status: "error"; message: string; authRequired?: boolean };
+
+function sortCustomers(items: StaffCustomerRecord[]) {
+  return [...items].sort((left, right) =>
+    left.profile.email.localeCompare(right.profile.email),
+  );
+}
 
 function customerLabel(profile: CustomerProfile) {
   const name = `${profile.firstName} ${profile.lastName}`.trim();
@@ -1054,7 +1061,16 @@ export function CustomerRecordsPanel({
   previewHistoryByCustomerId?: Record<string, StaffCustomerHistory>;
   previewReferralsByCustomerId?: Record<string, StaffReferralView>;
 }) {
-  const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
+  const [loadState, setLoadState] = useState<LoadState>(() =>
+    preview && previewCustomers
+      ? {
+          status: "ready",
+          admins: previewCustomers.filter((item) => item.kind === "admin"),
+          customers: previewCustomers.filter((item) => item.kind !== "admin"),
+        }
+      : { status: "loading" },
+  );
+  const [createdCustomerId, setCreatedCustomerId] = useState<string | null>(null);
 
   const loadCustomers = useCallback(async () => {
     if (preview && previewCustomers) {
@@ -1159,7 +1175,10 @@ export function CustomerRecordsPanel({
             <CustomerRecordCard
               key={customer.profile.id}
               customer={customer}
-              startOpen={customer.profile.id === focusCustomerId}
+              startOpen={
+                customer.profile.id === focusCustomerId ||
+                customer.profile.id === createdCustomerId
+              }
               preview={preview}
               previewHistory={previewHistoryByCustomerId?.[customer.profile.id]}
               previewReferrals={previewReferralsByCustomerId?.[customer.profile.id]}
@@ -1242,9 +1261,41 @@ export function CustomerRecordsPanel({
     );
   }
 
+  const existingEmails = [...loadState.admins, ...loadState.customers].map(
+    (item) => item.profile.email,
+  );
+
   return (
     <div className="space-y-10">
       {renderList("Administrators", loadState.admins, "No administrator accounts.")}
+      <section className="space-y-3">
+        <h3 className="text-lg font-semibold text-gold-dark">
+          Create customer profile
+        </h3>
+        <p className="text-sm text-text-muted">
+          Add a customer file with contact details. You can add pets, a card,
+          and a password on the file after it is created.
+        </p>
+        <div className="rounded-2xl border border-lavender/30 bg-cream px-5 py-6">
+          <CreateCustomerProfileForm
+            preview={preview}
+            existingEmails={existingEmails}
+            onCreated={(customer) => {
+              setCreatedCustomerId(customer.profile.id);
+              setLoadState((current) => {
+                if (current.status !== "ready") return current;
+                const without = current.customers.filter(
+                  (item) => item.profile.id !== customer.profile.id,
+                );
+                return {
+                  ...current,
+                  customers: sortCustomers([...without, customer]),
+                };
+              });
+            }}
+          />
+        </div>
+      </section>
       {renderList("Customers", loadState.customers, "No customer accounts yet.")}
     </div>
   );
