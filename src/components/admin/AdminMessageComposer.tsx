@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useId, useState } from "react";
 import { CallCustomerButton } from "@/components/admin/CallCustomerButton";
 import {
   STAFF_SMS_MAX_CHARS,
   buildStaffCustomerSms,
   formatStaffRecipientLabel,
+  hasStaffSmsRecipientIdentity,
   matchesStaffRecipientSearch,
   type StaffSmsRecipient,
   type StudioUnknownCaller,
@@ -29,86 +30,218 @@ export function nextVisibleRecentCallerCount(current: number, total: number) {
   return Math.min(total, current + RECENT_CALLERS_PAGE_SIZE);
 }
 
+export function CallerTextDialog({
+  open,
+  phone,
+  label,
+  message,
+  sending = false,
+  error = null,
+  onMessageChange,
+  onClose,
+  onSend,
+}: {
+  open: boolean;
+  phone: string;
+  label?: string;
+  message: string;
+  sending?: boolean;
+  error?: string | null;
+  onMessageChange: (message: string) => void;
+  onClose: () => void;
+  onSend: () => void;
+}) {
+  const titleId = useId();
+  const fieldId = useId();
+  const trimmed = message.trim();
+  const canSend =
+    trimmed.length > 0 && trimmed.length <= STAFF_SMS_MAX_CHARS && !sending;
+
+  useEffect(() => {
+    if (!open) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !sending) onClose();
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, sending, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+      role="presentation"
+      onClick={() => {
+        if (!sending) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="relative w-full max-w-md rounded-2xl border border-lavender/30 bg-cream p-6 pt-12 shadow-sm"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h3 id={titleId} className="pr-10 text-sm font-medium text-text">
+          {label || phone}
+        </h3>
+        {label ? <p className="mt-1 text-xs text-text-muted">{phone}</p> : null}
+        <button
+          type="button"
+          disabled={sending}
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full text-2xl font-light leading-none text-text-muted transition hover:bg-lavender-light hover:text-text disabled:opacity-50"
+        >
+          ×
+        </button>
+        <label htmlFor={fieldId} className="sr-only">
+          Message
+        </label>
+        <textarea
+          id={fieldId}
+          value={message}
+          onChange={(event) => onMessageChange(event.target.value)}
+          rows={5}
+          maxLength={STAFF_SMS_MAX_CHARS}
+          autoFocus
+          disabled={sending}
+          placeholder="Write a message…"
+          className="mt-4 w-full resize-none rounded-xl border border-lavender/40 bg-cream px-4 py-3 text-sm text-text disabled:opacity-60"
+        />
+        <p className="mt-1 text-xs text-text-muted">
+          {trimmed.length}/{STAFF_SMS_MAX_CHARS} · Sent as “K9 ATELIER: …”
+        </p>
+        {error ? (
+          <p className="mt-3 text-sm text-red-700" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <button
+          type="button"
+          disabled={!canSend}
+          onClick={onSend}
+          className="mt-4 rounded-xl bg-gold px-6 py-2.5 text-sm font-medium text-white hover:bg-gold-dark disabled:opacity-50"
+        >
+          {sending ? "Sending…" : "Send text"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function RecentCallersList({
   callers,
-  sendingIntro,
+  sending = false,
+  sendError = null,
   preview = false,
-  onSendText,
+  onSendMessage,
 }: {
   callers: StudioUnknownCaller[];
-  sendingIntro: string | null;
+  sending?: boolean;
+  sendError?: string | null;
   preview?: boolean;
-  onSendText: (phone: string) => void;
+  onSendMessage: (phone: string, message: string) => Promise<boolean> | boolean;
 }) {
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_RECENT_CALLERS);
+  const [target, setTarget] = useState<StudioUnknownCaller | null>(null);
+  const [draft, setDraft] = useState("");
 
-  if (callers.length === 0) {
-    return (
-      <p className="mt-4 text-sm text-text-muted">
-        Numbers that call the studio will appear here.
-      </p>
-    );
+  function closeComposer() {
+    if (sending) return;
+    setTarget(null);
+    setDraft("");
   }
 
-  const visibleCallers = callers.slice(0, visibleCount);
-  const hasMore = visibleCount < callers.length;
+  async function sendDraft() {
+    if (!target) return;
+    const sent = await onSendMessage(target.phone, draft);
+    if (sent) {
+      setTarget(null);
+      setDraft("");
+    }
+  }
 
   return (
     <>
-      <ul className="mt-5 space-y-3">
-        {visibleCallers.map((caller) => (
-          <li
-            key={`${caller.phone}-${caller.calledAt}`}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-lavender/30 px-4 py-3 text-sm"
-          >
-            <div>
-              <a
-                href={`tel:${caller.phone}`}
-                className="font-medium text-text underline-offset-2 hover:underline"
+      {callers.length === 0 ? (
+        <p className="mt-4 text-sm text-text-muted">
+          Numbers that call the studio will appear here.
+        </p>
+      ) : (
+        <>
+          <ul className="mt-5 space-y-3">
+            {callers.slice(0, visibleCount).map((caller) => (
+              <li
+                key={`${caller.phone}-${caller.calledAt}`}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-lavender/30 px-4 py-3 text-sm"
               >
-                {caller.label || caller.phone}
-              </a>
-              {caller.label ? (
-                <p className="mt-1 text-xs text-text-muted">{caller.phone}</p>
-              ) : null}
-              <p className="mt-1 text-xs text-text-muted">
-                Called {new Date(caller.calledAt).toLocaleString()}
-                {caller.introSentAt ? " · text sent" : ""}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <CallCustomerButton
-                phone={caller.phone}
-                label="Call back"
-                preview={preview}
-              />
+                <div>
+                  <a
+                    href={`tel:${caller.phone}`}
+                    className="font-medium text-text underline-offset-2 hover:underline"
+                  >
+                    {caller.label || caller.phone}
+                  </a>
+                  {caller.label ? (
+                    <p className="mt-1 text-xs text-text-muted">{caller.phone}</p>
+                  ) : null}
+                  <p className="mt-1 text-xs text-text-muted">
+                    Called {new Date(caller.calledAt).toLocaleString()}
+                    {caller.introSentAt ? " · text sent" : ""}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <CallCustomerButton
+                    phone={caller.phone}
+                    label="Call back"
+                    preview={preview}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTarget(caller);
+                      setDraft("");
+                    }}
+                    className="rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text hover:border-gold/40"
+                  >
+                    Send text
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {visibleCount < callers.length ? (
+            <div className="mt-3 flex justify-center">
               <button
                 type="button"
-                disabled={Boolean(sendingIntro)}
-                onClick={() => onSendText(caller.phone)}
-                className="rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text hover:border-gold/40 disabled:opacity-50"
+                onClick={() =>
+                  setVisibleCount((current) =>
+                    nextVisibleRecentCallerCount(current, callers.length),
+                  )
+                }
+                className="rounded-xl border border-lavender/40 px-6 py-2 text-sm font-medium text-text hover:border-gold/40"
               >
-                {sendingIntro === caller.phone ? "Sending…" : "Send text"}
+                More
               </button>
             </div>
-          </li>
-        ))}
-      </ul>
-      {hasMore ? (
-        <div className="mt-3 flex justify-center">
-          <button
-            type="button"
-            onClick={() =>
-              setVisibleCount((current) =>
-                nextVisibleRecentCallerCount(current, callers.length),
-              )
-            }
-            className="rounded-xl border border-lavender/40 px-6 py-2 text-sm font-medium text-text hover:border-gold/40"
-          >
-            More
-          </button>
-        </div>
-      ) : null}
+          ) : null}
+        </>
+      )}
+      <CallerTextDialog
+        open={target != null}
+        phone={target?.phone ?? ""}
+        label={target?.label}
+        message={draft}
+        sending={sending}
+        error={sendError}
+        onMessageChange={setDraft}
+        onClose={closeComposer}
+        onSend={() => void sendDraft()}
+      />
     </>
   );
 }
@@ -131,25 +264,24 @@ export function AdminMessageComposer({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [sendingIntro, setSendingIntro] = useState<string | null>(null);
+  const [callerTextSending, setCallerTextSending] = useState(false);
+  const [callerTextError, setCallerTextError] = useState<string | null>(null);
   const [importingPhotos, setImportingPhotos] = useState(false);
   const [importNote, setImportNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (keepCustomer = true) => {
+  const load = useCallback(async () => {
     if (preview) {
       const sample = buildPreviewStaffMessages();
-      setRecipients(sample.recipients);
+      const visible = sample.recipients.filter(hasStaffSmsRecipientIdentity);
+      setRecipients(visible);
       setInbox(sample.inbox);
       setUnknownCallers(sample.unknownCallers);
       setIntroPreview(sample.introPreview);
       setKnownCallerPreview(sample.knownCallerPreview);
-      if (!keepCustomer) {
-        const first = sample.recipients.find((item) => item.canText);
-        if (first) {
-          setCustomerId(first.id);
-          setPhone(first.phone);
-        }
-      }
+      setCustomerId((current) =>
+        visible.some((item) => item.id === current) ? current : "",
+      );
       return;
     }
     const response = await fetch("/api/admin/messages", {
@@ -166,24 +298,20 @@ export function AdminMessageComposer({
     if (!response.ok) {
       throw new Error(body.error ?? "Could not load customers.");
     }
-    const list = body.recipients ?? [];
+    const list = (body.recipients ?? []).filter(hasStaffSmsRecipientIdentity);
     setRecipients(list);
     setInbox(body.inbox ?? []);
     setUnknownCallers(body.unknownCallers ?? []);
     if (body.introPreview) setIntroPreview(body.introPreview);
     if (body.knownCallerPreview) setKnownCallerPreview(body.knownCallerPreview);
-    if (!keepCustomer) {
-      const first = list.find((item) => item.canText);
-      if (first) {
-        setCustomerId(first.id);
-        setPhone(first.phone);
-      }
-    }
+    setCustomerId((current) =>
+      list.some((item) => item.id === current) ? current : "",
+    );
   }, [preview]);
 
   useEffect(() => {
     let cancelled = false;
-    void load(false)
+    void load()
       .catch((loadError: unknown) => {
         if (!cancelled) {
           setError(
@@ -205,6 +333,7 @@ export function AdminMessageComposer({
   const filteredRecipients = recipients.filter((item) =>
     matchesStaffRecipientSearch(item, search),
   );
+  const customerSelectValue = selected?.id ?? "";
   const canSendToNumber = isValidSmsPhone(phone) || Boolean(selected?.canText);
   const canSend =
     canSendToNumber &&
@@ -260,6 +389,64 @@ export function AdminMessageComposer({
       setError("Could not send the text.");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function sendCallerText(phone: string, message: string) {
+    const trimmedPhone = phone.trim();
+    const trimmedMessage = message.trim();
+    if (
+      !trimmedPhone ||
+      !trimmedMessage ||
+      trimmedMessage.length > STAFF_SMS_MAX_CHARS ||
+      callerTextSending
+    ) {
+      return false;
+    }
+
+    setCallerTextSending(true);
+    setCallerTextError(null);
+    if (preview) {
+      const caller = unknownCallers.find((item) => item.phone === trimmedPhone);
+      setInbox((current) => [
+        {
+          id: `preview-out-${Date.now()}`,
+          direction: "outbound",
+          customerName: caller?.label || trimmedPhone,
+          petNames: "",
+          phone: trimmedPhone,
+          body: buildStaffCustomerSms(trimmedMessage),
+          mediaUrls: [],
+          createdAt: new Date().toISOString(),
+        },
+        ...current,
+      ]);
+      setCallerTextSending(false);
+      return true;
+    }
+
+    try {
+      const response = await fetch("/api/admin/messages", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: trimmedPhone,
+          message: trimmedMessage,
+        }),
+      });
+      const body = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setCallerTextError(body.error ?? "Could not send the text.");
+        return false;
+      }
+      await load();
+      return true;
+    } catch {
+      setCallerTextError("Could not send the text.");
+      return false;
+    } finally {
+      setCallerTextSending(false);
     }
   }
 
@@ -374,9 +561,10 @@ export function AdminMessageComposer({
         ) : null}
         <RecentCallersList
           callers={unknownCallers}
-          sendingIntro={sendingIntro}
+          sending={callerTextSending}
+          sendError={callerTextError}
           preview={preview}
-          onSendText={(phone) => void sendIntro(phone)}
+          onSendMessage={sendCallerText}
         />
       </section>
 
@@ -409,7 +597,7 @@ export function AdminMessageComposer({
             <div className="mt-1.5 flex flex-col gap-3 sm:flex-row sm:items-center">
               <select
                 id="sms-customer"
-                value={customerId}
+                value={customerSelectValue}
                 onChange={(event) => {
                   const nextId = event.target.value;
                   setCustomerId(nextId);

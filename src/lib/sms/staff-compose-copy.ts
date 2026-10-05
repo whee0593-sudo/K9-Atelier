@@ -92,6 +92,16 @@ export function staffRecipientSortKey(item: StaffSmsRecipient) {
   return formatStaffRecipientLabel(item).toLowerCase();
 }
 
+/**
+ * Deleted or empty files render as "— · — · — · no mobile number".
+ * They have no pet, no name, and no number we can text.
+ */
+export function hasStaffSmsRecipientIdentity(item: StaffSmsRecipient) {
+  if (item.petNames.some((name) => name.trim().length > 0)) return true;
+  if (item.firstName.trim() || item.lastName.trim()) return true;
+  return item.canText;
+}
+
 export function formatStaffRecipientLabel(item: StaffSmsRecipient) {
   const pets = item.petNames.join(", ") || "—";
   const first = item.firstName.trim() || "—";
