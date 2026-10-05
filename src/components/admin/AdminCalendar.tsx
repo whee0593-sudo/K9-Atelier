@@ -11,7 +11,7 @@ import {
   ViewDayDialog,
   type DateMenuAction,
 } from "@/components/admin/CalendarDateActions";
-import { AppointmentActionLinks } from "@/components/admin/AppointmentActionLinks";
+import { AppointmentActionsMenu } from "@/components/admin/AppointmentActionsMenu";
 import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
 import {
   availabilityBlockConflictMessage,
@@ -20,6 +20,7 @@ import {
   type AvailabilityBlock,
   type AvailabilityBlockDraft,
 } from "@/lib/appointments/availability-blocks";
+import { formatMinutesLabel } from "@/lib/appointments/closures";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import type { AdminCalendarDay } from "@/lib/appointments/calendar";
 import {
@@ -43,6 +44,25 @@ function formatLongDate(iso: string) {
     month: "long",
     day: "numeric",
     year: "numeric",
+  });
+}
+
+function applyPreviewAppointments(
+  source: AdminAppointmentRecord[],
+  date: string,
+  cancelledIds: string[],
+  moves: AdminAppointmentRecord[],
+) {
+  const cancelled = new Set(cancelledIds);
+  const movedIds = new Set(moves.map((item) => item.id));
+  const kept = source.filter(
+    (item) => !cancelled.has(item.id) && !movedIds.has(item.id),
+  );
+  const incoming = moves.filter(
+    (item) => item.appointmentDate === date && !cancelled.has(item.id),
+  );
+  return [...kept, ...incoming].sort((left, right) => {
+    return (left.scheduledStart ?? 24 * 60) - (right.scheduledStart ?? 24 * 60);
   });
 }
 
@@ -93,6 +113,14 @@ export function AdminCalendar({
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [appointmentMenu, setAppointmentMenu] = useState<{
+    id: string;
+    variant: "popover" | "sheet";
+    top: number;
+    left: number;
+  } | null>(null);
+  const [previewCancelledIds, setPreviewCancelledIds] = useState<string[]>([]);
+  const [previewMoves, setPreviewMoves] = useState<AdminAppointmentRecord[]>([]);
   const router = useRouter();
 
   const loadMonth = useCallback(async (nextMonth: string) => {
@@ -146,7 +174,12 @@ export function AdminCalendar({
   useEffect(() => {
     if (!selectedDate) return;
     if (preview) {
-      const previewAppointments = buildPreviewCalendarAppointments(selectedDate);
+      const previewAppointments = applyPreviewAppointments(
+        buildPreviewCalendarAppointments(selectedDate),
+        selectedDate,
+        previewCancelledIds,
+        previewMoves,
+      );
       setAppointments(previewAppointments);
       setPaidKinds(buildPreviewPaidKinds(previewAppointments));
       setLoadingDay(false);
@@ -180,19 +213,32 @@ export function AdminCalendar({
     return () => {
       cancelled = true;
     };
-  }, [preview, selectedDate, dayVersion]);
+  }, [preview, previewCancelledIds, previewMoves, selectedDate, dayVersion]);
 
   const visibleDays = useMemo(() => {
     if (!preview) return days;
     return days.map((day) => {
       const blocks = previewBlocks.filter((block) => block.serviceDate === day.date);
+      const source = buildPreviewCalendarAppointments(day.date);
+      const touched =
+        previewCancelledIds.length > 0 ||
+        previewMoves.some((item) => item.appointmentDate === day.date || source.some((row) => row.id === item.id));
+      const appointmentCount = touched
+        ? applyPreviewAppointments(
+            source,
+            day.date,
+            previewCancelledIds,
+            previewMoves,
+          ).length
+        : day.appointmentCount;
       return {
         ...day,
+        appointmentCount,
         blocks,
         availabilityLabel: availabilityBlockLabel(blocks),
       };
     });
-  }, [days, preview, previewBlocks]);
+  }, [days, preview, previewBlocks, previewCancelledIds, previewMoves]);
 
   const dialogBlocks = useMemo(() => {
     if (!dialog) return [];
@@ -201,6 +247,7 @@ export function AdminCalendar({
 
   function openMenu(date: string, anchor?: HTMLButtonElement) {
     if (!anchor) return;
+    setAppointmentMenu(null);
     const mobile = window.matchMedia("(max-width: 767px)").matches;
     if (mobile) {
       setMenu({ date, variant: "sheet", top: 0, left: 0 });
@@ -218,6 +265,61 @@ export function AdminCalendar({
       top = Math.max(12, rect.top - estimatedHeight - 8);
     }
     setMenu({ date, variant: "popover", top, left });
+  }
+
+  function openAppointmentMenu(id: string, anchor: HTMLElement) {
+    setMenu(null);
+    const mobile = window.matchMedia("(max-width: 767px)").matches;
+    if (mobile) {
+      setAppointmentMenu({ id, variant: "sheet", top: 0, left: 0 });
+      return;
+    }
+    const rect = anchor.getBoundingClientRect();
+    const width = 300;
+    const estimatedHeight = 460;
+    let left = rect.left;
+    if (left + width > window.innerWidth - 12) {
+      left = Math.max(12, window.innerWidth - width - 12);
+    }
+    let top = rect.bottom + 8;
+    if (top + estimatedHeight > window.innerHeight - 12) {
+      top = Math.max(12, rect.top - estimatedHeight - 8);
+    }
+    setAppointmentMenu({ id, variant: "popover", top, left });
+  }
+
+  function handleAppointmentChanged(next?: {
+    date: string;
+    slotStartMinutes: number;
+  }) {
+    if (preview && appointmentMenu && next) {
+      const current = appointments.find((item) => item.id === appointmentMenu.id);
+      if (current) {
+        const moved: AdminAppointmentRecord = {
+          ...current,
+          appointmentDate: next.date,
+          scheduledStart: next.slotStartMinutes,
+          appointmentTime: formatMinutesLabel(next.slotStartMinutes),
+        };
+        setPreviewMoves((existing) => [
+          ...existing.filter((item) => item.id !== current.id),
+          moved,
+        ]);
+      }
+    }
+    setAppointmentMenu(null);
+    refreshSelectedDay();
+  }
+
+  function handleAppointmentCancelled() {
+    if (preview && appointmentMenu) {
+      const id = appointmentMenu.id;
+      setPreviewCancelledIds((current) =>
+        current.includes(id) ? current : [...current, id],
+      );
+    }
+    setAppointmentMenu(null);
+    refreshSelectedDay();
   }
 
   function blocksFor(date: string) {
@@ -382,10 +484,12 @@ export function AdminCalendar({
           loading={loadingMonth}
           onPrevMonth={() => {
             setMenu(null);
+            setAppointmentMenu(null);
             setMonth((current) => shiftCalendarMonth(current, -1));
           }}
           onNextMonth={() => {
             setMenu(null);
+            setAppointmentMenu(null);
             setMonth((current) => shiftCalendarMonth(current, 1));
           }}
           onSelectDate={openMenu}
@@ -490,8 +594,39 @@ export function AdminCalendar({
           appointments={selectedDate === dialog.date ? appointments : []}
           blocks={dialogBlocks}
           onClose={() => setDialog(null)}
+          onAppointmentClick={(id, anchor) => {
+            setDialog(null);
+            openAppointmentMenu(id, anchor);
+          }}
+          onBlockClick={() => {
+            setActionError(null);
+            setEditingBlock(null);
+            setDialog({ type: "manage", date: dialog.date });
+          }}
         />
       ) : null}
+
+      {appointmentMenu
+        ? (() => {
+            const appointment = appointments.find(
+              (item) => item.id === appointmentMenu.id,
+            );
+            if (!appointment) return null;
+            return (
+              <AppointmentActionsMenu
+                appointment={appointment}
+                variant={appointmentMenu.variant}
+                top={appointmentMenu.top}
+                left={appointmentMenu.left}
+                preview={preview}
+                paidKinds={paidKinds[appointment.id] ?? []}
+                onClose={() => setAppointmentMenu(null)}
+                onChanged={handleAppointmentChanged}
+                onCancelled={handleAppointmentCancelled}
+              />
+            );
+          })()
+        : null}
 
       <div className="mt-6">
         <h4 className="text-base font-medium text-gold-dark">
@@ -511,8 +646,23 @@ export function AdminCalendar({
             {appointments.map((appointment) => (
               <li
                 key={appointment.id}
-                className="rounded-2xl border border-lavender/30 bg-cream p-6"
+                className="rounded-2xl border border-lavender/30 bg-cream"
               >
+                <div
+                  role="button"
+                  tabIndex={0}
+                  data-appointment-id={appointment.id}
+                  aria-label={`Appointment actions for ${appointment.petName}`}
+                  className="w-full cursor-pointer p-6 text-left"
+                  onClick={(event) =>
+                    openAppointmentMenu(appointment.id, event.currentTarget)
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter" && event.key !== " ") return;
+                    event.preventDefault();
+                    openAppointmentMenu(appointment.id, event.currentTarget);
+                  }}
+                >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="font-medium text-gold-dark">
@@ -569,13 +719,6 @@ export function AdminCalendar({
                     appointment.timezone,
                   )}
                 </p>
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <AppointmentActionLinks
-                    appointment={appointment}
-                    paidKinds={paidKinds[appointment.id] ?? []}
-                    preview={preview}
-                    onChanged={refreshSelectedDay}
-                  />
                 </div>
               </li>
             ))}

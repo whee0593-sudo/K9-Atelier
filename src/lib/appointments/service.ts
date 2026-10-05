@@ -73,7 +73,10 @@ const APPOINTMENT_SELECT = `
 `;
 
 const ADMIN_APPOINTMENT_SELECT = `
-  ${APPOINTMENT_SELECT.trim()},
+  ${APPOINTMENT_SELECT.trim().replace(
+    "pets ( name, breed )",
+    "pets ( name, breed, weight_lbs )",
+  )},
   profiles ( email, first_name, last_name, phone )
 `;
 
@@ -327,8 +330,16 @@ export async function setAppointmentStatus(
   | { ok: true }
   | { error: "unauthenticated" | "forbidden" | "not_found" | "server" }
 > {
-  const { getStaffSession } = await import("@/lib/staff/auth");
-  const session = await getStaffSession();
+  let session: Awaited<
+    ReturnType<typeof import("@/lib/staff/auth").getStaffSession>
+  >;
+  try {
+    const { getStaffSession } = await import("@/lib/staff/auth");
+    session = await getStaffSession();
+  } catch (error) {
+    console.error("setAppointmentStatus auth failed:", error);
+    return { error: "unauthenticated" };
+  }
   if ("error" in session) return { error: session.error };
 
   const appointmentBeforeUpdate = await fetchAppointmentAdminRecord(appointmentId);

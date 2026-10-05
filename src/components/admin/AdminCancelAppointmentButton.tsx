@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import React, { useEffect, useId, useState } from "react";
 import { canStaffCancelAppointment } from "@/lib/appointments/staff-actions";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 
@@ -19,15 +19,31 @@ export function AdminCancelAppointmentButton({
   appointment,
   preview = false,
   onCancelled,
+  label = "Cancel Appointment",
+  confirmTitle = "Cancel this appointment?",
+  triggerClassName = "rounded-xl border border-red-200 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 disabled:opacity-50",
+  showService = false,
+  showReason = false,
+  defaultOpen = false,
+  sheetOnMobile = false,
 }: {
   appointment: AdminAppointmentRecord;
   preview?: boolean;
   onCancelled?: () => void;
+  label?: string;
+  confirmTitle?: string;
+  triggerClassName?: string;
+  showService?: boolean;
+  showReason?: boolean;
+  defaultOpen?: boolean;
+  sheetOnMobile?: boolean;
 }) {
   const titleId = useId();
-  const [open, setOpen] = useState(false);
+  const reasonId = useId();
+  const [open, setOpen] = useState(defaultOpen);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -50,6 +66,7 @@ export function AdminCancelAppointmentButton({
   async function confirmCancel() {
     if (preview) {
       setOpen(false);
+      onCancelled?.();
       return;
     }
 
@@ -90,14 +107,19 @@ export function AdminCancelAppointmentButton({
           setError(null);
           setOpen(true);
         }}
-        className="rounded-xl border border-red-200 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+        data-appointment-action="cancel"
+        className={triggerClassName}
       >
-        Cancel Appointment
+        {label}
       </button>
 
       {open ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+          className={
+            sheetOnMobile
+              ? "fixed inset-0 z-[120] flex items-end justify-center bg-ink/40 p-0 sm:items-center sm:p-4"
+              : "fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+          }
           role="presentation"
           onClick={() => {
             if (!busy) setOpen(false);
@@ -107,14 +129,18 @@ export function AdminCancelAppointmentButton({
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            className="w-full max-w-md rounded-2xl border border-lavender/30 bg-cream p-6 shadow-sm"
+            className={
+              sheetOnMobile
+                ? "w-full max-w-md rounded-t-2xl border border-lavender/30 bg-cream p-6 shadow-sm sm:rounded-2xl"
+                : "w-full max-w-md rounded-2xl border border-lavender/30 bg-cream p-6 shadow-sm"
+            }
             onClick={(event) => event.stopPropagation()}
           >
             <h3
               id={titleId}
               className="text-lg font-medium text-gold-dark"
             >
-              Cancel this appointment?
+              {confirmTitle}
             </h3>
             <dl className="mt-4 space-y-2 text-sm text-text">
               <div>
@@ -125,14 +151,46 @@ export function AdminCancelAppointmentButton({
                 <dt className="text-text-muted">Pet</dt>
                 <dd>{appointment.petName}</dd>
               </div>
-              <div>
-                <dt className="text-text-muted">When</dt>
-                <dd>
-                  {formatConfirmDate(appointment.appointmentDate)} ·{" "}
-                  {appointment.appointmentTime}
-                </dd>
-              </div>
+              {showService ? (
+                <>
+                  <div>
+                    <dt className="text-text-muted">Date</dt>
+                    <dd>{formatConfirmDate(appointment.appointmentDate)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-text-muted">Service</dt>
+                    <dd>{appointment.serviceName}</dd>
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <dt className="text-text-muted">When</dt>
+                  <dd>
+                    {formatConfirmDate(appointment.appointmentDate)} ·{" "}
+                    {appointment.appointmentTime}
+                  </dd>
+                </div>
+              )}
             </dl>
+            {showReason ? (
+              <div className="mt-4">
+                <label
+                  htmlFor={reasonId}
+                  className="block text-sm font-medium text-text"
+                >
+                  Cancellation reason
+                  <span className="font-normal text-text-muted"> (optional)</span>
+                </label>
+                <textarea
+                  id={reasonId}
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                  rows={3}
+                  disabled={busy}
+                  className="mt-1 w-full rounded-xl border border-lavender/40 bg-white px-4 py-2.5 text-sm text-text"
+                />
+              </div>
+            ) : null}
             <p className="mt-4 text-sm leading-relaxed text-text-muted">
               {appointment.status === "confirmed"
                 ? "The customer will receive an email and text that this confirmed appointment has been cancelled."
@@ -148,7 +206,7 @@ export function AdminCancelAppointmentButton({
                 type="button"
                 disabled={busy}
                 onClick={() => void confirmCancel()}
-                className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+                className={`rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100 disabled:opacity-50 ${sheetOnMobile ? "min-h-11" : ""}`}
               >
                 {busy ? "Cancelling…" : "Cancel Appointment"}
               </button>
@@ -156,7 +214,7 @@ export function AdminCancelAppointmentButton({
                 type="button"
                 disabled={busy}
                 onClick={() => setOpen(false)}
-                className="rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium uppercase tracking-[0.08em] text-text transition hover:border-gold/40 disabled:opacity-50"
+                className={`rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium uppercase tracking-[0.08em] text-text transition hover:border-gold/40 disabled:opacity-50 ${sheetOnMobile ? "min-h-11" : ""}`}
               >
                 Keep Appointment
               </button>

@@ -12,6 +12,7 @@ import {
   type AvailabilityBlock,
 } from "@/lib/appointments/availability-blocks";
 import { formatMinutesLabel } from "@/lib/appointments/closures";
+import { appointmentStatusLabel } from "@/lib/appointments/map";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 
 export type DateMenuAction =
@@ -403,18 +404,25 @@ export function ManageAvailabilityDialog({
   );
 }
 
+const dayRowClass =
+  "block min-h-11 w-full rounded-xl px-2 py-2 text-left hover:bg-lavender-light";
+
 export function ViewDayDialog({
   date,
   loading,
   appointments,
   blocks,
   onClose,
+  onAppointmentClick,
+  onBlockClick,
 }: {
   date: string;
   loading: boolean;
   appointments: AdminAppointmentRecord[];
   blocks: AvailabilityBlock[];
   onClose: () => void;
+  onAppointmentClick?: (id: string, anchor: HTMLButtonElement) => void;
+  onBlockClick?: (id: string) => void;
 }) {
   const titleId = useId();
   const timeline = buildDayTimeline({ appointments, blocks });
@@ -425,13 +433,53 @@ export function ViewDayDialog({
       ) : timeline.length === 0 ? (
         <p className="mt-4 text-sm text-text-muted">Nothing scheduled on this day.</p>
       ) : (
-        <ol className="mt-4 space-y-4">
-          {timeline.map((entry) => (
-            <li key={`${entry.kind}-${entry.id}`}>
-              <p className="text-sm font-medium text-gold-dark">{entry.timeLabel}</p>
-              <p className="mt-1 text-sm text-text">{entry.title}</p>
-            </li>
-          ))}
+        <ol className="mt-4 space-y-2">
+          {timeline.map((entry) => {
+            if (entry.kind === "block") {
+              return (
+                <li key={`${entry.kind}-${entry.id}`}>
+                  <button
+                    type="button"
+                    data-day-entry="block"
+                    className={dayRowClass}
+                    onClick={() => onBlockClick?.(entry.id)}
+                  >
+                    <p className="text-sm font-medium text-gold-dark">{entry.timeLabel}</p>
+                    <p className="mt-1 text-sm text-text">{entry.title}</p>
+                  </button>
+                </li>
+              );
+            }
+            const appointment = appointments.find((item) => item.id === entry.id);
+            return (
+              <li key={`${entry.kind}-${entry.id}`}>
+                <button
+                  type="button"
+                  data-day-entry="appointment"
+                  className={dayRowClass}
+                  onClick={(event) =>
+                    onAppointmentClick?.(entry.id, event.currentTarget)
+                  }
+                >
+                  <p className="text-sm font-medium text-gold-dark">{entry.timeLabel}</p>
+                  <p className="mt-1 text-sm text-text">
+                    {appointment?.petName ?? entry.title}
+                  </p>
+                  {appointment ? (
+                    <>
+                      <p className="text-sm text-text">{appointment.serviceName}</p>
+                      <p className="text-sm text-text-muted">
+                        {appointmentStatusLabel(
+                          appointment.status,
+                          appointment.awaitingCustomerConfirm,
+                        )}
+                      </p>
+                    </>
+                  ) : null}
+                </button>
+              </li>
+            );
+          })}
         </ol>
       )}
       <button

@@ -9,6 +9,8 @@ type Props = {
   label?: string;
   disabled?: boolean;
   preview?: boolean;
+  className?: string;
+  fullWidth?: boolean;
 };
 
 export function CallCustomerButton({
@@ -18,6 +20,8 @@ export function CallCustomerButton({
   label = "Call customer",
   disabled = false,
   preview = false,
+  className,
+  fullWidth = false,
 }: Props) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -50,12 +54,19 @@ export function CallCustomerButton({
   }
 
   return (
-    <span className="inline-flex flex-col items-start gap-1">
+    <span
+      className={`inline-flex flex-col gap-1 ${fullWidth ? "w-full items-stretch" : "items-start"}`}
+    >
       <button
         type="button"
         disabled={disabled || busy || (!appointmentId && !customerId && !phone)}
         onClick={() => void startCall()}
-        className="rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text transition hover:border-gold/40 disabled:opacity-50"
+        className={[
+          "rounded-xl border border-lavender/40 px-4 py-2 text-left text-sm font-medium text-text transition hover:border-gold/40 disabled:opacity-50",
+          className,
+        ]
+          .filter(Boolean)
+          .join(" ")}
       >
         {busy ? "Calling…" : label}
       </button>

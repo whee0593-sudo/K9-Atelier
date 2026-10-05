@@ -160,7 +160,12 @@ describe("Calendar date actions", () => {
     );
     assert.match(day, /October 12/);
     assert.match(day, /9:00 AM/);
-    assert.match(day, /Bella — Full Groom/);
+    assert.match(day, /Bella/);
+    assert.match(day, /Full Groom/);
+    assert.match(day, /Confirmed/);
+    assert.match(day, /data-day-entry="appointment"/);
     assert.match(day, /Blocked · Personal/);
+    assert.match(day, /data-day-entry="block"/);
+    assert.match(day, /min-h-11/);
   });
 });

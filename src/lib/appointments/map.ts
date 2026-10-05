@@ -79,6 +79,7 @@ export function mapAppointmentRowToAdminRecord(
   row: AppointmentRow,
 ): AdminAppointmentRecord {
   const profile = firstRelation(row.profiles);
+  const pet = firstRelation(row.pets);
   const nameParts = [profile?.first_name, profile?.last_name].filter(Boolean);
 
   return {
@@ -88,6 +89,8 @@ export function mapAppointmentRowToAdminRecord(
     customerFirstName: profile?.first_name ?? null,
     customerLastName: profile?.last_name ?? null,
     customerPhone: profile?.phone ?? null,
+    petWeightLbs:
+      typeof pet?.weight_lbs === "number" ? pet.weight_lbs : null,
     reminderSmsSentAt: row.reminder_sms_sent_at ?? null,
     enRouteSmsSentAt: row.en_route_sms_sent_at ?? null,
     serviceStartedAt: row.service_started_at ?? null,

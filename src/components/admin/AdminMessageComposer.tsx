@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useId, useState } from "react";
+import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { CallCustomerButton } from "@/components/admin/CallCustomerButton";
 import {
   STAFF_SMS_MAX_CHARS,
@@ -248,8 +248,12 @@ export function RecentCallersList({
 
 export function AdminMessageComposer({
   preview = false,
+  initialCustomerId = "",
+  initialPhone = "",
 }: {
   preview?: boolean;
+  initialCustomerId?: string;
+  initialPhone?: string;
 }) {
   const [recipients, setRecipients] = useState<StaffSmsRecipient[]>([]);
   const [inbox, setInbox] = useState<StaffSmsInboxItem[]>([]);
@@ -257,9 +261,10 @@ export function AdminMessageComposer({
   const [introPreview, setIntroPreview] = useState("");
   const [knownCallerPreview, setKnownCallerPreview] = useState("");
   const [introPhone, setIntroPhone] = useState("");
-  const [customerId, setCustomerId] = useState("");
+  const [customerId, setCustomerId] = useState(initialCustomerId);
   const [search, setSearch] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(initialPhone);
+  const appliedContact = useRef(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -328,6 +333,24 @@ export function AdminMessageComposer({
       cancelled = true;
     };
   }, [load]);
+
+  useEffect(() => {
+    if (appliedContact.current || recipients.length === 0) return;
+    if (!initialCustomerId && !initialPhone) {
+      appliedContact.current = true;
+      return;
+    }
+    const match = initialCustomerId
+      ? recipients.find((item) => item.id === initialCustomerId)
+      : undefined;
+    if (match) {
+      setCustomerId(match.id);
+      setPhone((current) => current || match.phone || initialPhone);
+    } else if (initialPhone) {
+      setPhone((current) => current || initialPhone);
+    }
+    appliedContact.current = true;
+  }, [initialCustomerId, initialPhone, recipients]);
 
   const selected = recipients.find((item) => item.id === customerId);
   const filteredRecipients = recipients.filter((item) =>

@@ -92,10 +92,15 @@ function firstRelation<T>(value: T | T[] | null | undefined): T | null {
 async function requireStaffSession(): Promise<
   { ok: true } | { error: "unauthenticated" | "forbidden" }
 > {
-  const { getStaffSession } = await import("@/lib/staff/auth");
-  const session = await getStaffSession();
-  if ("error" in session) return { error: session.error };
-  return { ok: true };
+  try {
+    const { getStaffSession } = await import("@/lib/staff/auth");
+    const session = await getStaffSession();
+    if ("error" in session) return { error: session.error };
+    return { ok: true };
+  } catch (error) {
+    console.error("staff reschedule auth failed:", error);
+    return { error: "unauthenticated" };
+  }
 }
 
 async function loadAppointmentRow(
