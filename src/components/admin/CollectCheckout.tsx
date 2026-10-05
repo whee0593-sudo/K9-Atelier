@@ -28,6 +28,7 @@ import { ChargeReceiptActions } from "@/components/admin/ChargeReceiptActions";
 import { ChargeReceiptLetter } from "@/components/admin/ChargeReceiptLetter";
 import { ChargeRefundForm } from "@/components/admin/ChargeRefundForm";
 import { collectBillHeading } from "@/lib/charges/receipt-view";
+import { manualCardWallets } from "@/lib/payments/card-wallets";
 import {
   buildCollectChargePaymentFields,
   collectReceiptPaymentLabel,
@@ -1353,7 +1354,7 @@ function ConfirmNewCard({
     <div className="space-y-4">
       <PaymentElement
         options={{
-          wallets: { applePay: "never", googlePay: "never", link: "never" },
+          wallets: manualCardWallets,
         }}
       />
       <button
