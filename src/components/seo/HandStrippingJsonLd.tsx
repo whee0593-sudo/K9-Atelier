@@ -1,5 +1,5 @@
 import React from "react";
-import { getBrandSearchName, getBrandWebsiteUrl, getCommunitiesServed } from "@/lib/business";
+import { getBrandSearchName, getBrandWebsiteUrl } from "@/lib/business";
 import {
   HAND_STRIPPING_PAGE_DESCRIPTION,
   HAND_STRIPPING_PATH,
@@ -7,12 +7,23 @@ import {
   absoluteSiteUrl,
 } from "@/lib/service-page";
 
+export const HAND_STRIPPING_SERVICE_TYPE = "Mobile Hand Stripping";
+
+export const HAND_STRIPPING_AREA_SERVED = [
+  "Jupiter Island",
+  "Jupiter",
+  "Tequesta",
+  "Palm Beach Gardens",
+  "Palm Beach",
+  "West Palm Beach",
+] as const;
+
 function businessEntityId() {
   return `${getBrandWebsiteUrl().replace(/\/$/, "")}/#business`;
 }
 
 function areaServed() {
-  return getCommunitiesServed().map((name) => ({
+  return HAND_STRIPPING_AREA_SERVED.map((name) => ({
     "@type": "City",
     name,
     containedInPlace: {
@@ -56,6 +67,7 @@ export function HandStrippingJsonLd() {
         "@type": "Service",
         "@id": `${url}#service`,
         name: "Hand Stripping",
+        serviceType: HAND_STRIPPING_SERVICE_TYPE,
         url,
         description: HAND_STRIPPING_PAGE_DESCRIPTION,
         provider: {
