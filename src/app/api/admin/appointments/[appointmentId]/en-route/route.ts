@@ -16,7 +16,7 @@ export async function POST(_request: Request, context: RouteContext) {
     if ("error" in result) {
       if (result.error === "conflict") {
         return staffJsonError(
-          "This appointment cannot receive an on-the-way text yet. Confirm it first, and make sure a mobile number is on file.",
+          "This on-the-way text cannot be sent. Add a mobile number on file, or it was already sent.",
           409,
         );
       }

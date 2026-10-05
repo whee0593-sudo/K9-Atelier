@@ -6,6 +6,7 @@ import { AdminCalendar } from "@/components/admin/AdminCalendar";
 import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
 import { AppointmentActionLinks } from "@/components/admin/AppointmentActionLinks";
 import { formatStaffVisitTiming } from "@/lib/charges/hourly";
+import { appointmentStatusLabel } from "@/lib/appointments/map";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import type { ChargeKind } from "@/lib/charges/types";
 import { formatServiceAddress } from "@/lib/travel";
@@ -39,13 +40,16 @@ function formatShortDate(iso: string): string {
 
 export function AppointmentReviewPanel({
   preview = false,
+  previewToday = [],
 }: {
   /** Skip the staff API and show the calendar shell. Used by tests. */
   preview?: boolean;
+  /** Sample rows for the drive list when `preview` skips the staff API. */
+  previewToday?: AdminAppointmentRecord[];
 } = {}) {
   const [todayAppointments, setTodayAppointments] = useState<
     AdminAppointmentRecord[]
-  >([]);
+  >(previewToday);
   const [schedule, setSchedule] = useState<ScheduleDay[]>([]);
   const [zones, setZones] = useState<ZoneOption[]>([]);
   const [paidKinds, setPaidKinds] = useState<Record<string, ChargeKind[]>>({});
@@ -378,7 +382,7 @@ export function AppointmentReviewPanel({
         {todayAppointments.length === 0 ? (
           <div className="mt-4 rounded-2xl border border-lavender/30 bg-cream p-8 text-center">
             <p className="text-sm text-text-muted">
-              No confirmed appointments on today&apos;s calendar.
+              No appointments on today&apos;s calendar.
             </p>
           </div>
         ) : (
@@ -424,6 +428,12 @@ export function AppointmentReviewPanel({
                       />
                       <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
                         Stop {index + 1} · {appointment.appointmentTime}
+                      </span>
+                      <span className="text-xs font-medium text-gold-dark">
+                        {appointmentStatusLabel(
+                          appointment.status,
+                          appointment.awaitingCustomerConfirm,
+                        )}
                       </span>
                     </div>
                   </div>

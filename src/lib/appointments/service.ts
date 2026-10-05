@@ -3,6 +3,7 @@ import {
   mapAppointmentRowToAdminRecord,
   mapAppointmentRowToRecord,
 } from "@/lib/appointments/map";
+import { isOperationalAdminAppointment } from "@/lib/appointments/operational-visibility";
 import type {
   AdminAppointmentRecord,
   AppointmentRecord,
@@ -335,7 +336,7 @@ export async function setAppointmentStatus(
   return { ok: true };
 }
 
-export async function listTodayConfirmedAdminAppointments(): Promise<
+export async function listTodayAdminAppointments(): Promise<
   | { appointments: AdminAppointmentRecord[] }
   | { error: "unauthenticated" | "forbidden" | "server" }
 > {
@@ -348,14 +349,14 @@ export async function listTodayConfirmedAdminAppointments(): Promise<
   const { data, error } = await supabase
     .from("appointments")
     .select(ADMIN_TODAY_APPOINTMENT_SELECT)
-    .eq("status", "confirmed")
+    .neq("status", "cancelled")
     .eq("appointment_date", todayInBusinessTimezone())
     .order("scheduled_start", { ascending: true })
     .order("appointment_time", { ascending: true });
 
   if (error) {
     console.error(
-      "listTodayConfirmedAdminAppointments failed:",
+      "listTodayAdminAppointments failed:",
       error.code,
       error.message,
     );
@@ -363,9 +364,11 @@ export async function listTodayConfirmedAdminAppointments(): Promise<
   }
 
   return {
-    appointments: ((data ?? []) as unknown as AppointmentRow[]).map(
-      mapAppointmentRowToAdminRecord,
-    ),
+    appointments: ((data ?? []) as unknown as AppointmentRow[])
+      .map(mapAppointmentRowToAdminRecord)
+      .filter((appointment) =>
+        isOperationalAdminAppointment(appointment.status),
+      ),
   };
 }
 
@@ -423,7 +426,7 @@ export async function sendAppointmentEnRouteNotification(
   if (!isSmsConfigured()) return { error: "misconfigured" };
 
   const appointment = await fetchAppointmentAdminRecord(appointmentId);
-  if (!appointment || appointment.status !== "confirmed") {
+  if (!appointment || !isOperationalAdminAppointment(appointment.status)) {
     return { error: "not_found" };
   }
 
