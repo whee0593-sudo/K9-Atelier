@@ -23,6 +23,7 @@ import {
   getServicePriceEstimate,
   allBookableServices,
 } from "@/lib/services";
+import { keepPrimaryIfReferralFails } from "@/lib/referrals/allocate-code";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import { getStaffSession } from "@/lib/staff/auth";
@@ -566,16 +567,14 @@ export async function createStaffCustomerBooking(
       if ("error" in savedPet) return savedPet;
       const petRow = savedPet.pet;
 
-      try {
+      await keepPrimaryIfReferralFails(petRow, async () => {
         const { ensurePetReferralCode } = await import("@/lib/referrals/service");
         await ensurePetReferralCode({
           petId: petRow.id as string,
           petName: pet.name,
           ownerCustomerId: userId,
         });
-      } catch (error) {
-        console.error("createStaffCustomerBooking referral code failed:", error);
-      }
+      });
 
       const durationMinutes = estimateServiceDurationMinutes(
         serviceId,

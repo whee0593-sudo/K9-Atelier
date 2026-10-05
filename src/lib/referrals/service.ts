@@ -15,10 +15,11 @@ import {
   requireReleaseReason,
 } from "@/lib/referrals/reservation";
 import {
-  buildReferralCodeBase,
-  nextReferralCodeCandidate,
-  normalizeReferralCode,
-} from "@/lib/referrals/codes";
+  describeReferralWriteError,
+  ensurePetReferralCodeFromStore,
+  toReferralWriteError,
+} from "@/lib/referrals/allocate-code";
+import { normalizeReferralCode } from "@/lib/referrals/codes";
 import {
   NEW_CLIENT_DISCOUNT_BPS,
   centsToDollars,
@@ -62,57 +63,78 @@ export async function ensurePetReferralCode(input: {
 }) {
   if (!hasSupabaseAdminConfig()) return null;
   const admin = createAdminClient();
-  const { data: existing } = await admin
-    .from("pet_referral_codes")
-    .select("id, referral_code")
-    .eq("pet_id", input.petId)
-    .maybeSingle();
-  if (existing?.referral_code) return existing.referral_code as string;
-
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("first_name, last_name")
-    .eq("id", input.ownerCustomerId)
-    .maybeSingle();
-
-  const base = buildReferralCodeBase({
-    petName: input.petName,
-    ownerFirstName: profile?.first_name ?? "",
-    ownerLastName: profile?.last_name ?? "",
-  });
-
-  for (let attempt = 1; attempt <= 40; attempt += 1) {
-    const code = nextReferralCodeCandidate(base, attempt);
-    const { error } = await admin.from("pet_referral_codes").insert({
-      pet_id: input.petId,
-      owner_customer_id: input.ownerCustomerId,
-      referral_code: code,
-      referral_code_normalized: normalizeReferralCode(code),
-      is_active: true,
-    });
-    if (!error) return code;
-    if (error.code !== "23505") {
-      console.error("ensurePetReferralCode failed:", error.message);
-      return null;
-    }
-  }
-  return null;
+  return ensurePetReferralCodeFromStore(
+    {
+      async findByPetId(petId) {
+        const { data, error } = await admin
+          .from("pet_referral_codes")
+          .select("referral_code")
+          .eq("pet_id", petId)
+          .maybeSingle();
+        if (error) {
+          console.error(
+            "ensurePetReferralCode lookup failed:",
+            describeReferralWriteError(toReferralWriteError(error)),
+          );
+          return null;
+        }
+        return data?.referral_code
+          ? { referral_code: data.referral_code as string }
+          : null;
+      },
+      async findOwnerName(ownerCustomerId) {
+        const { data, error } = await admin
+          .from("profiles")
+          .select("first_name, last_name")
+          .eq("id", ownerCustomerId)
+          .maybeSingle();
+        if (error) {
+          console.error(
+            "ensurePetReferralCode profile lookup failed:",
+            describeReferralWriteError(toReferralWriteError(error)),
+          );
+          return null;
+        }
+        return data;
+      },
+      async insert(row) {
+        const { error } = await admin.from("pet_referral_codes").insert(row);
+        if (!error) return { ok: true };
+        return { ok: false, error: toReferralWriteError(error) };
+      },
+    },
+    input,
+  );
 }
 
 export async function ensureCustomerReferralCodes(customerId: string) {
   if (!hasSupabaseAdminConfig()) return;
   const admin = createAdminClient();
-  const { data: pets } = await admin
+  const { data: pets, error } = await admin
     .from("pets")
     .select("id, name")
     .eq("customer_id", customerId)
     .is("archived_at", null);
+  if (error) {
+    console.error(
+      "ensureCustomerReferralCodes failed:",
+      describeReferralWriteError(toReferralWriteError(error)),
+    );
+    return;
+  }
   for (const pet of pets ?? []) {
-    await ensurePetReferralCode({
-      petId: pet.id as string,
-      petName: String(pet.name ?? ""),
-      ownerCustomerId: customerId,
-    });
+    try {
+      await ensurePetReferralCode({
+        petId: pet.id as string,
+        petName: String(pet.name ?? ""),
+        ownerCustomerId: customerId,
+      });
+    } catch (referralError) {
+      console.error(
+        "ensureCustomerReferralCodes pet failed:",
+        describeReferralWriteError(toReferralWriteError(referralError)),
+      );
+    }
   }
 }
 
