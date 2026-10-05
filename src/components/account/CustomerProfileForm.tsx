@@ -74,6 +74,7 @@ export function CustomerProfileForm({
   emailReadOnly,
   saveUrl,
   onSaved,
+  onCancel,
   audience = "customer",
   preview = false,
 }: {
@@ -81,6 +82,7 @@ export function CustomerProfileForm({
   emailReadOnly?: boolean;
   saveUrl: string;
   onSaved?: (profile: CustomerProfile) => void;
+  onCancel?: () => void;
   audience?: "customer" | "staff";
   preview?: boolean;
 }) {
@@ -330,7 +332,7 @@ export function CustomerProfileForm({
           {error ?? incompleteMessage}
         </p>
       ) : null}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           type="submit"
           disabled={saving}
@@ -338,6 +340,16 @@ export function CustomerProfileForm({
         >
           {saving ? "Saving…" : "Save Profile"}
         </button>
+        {onCancel ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={saving}
+            className="rounded-xl border border-lavender px-4 py-2 text-sm text-text-muted disabled:opacity-60"
+          >
+            Cancel
+          </button>
+        ) : null}
         {saved && <span className="text-xs text-text-muted">Saved</span>}
       </div>
     </form>

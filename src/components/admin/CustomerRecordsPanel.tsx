@@ -37,6 +37,57 @@ function customerLabel(profile: CustomerProfile) {
   return name || profile.email;
 }
 
+function ownerProfileSummary(profile: CustomerProfile) {
+  const parts = [customerLabel(profile)];
+  if (profile.phone.trim()) parts.push(profile.phone.trim());
+  if (profile.preferredContact.trim()) parts.push(profile.preferredContact.trim());
+  return parts.join(" · ");
+}
+
+function profileDetailValue(value: string) {
+  const text = value.trim();
+  return text || "—";
+}
+
+function OwnerProfileDetails({ profile }: { profile: CustomerProfile }) {
+  const rows: Array<{ label: string; value: string; wide?: boolean }> = [
+    { label: "Email", value: profileDetailValue(profile.email) },
+    { label: "First Name", value: profileDetailValue(profile.firstName) },
+    { label: "Last Name", value: profileDetailValue(profile.lastName) },
+    { label: "Mobile Phone", value: profileDetailValue(profile.phone) },
+    {
+      label: "Preferred Contact Method",
+      value: profileDetailValue(profile.preferredContact),
+    },
+    {
+      label: "Emergency Contact Name",
+      value: profileDetailValue(profile.emergencyContactName),
+      wide: true,
+    },
+    {
+      label: "Emergency Contact Phone",
+      value: profileDetailValue(profile.emergencyContactPhone),
+    },
+    {
+      label: "Relationship",
+      value: profileDetailValue(profile.emergencyContactRelationship),
+    },
+  ];
+
+  return (
+    <dl className="grid gap-4 border-t border-lavender/30 px-4 py-4 sm:grid-cols-2">
+      {rows.map((row) => (
+        <div key={row.label} className={row.wide ? "sm:col-span-2" : undefined}>
+          <dt className="text-[10px] font-medium uppercase tracking-[0.14em] text-text-muted">
+            {row.label}
+          </dt>
+          <dd className="mt-1 whitespace-pre-wrap text-sm text-text">{row.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 function bookForCustomerHref(profile: CustomerProfile) {
   const params = new URLSearchParams();
   if (profile.id) params.set("customerId", profile.id);
@@ -746,6 +797,8 @@ export function CustomerRecordCard({
   const [busyAction, setBusyAction] = useState<"delete" | "freeze" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [profile, setProfile] = useState(customer.profile);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileEditing, setProfileEditing] = useState(false);
 
   useEffect(() => {
     setProfile(customer.profile);
@@ -918,17 +971,53 @@ export function CustomerRecordCard({
                 {renderOwnerActions()}
               </div>
             </div>
-            <div className="mt-4">
-              <CustomerProfileForm
-                profile={profile}
-                saveUrl={`/api/admin/customers/${profile.id}`}
-                onSaved={(next) => {
-                  setProfile(next);
-                  onProfileSaved(next);
-                }}
-                audience="staff"
-                preview={preview}
-              />
+            <div className="mt-4 rounded-xl border border-lavender/30">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (profileEditing) return;
+                    setProfileOpen((current) => !current);
+                  }}
+                  aria-expanded={profileOpen || profileEditing}
+                  aria-label={
+                    profileOpen || profileEditing
+                      ? `Close ${customerLabel(profile)} profile`
+                      : `Open ${customerLabel(profile)} profile`
+                  }
+                  className="min-w-0 flex-1 px-4 py-3 text-left text-sm text-text"
+                >
+                  <span className="font-medium">{ownerProfileSummary(profile)}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfileOpen(true);
+                    setProfileEditing(true);
+                  }}
+                  className="mr-3 shrink-0 rounded-xl border border-lavender/40 px-3 py-1.5 text-sm text-text-muted hover:border-gold/40 hover:text-text"
+                >
+                  Edit
+                </button>
+              </div>
+              {profileEditing ? (
+                <div className="border-t border-lavender/30 px-4 py-4">
+                  <CustomerProfileForm
+                    profile={profile}
+                    saveUrl={`/api/admin/customers/${profile.id}`}
+                    onSaved={(next) => {
+                      setProfile(next);
+                      onProfileSaved(next);
+                      setProfileEditing(false);
+                    }}
+                    onCancel={() => setProfileEditing(false)}
+                    audience="staff"
+                    preview={preview}
+                  />
+                </div>
+              ) : profileOpen ? (
+                <OwnerProfileDetails profile={profile} />
+              ) : null}
             </div>
           </section>
           <StaffCustomerPayments
