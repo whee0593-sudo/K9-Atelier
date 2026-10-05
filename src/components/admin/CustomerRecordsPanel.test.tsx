@@ -349,6 +349,23 @@ describe("CustomerRecordCard actions", () => {
     assert.doesNotMatch(html, /Save Pet/);
     assert.match(html, /\+ Add a pet/);
   });
+
+  it("keeps the owner profile collapsed until the bar or Edit is used", () => {
+    const html = renderToStaticMarkup(
+      <CustomerRecordCard
+        customer={sampleCustomer()}
+        startOpen
+        preview
+        {...cardHandlers}
+      />,
+    );
+    assert.match(html, /Ada Lovelace · \+15615550123 · Text Message/);
+    assert.match(html, /Open Ada Lovelace profile/);
+    assert.match(html, /aria-expanded="false"/);
+    assert.match(html, />Edit</);
+    assert.doesNotMatch(html, /Save Profile/);
+    assert.doesNotMatch(html, /Emergency Contact Name/);
+  });
 });
 
 describe("latestPetServiceLabel", () => {
