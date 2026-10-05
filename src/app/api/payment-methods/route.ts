@@ -48,7 +48,10 @@ export async function POST(request: Request) {
       );
     }
     if (result.error === "conflict") {
-      return staffJsonError("This card could not be verified. Please try another card.", 409);
+      return staffJsonError(
+        result.message ?? "This card could not be verified. Please try another card.",
+        409,
+      );
     }
     return mapStaffServiceError("server");
   }

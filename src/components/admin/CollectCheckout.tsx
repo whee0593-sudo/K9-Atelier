@@ -32,6 +32,7 @@ import {
   buildCollectChargePaymentFields,
   collectReceiptPaymentLabel,
 } from "@/lib/charges/tender";
+import { isCardExpired } from "@/lib/payments/card-on-file";
 import { shouldShowCollectReferralCode } from "@/lib/referrals/collect-code";
 import type { ChargeTender } from "@/lib/charges/types";
 import type {
@@ -783,20 +784,25 @@ export function CollectCheckout({
                   This guest has no card on file.
                 </p>
               ) : (
-                methods.map((method) => (
-                  <label
-                    key={method.id}
-                    className="flex items-center gap-3 rounded-2xl border border-lavender/40 bg-cream px-4 py-3 text-sm"
-                  >
-                    <input
-                      type="radio"
-                      name="no-show-card"
-                      checked={selectedMethodId === method.id}
-                      onChange={() => setSelectedMethodId(method.id)}
-                    />
-                    {formatPaymentMethodLabel(method)}
-                  </label>
-                ))
+                methods.map((method) => {
+                  const expired = isCardExpired(method.expMonth, method.expYear);
+                  return (
+                    <label
+                      key={method.id}
+                      className="flex items-center gap-3 rounded-2xl border border-lavender/40 bg-cream px-4 py-3 text-sm"
+                    >
+                      <input
+                        type="radio"
+                        name="no-show-card"
+                        checked={selectedMethodId === method.id}
+                        disabled={expired}
+                        onChange={() => setSelectedMethodId(method.id)}
+                      />
+                      {formatPaymentMethodLabel(method)}
+                      {expired ? " · Expired" : ""}
+                    </label>
+                  );
+                })
               )}
             </div>
           ) : null}
@@ -1200,20 +1206,25 @@ function PayStep({
         Choose a saved card, a different card, or cash.
       </p>
       <div className="mt-3 space-y-2">
-        {methods.map((method) => (
-          <label
-            key={method.id}
-            className="flex items-center gap-3 rounded-2xl border border-lavender/40 bg-cream px-4 py-3 text-sm"
-          >
-            <input
-              type="radio"
-              name="collect-card"
-              checked={!useNewCard && !useCash && selectedMethodId === method.id}
-              onChange={() => onSelectMethod(method.id)}
-            />
-            {formatPaymentMethodLabel(method)}
-          </label>
-        ))}
+        {methods.map((method) => {
+          const expired = isCardExpired(method.expMonth, method.expYear);
+          return (
+            <label
+              key={method.id}
+              className="flex items-center gap-3 rounded-2xl border border-lavender/40 bg-cream px-4 py-3 text-sm"
+            >
+              <input
+                type="radio"
+                name="collect-card"
+                checked={!useNewCard && !useCash && selectedMethodId === method.id}
+                disabled={expired}
+                onChange={() => onSelectMethod(method.id)}
+              />
+              {formatPaymentMethodLabel(method)}
+              {expired ? " · Expired" : ""}
+            </label>
+          );
+        })}
         <label className="flex items-center gap-3 rounded-2xl border border-lavender/40 bg-cream px-4 py-3 text-sm">
           <input
             type="radio"

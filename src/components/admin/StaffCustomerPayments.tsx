@@ -1,7 +1,7 @@
 "use client";
 
 import { Elements } from "@stripe/react-stripe-js";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AddCardForm,
   stripePromiseFor,
@@ -11,6 +11,11 @@ import {
   deleteStaffCustomerPaymentMethod,
   saveStaffPaymentSetupIntent,
 } from "@/lib/payments/client";
+import {
+  isCardExpired,
+  readSucceededSetupIntentId,
+  withoutSetupIntentRedirect,
+} from "@/lib/payments/card-on-file";
 import {
   formatPaymentMethodLabel,
   type PaymentMethodRecord,
@@ -41,6 +46,44 @@ export function StaffCustomerPayments({
     () => (setup ? stripePromiseFor(setup.publishableKey) : null),
     [setup],
   );
+  const methodsRef = useRef(methods);
+  const onChangeRef = useRef(onChange);
+  methodsRef.current = methods;
+  onChangeRef.current = onChange;
+
+  useEffect(() => {
+    if (preview) return;
+    const setupIntentId = readSucceededSetupIntentId(window.location.search);
+    if (!setupIntentId) return;
+    let cancelled = false;
+    saveStaffPaymentSetupIntent(customerId, setupIntentId)
+      .then((method) => {
+        if (cancelled) return;
+        const current = methodsRef.current;
+        onChangeRef.current(
+          current.some((item) => item.id === method.id)
+            ? current.map((item) => (item.id === method.id ? method : item))
+            : [...current, method],
+        );
+        window.history.replaceState(
+          null,
+          "",
+          withoutSetupIntentRedirect(window.location.href),
+        );
+      })
+      .catch((saveError) => {
+        if (!cancelled) {
+          setError(
+            saveError instanceof Error
+              ? saveError.message
+              : "This card could not be saved.",
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [customerId, preview]);
 
   async function startAddCard() {
     setAdding(true);
@@ -118,6 +161,9 @@ export function StaffCustomerPayments({
                 {method.isDefault ? (
                   <p className="mt-1 text-xs text-text-muted">Default</p>
                 ) : null}
+                {isCardExpired(method.expMonth, method.expYear) ? (
+                  <p className="mt-1 text-xs text-red-800">Expired</p>
+                ) : null}
               </div>
               <button
                 type="button"
@@ -143,7 +189,9 @@ export function StaffCustomerPayments({
           >
             <AddCardForm
               clientSecret={setup.clientSecret}
-              returnUrl={`${typeof window === "undefined" ? "" : window.location.origin}/admin/pets`}
+              returnUrl={
+                typeof window === "undefined" ? undefined : window.location.href
+              }
               saveSetupIntent={(setupIntentId) =>
                 saveStaffPaymentSetupIntent(customerId, setupIntentId)
               }
