@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   applyBlocksToSlots,
@@ -6,6 +7,7 @@ import {
   availabilityBlockConflictMessage,
   availabilityBlockLabel,
   buildDayTimeline,
+  formatMonthDayYear,
   listBlockTimeOptions,
   normalizeAvailabilityBlockInput,
   staffAvailabilityAccessStatus,
@@ -195,6 +197,54 @@ describe("day timeline", () => {
       ["Bella — Full Groom", "Blocked · Personal", "Milo — Bath & Coat Care"],
     );
     assert.equal(timeline[1]?.timeLabel, "12:00 PM – 2:00 PM");
+  });
+
+  it("keeps an all-day block beside existing appointments", () => {
+    const timeline = buildDayTimeline({
+      appointments: [
+        {
+          id: "bella",
+          petName: "Bella",
+          serviceName: "Full Groom",
+          scheduledStart: 9 * 60,
+          appointmentTime: "9:00–10:30 AM",
+        },
+      ],
+      blocks: [
+        block({
+          id: "day",
+          allDay: true,
+          startMinutes: null,
+          endMinutes: null,
+        }),
+      ],
+    });
+    assert.equal(timeline[0]?.timeLabel, "Unavailable — All Day");
+    assert.equal(timeline[0]?.title, "");
+    assert.equal(timeline[1]?.title, "Bella — Full Groom");
+    assert.equal(formatMonthDayYear("2026-10-20"), "October 20, 2026");
+  });
+});
+
+describe("all-day blocks do not rewrite appointments", () => {
+  it("stores a block without reading or updating the appointments table", () => {
+    const store = readFileSync(
+      new URL("./availability-block-store.ts", import.meta.url),
+      "utf8",
+    );
+    assert.match(store, /from\("admin_availability_blocks"\)/);
+    assert.doesNotMatch(store, /from\("appointments"\)/);
+    assert.doesNotMatch(store, /staff_set_appointment_status/);
+    assert.equal(
+      availabilityBlockConflictMessage([], {
+        serviceDate: "2026-10-20",
+        allDay: true,
+        startMinutes: null,
+        endMinutes: null,
+        reason: null,
+      }),
+      null,
+    );
   });
 });
 

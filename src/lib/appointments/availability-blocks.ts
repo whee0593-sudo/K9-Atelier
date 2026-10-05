@@ -240,6 +240,14 @@ export function formatMonthDay(iso: string) {
   });
 }
 
+export function formatMonthDayYear(iso: string) {
+  return parseDateValue(iso).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export type DayTimelineEntry = {
   kind: "appointment" | "block";
   at: number;
@@ -298,7 +306,11 @@ export function buildDayTimeline(input: {
     at: block.allDay ? -1 : (block.startMinutes ?? 0),
     id: block.id,
     timeLabel: formatBlockRange(block),
-    title: block.reason ? `Blocked · ${block.reason}` : "Blocked",
+    title: block.allDay
+      ? (block.reason ?? "")
+      : block.reason
+        ? `Blocked · ${block.reason}`
+        : "Blocked",
   }));
   return [...appointments, ...blocks].sort(
     (a, b) => a.at - b.at || a.kind.localeCompare(b.kind),

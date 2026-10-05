@@ -8,11 +8,14 @@ import {
   formatFullDate,
   formatMenuDate,
   formatMonthDay,
+  formatMonthDayYear,
   listBlockTimeOptions,
+  parseLooseClock,
   type AvailabilityBlock,
 } from "@/lib/appointments/availability-blocks";
 import { formatMinutesLabel } from "@/lib/appointments/closures";
 import { appointmentStatusLabel } from "@/lib/appointments/map";
+import { isOperationalAdminAppointment } from "@/lib/appointments/operational-visibility";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 
 export type DateMenuAction =
@@ -272,27 +275,148 @@ export function BlockTimeDialog({
   );
 }
 
+function warningSortMinutes(appointment: AdminAppointmentRecord) {
+  if (typeof appointment.scheduledStart === "number") {
+    return appointment.scheduledStart;
+  }
+  return parseLooseClock(appointment.appointmentTime) ?? 24 * 60;
+}
+
+function appointmentsAlreadyScheduled(appointments: AdminAppointmentRecord[]) {
+  return appointments
+    .filter((appointment) => isOperationalAdminAppointment(appointment.status))
+    .slice()
+    .sort((left, right) => warningSortMinutes(left) - warningSortMinutes(right));
+}
+
 export function BlockAllDayDialog({
   date,
   block,
   busy,
   error,
+  appointments = [],
   onClose,
   onSubmit,
+  onAppointmentClick,
 }: {
   date: string;
   block: AvailabilityBlock | null;
   busy: boolean;
   error: string | null;
+  /** Null while the day is still being checked. Cancelled rows are ignored. */
+  appointments?: AdminAppointmentRecord[] | null;
   onClose: () => void;
   onSubmit: (reason: string) => void;
+  onAppointmentClick?: (id: string, anchor: HTMLButtonElement) => void;
 }) {
   const titleId = useId();
   const [reason, setReason] = useState(block?.reason ?? "");
+  const scheduled = appointments ? appointmentsAlreadyScheduled(appointments) : [];
+  const showWarning = block == null && scheduled.length > 0;
+
+  if (block == null && appointments == null) {
+    return (
+      <DialogFrame title="Block Entire Day?" titleId={titleId} onClose={onClose}>
+        <p className="mt-4 text-sm text-text-muted">
+          {error ?? "Checking this day…"}
+        </p>
+        <button
+          type="button"
+          className="mt-5 min-h-11 rounded-xl border border-lavender/40 px-4 text-sm text-text"
+          onClick={onClose}
+        >
+          Cancel
+        </button>
+      </DialogFrame>
+    );
+  }
+
+  if (showWarning) {
+    return (
+      <DialogFrame
+        title="Appointments Already Scheduled"
+        titleId={titleId}
+        onClose={onClose}
+      >
+        <form
+          className="mt-4 grid gap-4"
+          data-block-all-day="warning"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit("");
+          }}
+        >
+          <p className="text-sm text-text">
+            This date already has existing appointments. Blocking the day will
+            prevent new bookings, but existing appointments will remain
+            scheduled.
+          </p>
+          <p className="text-sm font-medium text-gold-dark">
+            {formatMonthDayYear(date)}
+          </p>
+          <div>
+            <p className="text-sm font-medium text-text">Existing appointments:</p>
+            <ul className="mt-2 space-y-2">
+              {scheduled.map((appointment) => (
+                <li key={appointment.id}>
+                  <button
+                    type="button"
+                    data-existing-appointment={appointment.id}
+                    className="block min-h-11 w-full rounded-xl px-2 py-2 text-left hover:bg-lavender-light"
+                    onClick={(event) =>
+                      onAppointmentClick?.(appointment.id, event.currentTarget)
+                    }
+                  >
+                    <p className="text-sm font-medium text-gold-dark [overflow-wrap:anywhere]">
+                      {appointment.appointmentTime}
+                    </p>
+                    {appointment.customerName ? (
+                      <p className="mt-1 text-sm text-text [overflow-wrap:anywhere]">
+                        {appointment.customerName}
+                      </p>
+                    ) : null}
+                    <p className="text-sm text-text [overflow-wrap:anywhere]">
+                      {appointment.petName}
+                    </p>
+                    <p className="text-sm text-text [overflow-wrap:anywhere]">
+                      {appointment.serviceName}
+                    </p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          {error ? (
+            <p className="text-sm text-red-800" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              className="min-h-11 w-full rounded-xl border border-lavender/40 px-4 text-sm text-text sm:w-auto"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={busy}
+              className="min-h-11 w-full rounded-xl bg-gold px-4 text-sm font-medium text-white hover:bg-gold-dark disabled:opacity-60 sm:w-auto"
+            >
+              Block All Day Anyway
+            </button>
+          </div>
+        </form>
+      </DialogFrame>
+    );
+  }
+
   return (
     <DialogFrame title="Block Entire Day?" titleId={titleId} onClose={onClose}>
       <form
         className="mt-4 grid gap-4"
+        data-block-all-day="confirm"
         onSubmit={(event) => {
           event.preventDefault();
           onSubmit(reason);
@@ -445,7 +569,9 @@ export function ViewDayDialog({
                     onClick={() => onBlockClick?.(entry.id)}
                   >
                     <p className="text-sm font-medium text-gold-dark">{entry.timeLabel}</p>
-                    <p className="mt-1 text-sm text-text">{entry.title}</p>
+                    {entry.title ? (
+                      <p className="mt-1 text-sm text-text">{entry.title}</p>
+                    ) : null}
                   </button>
                 </li>
               );

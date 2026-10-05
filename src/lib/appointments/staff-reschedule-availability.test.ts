@@ -33,14 +33,14 @@ describe("staff reschedule availability", () => {
 
   it("rejects a window that overlaps an availability block", () => {
     assert.equal(appointmentOverlapsBlocks([middayBlock], 12 * 60, 90), true);
-    assert.equal(
-      appointmentOverlapsBlocks(
-        [{ ...middayBlock, allDay: true, startMinutes: null, endMinutes: null }],
-        9 * 60,
-        60,
-      ),
-      true,
-    );
+    const allDay = {
+      ...middayBlock,
+      allDay: true,
+      startMinutes: null,
+      endMinutes: null,
+    };
+    assert.equal(appointmentOverlapsBlocks([allDay], 9 * 60, 90), true);
+    assert.equal(appointmentOverlapsBlocks([allDay], 14 * 60, 90), true);
   });
 
   it("rejects a window that overlaps another appointment", () => {
@@ -115,6 +115,20 @@ describe("staff reschedule and cancel server gates", () => {
     assert.match(schedule, /appointmentOverlapsBlocks/);
     assert.match(schedule, /function assignArrivalWindow/);
     assert.match(schedule, /\.neq\("status", "cancelled"\)/);
+    const availability = schedule.slice(
+      schedule.indexOf("export async function getAvailabilityForAddress"),
+      schedule.indexOf("export async function assignArrivalWindow"),
+    );
+    assert.match(availability, /block\.allDay/);
+    const assign = schedule.slice(
+      schedule.indexOf("export async function assignArrivalWindow"),
+    );
+    const blockCheck = assign.indexOf("appointmentOverlapsBlocks");
+    const exclude = assign.indexOf("excludeAppointmentIds: input.excludeAppointmentIds");
+    assert.ok(blockCheck > 0);
+    assert.ok(exclude > blockCheck);
+    assert.doesNotMatch(reschedule, /admin_availability_blocks/);
+    assert.doesNotMatch(reschedule, /deleteAvailabilityBlock/);
   });
 
   it("cancels through staff status and leaves cancelled rows out of booked counts", () => {
@@ -124,5 +138,7 @@ describe("staff reschedule and cancel server gates", () => {
     assert.match(service, /staff_set_appointment_status/);
     assert.match(service, /\.neq\("status", "cancelled"\)/);
     assert.match(calendar, /\.neq\("status", "cancelled"\)/);
+    assert.doesNotMatch(service, /admin_availability_blocks/);
+    assert.doesNotMatch(service, /deleteAvailabilityBlock/);
   });
 });
