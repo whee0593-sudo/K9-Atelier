@@ -39,20 +39,44 @@ function roundTravelFee(amount: number) {
   return Math.round(amount);
 }
 
+/** First chargeable band ends here: miles above 10 through 15 at $10. */
+const FIRST_CHARGE_END_MILES = 15;
+const FIRST_CHARGE_PER_MILE = 10;
+/** Miles above 15 through 20 at $15. Matches the existing standard-zone display. */
+const SECOND_CHARGE_PER_MILE = 15;
+/** Miles above 20 through the standard service limit at $20. */
+const EXTENDED_CHARGE_PER_MILE = 20;
+
 /**
- * Progressive one-way travel fee.
- * 0–free: $0
- * above free through the $6.50 tier: (miles − free) × $6.50
- * above that tier through the standard service limit:
- *   (tier miles × $6.50) + (miles above the tier × extended rate)
- * Beyond the standard service limit: no automatic fee.
+ * Progressive one-way travel fee. Each mile is charged at the rate for its
+ * own band. The highest rate is never applied to the whole distance.
+ * 0–10: $0
+ * above 10 through 15: (distance − 10) × $10
+ * above 15 through 20: $50 + (distance − 15) × $15
+ * above 20 through the service limit: $125 + (distance − 20) × $20
+ * Beyond the service limit: no automatic fee.
  */
+function progressiveTravelFee(roundedMiles: number, freeRadiusMiles: number) {
+  const firstBandMiles = roundToTenth(
+    Math.max(0, Math.min(roundedMiles, FIRST_CHARGE_END_MILES) - freeRadiusMiles),
+  );
+  const secondBandMiles = roundToTenth(
+    Math.max(0, Math.min(roundedMiles, business.serviceArea.maxDistanceMiles) - FIRST_CHARGE_END_MILES),
+  );
+  const extendedBandMiles = roundToTenth(
+    Math.max(0, roundedMiles - business.serviceArea.maxDistanceMiles),
+  );
+  return roundTravelFee(
+    firstBandMiles * FIRST_CHARGE_PER_MILE +
+      secondBandMiles * SECOND_CHARGE_PER_MILE +
+      extendedBandMiles * EXTENDED_CHARGE_PER_MILE,
+  );
+}
+
 export function calculateTravelFee(distanceMiles: number): TravelQuote {
   const {
     freeRadiusMiles,
-    travelFeePerMile,
     maxDistanceMiles: standardRateThroughMiles,
-    extendedTravelFeePerMile,
     standardServiceMiles,
   } = business.serviceArea;
 
@@ -67,19 +91,10 @@ export function calculateTravelFee(distanceMiles: number): TravelQuote {
 
   if (withinFreeRadius) {
     zone = "complimentary";
-  } else if (withinStandardRate) {
-    zone = "standard";
-    billableMiles = roundToTenth(rounded - freeRadiusMiles);
-    fee = roundTravelFee(billableMiles * travelFeePerMile);
   } else if (withinServiceArea) {
-    zone = "extended";
-    const standardMiles = roundToTenth(standardRateThroughMiles - freeRadiusMiles);
-    const extendedMiles = roundToTenth(rounded - standardRateThroughMiles);
-    billableMiles = roundToTenth(standardMiles + extendedMiles);
-    fee = roundTravelFee(
-      standardMiles * travelFeePerMile +
-        extendedMiles * extendedTravelFeePerMile,
-    );
+    zone = withinStandardRate ? "standard" : "extended";
+    billableMiles = roundToTenth(rounded - freeRadiusMiles);
+    fee = progressiveTravelFee(rounded, freeRadiusMiles);
   }
 
   let summary: string;
@@ -88,7 +103,7 @@ export function calculateTravelFee(distanceMiles: number): TravelQuote {
   } else if (zone === "complimentary") {
     summary = `${rounded} mi from base — Complimentary travel`;
   } else if (zone === "standard") {
-    summary = `${rounded} mi from base — ${billableMiles} mi beyond free radius × ${formatPrice(travelFeePerMile)} = ${formatPrice(fee)} travel fee.`;
+    summary = `${rounded} mi from base — travel fee ${formatPrice(fee)}.`;
   } else {
     summary = `Extended Service Area. An extended travel fee applies to this location. Travel fee ${formatPrice(fee)}.`;
   }

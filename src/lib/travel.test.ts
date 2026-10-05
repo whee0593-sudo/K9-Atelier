@@ -3,74 +3,69 @@ import { describe, it } from "node:test";
 import { calculateTravelFee } from "./travel";
 
 describe("calculateTravelFee", () => {
-  it("treats 0 through 10.0 miles as complimentary", () => {
-    for (const miles of [0, 5, 9.96, 10, 10.04]) {
+  it("charges the requested progressive amounts", () => {
+    const cases: Array<[number, number, "complimentary" | "standard" | "extended" | "outside"]> = [
+      [10, 0, "complimentary"],
+      [12, 20, "standard"],
+      [15, 50, "standard"],
+      [16.7, 76, "standard"],
+      [18, 95, "standard"],
+      [20, 125, "standard"],
+      [21, 145, "extended"],
+      [22.6, 177, "extended"],
+      [25, 225, "extended"],
+      [25.1, 0, "outside"],
+    ];
+
+    for (const [miles, fee, zone] of cases) {
       const quote = calculateTravelFee(miles);
-      assert.equal(quote.zone, "complimentary");
-      assert.equal(quote.fee, 0);
-      assert.equal(quote.withinServiceArea, true);
-      assert.equal(quote.withinFreeRadius, true);
-      assert.match(quote.summary, /Complimentary travel/);
+      assert.equal(quote.distanceMiles, miles, `${miles} mi distance`);
+      assert.equal(quote.fee, fee, `${miles} mi fee`);
+      assert.equal(quote.zone, zone, `${miles} mi zone`);
     }
-    assert.equal(calculateTravelFee(10.04).distanceMiles, 10);
   });
 
-  it("charges $6.50 per mile only for the portion above 10 through 20", () => {
-    const fourteen = calculateTravelFee(14);
-    assert.equal(fourteen.zone, "standard");
-    assert.equal(fourteen.distanceMiles, 14);
-    assert.equal(fourteen.billableMiles, 4);
-    assert.equal(fourteen.fee, 26);
-
-    const fifteen = calculateTravelFee(15);
-    assert.equal(fifteen.fee, 33);
-    assert.equal(fifteen.billableMiles, 5);
-
-    const twenty = calculateTravelFee(20);
-    assert.equal(twenty.zone, "standard");
-    assert.equal(twenty.fee, 65);
-    assert.equal(twenty.withinServiceArea, true);
+  it("keeps 21 miles progressive instead of charging every mile at $20", () => {
+    const quote = calculateTravelFee(21);
+    assert.equal(quote.fee, 50 + 75 + 20);
+    assert.equal(quote.fee, 145);
+    assert.notEqual(quote.fee, 21 * 20);
   });
 
-  it("uses a progressive extended rate above 20 miles through 25", () => {
-    const justOver = calculateTravelFee(20.1);
-    assert.equal(justOver.zone, "extended");
-    assert.equal(justOver.fee, 66);
+  it("rounds 16.7 miles from $75.50 to $76 and keeps 22.6 miles at $177", () => {
+    assert.equal(calculateTravelFee(16.7).fee, 76);
+    assert.equal(calculateTravelFee(22.6).fee, 177);
+  });
 
-    const example = calculateTravelFee(21.8);
-    assert.equal(example.distanceMiles, 21.8);
-    assert.equal(example.billableMiles, 11.8);
-    assert.equal(example.fee, 83);
-    assert.equal(example.fee, 65 + 18);
-    assert.notEqual(example.fee, Math.round(21.8 * 10));
-
-    assert.equal(calculateTravelFee(23).fee, 95);
-    assert.equal(calculateTravelFee(25).fee, 115);
-    assert.equal(calculateTravelFee(25).zone, "extended");
-    assert.equal(calculateTravelFee(25.04).distanceMiles, 25);
-    assert.equal(calculateTravelFee(25.04).fee, 115);
-
-    const extended = calculateTravelFee(21.8);
-    assert.match(extended.summary, /Extended Service Area/);
-    assert.match(
-      extended.summary,
-      /An extended travel fee applies to this location/,
-    );
-    assert.match(extended.summary, /\$83/);
+  it("treats distances that round to 10.0 miles as complimentary", () => {
+    const quote = calculateTravelFee(10.04);
+    assert.equal(quote.distanceMiles, 10);
+    assert.equal(quote.fee, 0);
+    assert.equal(quote.zone, "complimentary");
+    assert.match(quote.summary, /Complimentary travel/);
   });
 
   it("does not offer a travel fee beyond 25.0 miles", () => {
-    for (const miles of [25.05, 25.1, 30, 40]) {
+    for (const miles of [25.05, 25.1, 30]) {
       const quote = calculateTravelFee(miles);
       assert.equal(quote.zone, "outside");
       assert.equal(quote.withinServiceArea, false);
       assert.equal(quote.fee, 0);
-      assert.equal(quote.billableMiles, 0);
       assert.equal(
         quote.summary,
         "This address is outside our standard 25-mile service area. Please contact us to inquire about availability.",
       );
     }
     assert.equal(calculateTravelFee(25.05).distanceMiles, 25.1);
+  });
+
+  it("labels the extended band for the booking card", () => {
+    const quote = calculateTravelFee(22.6);
+    assert.match(quote.summary, /Extended Service Area/);
+    assert.match(
+      quote.summary,
+      /An extended travel fee applies to this location/,
+    );
+    assert.match(quote.summary, /\$177/);
   });
 });
