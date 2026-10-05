@@ -6,6 +6,7 @@ import {
   STAFF_SMS_MAX_CHARS,
   buildStaffCustomerSms,
   formatStaffRecipientLabel,
+  hasStaffSmsRecipientIdentity,
   matchesStaffRecipientSearch,
   type StaffSmsRecipient,
   type StudioUnknownCaller,
@@ -135,21 +136,18 @@ export function AdminMessageComposer({
   const [importNote, setImportNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (keepCustomer = true) => {
+  const load = useCallback(async () => {
     if (preview) {
       const sample = buildPreviewStaffMessages();
-      setRecipients(sample.recipients);
+      const visible = sample.recipients.filter(hasStaffSmsRecipientIdentity);
+      setRecipients(visible);
       setInbox(sample.inbox);
       setUnknownCallers(sample.unknownCallers);
       setIntroPreview(sample.introPreview);
       setKnownCallerPreview(sample.knownCallerPreview);
-      if (!keepCustomer) {
-        const first = sample.recipients.find((item) => item.canText);
-        if (first) {
-          setCustomerId(first.id);
-          setPhone(first.phone);
-        }
-      }
+      setCustomerId((current) =>
+        visible.some((item) => item.id === current) ? current : "",
+      );
       return;
     }
     const response = await fetch("/api/admin/messages", {
@@ -166,24 +164,20 @@ export function AdminMessageComposer({
     if (!response.ok) {
       throw new Error(body.error ?? "Could not load customers.");
     }
-    const list = body.recipients ?? [];
+    const list = (body.recipients ?? []).filter(hasStaffSmsRecipientIdentity);
     setRecipients(list);
     setInbox(body.inbox ?? []);
     setUnknownCallers(body.unknownCallers ?? []);
     if (body.introPreview) setIntroPreview(body.introPreview);
     if (body.knownCallerPreview) setKnownCallerPreview(body.knownCallerPreview);
-    if (!keepCustomer) {
-      const first = list.find((item) => item.canText);
-      if (first) {
-        setCustomerId(first.id);
-        setPhone(first.phone);
-      }
-    }
+    setCustomerId((current) =>
+      list.some((item) => item.id === current) ? current : "",
+    );
   }, [preview]);
 
   useEffect(() => {
     let cancelled = false;
-    void load(false)
+    void load()
       .catch((loadError: unknown) => {
         if (!cancelled) {
           setError(
@@ -205,6 +199,7 @@ export function AdminMessageComposer({
   const filteredRecipients = recipients.filter((item) =>
     matchesStaffRecipientSearch(item, search),
   );
+  const customerSelectValue = selected?.id ?? "";
   const canSendToNumber = isValidSmsPhone(phone) || Boolean(selected?.canText);
   const canSend =
     canSendToNumber &&
@@ -409,7 +404,7 @@ export function AdminMessageComposer({
             <div className="mt-1.5 flex flex-col gap-3 sm:flex-row sm:items-center">
               <select
                 id="sms-customer"
-                value={customerId}
+                value={customerSelectValue}
                 onChange={(event) => {
                   const nextId = event.target.value;
                   setCustomerId(nextId);

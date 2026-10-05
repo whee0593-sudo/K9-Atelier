@@ -48,6 +48,16 @@ const previewRecipients: StaffSmsRecipient[] = [
     petNames: ["Daisy"],
     canText: true,
   },
+  {
+    id: "preview-deleted",
+    firstName: "",
+    lastName: "",
+    name: "",
+    email: "removed@example.com",
+    phone: "",
+    petNames: [],
+    canText: false,
+  },
 ];
 
 const previewInbox: StaffSmsInboxItem[] = [

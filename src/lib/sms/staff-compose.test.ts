@@ -6,6 +6,7 @@ import {
   buildStudioIntroSms,
   buildStudioKnownCallerSms,
   formatStaffRecipientLabel,
+  hasStaffSmsRecipientIdentity,
   matchesStaffRecipientSearch,
   staffRecipientSortKey,
   type StaffSmsRecipient,
@@ -112,6 +113,46 @@ describe("staff customer SMS", () => {
         recipient({ petNames: [], firstName: "", lastName: "", canText: false, phone: "" }),
       ),
       "— · — · — · no mobile number",
+    );
+  });
+
+  it("drops deleted profiles that have no pet, name, or phone", () => {
+    const deleted = recipient({
+      petNames: [],
+      firstName: "",
+      lastName: "  ",
+      name: "",
+      phone: "",
+      canText: false,
+    });
+    assert.equal(hasStaffSmsRecipientIdentity(deleted), false);
+    assert.equal(
+      hasStaffSmsRecipientIdentity(recipient({ petNames: [], phone: "", canText: false })),
+      true,
+    );
+    assert.equal(
+      hasStaffSmsRecipientIdentity(
+        recipient({ petNames: ["Lychee"], firstName: "", lastName: "", phone: "+15618014742" }),
+      ),
+      true,
+    );
+    assert.equal(
+      hasStaffSmsRecipientIdentity(
+        recipient({ petNames: [], firstName: "", lastName: "", phone: "+15615550123", canText: true }),
+      ),
+      true,
+    );
+    assert.equal(
+      hasStaffSmsRecipientIdentity(
+        recipient({
+          petNames: [],
+          firstName: "",
+          lastName: "",
+          phone: "123",
+          canText: false,
+        }),
+      ),
+      false,
     );
   });
 

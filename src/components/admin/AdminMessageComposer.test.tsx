@@ -9,7 +9,10 @@ import {
   RecentCallersList,
   nextVisibleRecentCallerCount,
 } from "@/components/admin/AdminMessageComposer";
-import type { StudioUnknownCaller } from "@/lib/sms/staff-compose-copy";
+import {
+  hasStaffSmsRecipientIdentity,
+  type StudioUnknownCaller,
+} from "@/lib/sms/staff-compose-copy";
 import { buildPreviewStaffMessages } from "@/lib/sms/staff-compose-preview";
 
 function callers(count: number): StudioUnknownCaller[] {
@@ -76,6 +79,10 @@ describe("Recent callers list", () => {
 describe("Admin message inbox photos", () => {
   it("includes inbound photos in the staff preview inbox", () => {
     const sample = buildPreviewStaffMessages();
+    assert.equal(
+      sample.recipients.some((item) => !hasStaffSmsRecipientIdentity(item)),
+      true,
+    );
     const photo = sample.inbox.find((item) => item.mediaUrls.length > 0);
     assert.ok(photo);
     assert.equal(photo?.body, "Photo");
@@ -89,5 +96,8 @@ describe("Admin message inbox photos", () => {
     assert.match(source, /staffSmsMediaProxyPath/);
     assert.match(source, /Import past photos/);
     assert.match(source, /backfill-photos/);
+    assert.match(source, /hasStaffSmsRecipientIdentity/);
+    assert.match(source, /Choose a customer, or type a number below/);
+    assert.doesNotMatch(source, /item\.canText\)/);
   });
 });

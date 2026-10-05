@@ -5,6 +5,7 @@ import {
   STAFF_SMS_MAX_CHARS,
   type StaffSmsRecipient,
   buildStaffCustomerSms,
+  hasStaffSmsRecipientIdentity,
   staffRecipientSortKey,
 } from "@/lib/sms/staff-compose-copy";
 import { lookupCustomerByPhone } from "@/lib/sms/customer-by-phone";
@@ -59,21 +60,23 @@ export async function listStaffSmsRecipients(): Promise<
     }
   }
 
-  const recipients = (data ?? []).map((row) => {
-    const phone = row.phone?.trim() ?? "";
-    const firstName = String(row.first_name ?? "").trim();
-    const lastName = String(row.last_name ?? "").trim();
-    return {
-      id: row.id as string,
-      firstName,
-      lastName,
-      name: displayName(row.first_name, row.last_name, row.email),
-      email: row.email as string,
-      phone,
-      petNames: petsByCustomer.get(row.id as string) ?? [],
-      canText: normalizePhoneToE164(phone) != null,
-    };
-  });
+  const recipients = (data ?? [])
+    .map((row) => {
+      const phone = row.phone?.trim() ?? "";
+      const firstName = String(row.first_name ?? "").trim();
+      const lastName = String(row.last_name ?? "").trim();
+      return {
+        id: row.id as string,
+        firstName,
+        lastName,
+        name: displayName(row.first_name, row.last_name, row.email),
+        email: row.email as string,
+        phone,
+        petNames: petsByCustomer.get(row.id as string) ?? [],
+        canText: normalizePhoneToE164(phone) != null,
+      };
+    })
+    .filter(hasStaffSmsRecipientIdentity);
 
   recipients.sort((a, b) =>
     staffRecipientSortKey(a).localeCompare(staffRecipientSortKey(b), "en"),
