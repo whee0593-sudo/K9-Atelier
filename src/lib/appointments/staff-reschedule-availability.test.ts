@@ -129,6 +129,36 @@ describe("staff reschedule and cancel server gates", () => {
     assert.ok(exclude > blockCheck);
     assert.doesNotMatch(reschedule, /admin_availability_blocks/);
     assert.doesNotMatch(reschedule, /deleteAvailabilityBlock/);
+    const rescheduleBody = reschedule.slice(
+      reschedule.indexOf("export async function rescheduleStaffAppointment"),
+    );
+    const availabilityCall = rescheduleBody.indexOf("const assignment = await assignArrivalWindow");
+    assert.ok(availabilityCall > 0);
+    assert.doesNotMatch(
+      rescheduleBody.slice(0, availabilityCall),
+      /appointment_date\s*===/,
+    );
+    assert.match(reschedule, /excludeAppointmentIds: \[appointmentId\]/);
+    assert.doesNotMatch(reschedule, /excludeAppointmentIds: blocks/);
+  });
+
+  it("rejects a same-day move onto an all-day block without ignoring availability rules", () => {
+    const allDay = {
+      ...middayBlock,
+      serviceDate: "2026-10-20",
+      allDay: true,
+      startMinutes: null,
+      endMinutes: null,
+    };
+    const movingId = "bella";
+    const otherAppointments = [
+      { id: movingId, start: 9 * 60 },
+      { id: "milo", start: 13 * 60 + 30 },
+    ].filter((row) => row.id !== movingId);
+    assert.equal(otherAppointments.length, 1);
+    assert.equal(appointmentOverlapsBlocks([allDay], 9 * 60, 90), true);
+    assert.equal(appointmentOverlapsBlocks([allDay], 14 * 60, 90), true);
+    assert.equal(appointmentOverlapsBlocks([], 10 * 60, 90), false);
   });
 
   it("cancels through staff status and leaves cancelled rows out of booked counts", () => {

@@ -282,6 +282,13 @@ function warningSortMinutes(appointment: AdminAppointmentRecord) {
   return parseLooseClock(appointment.appointmentTime) ?? 24 * 60;
 }
 
+function warningGuestLine(appointment: AdminAppointmentRecord) {
+  const customer = appointment.customerName?.trim() ?? "";
+  const pet = appointment.petName?.trim() ?? "";
+  if (customer && pet) return `${customer} · ${pet}`;
+  return customer || pet;
+}
+
 function appointmentsAlreadyScheduled(appointments: AdminAppointmentRecord[]) {
   return appointments
     .filter((appointment) => isOperationalAdminAppointment(appointment.status))
@@ -370,13 +377,8 @@ export function BlockAllDayDialog({
                     <p className="text-sm font-medium text-gold-dark [overflow-wrap:anywhere]">
                       {appointment.appointmentTime}
                     </p>
-                    {appointment.customerName ? (
-                      <p className="mt-1 text-sm text-text [overflow-wrap:anywhere]">
-                        {appointment.customerName}
-                      </p>
-                    ) : null}
-                    <p className="text-sm text-text [overflow-wrap:anywhere]">
-                      {appointment.petName}
+                    <p className="mt-1 text-sm text-text [overflow-wrap:anywhere]">
+                      {warningGuestLine(appointment)}
                     </p>
                     <p className="text-sm text-text [overflow-wrap:anywhere]">
                       {appointment.serviceName}

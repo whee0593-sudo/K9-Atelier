@@ -201,12 +201,10 @@ describe("Calendar date actions", () => {
     assert.match(html, /October 20, 2026/);
     assert.match(html, /Existing appointments:/);
     assert.match(html, /9:00–10:30 AM/);
-    assert.match(html, /Alex Rivera/);
-    assert.match(html, /Bella/);
+    assert.match(html, /Alex Rivera · Bella/);
     assert.match(html, /Full Groom/);
     assert.match(html, /1:30–3:00 PM/);
-    assert.match(html, /Jordan Lee/);
-    assert.match(html, /Milo/);
+    assert.match(html, /Jordan Lee · Milo/);
     assert.match(html, /Bath &amp; Coat Care/);
     assert.match(html, /data-existing-appointment="bella"/);
     assert.match(html, /data-existing-appointment="milo"/);
