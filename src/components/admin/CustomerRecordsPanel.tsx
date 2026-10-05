@@ -37,13 +37,6 @@ function customerLabel(profile: CustomerProfile) {
   return name || profile.email;
 }
 
-function ownerProfileSummary(profile: CustomerProfile) {
-  const parts = [customerLabel(profile)];
-  if (profile.phone.trim()) parts.push(profile.phone.trim());
-  if (profile.preferredContact.trim()) parts.push(profile.preferredContact.trim());
-  return parts.join(" · ");
-}
-
 function profileDetailValue(value: string) {
   const text = value.trim();
   return text || "—";
@@ -797,7 +790,6 @@ export function CustomerRecordCard({
   const [busyAction, setBusyAction] = useState<"delete" | "freeze" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [profile, setProfile] = useState(customer.profile);
-  const [profileOpen, setProfileOpen] = useState(false);
   const [profileEditing, setProfileEditing] = useState(false);
 
   useEffect(() => {
@@ -928,6 +920,16 @@ export function CustomerRecordCard({
               Book for customer
             </a>
           ) : null}
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(true);
+              setProfileEditing(true);
+            }}
+            className="rounded-xl border border-lavender/40 px-3 py-2 text-sm text-text-muted hover:border-gold/40 hover:text-text"
+          >
+            Edit
+          </button>
           {renderOwnerActions()}
           <button
             type="button"
@@ -971,53 +973,23 @@ export function CustomerRecordCard({
                 {renderOwnerActions()}
               </div>
             </div>
-            <div className="mt-4 rounded-xl border border-lavender/30">
-              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (profileEditing) return;
-                    setProfileOpen((current) => !current);
-                  }}
-                  aria-expanded={profileOpen || profileEditing}
-                  aria-label={
-                    profileOpen || profileEditing
-                      ? `Close ${customerLabel(profile)} profile`
-                      : `Open ${customerLabel(profile)} profile`
-                  }
-                  className="min-w-0 flex-1 px-4 py-3 text-left text-sm text-text"
-                >
-                  <span className="font-medium">{ownerProfileSummary(profile)}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setProfileOpen(true);
-                    setProfileEditing(true);
-                  }}
-                  className="mr-3 shrink-0 rounded-xl border border-lavender/40 px-3 py-1.5 text-sm text-text-muted hover:border-gold/40 hover:text-text"
-                >
-                  Edit
-                </button>
-              </div>
+            <div className="mt-4">
               {profileEditing ? (
-                <div className="border-t border-lavender/30 px-4 py-4">
-                  <CustomerProfileForm
-                    profile={profile}
-                    saveUrl={`/api/admin/customers/${profile.id}`}
-                    onSaved={(next) => {
-                      setProfile(next);
-                      onProfileSaved(next);
-                      setProfileEditing(false);
-                    }}
-                    onCancel={() => setProfileEditing(false)}
-                    audience="staff"
-                    preview={preview}
-                  />
-                </div>
-              ) : profileOpen ? (
+                <CustomerProfileForm
+                  profile={profile}
+                  saveUrl={`/api/admin/customers/${profile.id}`}
+                  onSaved={(next) => {
+                    setProfile(next);
+                    onProfileSaved(next);
+                    setProfileEditing(false);
+                  }}
+                  onCancel={() => setProfileEditing(false)}
+                  audience="staff"
+                  preview={preview}
+                />
+              ) : (
                 <OwnerProfileDetails profile={profile} />
-              ) : null}
+              )}
             </div>
           </section>
           <StaffCustomerPayments

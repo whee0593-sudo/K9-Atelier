@@ -350,8 +350,18 @@ describe("CustomerRecordCard actions", () => {
     assert.match(html, /\+ Add a pet/);
   });
 
-  it("keeps the owner profile collapsed until the bar or Edit is used", () => {
-    const html = renderToStaticMarkup(
+  it("puts Edit on the customer row and shows saved profile fields when opened", () => {
+    const collapsed = renderToStaticMarkup(
+      <CustomerRecordCard customer={sampleCustomer()} preview {...cardHandlers} />,
+    );
+    assert.match(
+      collapsed,
+      /Book for customer<\/a><button[^>]*>Edit<\/button><button[^>]*>Freeze<\/button>/,
+    );
+    assert.doesNotMatch(collapsed, /Emergency Contact Name/);
+    assert.doesNotMatch(collapsed, /Save Profile/);
+
+    const opened = renderToStaticMarkup(
       <CustomerRecordCard
         customer={sampleCustomer()}
         startOpen
@@ -359,12 +369,17 @@ describe("CustomerRecordCard actions", () => {
         {...cardHandlers}
       />,
     );
-    assert.match(html, /Ada Lovelace · \+15615550123 · Text Message/);
-    assert.match(html, /Open Ada Lovelace profile/);
-    assert.match(html, /aria-expanded="false"/);
-    assert.match(html, />Edit</);
-    assert.doesNotMatch(html, /Save Profile/);
-    assert.doesNotMatch(html, /Emergency Contact Name/);
+    assert.match(opened, /Owner Profile/);
+    assert.match(opened, /Emergency Contact Name/);
+    assert.match(opened, /ada@example.com/);
+    assert.match(opened, /\+15615550123/);
+    assert.match(opened, /Text Message/);
+    assert.doesNotMatch(opened, /Save Profile/);
+    assert.doesNotMatch(opened, /Open Ada Lovelace profile/);
+    const profileStart = opened.indexOf("Owner Profile");
+    const profileEnd = opened.indexOf("Payment Methods");
+    const profileHtml = opened.slice(profileStart, profileEnd);
+    assert.doesNotMatch(profileHtml, />Edit</);
   });
 });
 
