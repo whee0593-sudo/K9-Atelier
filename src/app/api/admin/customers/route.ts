@@ -6,7 +6,7 @@ import {
 } from "@/lib/profiles/staff-service";
 import {
   ProfileValidationError,
-  validateStaffProfileWriteInput,
+  validateStaffCustomerCreateInput,
 } from "@/lib/profiles/validation";
 import { mapStaffServiceError, staffJsonError } from "@/lib/staff/api-errors";
 
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       return jsonError("Invalid request body.", 400);
     }
 
-    const input = validateStaffProfileWriteInput(body);
+    const input = validateStaffCustomerCreateInput(body);
     const result = await createStaffCustomer(input);
     if ("error" in result) {
       if (result.message) {

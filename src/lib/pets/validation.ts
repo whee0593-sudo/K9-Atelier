@@ -365,6 +365,105 @@ export function validateCreatePetInput(body: unknown): PetWriteInput {
   return validateWriteFields(assertPlainObject(body), "create") as PetWriteInput;
 }
 
+export type OptionalStaffPetInput = {
+  name: string;
+  breed: string;
+  weightLbs: number | null;
+  dateOfBirth: string | null;
+  approximateAgeYears: number | null;
+  sex: string | null;
+  temperamentNotes: string | null;
+  healthComfortNotes: string | null;
+  groomingPreferences: string | null;
+  rabiesStatus: PetRabiesStatus | null;
+  rabiesExpirationDate: string | null;
+  adminServiceNotes: string;
+};
+
+function optionalWeightLbs(value: unknown): number | null {
+  if (value == null || value === "" || value === 0) return null;
+  if (typeof value === "string" && value.trim() === "") return null;
+  return normalizeWeightLbs(value);
+}
+
+/** Staff may file a dog with any subset of the pet profile, including none of the usual columns. */
+export function validateOptionalStaffPetInput(body: unknown): OptionalStaffPetInput | null {
+  if (body == null) return null;
+  const record = assertPlainObject(body);
+  const name = normalizeOptionalText(record.name, "name", MAX_NAME_LENGTH) ?? "";
+  const breed = normalizeOptionalText(record.breed, "breed", MAX_BREED_LENGTH) ?? "";
+  const weightLbs =
+    record.weightLbs === undefined ? null : optionalWeightLbs(record.weightLbs);
+  const dateOfBirth =
+    record.dateOfBirth === undefined ? null : normalizeDateOfBirth(record.dateOfBirth);
+  const approximateAgeYears =
+    record.approximateAgeYears === undefined
+      ? null
+      : normalizeApproximateAgeYears(record.approximateAgeYears);
+  assertBirthStrategy(dateOfBirth, approximateAgeYears);
+  const sex = record.sex === undefined ? null : normalizeSex(record.sex);
+  const temperamentNotes =
+    record.temperamentNotes === undefined
+      ? null
+      : normalizeOptionalText(record.temperamentNotes, "temperamentNotes", MAX_NOTES_LENGTH);
+  const healthComfortNotes =
+    record.healthComfortNotes === undefined
+      ? null
+      : normalizeOptionalText(
+          record.healthComfortNotes,
+          "healthComfortNotes",
+          MAX_NOTES_LENGTH,
+        );
+  const groomingPreferences =
+    record.groomingPreferences === undefined
+      ? null
+      : normalizeOptionalText(
+          record.groomingPreferences,
+          "groomingPreferences",
+          MAX_NOTES_LENGTH,
+        );
+  const rabiesStatus =
+    record.rabiesStatus === undefined ? null : normalizeRabiesStatus(record.rabiesStatus);
+  const rabiesExpirationDate =
+    record.rabiesExpirationDate === undefined
+      ? null
+      : normalizeRabiesExpirationDate(record.rabiesExpirationDate);
+  const adminServiceNotes =
+    normalizeOptionalText(record.adminServiceNotes, "adminServiceNotes", MAX_NOTES_LENGTH) ??
+    "";
+
+  const hasContent = Boolean(
+    name ||
+      breed ||
+      weightLbs != null ||
+      dateOfBirth ||
+      approximateAgeYears != null ||
+      sex ||
+      temperamentNotes ||
+      healthComfortNotes ||
+      groomingPreferences ||
+      rabiesStatus ||
+      rabiesExpirationDate ||
+      adminServiceNotes,
+  );
+  if (!hasContent) return null;
+
+  return {
+    name,
+    breed,
+    weightLbs,
+    dateOfBirth,
+    approximateAgeYears,
+    sex,
+    temperamentNotes,
+    healthComfortNotes,
+    groomingPreferences,
+    rabiesStatus,
+    rabiesExpirationDate,
+    adminServiceNotes,
+  };
+}
+
 export function validateUpdatePetInput(body: unknown): Partial<PetWriteInput> {
   return validateWriteFields(assertPlainObject(body), "update");
 }

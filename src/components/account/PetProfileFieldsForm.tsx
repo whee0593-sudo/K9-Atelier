@@ -29,6 +29,7 @@ type Props = {
   vaccinationUploading?: boolean;
   vaccinationAudience?: "customer" | "admin";
   onVaccinationUpload?: (file: File) => Promise<void>;
+  showRequired?: boolean;
 };
 
 export function PetProfileFieldsForm({
@@ -39,6 +40,7 @@ export function PetProfileFieldsForm({
   vaccinationUploading,
   vaccinationAudience = "customer",
   onVaccinationUpload,
+  showRequired = true,
 }: Props) {
   return (
     <div className="space-y-5">
@@ -47,6 +49,7 @@ export function PetProfileFieldsForm({
         pet={pet}
         onPetChange={onPetChange}
         variant={variant}
+        showRequired={showRequired}
       />
       <PetBirthdayFields
         pet={pet}
@@ -67,6 +70,7 @@ export function PetProfileFieldsForm({
         vaccinationUploading={vaccinationUploading}
         vaccinationAudience={vaccinationAudience}
         onVaccinationUpload={onVaccinationUpload}
+        showRequired={showRequired}
       />
     </div>
   );

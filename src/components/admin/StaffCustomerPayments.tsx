@@ -1,7 +1,7 @@
 "use client";
 
 import { Elements } from "@stripe/react-stripe-js";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AddCardForm,
   stripePromiseFor,
@@ -20,11 +20,13 @@ export function StaffCustomerPayments({
   customerId,
   methods,
   preview = false,
+  autoStartAddCard = false,
   onChange,
 }: {
   customerId: string;
   methods: PaymentMethodRecord[];
   preview?: boolean;
+  autoStartAddCard?: boolean;
   onChange: (methods: PaymentMethodRecord[]) => void;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +35,13 @@ export function StaffCustomerPayments({
     publishableKey: string;
   } | null>(null);
   const [adding, setAdding] = useState(false);
+  const autoStarted = useRef(false);
+
+  useEffect(() => {
+    if (!autoStartAddCard || autoStarted.current) return;
+    autoStarted.current = true;
+    void startAddCard();
+  }, [autoStartAddCard]);
 
   const visibleMethods = methods.filter(
     (method, index) => methods.findIndex((item) => item.id === method.id) === index,

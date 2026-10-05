@@ -19,6 +19,7 @@ type Props = {
   vaccinationUploading?: boolean;
   vaccinationAudience?: "customer" | "admin";
   onVaccinationUpload?: (file: File) => Promise<void>;
+  showRequired?: boolean;
 };
 
 function fieldInputClass(variant: "account" | "booking") {
@@ -120,6 +121,7 @@ export function PetScalarFields({
   vaccinationUploading = false,
   vaccinationAudience = "customer",
   onVaccinationUpload,
+  showRequired = true,
 }: Props) {
   const inputClass = fieldInputClass(variant);
   const labelClass = fieldLabelClass(variant);
@@ -185,7 +187,7 @@ export function PetScalarFields({
             <fieldset key={field.id} className="space-y-3">
               <legend className={labelClass}>
                 {field.label}
-                <span className="text-gold"> *</span>
+                {showRequired ? <span className="text-gold"> *</span> : null}
               </legend>
               <div className="space-y-2">
                 {RABIES_STATUS_OPTIONS.map((option) => {
@@ -316,7 +318,9 @@ export function PetScalarFields({
             <div key={field.id}>
               <label className={labelClass}>
                 {field.label}
-                {field.required && <span className="text-gold"> *</span>}
+                {showRequired && field.required ? (
+                  <span className="text-gold"> *</span>
+                ) : null}
               </label>
               <textarea
                 rows={3}
@@ -336,7 +340,9 @@ export function PetScalarFields({
             <div key={field.id}>
               <label className={labelClass}>
                 {field.label}
-                {field.required && <span className="text-gold"> *</span>}
+                {showRequired && field.required ? (
+                  <span className="text-gold"> *</span>
+                ) : null}
               </label>
               <select
                 value={getPetFieldValue(pet, field.id)}
@@ -361,7 +367,9 @@ export function PetScalarFields({
             <div key={field.id}>
               <label className={labelClass}>
                 {field.label}
-                {field.required && <span className="text-gold"> *</span>}
+                {showRequired && field.required ? (
+                  <span className="text-gold"> *</span>
+                ) : null}
               </label>
               <input
                 type="date"
@@ -379,7 +387,9 @@ export function PetScalarFields({
           <div key={field.id}>
             <label className={labelClass}>
               {field.label}
-              {field.required && <span className="text-gold"> *</span>}
+              {showRequired && field.required ? (
+                <span className="text-gold"> *</span>
+              ) : null}
             </label>
             <input
               type={field.type === "number" ? "number" : "text"}

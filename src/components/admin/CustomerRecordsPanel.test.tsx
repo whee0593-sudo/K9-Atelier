@@ -532,6 +532,15 @@ describe("Create customer profile section", () => {
     assert.match(html, /First Name/);
     assert.match(html, /Mobile Phone/);
     assert.match(html, /Emergency Contact/);
+    assert.match(html, /Pet Profile/);
+    assert.match(html, /Pet Name/);
+    assert.match(html, /Payment Methods/);
+    assert.match(html, /New password/);
+    assert.match(html, /Confirm password/);
+    assert.match(html, /Every field is optional/);
+    const createForm = html.slice(create, customers);
+    assert.doesNotMatch(createForm, /text-gold(?:-dark)?"> \*/);
+    assert.doesNotMatch(createForm, /required/);
     assert.match(html, /Ada Lovelace/);
     assert.match(html, /penny@k9atelier.com/);
   });

@@ -1,3 +1,4 @@
+import { validateOptionalStaffPetInput, type OptionalStaffPetInput } from "@/lib/pets/validation";
 import {
   EMERGENCY_RELATIONSHIP_OPTIONS,
   PREFERRED_CONTACT_OPTIONS,
@@ -224,6 +225,122 @@ export function validateStaffProfileWriteInput(
   return {
     ...validateProfileWriteInput(body),
     email,
+  };
+}
+
+export type StaffCustomerCreateInput = {
+  customerId: string | null;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  preferredContact: string | null;
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+  emergencyContactRelationship: string | null;
+  password: string | null;
+  pet: OptionalStaffPetInput | null;
+};
+
+function readOptionalName(record: Record<string, unknown>, key: string, label: string) {
+  const value = record[key];
+  if (value == null || value === "") return null;
+  if (typeof value !== "string") {
+    throw new ProfileValidationError(`${label} must be text.`, key);
+  }
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.length > 80) {
+    throw new ProfileValidationError(`${label} is too long.`, key);
+  }
+  return trimmed;
+}
+
+function readOptionalEmail(value: unknown): string | null {
+  if (value == null || value === "") return null;
+  if (typeof value !== "string" || !value.trim()) return null;
+  return validateEmailAddress(value);
+}
+
+function readOptionalPhone(value: unknown): string | null {
+  if (value == null || value === "") return null;
+  if (typeof value !== "string" || !value.trim()) return null;
+  const phone = normalizePhoneToE164(value);
+  if (!phone) {
+    throw new ProfileValidationError("Please enter a valid US mobile number.", "phone");
+  }
+  return phone;
+}
+
+function readOptionalPassword(value: unknown): string | null {
+  if (value == null || value === "") return null;
+  if (typeof value !== "string") {
+    throw new ProfileValidationError("Password must be text.", "password");
+  }
+  if (value.length < MIN_CUSTOMER_PASSWORD_LENGTH) {
+    throw new ProfileValidationError(
+      `Use at least ${MIN_CUSTOMER_PASSWORD_LENGTH} characters.`,
+      "password",
+    );
+  }
+  if (value.length > 72) {
+    throw new ProfileValidationError("Password is too long.", "password");
+  }
+  return value;
+}
+
+function readOptionalCustomerId(value: unknown): string | null {
+  if (value == null || value === "") return null;
+  if (typeof value !== "string") {
+    throw new ProfileValidationError("Invalid customer id.", "customerId");
+  }
+  return validateCustomerId(value);
+}
+
+/** Staff can open a customer file before any column is filled in. */
+export function validateStaffCustomerCreateInput(body: unknown): StaffCustomerCreateInput {
+  const record = assertPlainObject(body);
+  const preferredContact = readOptionalText(record, "preferredContact", 40);
+  if (
+    preferredContact &&
+    !PREFERRED_CONTACT_OPTIONS.includes(
+      preferredContact as (typeof PREFERRED_CONTACT_OPTIONS)[number],
+    )
+  ) {
+    throw new ProfileValidationError(
+      "Preferred contact method is invalid.",
+      "preferredContact",
+    );
+  }
+  const emergencyContactRelationship = readOptionalText(
+    record,
+    "emergencyContactRelationship",
+    40,
+  );
+  if (
+    emergencyContactRelationship &&
+    !EMERGENCY_RELATIONSHIP_OPTIONS.includes(
+      emergencyContactRelationship as (typeof EMERGENCY_RELATIONSHIP_OPTIONS)[number],
+    )
+  ) {
+    throw new ProfileValidationError(
+      "Relationship is invalid.",
+      "emergencyContactRelationship",
+    );
+  }
+
+  return {
+    customerId: readOptionalCustomerId(record.customerId),
+    email: readOptionalEmail(record.email),
+    firstName: readOptionalName(record, "firstName", "First Name"),
+    lastName: readOptionalName(record, "lastName", "Last Name"),
+    phone: readOptionalPhone(record.phone),
+    preferredContact,
+    emergencyContactName: readOptionalText(record, "emergencyContactName", 80),
+    emergencyContactPhone: readOptionalText(record, "emergencyContactPhone", 32),
+    emergencyContactRelationship,
+    password: readOptionalPassword(record.password),
+    pet: record.pet === undefined ? null : validateOptionalStaffPetInput(record.pet),
   };
 }
 

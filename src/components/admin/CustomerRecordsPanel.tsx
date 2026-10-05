@@ -9,7 +9,7 @@ import {
   customerDeleteConfirmMessage,
   customerFreezeConfirmMessage,
 } from "@/lib/profiles/delete-guard";
-import { isOwnerEmail } from "@/lib/staff/owner";
+import { isInternalCustomerEmail, isOwnerEmail } from "@/lib/staff/owner";
 import type { PaymentMethodRecord } from "@/lib/payments/types";
 import type { StaffCustomerHistory } from "@/lib/charges/history";
 import { formatLineItemMoney } from "@/lib/charges/list-amount";
@@ -39,9 +39,13 @@ function sortCustomers(items: StaffCustomerRecord[]) {
   );
 }
 
+function visibleAccountEmail(email: string) {
+  return isInternalCustomerEmail(email) ? "" : email.trim();
+}
+
 function customerLabel(profile: CustomerProfile) {
   const name = `${profile.firstName} ${profile.lastName}`.trim();
-  return name || profile.email;
+  return name || visibleAccountEmail(profile.email) || "Customer";
 }
 
 function profileDetailValue(value: string) {
@@ -51,7 +55,10 @@ function profileDetailValue(value: string) {
 
 function OwnerProfileDetails({ profile }: { profile: CustomerProfile }) {
   const rows: Array<{ label: string; value: string; wide?: boolean }> = [
-    { label: "Email", value: profileDetailValue(profile.email) },
+    {
+      label: "Email",
+      value: profileDetailValue(visibleAccountEmail(profile.email)),
+    },
     { label: "First Name", value: profileDetailValue(profile.firstName) },
     { label: "Last Name", value: profileDetailValue(profile.lastName) },
     { label: "Mobile Phone", value: profileDetailValue(profile.phone) },
@@ -91,7 +98,8 @@ function OwnerProfileDetails({ profile }: { profile: CustomerProfile }) {
 function bookForCustomerHref(profile: CustomerProfile) {
   const params = new URLSearchParams();
   if (profile.id) params.set("customerId", profile.id);
-  if (profile.email) params.set("email", profile.email);
+  const email = visibleAccountEmail(profile.email);
+  if (email) params.set("email", email);
   if (profile.firstName) params.set("firstName", profile.firstName);
   if (profile.lastName) params.set("lastName", profile.lastName);
   if (profile.phone) params.set("phone", profile.phone);
@@ -913,8 +921,9 @@ export function CustomerRecordCard({
           <p className="mt-1 text-sm text-text-muted">
             {roleLabel}
             {customer.frozen ? " · Frozen" : ""}
-            {" · "}
-            {profile.email}
+            {visibleAccountEmail(profile.email)
+              ? ` · ${visibleAccountEmail(profile.email)}`
+              : ""}
             {profile.phone ? ` · ${profile.phone}` : ""}
           </p>
         </button>
@@ -1273,14 +1282,13 @@ export function CustomerRecordsPanel({
           Create customer profile
         </h3>
         <p className="text-sm text-text-muted">
-          Add a customer file with contact details. You can add pets, a card,
-          and a password on the file after it is created.
+          Add a customer file. Every field is optional.
         </p>
         <div className="rounded-2xl border border-lavender/30 bg-cream px-5 py-6">
           <CreateCustomerProfileForm
             preview={preview}
             existingEmails={existingEmails}
-            onCreated={(customer) => {
+            onSaved={(customer) => {
               setCreatedCustomerId(customer.profile.id);
               setLoadState((current) => {
                 if (current.status !== "ready") return current;
