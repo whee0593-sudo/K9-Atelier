@@ -17,7 +17,7 @@ export const bookingSecondaryBtnClass =
   "inline-flex min-h-[52px] w-full items-center justify-center rounded-sm border border-champagne bg-transparent px-6 text-[13px] font-medium uppercase tracking-[0.14em] text-ink transition hover:border-ink sm:w-auto";
 
 export const bookingBackLinkClass =
-  "font-body text-[12px] font-medium uppercase tracking-[0.14em] text-taupe transition hover:text-ink";
+  "inline-flex min-h-[44px] items-center font-body text-[12px] font-medium uppercase tracking-[0.14em] text-taupe transition hover:text-ink";
 
 export const bookingCardClass =
   "border border-gray-line/80 bg-ivory p-6 text-left transition md:p-8";

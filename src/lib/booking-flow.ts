@@ -32,13 +32,19 @@ export function bookingDurationMinutes(
   );
 }
 
-export function createDraftBookingPet(): PetProfile {
-  const id =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
+/** Stable SSR placeholder — replaced with a UUID on the client before use. */
+export const DRAFT_PET_PLACEHOLDER_ID = "draft-pending";
+
+export function createDraftBookingPet(id?: string): PetProfile {
+  const resolvedId =
+    id ??
+    (typeof window !== "undefined" &&
+    typeof crypto !== "undefined" &&
+    "randomUUID" in crypto
       ? `draft-${crypto.randomUUID()}`
-      : `draft-${Date.now()}`;
+      : DRAFT_PET_PLACEHOLDER_ID);
   return {
-    id,
+    id: resolvedId,
     name: "",
     breed: "",
     weightLbs: 0,
@@ -46,6 +52,14 @@ export function createDraftBookingPet(): PetProfile {
     vaccinationBookingStatus: "missing",
     rabiesStatus: null,
   };
+}
+
+export function assignDraftPetId(pet: PetProfile): PetProfile {
+  if (pet.id !== DRAFT_PET_PLACEHOLDER_ID) return pet;
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return { ...pet, id: `draft-${crypto.randomUUID()}` };
+  }
+  return { ...pet, id: `draft-${Date.now()}` };
 }
 
 export function isPersistedPetId(id: string) {

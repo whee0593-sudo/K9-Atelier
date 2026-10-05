@@ -18,10 +18,15 @@ describe("BookingProgress", () => {
   it("uses a compact mobile progress label and indicator", () => {
     const html = renderToStaticMarkup(<BookingProgress currentStep={2} />);
     assert.match(html, /Step 2 of 6/);
-    assert.match(html, />Date &amp; Time</);
+    assert.match(html, /aria-label="Step 2 of 6: Date &amp; Time"/);
     assert.match(html, /role="progressbar"/);
     assert.match(html, /aria-valuenow="2"/);
     assert.match(html, /sm:hidden/);
     assert.match(html, /hidden flex-wrap gap-x-4 gap-y-3 sm:flex/);
+    // Avoid duplicating the step short label under the mobile progress bar.
+    assert.doesNotMatch(
+      html,
+      /sm:hidden[\s\S]*?>Date &amp; Time<\/p>/,
+    );
   });
 });

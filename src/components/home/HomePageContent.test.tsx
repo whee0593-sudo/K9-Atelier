@@ -34,7 +34,7 @@ describe("home page content", () => {
 
     assert.equal(
       business.brand.lead,
-      "Multiple award-winning show groomer specializing in tailored styling, show-level coat care, extra-gentle senior care and hand stripping.",
+      "Award-winning show groomer — tailored styling, gentle senior care, and hand stripping.",
     );
     assert.equal(
       business.brand.lead.includes("Private mobile pet spa in Palm Beach County"),
@@ -48,6 +48,7 @@ describe("home page content", () => {
     assert.match(source, /Ask a Question/);
     assert.match(source, /href="\/contact"/);
     assert.match(source, /heroCtaClass/);
+    assert.match(source, /heroSecondaryCtaClass/);
     assert.match(source, /business\.brand\.lead/);
     assert.equal(
       source.includes("Award-winning grooming, brought directly"),
@@ -58,7 +59,7 @@ describe("home page content", () => {
     assert.equal(source.includes("/#first-visit"), false);
   });
 
-  it("puts brand copy and CTAs above the mobile hero image", () => {
+  it("puts brand copy, CTAs, and service meta above the mobile hero image", () => {
     const source = readFileSync(new URL("./HomeHero.tsx", import.meta.url), "utf8");
 
     const eyebrow = source.indexOf("business.brand.lockup");
@@ -66,17 +67,15 @@ describe("home page content", () => {
     const lead = source.indexOf("business.brand.lead");
     const bookCta = source.indexOf("Book an Appointment");
     const askCta = source.indexOf("Ask a Question");
+    const serviceMeta = source.indexOf("<HeroServiceMeta className=\"mt-6 md:mt-8\"");
     const photo = source.indexOf("<EditorialPhoto");
-    const mobileMeta = source.indexOf("<HeroServiceMeta className=\"md:hidden\"");
-    const desktopMeta = source.indexOf("hidden md:block");
 
     assert.ok(eyebrow > 0 && eyebrow < tagline);
     assert.ok(tagline < lead);
     assert.ok(lead < bookCta);
     assert.ok(bookCta < askCta);
-    assert.ok(askCta < photo);
-    assert.ok(photo < mobileMeta);
-    assert.ok(desktopMeta > 0);
+    assert.ok(askCta < serviceMeta);
+    assert.ok(serviceMeta < photo);
     assert.match(source, /max-h-\[46vh\]/);
     assert.match(source, /md:max-h-\[80vh\]/);
     assert.match(source, /md:!w-\[353px\]/);
@@ -143,7 +142,7 @@ describe("homepage SEO", () => {
     assert.match(html, /Private Mobile Pet Spa · Palm Beach/);
     assert.match(
       html,
-      /Multiple award-winning show groomer specializing in tailored styling, show-level coat care, extra-gentle senior care and hand stripping\./,
+      /Award-winning show groomer — tailored styling, gentle senior care, and hand stripping\./,
     );
     assert.match(html, /Grooming, tailored to the individual\./);
     assert.match(html, new RegExp(getCommunitiesServedLabel().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));

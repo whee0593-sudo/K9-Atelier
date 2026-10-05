@@ -16,7 +16,7 @@ export function ServicesNav() {
   return (
     <nav
       aria-label="Service categories"
-      className="sticky top-[5.4rem] z-40 border-y border-gray-line/80 bg-ivory/95 backdrop-blur-sm md:top-[5.9rem]"
+      className="sticky top-[5.75rem] z-40 border-y border-gray-line/80 bg-ivory/95 backdrop-blur-sm md:top-[6.25rem]"
     >
       <div className="mx-auto max-w-[1240px] px-5 py-3 md:px-12 md:py-4 xl:px-20">
         <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 xl:grid-cols-7">

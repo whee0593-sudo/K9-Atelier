@@ -242,57 +242,67 @@ export function PetScalarFields({
                     : "mt-1.5 rounded-xl border border-dashed border-lavender/60 bg-lavender-light/20 px-4 py-6"
                 }
               >
-                <p
-                  className={
-                    variant === "booking"
-                      ? "font-body text-[13px] text-ink"
-                      : "text-sm text-text"
-                  }
-                >
-                  {uploaded ? "On file" : "Not uploaded"}
-                </p>
-                <p className={`${noteClass} mt-1 break-words`}>
-                  PDF, JPG, PNG, WEBP, or HEIC · Max 4 MB
-                </p>
                 {!petPersisted ? (
-                  <p className={`${noteClass} mt-3 break-words`}>
-                    Save this pet profile to upload a record, if you would like
-                    one on file.
-                  </p>
-                ) : null}
-                <div className="mt-4 flex w-full min-w-0 flex-col gap-3">
-                  {canView ? (
-                    <button
-                      type="button"
-                      onClick={() => void handleViewRecord()}
-                      disabled={viewingRecord}
-                      className={
-                        variant === "booking"
-                          ? "inline-flex min-h-[48px] w-full items-center justify-center rounded-sm border border-deep-lavender bg-dusty-lavender/30 px-4 py-2 text-[12px] font-medium uppercase tracking-[0.14em] text-ink disabled:opacity-60"
-                          : "inline-flex items-center justify-center rounded-lg border border-gold bg-lavender-light/60 px-3 py-2 text-xs font-medium text-gold-dark disabled:opacity-60"
-                      }
-                    >
-                      {viewingRecord ? "Opening…" : "View Document"}
-                    </button>
-                  ) : null}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept={
-                      field.accept ?? ".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif"
-                    }
-                    disabled={!canUpload}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] ?? null;
-                      void handleVaccinationFileChange(file);
-                    }}
+                  <p
                     className={
                       variant === "booking"
-                        ? "block w-full min-w-0 max-w-full text-base text-taupe file:mr-3 file:inline-flex file:min-h-[48px] file:rounded-sm file:border-0 file:bg-deep-lavender file:px-4 file:text-[12px] file:font-medium file:uppercase file:tracking-[0.14em] file:text-ivory disabled:opacity-60"
-                        : "max-w-full text-xs text-text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-gold file:px-3 file:py-2 file:text-xs file:font-medium file:text-white disabled:opacity-60"
+                        ? "font-body text-[13px] leading-relaxed text-ink"
+                        : `${noteClass} break-words`
                     }
-                  />
-                </div>
+                  >
+                    {variant === "booking"
+                      ? "You can upload a rabies record later in My Account after this dog is saved — it is not required to continue booking."
+                      : "Save this pet profile to upload a record, if you would like one on file."}
+                  </p>
+                ) : (
+                  <>
+                    <p
+                      className={
+                        variant === "booking"
+                          ? "font-body text-[13px] text-ink"
+                          : "text-sm text-text"
+                      }
+                    >
+                      {uploaded ? "On file" : "Not uploaded"}
+                    </p>
+                    <p className={`${noteClass} mt-1 break-words`}>
+                      PDF, JPG, PNG, WEBP, or HEIC · Max 4 MB
+                    </p>
+                    <div className="mt-4 flex w-full min-w-0 flex-col gap-3">
+                      {canView ? (
+                        <button
+                          type="button"
+                          onClick={() => void handleViewRecord()}
+                          disabled={viewingRecord}
+                          className={
+                            variant === "booking"
+                              ? "inline-flex min-h-[48px] w-full items-center justify-center rounded-sm border border-deep-lavender bg-dusty-lavender/30 px-4 py-2 text-[12px] font-medium uppercase tracking-[0.14em] text-ink disabled:opacity-60"
+                              : "inline-flex items-center justify-center rounded-lg border border-gold bg-lavender-light/60 px-3 py-2 text-xs font-medium text-gold-dark disabled:opacity-60"
+                          }
+                        >
+                          {viewingRecord ? "Opening…" : "View Document"}
+                        </button>
+                      ) : null}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept={
+                          field.accept ?? ".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif"
+                        }
+                        disabled={!canUpload}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] ?? null;
+                          void handleVaccinationFileChange(file);
+                        }}
+                        className={
+                          variant === "booking"
+                            ? "block w-full min-w-0 max-w-full text-base text-taupe file:mr-3 file:inline-flex file:min-h-[48px] file:rounded-sm file:border-0 file:bg-deep-lavender file:px-4 file:text-[12px] file:font-medium file:uppercase file:tracking-[0.14em] file:text-ivory disabled:opacity-60"
+                            : "max-w-full text-xs text-text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-gold file:px-3 file:py-2 file:text-xs file:font-medium file:text-white disabled:opacity-60"
+                        }
+                      />
+                    </div>
+                  </>
+                )}
                 {vaccinationUploading && (
                   <p className="mt-2 text-xs text-text-muted">Uploading…</p>
                 )}
