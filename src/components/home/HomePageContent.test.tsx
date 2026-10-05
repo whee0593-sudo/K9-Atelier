@@ -11,7 +11,7 @@ import {
   HOME_PAGE_DESCRIPTION,
   HOME_PAGE_TITLE,
 } from "@/lib/home-seo";
-import { business, getCommunitiesServedLabel } from "@/lib/business";
+import { business } from "@/lib/business";
 
 const REMOVED_HOME_SECTIONS = [
   "HomeAboutTeaser",
@@ -146,10 +146,10 @@ describe("homepage SEO", () => {
       /Multiple award-winning show groomer specializing in tailored styling, show-level coat care, extra-gentle senior care and hand stripping\./,
     );
     assert.match(html, /Grooming, tailored to the individual\./);
-    assert.match(html, new RegExp(getCommunitiesServedLabel().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    const visibleText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
     assert.match(
-      html,
-      /Jupiter · Palm Beach Gardens · West Palm Beach/,
+      visibleText,
+      /Serving Jupiter Island · Jupiter · Tequesta · Palm Beach Gardens · Palm Beach · West Palm Beach/,
     );
     assert.doesNotMatch(
       html,
@@ -227,9 +227,14 @@ describe("homepage SEO", () => {
     assert.equal(business.brand.phoneDisplay, "561-593-3335");
     assert.match(html, /561-593-3335/);
     assert.match(html, /href="tel:\+15615933335"/);
+    const visibleText = html.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ");
     assert.match(
-      html,
-      /Serving Jupiter, Palm Beach Gardens &amp; West Palm Beach\./,
+      visibleText,
+      /Private, cage-free mobile dog grooming for dogs up to 45 lbs\./,
+    );
+    assert.match(
+      visibleText,
+      /Serving Jupiter Island, Jupiter, Tequesta, Palm Beach Gardens, Palm Beach & West Palm Beach\./,
     );
   });
 });
