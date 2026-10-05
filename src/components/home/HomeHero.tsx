@@ -27,17 +27,11 @@ function HeroServiceMeta({ className = "" }: { className?: string }) {
       className={`font-body max-w-xl space-y-3 text-[13px] font-medium uppercase leading-relaxed tracking-[0.12em] text-taupe md:text-[12px] md:tracking-[0.16em] ${className}`}
     >
       <p className="text-pretty">
-        Serving <span className="whitespace-nowrap">Jupiter Island</span>
-        {" · "}
-        <span className="whitespace-nowrap">Jupiter</span>
-        {" · "}
-        <span className="whitespace-nowrap">Tequesta</span>
-        {" · "}
-        <span className="whitespace-nowrap">Palm Beach Gardens</span>
-        {" · "}
-        <span className="whitespace-nowrap">Palm Beach</span>
-        {" · "}
-        <span className="whitespace-nowrap">West Palm Beach</span>
+        <span className="whitespace-nowrap">Serving Jupiter Island ·</span>{" "}
+        <span className="whitespace-nowrap">Jupiter ·</span>{" "}
+        <span className="whitespace-nowrap">Tequesta ·</span>{" "}
+        <span className="whitespace-nowrap">Palm Beach Gardens ·</span>{" "}
+        <span className="whitespace-nowrap">Palm Beach · West Palm Beach</span>
       </p>
       <p className="break-words">
         By Appointment Only · Dogs up to 45 lbs

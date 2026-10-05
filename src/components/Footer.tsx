@@ -64,7 +64,8 @@ export function Footer() {
             <p className="font-body mt-1.5 text-pretty text-[12px] font-medium leading-relaxed text-taupe">
               Serving{" "}
               <span className="whitespace-nowrap">Jupiter Island,</span>{" "}
-              <span className="whitespace-nowrap">Jupiter,</span>{" "}
+              <span className="whitespace-nowrap">Jupiter,</span>
+              <br className="min-[375px]:hidden" />{" "}
               <span className="whitespace-nowrap">Tequesta,</span>{" "}
               <span className="whitespace-nowrap">Palm Beach Gardens,</span>{" "}
               <span className="whitespace-nowrap">Palm Beach & West Palm Beach.</span>
