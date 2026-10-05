@@ -525,24 +525,19 @@ describe("Create customer profile section", () => {
     const administrators = html.indexOf(">Administrators<");
     const create = html.indexOf(">Create customer profile<");
     const customers = html.indexOf(">Customers<");
+    const ada = html.indexOf("Ada Lovelace");
     assert.ok(administrators >= 0);
     assert.ok(create > administrators);
     assert.ok(customers > create);
-    assert.match(html, /Create profile/);
-    assert.match(html, /First Name/);
-    assert.match(html, /Mobile Phone/);
-    assert.match(html, /Emergency Contact/);
-    assert.match(html, /Pet Profile/);
-    assert.match(html, /Pet Name/);
-    assert.match(html, /Payment Methods/);
-    assert.match(html, /New password/);
-    assert.match(html, /Confirm password/);
-    assert.match(html, /Every field is optional/);
-    const createForm = html.slice(create, customers);
-    assert.doesNotMatch(createForm, /text-gold(?:-dark)?"> \*/);
-    assert.doesNotMatch(createForm, /required/);
-    assert.match(html, /Ada Lovelace/);
+    assert.ok(ada > customers);
+    assert.match(html, />Add\+</);
+    assert.doesNotMatch(html, /Every field is optional/);
+    assert.doesNotMatch(html, />Create profile</);
+    const between = html.slice(create, customers);
+    assert.doesNotMatch(between, /<form/);
+    assert.doesNotMatch(between, /Owner Profile/);
     assert.match(html, /penny@k9atelier.com/);
+    assert.ok(html.indexOf("penny@k9atelier.com") < create);
   });
 
   it("creates a customer file from the staff customers route", () => {
@@ -559,6 +554,10 @@ describe("Create customer profile section", () => {
       "utf8",
     );
     assert.match(panel, /<CreateCustomerProfileForm/);
+    assert.match(panel, /Add\+/);
+    assert.match(panel, /addCreateDraft/);
+    assert.match(panel, /createDrafts\.map/);
+    assert.doesNotMatch(panel, /Every field is optional/);
     assert.match(route, /export async function POST/);
     assert.match(route, /createStaffCustomer/);
     assert.match(service, /export async function createStaffCustomer/);

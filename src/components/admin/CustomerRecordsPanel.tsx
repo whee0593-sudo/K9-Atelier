@@ -1080,6 +1080,7 @@ export function CustomerRecordsPanel({
       : { status: "loading" },
   );
   const [createdCustomerId, setCreatedCustomerId] = useState<string | null>(null);
+  const [createDrafts, setCreateDrafts] = useState<number[]>([]);
 
   const loadCustomers = useCallback(async () => {
     if (preview && previewCustomers) {
@@ -1173,14 +1174,22 @@ export function CustomerRecordsPanel({
     };
   }
 
-  function renderList(title: string, items: StaffCustomerRecord[], empty: string) {
-    return (
-      <section className="space-y-3">
-        <h3 className="text-lg font-semibold text-gold-dark">{title}</h3>
-        {items.length === 0 ? (
-          <p className="text-sm text-text-muted">{empty}</p>
-        ) : (
-          items.map((customer) => (
+  function addCreateDraft() {
+    setCreateDrafts((current) => {
+      const nextId = current.reduce((max, id) => Math.max(max, id), 0) + 1;
+      return [nextId, ...current];
+    });
+  }
+
+  function removeCreateDraft(id: number) {
+    setCreateDrafts((current) => current.filter((draftId) => draftId !== id));
+  }
+
+  function renderCards(items: StaffCustomerRecord[], empty: string) {
+    if (items.length === 0) {
+      return <p className="text-sm text-text-muted">{empty}</p>;
+    }
+    return items.map((customer) => (
             <CustomerRecordCard
               key={customer.profile.id}
               customer={customer}
@@ -1264,8 +1273,14 @@ export function CustomerRecordsPanel({
                 });
               }}
             />
-          ))
-        )}
+    ));
+  }
+
+  function renderList(title: string, items: StaffCustomerRecord[], empty: string) {
+    return (
+      <section className="space-y-3">
+        <h3 className="text-lg font-semibold text-gold-dark">{title}</h3>
+        {renderCards(items, empty)}
       </section>
     );
   }
@@ -1278,31 +1293,52 @@ export function CustomerRecordsPanel({
     <div className="space-y-10">
       {renderList("Administrators", loadState.admins, "No administrator accounts.")}
       <section className="space-y-3">
-        <h3 className="text-lg font-semibold text-gold-dark">
-          Create customer profile
-        </h3>
-        <p className="text-sm text-text-muted">
-          Add a customer file. Every field is optional.
-        </p>
-        <div className="rounded-2xl border border-lavender/30 bg-cream px-5 py-6">
-          <CreateCustomerProfileForm
-            preview={preview}
-            existingEmails={existingEmails}
-            onSaved={(customer) => {
-              setCreatedCustomerId(customer.profile.id);
-              setLoadState((current) => {
-                if (current.status !== "ready") return current;
-                const without = current.customers.filter(
-                  (item) => item.profile.id !== customer.profile.id,
-                );
-                return {
-                  ...current,
-                  customers: sortCustomers([...without, customer]),
-                };
-              });
-            }}
-          />
+        <div className="flex items-center justify-between gap-4">
+          <h3 className="text-lg font-semibold text-gold-dark">
+            Create customer profile
+          </h3>
+          <button
+            type="button"
+            onClick={addCreateDraft}
+            className="shrink-0 rounded-xl border border-lavender/40 px-3 py-2 text-sm text-text-muted hover:border-gold/40 hover:text-text"
+          >
+            Add+
+          </button>
         </div>
+        {createDrafts.map((id) => (
+          <div
+            key={id}
+            className="rounded-2xl border border-lavender/30 bg-cream px-5 py-6"
+          >
+            <div className="mb-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => removeCreateDraft(id)}
+                className="rounded-xl border border-lavender/40 px-3 py-1.5 text-sm text-text-muted hover:border-gold/40 hover:text-text"
+              >
+                Remove
+              </button>
+            </div>
+            <CreateCustomerProfileForm
+              preview={preview}
+              existingEmails={existingEmails}
+              onCreated={() => removeCreateDraft(id)}
+              onSaved={(customer) => {
+                setCreatedCustomerId(customer.profile.id);
+                setLoadState((current) => {
+                  if (current.status !== "ready") return current;
+                  const without = current.customers.filter(
+                    (item) => item.profile.id !== customer.profile.id,
+                  );
+                  return {
+                    ...current,
+                    customers: sortCustomers([...without, customer]),
+                  };
+                });
+              }}
+            />
+          </div>
+        ))}
       </section>
       {renderList("Customers", loadState.customers, "No customer accounts yet.")}
     </div>

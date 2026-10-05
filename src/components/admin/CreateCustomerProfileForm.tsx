@@ -120,10 +120,12 @@ export function CreateCustomerProfileForm({
   preview = false,
   existingEmails = [],
   onSaved,
+  onCreated,
 }: {
   preview?: boolean;
   existingEmails?: string[];
   onSaved: (customer: StaffCustomerRecord) => void;
+  onCreated?: () => void;
 }) {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [pet, setPet] = useState<PetProfile>(emptyPet);
@@ -279,6 +281,7 @@ export function CreateCustomerProfileForm({
       setPetSaved(false);
       setStartCard(false);
       setSaved(true);
+      onCreated?.();
     } catch (saveError) {
       setError(
         saveError instanceof Error
