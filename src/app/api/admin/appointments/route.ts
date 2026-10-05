@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { mapStaffServiceError, staffJsonError } from "@/lib/staff/api-errors";
 import {
   listAdminAppointmentsOnDate,
-  listTodayConfirmedAdminAppointments,
+  listTodayAdminAppointments,
 } from "@/lib/appointments/service";
 import { listAdminScheduleDays } from "@/lib/appointments/schedule";
 import { getRoutingConfig, zoneLabel } from "@/lib/booking-schedule";
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     });
   }
 
-  const today = await listTodayConfirmedAdminAppointments();
+  const today = await listTodayAdminAppointments();
   if (
     "error" in today &&
     (today.error === "unauthenticated" || today.error === "forbidden")

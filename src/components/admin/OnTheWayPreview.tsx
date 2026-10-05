@@ -1,14 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { AppointmentActionLinks } from "@/components/admin/AppointmentActionLinks";
 import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
 import { buildPreviewOnTheWayAppointments } from "@/lib/appointments/calendar-preview";
+import { appointmentStatusLabel } from "@/lib/appointments/map";
 import { formatStaffVisitTiming } from "@/lib/charges/hourly";
 import { buildAppointmentEnRouteSms } from "@/lib/notifications";
 import { formatServiceAddress } from "@/lib/travel";
 
-const SAMPLE_APPOINTMENTS = buildPreviewOnTheWayAppointments();
+function sampleAppointments() {
+  const samples = buildPreviewOnTheWayAppointments();
+  const base = samples[0];
+  if (!base) return samples;
+  return [
+    ...samples,
+    {
+      ...base,
+      id: "preview-on-the-way-pending",
+      petName: "Nori",
+      petBreed: "Poodle",
+      customerName: "Casey Lin",
+      customerFirstName: "Casey",
+      serviceName: "Signature Bath & Care",
+      appointmentTime: "3:00–5:00 PM",
+      status: "pending_confirmation" as const,
+      confirmedAt: null,
+      customerConfirmedAt: null,
+      enRouteSmsSentAt: null,
+    },
+  ];
+}
+
+const SAMPLE_APPOINTMENTS = sampleAppointments();
 
 export function OnTheWayPreview() {
   const [appointments, setAppointments] = useState(SAMPLE_APPOINTMENTS);
@@ -74,6 +98,12 @@ export function OnTheWayPreview() {
                     />
                     <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
                       Stop {index + 1} · {appointment.appointmentTime}
+                    </span>
+                    <span className="text-xs font-medium text-gold-dark">
+                      {appointmentStatusLabel(
+                        appointment.status,
+                        appointment.awaitingCustomerConfirm,
+                      )}
                     </span>
                   </div>
                 </div>
