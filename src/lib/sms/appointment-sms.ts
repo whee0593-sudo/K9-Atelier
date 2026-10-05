@@ -12,6 +12,7 @@ import {
   type BookingConfirmationDetails,
 } from "@/lib/notifications";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
+import { streetNameForSms } from "@/lib/sms/street-name";
 import { sendSms } from "@/lib/sms/twilio";
 
 function smsCustomerName(customer: CustomerContact) {
@@ -29,6 +30,7 @@ function detailsForSms(
   return {
     ...bookingDetailsFromAppointment(appointment, customer),
     customerName: smsCustomerName(customer),
+    streetName: streetNameForSms(appointment.addressStreet),
   };
 }
 

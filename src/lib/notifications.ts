@@ -1,4 +1,5 @@
-import { business, getBrandWebsiteLabel } from "@/lib/business";
+import { business } from "@/lib/business";
+import { streetNameForSms } from "@/lib/sms/street-name";
 
 /** Disclaimer shown under the estimated total in booking confirmations. */
 export const estimateNote =
@@ -13,6 +14,11 @@ export type BookingConfirmationDetails = {
   /** Arrival window, e.g. "10–11 AM". */
   timeLabel: string;
   addressLabel?: string;
+  /**
+   * Street name only, for confirmation texts. No house number.
+   * City, state, and ZIP stay out of the SMS.
+   */
+  streetName?: string;
   durationLabel?: string;
   priceLabel?: string;
   /**
@@ -52,14 +58,32 @@ function smsGreetingName(details: BookingConfirmationDetails) {
   return details.customerName?.trim() || "there";
 }
 
+function confirmationSmsWhen(details: BookingConfirmationDetails) {
+  const window = formatSmsTimeWindow(details.timeLabel);
+  const street = streetNameForSms(details.streetName);
+  if (!street) return `${details.dateLabel}, ${window}`;
+  return `${details.dateLabel}, ${window}, ${street}`;
+}
+
 /**
- * SMS body for a booking-success notification. First-visit confirmations use
- * welcome wording. Kept short for text-message delivery.
+ * Confirmation text sent with the confirmation email, and again 3 days
+ * before the visit. The email keeps the full address and the previous
+ * letter. The text asks the guest to reply C.
  */
+export function buildCustomerAppointmentConfirmSms(
+  details: BookingConfirmationDetails,
+): string {
+  return [
+    `${details.petName}'s appointment on ${confirmationSmsWhen(details)}. Reply C to confirm.`,
+    "",
+    SMS_OPT_OUT,
+  ].join("\n");
+}
+
 export function buildBookingConfirmationSms(
   details: BookingConfirmationDetails,
 ): string {
-  return `Your K9 Atelier appointment is confirmed for ${details.dateLabel} between ${details.timeLabel}. ${SMS_OPT_OUT}`;
+  return buildCustomerAppointmentConfirmSms(details);
 }
 
 export function buildAppointmentSubmittedSms(
@@ -117,26 +141,11 @@ function formatSmsClock(hourText: string, minuteText: string, period: string) {
   return `${hour}:${String(minute).padStart(2, "0")}${suffix}`;
 }
 
-export function accountAppointmentsUrl() {
-  return `https://${getBrandWebsiteLabel()}/account/appointments`;
-}
-
-/** Sent 3 days before the visit at 10am. Customer replies YES to confirm. */
+/** Sent 3 days before the visit at 10am. Customer replies C to confirm. */
 export function buildAppointmentConfirmRequestSms(
   details: BookingConfirmationDetails,
 ): string {
-  const name = smsGreetingName(details);
-  const window = formatSmsTimeWindow(details.timeLabel);
-  return [
-    `K9 ATELIER: Hi ${name}, please reply YES to confirm ${details.petName}'s ${details.serviceName} appointment on ${details.dateLabel} between ${window}.`,
-    "",
-    "To view, change, or cancel your appointment, visit:",
-    accountAppointmentsUrl(),
-    "",
-    "Changes and cancellations are subject to the policy accepted at booking.",
-    "",
-    SMS_OPT_OUT,
-  ].join("\n");
+  return buildCustomerAppointmentConfirmSms(details);
 }
 
 export function buildAppointmentEnRouteSms(

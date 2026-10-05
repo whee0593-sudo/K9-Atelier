@@ -47,9 +47,10 @@ const INBOUND_SELECT = `
   profiles ( email, first_name, last_name, phone )
 `;
 
+/** C confirms. YES and Y still count for texts already sent. */
 export function isCustomerYesReply(body: string) {
   const text = body.trim().replace(/[.!]+$/g, "").trim();
-  return /^(YES|Y)$/i.test(text);
+  return /^(C|YES|Y)$/i.test(text);
 }
 
 export function isIgnoredInboundReply(body: string) {
@@ -71,7 +72,7 @@ export function buildCustomerYesReceivedSms(input: {
   petName: string;
   dateLabel: string;
 }) {
-  return `K9 ATELIER: Thanks ${firstName(input.customerName)} — we received your YES for ${input.petName} on ${input.dateLabel}.\n\nReply STOP to opt out.`;
+  return `K9 ATELIER: Thanks ${firstName(input.customerName)} — we received your confirmation for ${input.petName} on ${input.dateLabel}.\n\nReply STOP to opt out.`;
 }
 
 export type InboundSmsResult =
@@ -185,9 +186,9 @@ export async function handleInboundCustomerSms(input: {
   if (!already) {
     await sendEmail({
       to: business.brand.email,
-      subject: `[K9 Atelier] Customer YES — ${appointment.petName}`,
+      subject: `[K9 Atelier] Customer confirmed — ${appointment.petName}`,
       text: [
-        `${contact?.name ?? contact?.email ?? "A customer"} replied YES.`,
+        `${contact?.name ?? contact?.email ?? "A customer"} replied ${input.body.trim()} to confirm.`,
         "",
         `Pet: ${appointment.petName}`,
         `Service: ${appointment.serviceName}`,
