@@ -14,6 +14,7 @@ import {
   fetchCustomerPaymentMethods,
   savePaymentSetupIntent,
 } from "@/lib/payments/client";
+import { customerCardWallets, manualCardWallets } from "@/lib/payments/card-wallets";
 import {
   formatPaymentMethodLabel,
   type PaymentMethodRecord,
@@ -36,12 +37,14 @@ function AddCardForm({
   onCancel,
   returnUrl,
   saveSetupIntent = savePaymentSetupIntent,
+  allowWallets = false,
 }: {
   clientSecret: string;
   onSaved: (method: PaymentMethodRecord) => void;
   onCancel: () => void;
   returnUrl?: string;
   saveSetupIntent?: (setupIntentId: string) => Promise<PaymentMethodRecord>;
+  allowWallets?: boolean;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -103,13 +106,15 @@ function AddCardForm({
 
   return (
     <div className="space-y-4">
+      {allowWallets ? (
+        <p className="text-sm text-text-muted">
+          On your phone, Apple Pay or Google Pay can save this card. You will
+          not be charged now.
+        </p>
+      ) : null}
       <PaymentElement
         options={{
-          wallets: {
-            applePay: "never",
-            googlePay: "never",
-            link: "never",
-          },
+          wallets: allowWallets ? customerCardWallets : manualCardWallets,
         }}
       />
       {error && (
@@ -274,6 +279,7 @@ export function PaymentMethodsManager({
             }}
           >
             <AddCardForm
+              allowWallets
               clientSecret={setup.clientSecret}
               onSaved={(method) => {
                 setMethods((current) => {

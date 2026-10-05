@@ -206,6 +206,7 @@ export function BookingPaymentStep({
                 }}
               >
                 <AddCardForm
+                  allowWallets
                   clientSecret={cardSetup.clientSecret}
                   returnUrl={
                     typeof window === "undefined"

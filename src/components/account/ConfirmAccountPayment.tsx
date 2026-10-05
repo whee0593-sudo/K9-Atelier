@@ -100,6 +100,7 @@ export function ConfirmAccountPayment({
             }}
           >
             <AddCardForm
+              allowWallets
               clientSecret={cardSetup.clientSecret}
               returnUrl={
                 typeof window === "undefined" ? undefined : window.location.href

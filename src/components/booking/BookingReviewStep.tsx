@@ -571,6 +571,7 @@ export function BookingReviewStep({
               }}
             >
               <AddCardForm
+                allowWallets
                 clientSecret={cardSetup.clientSecret}
                 returnUrl={
                   typeof window === "undefined"
