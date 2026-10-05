@@ -62,16 +62,21 @@ export const FULL_GROOM_FAQS = [
 export const HAND_STRIPPING_PAGE_TITLE =
   "Hand Stripping Dog Grooming in Palm Beach | K9 Atelier";
 export const HAND_STRIPPING_PAGE_DESCRIPTION =
-  "Professional hand stripping in Palm Beach for wire-coated dogs, preserving natural coat texture, color and protection through traditional coat care.";
+  "Professional mobile hand stripping for wire-coated dogs, preserving natural coat texture, color and breed character with private one-on-one care.";
 export const HAND_STRIPPING_PAGE_H1 = "Hand Stripping";
 export const HAND_STRIPPING_PAGE_INTRO =
-  "Professional hand stripping in Palm Beach for wire-coated breeds, preserving harsh texture, rich color and the coat\u2019s natural protective qualities.";
+  "Professional mobile hand stripping for wire-coated breeds, with private one-on-one care that preserves harsh texture, rich color and the coat\u2019s natural protective qualities.";
 export const HAND_STRIPPING_WHAT_HEADING = "What Is Hand Stripping?";
 export const HAND_STRIPPING_WHAT_BODY =
   "Hand stripping is a traditional grooming technique used to maintain certain wire coats by manually removing mature outer coat that is ready to shed. Rather than cutting the coat shorter with clippers, the finished coat is maintained through careful removal and rotation of mature hair to support its characteristic texture, color and appearance.";
+export const HAND_STRIPPING_GROOMER_BEFORE =
+  "Hand stripping at K9 Atelier is performed by ";
+export const HAND_STRIPPING_GROOMER_NAME = "Penny";
+export const HAND_STRIPPING_GROOMER_AFTER =
+  ", a multiple award-winning show groomer experienced in breed-specific coat care.";
 export const HAND_STRIPPING_COMPARE_HEADING = "Hand Stripping vs. Clipping";
 export const HAND_STRIPPING_COMPARE_BODY =
-  "Hand stripping and clipping create different results on a wire coat. Clipping shortens the existing hair, while hand stripping removes mature outer coat that is ready to release. For suitable coats, traditional hand stripping can help maintain the characteristic texture, color and finish associated with the breed.";
+  "Hand stripping and clipping create different results on a wire coat. Clipping or shaving cuts the existing coat shorter, while hand stripping removes mature outer coat by hand to help preserve the coat\u2019s natural texture, color and breed character. For suitable coats, traditional hand stripping can help maintain the characteristic texture, color and finish associated with the breed.";
 export const HAND_STRIPPING_SUITABLE_HEADING =
   "Which Coats Are Suitable for Hand Stripping?";
 export const HAND_STRIPPING_SUITABLE_BODY =

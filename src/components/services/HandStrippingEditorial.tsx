@@ -6,6 +6,9 @@ import {
   HAND_STRIPPING_COMPARE_BODY,
   HAND_STRIPPING_COMPARE_HEADING,
   HAND_STRIPPING_FAQS,
+  HAND_STRIPPING_GROOMER_AFTER,
+  HAND_STRIPPING_GROOMER_BEFORE,
+  HAND_STRIPPING_GROOMER_NAME,
   HAND_STRIPPING_MAINTENANCE_BODY,
   HAND_STRIPPING_MAINTENANCE_HEADING,
   HAND_STRIPPING_SUITABLE_BODY,
@@ -18,6 +21,9 @@ import {
 
 const textLinkClass =
   "font-body inline-flex min-h-[48px] items-center justify-center text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne";
+
+const inlineLinkClass =
+  "text-deep-lavender underline decoration-champagne/70 underline-offset-4 transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne";
 
 const sections = [
   {
@@ -68,6 +74,15 @@ export function HandStrippingEditorial() {
                     {paragraph}
                   </p>
                 ))}
+                {section.heading === HAND_STRIPPING_WHAT_HEADING ? (
+                  <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
+                    {HAND_STRIPPING_GROOMER_BEFORE}
+                    <Link href="/about" className={inlineLinkClass}>
+                      {HAND_STRIPPING_GROOMER_NAME}
+                    </Link>
+                    {HAND_STRIPPING_GROOMER_AFTER}
+                  </p>
+                ) : null}
               </div>
             ))}
           </div>

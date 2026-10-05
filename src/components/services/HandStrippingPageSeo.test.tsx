@@ -7,20 +7,29 @@ import { renderToStaticMarkup } from "react-dom/server";
 // Service components rely on the Next.js JSX runtime. Expose React for tsx tests.
 (globalThis as { React?: typeof React }).React = React;
 import { generateMetadata } from "@/app/services/[slug]/page";
-import { HandStrippingJsonLd } from "@/components/seo/HandStrippingJsonLd";
+import {
+  HAND_STRIPPING_AREA_SERVED,
+  HAND_STRIPPING_SERVICE_TYPE,
+  HandStrippingJsonLd,
+} from "@/components/seo/HandStrippingJsonLd";
 import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
 import { HandStrippingEditorial } from "@/components/services/HandStrippingEditorial";
 import { ServiceCard } from "@/components/services/ServiceCard";
 import { ServicesSection } from "@/components/services/ServicesSection";
 import { business, getBrandSearchName, getCommunitiesServed } from "@/lib/business";
 import {
+  HAND_STRIPPING_COMPARE_BODY,
   HAND_STRIPPING_COMPARE_HEADING,
   HAND_STRIPPING_FAQS,
+  HAND_STRIPPING_GROOMER_AFTER,
+  HAND_STRIPPING_GROOMER_BEFORE,
+  HAND_STRIPPING_GROOMER_NAME,
   HAND_STRIPPING_MAINTENANCE_HEADING,
   HAND_STRIPPING_PAGE_DESCRIPTION,
   HAND_STRIPPING_PAGE_H1,
   HAND_STRIPPING_PAGE_INTRO,
   HAND_STRIPPING_PAGE_TITLE,
+  HAND_STRIPPING_SUITABLE_BODY,
   HAND_STRIPPING_SUITABLE_HEADING,
   HAND_STRIPPING_SUITABLE_NOTE,
   HAND_STRIPPING_WHAT_HEADING,
@@ -93,21 +102,26 @@ describe("hand stripping page metadata", () => {
     assert.equal(metadata.description, HAND_STRIPPING_PAGE_DESCRIPTION);
     assert.equal(
       metadata.description,
-      "Professional hand stripping in Palm Beach for wire-coated dogs, preserving natural coat texture, color and protection through traditional coat care.",
+      "Professional mobile hand stripping for wire-coated dogs, preserving natural coat texture, color and breed character with private one-on-one care.",
     );
+    assert.equal(metadata.description.includes("$"), false);
+    assert.equal(metadata.description?.includes("Jupiter"), false);
     assert.equal(
       metadata.alternates?.canonical,
       "https://k9atelier.com/services/hand-stripping",
     );
     assert.equal(metadata.openGraph?.url, "https://k9atelier.com/services/hand-stripping");
+    assert.equal(metadata.openGraph?.title, HAND_STRIPPING_PAGE_TITLE);
+    assert.equal(metadata.openGraph?.description, HAND_STRIPPING_PAGE_DESCRIPTION);
     assert.equal(metadata.twitter?.title, HAND_STRIPPING_PAGE_TITLE);
     assert.equal(metadata.twitter?.description, HAND_STRIPPING_PAGE_DESCRIPTION);
     assert.equal(category?.pageEyebrow, "Hand Stripping");
     assert.equal(category?.pageH1, HAND_STRIPPING_PAGE_H1);
+    assert.equal(category?.pageH1, "Hand Stripping");
     assert.equal(category?.pageIntro, HAND_STRIPPING_PAGE_INTRO);
     assert.equal(
       category?.pageIntro,
-      "Professional hand stripping in Palm Beach for wire-coated breeds, preserving harsh texture, rich color and the coat\u2019s natural protective qualities.",
+      "Professional mobile hand stripping for wire-coated breeds, with private one-on-one care that preserves harsh texture, rich color and the coat\u2019s natural protective qualities.",
     );
   });
 });
@@ -137,7 +151,7 @@ describe("hand stripping page content", () => {
     assert.match(html, /Hand Stripping/);
     assert.match(
       html,
-      /Professional hand stripping in Palm Beach for wire-coated breeds, preserving harsh texture, rich color and the coat\u2019s natural protective qualities\./,
+      /Professional mobile hand stripping for wire-coated breeds, with private one-on-one care that preserves harsh texture, rich color and the coat\u2019s natural protective qualities\./,
     );
     for (const heading of [
       HAND_STRIPPING_WHAT_HEADING,
@@ -147,10 +161,23 @@ describe("hand stripping page content", () => {
     ]) {
       assert.match(html, new RegExp(heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     }
+    assert.match(html, /Wire-coated breeds/);
+    assert.match(html, /Terriers/);
+    assert.match(html, /Schnauzers/);
     assert.match(html, /Norwich Terriers/);
+    assert.match(html, /harsh outer coat/);
+    assert.match(html, new RegExp(HAND_STRIPPING_SUITABLE_BODY.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(html, new RegExp(HAND_STRIPPING_SUITABLE_NOTE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(html, /Rather than cutting the coat shorter with clippers/);
-    assert.match(html, /Clipping shortens the existing hair/);
+    assert.match(html, new RegExp(HAND_STRIPPING_COMPARE_BODY.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.match(
+      html,
+      /Clipping or shaving cuts the existing coat shorter, while hand stripping removes mature outer coat by hand to help preserve the coat.s natural texture, color and breed character\./,
+    );
+    assert.match(
+      html,
+      /Hand stripping at K9 Atelier is performed by <a[^>]*href="\/about"[^>]*>Penny<\/a>, a multiple award-winning show groomer experienced in breed-specific coat care\./,
+    );
 
     for (const faq of HAND_STRIPPING_FAQS) {
       assert.match(html, new RegExp(faq.question.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
@@ -168,7 +195,12 @@ describe("hand stripping page content", () => {
       (link) =>
         link.href === "/services/bath-coat-care" && link.text === "Signature Bath & Care",
     );
-    const groomer = links.find((link) => link.href === "/about");
+    const groomer = links.find(
+      (link) => link.href === "/about" && /Meet Your Groomer/.test(link.text),
+    );
+    const penny = links.find(
+      (link) => link.href === "/about" && link.text === HAND_STRIPPING_GROOMER_NAME,
+    );
     const booking = links.filter((link) => link.href === "/book");
 
     assert.ok(services);
@@ -185,6 +217,10 @@ describe("hand stripping page content", () => {
     assert.ok(groomer);
     assert.match(groomer.text, /^Meet Your Groomer/);
     assert.match(groomer.text, /→/);
+    assert.ok(penny);
+    assert.equal(penny.text, "Penny");
+    assert.match(html, new RegExp(`${HAND_STRIPPING_GROOMER_BEFORE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}<a`));
+    assert.match(html, new RegExp(HAND_STRIPPING_GROOMER_AFTER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.ok(booking.length >= 1);
     assert.match(booking[0].text, /Book an Appointment/);
   });
@@ -252,23 +288,36 @@ describe("hand stripping structured data", () => {
     const services = nodes.filter((node) => typesOf(node).includes("Service"));
     assert.equal(services.length, 1);
     const service = services[0];
+    assert.equal(service["@id"], "https://k9atelier.com/services/hand-stripping#service");
     assert.equal(service.name, "Hand Stripping");
+    assert.equal(service.serviceType, HAND_STRIPPING_SERVICE_TYPE);
+    assert.equal(service.serviceType, "Mobile Hand Stripping");
     assert.equal(service.url, "https://k9atelier.com/services/hand-stripping");
     assert.equal(service.description, HAND_STRIPPING_PAGE_DESCRIPTION);
+    assert.equal(service.offers, undefined);
     const provider = service.provider as JsonLdNode;
     assert.equal(provider["@id"], businesses[0]["@id"]);
+    assert.equal(provider["@id"], "https://k9atelier.com/#business");
     assert.equal(provider.name, "K9 Atelier Mobile Pet Spa");
     assert.equal(provider["@type"], undefined);
+
+    const businessAreas = businesses[0].areaServed as JsonLdNode[];
+    assert.deepEqual(
+      businessAreas.map((area) => area.name),
+      getCommunitiesServed(),
+    );
 
     const areas = service.areaServed as JsonLdNode[];
     assert.deepEqual(
       areas.map((area) => area.name),
-      getCommunitiesServed(),
+      [...HAND_STRIPPING_AREA_SERVED],
     );
     assert.deepEqual(areas.map((area) => area.name), [
-      "Palm Beach",
+      "Jupiter Island",
       "Jupiter",
+      "Tequesta",
       "Palm Beach Gardens",
+      "Palm Beach",
       "West Palm Beach",
     ]);
     for (const area of areas) {
