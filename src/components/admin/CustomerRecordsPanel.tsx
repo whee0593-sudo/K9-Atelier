@@ -1339,8 +1339,8 @@ export function CustomerRecordsPanel({
             />
           </div>
         ))}
-        {renderCards(loadState.customers, "No customer accounts yet.")}
       </section>
+      {renderList("Customers", loadState.customers, "No customer accounts yet.")}
     </div>
   );
 }
