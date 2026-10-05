@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { business, formatPrice } from "@/lib/business";
 import {
   formatServiceAddress,
@@ -19,6 +20,7 @@ import {
   bookingLabelClass,
   bookingNoticeClass,
   bookingPrimaryBtnClass,
+  bookingSecondaryBtnClass,
 } from "@/components/booking/booking-ui";
 
 const EMPTY_ADD_ON_IDS: string[] = [];
@@ -68,7 +70,7 @@ export function BookingLocationTimeStep({
   const [assigning, setAssigning] = useState(false);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
 
-  const { freeRadiusMiles } = business.serviceArea;
+  const { freeRadiusMiles, standardServiceMiles } = business.serviceArea;
 
   useEffect(() => {
     if (phase !== "schedule" || !quote?.lat || !quote.lon) return;
@@ -137,9 +139,6 @@ export function BookingLocationTimeStep({
       }
 
       setQuote(data.quote);
-      if (data.quote.withinServiceArea && data.quote.lat != null && data.quote.lon != null) {
-        setPhase("schedule");
-      }
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -252,7 +251,7 @@ export function BookingLocationTimeStep({
       <p className="font-body mt-4 max-w-2xl text-sm leading-relaxed text-taupe">
         Enter the appointment address so we can open the calendar. Complimentary
         travel is included within {freeRadiusMiles} miles; visits up to{" "}
-        {business.serviceArea.maxDistanceMiles} miles may include a travel fee.
+        {standardServiceMiles} miles may include a travel fee.
       </p>
 
       <form onSubmit={handleCheckArea} className="mt-8 space-y-5">
@@ -329,14 +328,29 @@ export function BookingLocationTimeStep({
 
       {quote && quote.withinServiceArea && (
         <div className={`${bookingNoticeClass} mt-8`}>
-          {quote.fee === 0 ? (
+          {quote.zone === "complimentary" ? (
             <>
               <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
                 Your Address Is Within Our Complimentary Service Area
               </p>
               <p className="font-display mt-3 text-2xl text-ink">{city}</p>
               <p className="font-body mt-4 text-sm text-taupe">
-                Travel · Complimentary
+                Complimentary travel
+              </p>
+            </>
+          ) : quote.zone === "extended" ? (
+            <>
+              <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+                Extended Service Area
+              </p>
+              <p className="font-body mt-3 text-sm text-taupe">
+                An extended travel fee applies to this location.
+              </p>
+              <p className="font-body mt-4 text-sm text-ink">
+                Distance · {quote.distanceMiles} miles
+              </p>
+              <p className="font-body mt-2 text-sm text-ink">
+                Extended Travel · +{formatPrice(quote.fee)}
               </p>
             </>
           ) : (
@@ -376,6 +390,9 @@ export function BookingLocationTimeStep({
       {quote && !quote.withinServiceArea && (
         <div className={`${bookingNoticeClass} mt-8`}>
           <p className="text-sm text-ink">{quote.summary}</p>
+          <Link href="/contact" className={`${bookingSecondaryBtnClass} mt-6`}>
+            Contact Us
+          </Link>
         </div>
       )}
     </section>

@@ -67,8 +67,10 @@
   "serviceArea": {
     "freeRadiusMiles": 10,
     "travelFeePerMile": 6.5,
-    "travelFeeNote": "Charged per one-way mile beyond free radius, based on GPS driving distance from base",
+    "travelFeeNote": "One-way miles: 0–10 complimentary; the portion above 10 through 20 at $6.50/mile; the portion above 20 through 25 at $10/mile. Beyond 25 miles, contact the studio. Final travel fee is rounded to the nearest dollar.",
     "maxDistanceMiles": 20,
+    "extendedTravelFeePerMile": 10,
+    "standardServiceMiles": 25,
     "communitiesServed": "Jupiter · Palm Beach Gardens · West Palm Beach",
     "publicBaseLabel": "Palm Beach Gardens, FL area",
     "publicLocality": "Palm Beach Gardens",

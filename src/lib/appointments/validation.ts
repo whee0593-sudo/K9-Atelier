@@ -1,4 +1,4 @@
-import { business } from "@/lib/business";
+import { calculateTravelFee } from "@/lib/travel";
 import type { AppointmentWriteInput } from "@/lib/appointments/types";
 import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
 import {
@@ -158,13 +158,24 @@ export function validateCreateAppointmentInput(
         )
       : {};
 
-  const travelDistanceMiles = readNumber(
+  const submittedDistanceMiles = readNumber(
     record,
     "travelDistanceMiles",
     "Travel distance",
   );
-  const travelFee = readNumber(record, "travelFee", "Travel fee");
-  const estimatedTotal = readNumber(record, "estimatedTotal", "Estimated total");
+  const submittedTravelFee = readNumber(record, "travelFee", "Travel fee");
+  const travelQuote = calculateTravelFee(submittedDistanceMiles);
+  if (!travelQuote.withinServiceArea) {
+    throw new AppointmentValidationError(
+      "Address is outside the service area.",
+      "address",
+    );
+  }
+  const travelDistanceMiles = travelQuote.distanceMiles;
+  const travelFee = travelQuote.fee;
+  const submittedTotal = readNumber(record, "estimatedTotal", "Estimated total");
+  const estimatedTotal =
+    Math.round((submittedTotal - submittedTravelFee + travelFee) * 100) / 100;
   const customerFirstName = readString(
     record,
     "customerFirstName",
@@ -214,13 +225,6 @@ export function validateCreateAppointmentInput(
     throw new AppointmentValidationError(
       "Please select a saved payment method for this appointment.",
       "paymentMethodId",
-    );
-  }
-
-  if (travelDistanceMiles > business.serviceArea.maxDistanceMiles) {
-    throw new AppointmentValidationError(
-      "Address is outside the service area.",
-      "address",
     );
   }
 
