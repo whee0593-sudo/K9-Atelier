@@ -37,7 +37,7 @@ export function buildStaffCreatedBookingEmail(
     "",
     closingParagraph,
     "",
-    `Confirm appointment: ${notice.confirmUrl}`,
+    `Review and confirm: ${notice.confirmUrl}`,
   ].join("\n");
 
   return buildCustomerLetterEmail(
@@ -53,7 +53,7 @@ export function buildStaffCreatedBookingEmail(
       closingParagraph,
       cta: {
         href: notice.confirmUrl,
-        label: "CONFIRM APPOINTMENT",
+        label: "Review and Confirm",
       },
     },
     text,
@@ -75,7 +75,7 @@ export function buildStaffCreatedBookingSms(
 ) {
   const dateLabel = formatAppointmentDateLabel(appointment.appointmentDate);
   const petLabel = formatPetNameList(petNames);
-  return `K9 Atelier reserved a visit for ${petLabel} on ${dateLabel} between ${appointment.appointmentTime}. Confirm here: ${confirmUrl} Reply STOP to opt out.`;
+  return `K9 Atelier reserved a visit for ${petLabel} on ${dateLabel} between ${appointment.appointmentTime}. Review and confirm: ${confirmUrl} Reply STOP to opt out.`;
 }
 
 export type StaffBookingInviteNotice = {
