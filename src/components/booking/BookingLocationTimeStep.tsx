@@ -217,8 +217,8 @@ export function BookingLocationTimeStep({
           Choose a date and start time for {pet.name}.
         </h2>
         <p className="font-body mt-4 text-sm text-taupe">
-          Monday–Friday · 9:00 AM–5:00 PM Eastern. Arrival is estimated for our
-          mobile route and may vary slightly.
+          Monday–Friday · 9:00 AM–5:00 PM Eastern. Timing may vary due to weather
+          or traffic. We will text you when we are on the way.
         </p>
         <div className="mt-8">
           <DateTimeStep

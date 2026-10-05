@@ -1,4 +1,4 @@
-import { listHourlyStartMinutes } from "@/lib/booking-schedule";
+import { isWithinServiceDay } from "@/lib/booking-schedule";
 import {
   isBookableWeekday,
   isDateBookable,
@@ -37,7 +37,7 @@ export function parseStaffRescheduleInput(
   if (
     typeof slotStartMinutes !== "number" ||
     !Number.isInteger(slotStartMinutes) ||
-    !listHourlyStartMinutes().includes(slotStartMinutes)
+    !isWithinServiceDay(slotStartMinutes)
   ) {
     return { error: "Choose a valid start time." };
   }

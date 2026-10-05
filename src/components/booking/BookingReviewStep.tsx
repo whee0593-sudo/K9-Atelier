@@ -386,7 +386,8 @@ export function BookingReviewStep({
             {appointmentDate} · {appointmentTime}
           </p>
           <p className="font-body mt-2 text-xs text-taupe">
-            Estimated arrival for our mobile route — timing may vary slightly.
+            Estimated arrival for our mobile route. Timing may vary due to weather
+            or traffic. We will text you when we are on the way.
           </p>
           <p className="font-body mt-2 text-sm text-taupe">
             {formatServiceAddress(address)}

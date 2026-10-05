@@ -202,7 +202,7 @@ export function buildBookingConfirmationEmail(
     "You are not charged when you book. Payment is settled after your appointment. Late cancellations and no-shows may be charged to the card you selected, according to our cancellation policy.",
     "",
     "What to Expect",
-    "Our mobile grooming studio will arrive near your scheduled start time. Because this is a mobile service, arrival is estimated and may vary slightly with traffic and the day’s route. A quick health and coat check will take place before we begin, and we'll keep you updated throughout the appointment.",
+    "We do our best to arrive at your scheduled time, and every confirmed appointment will be completed. Because this is a mobile service, arrival time may vary due to weather, traffic, and the appointment before yours. We will text you when we are on the way. A quick health and coat check will take place before we begin.",
     "",
     "How to Prepare",
     `- Please ensure ${details.petName} has had a bathroom break shortly before our arrival`,

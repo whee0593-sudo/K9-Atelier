@@ -9,7 +9,7 @@ import {
   quoteAppointmentChange,
 } from "@/lib/appointments/customer-change";
 import type { AppointmentChangeAction } from "@/lib/appointments/change-policy";
-import { listHourlyStartMinutes } from "@/lib/booking-schedule";
+import { isWithinServiceDay } from "@/lib/booking-schedule";
 
 const ACTIONS: AppointmentChangeAction[] = [
   "reschedule",
@@ -77,7 +77,7 @@ export async function POST(
 
     const slotStartMinutes =
       typeof body.slotStartMinutes === "number" &&
-      listHourlyStartMinutes().includes(body.slotStartMinutes)
+      isWithinServiceDay(body.slotStartMinutes)
         ? body.slotStartMinutes
         : body.timePreference === "afternoon"
           ? 12 * 60

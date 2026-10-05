@@ -245,6 +245,86 @@ function extraMilesForInsert(
   return Math.max(0, added - removed);
 }
 
+type OpenWindow = {
+  earliest: number;
+  latestStart: number;
+  extraMiles: number;
+};
+
+/**
+ * Gaps where another stop can start. The drive window is the fixed buffer
+ * (15 minutes). Distance and weather are explained to the guest; they do not
+ * push the next bookable start later.
+ */
+function openWindows(
+  base: GeoPoint,
+  stops: RouteStop[],
+  incoming: GeoPoint,
+  durationMinutes: number,
+): OpenWindow[] {
+  const bounds = getDayBounds();
+  const driveGap = bounds.travelBufferMinutes;
+  const sorted = [...stops].sort((a, b) => a.scheduledStart - b.scheduledStart);
+  const windows: OpenWindow[] = [];
+
+  for (let index = 0; index <= sorted.length; index += 1) {
+    const prev = sorted[index - 1];
+    const next = sorted[index];
+    const earliest =
+      index === 0
+        ? bounds.hoursStart
+        : (prev?.scheduledStart ?? bounds.hoursStart) +
+          (prev?.durationMinutes ?? 0) +
+          driveGap;
+    const latestFinish = next ? next.scheduledStart - driveGap : bounds.hoursEnd;
+    const latestStart = latestFinish - durationMinutes;
+    if (earliest > latestStart) continue;
+    if (earliest + durationMinutes > bounds.hoursEnd) continue;
+    windows.push({
+      earliest,
+      latestStart,
+      extraMiles: extraMilesForInsert(base, sorted, index, incoming),
+    });
+  }
+
+  return windows;
+}
+
+function startFitsWindow(start: number, window: OpenWindow, durationMinutes: number) {
+  const { hoursEnd } = getDayBounds();
+  return (
+    start >= window.earliest &&
+    start <= window.latestStart &&
+    start + durationMinutes <= hoursEnd
+  );
+}
+
+/** On-the-hour starts, plus the exact minute a route reopens and each quarter hour after it. */
+function isOfferedStart(
+  start: number,
+  windows: OpenWindow[],
+  durationMinutes: number,
+) {
+  if (!windows.some((window) => startFitsWindow(start, window, durationMinutes))) {
+    return false;
+  }
+  if (listHourlyStartMinutes().includes(start)) return true;
+  return windows.some((window) => {
+    if (window.earliest % 60 === 0) return false;
+    if (!startFitsWindow(start, window, durationMinutes)) return false;
+    return start === window.earliest || start % 15 === 0;
+  });
+}
+
+export function isWithinServiceDay(startMinutes: number) {
+  const { hoursStart, hoursEnd } = getDayBounds();
+  return (
+    Number.isInteger(startMinutes) &&
+    startMinutes >= hoursStart &&
+    startMinutes < hoursEnd
+  );
+}
+
 function collectExactStartCandidates(
   base: GeoPoint,
   stops: RouteStop[],
@@ -252,41 +332,13 @@ function collectExactStartCandidates(
   durationMinutes: number,
   requestedStart: number,
 ): InsertionCandidate[] {
-  const bounds = getDayBounds();
-  const sorted = [...stops].sort((a, b) => a.scheduledStart - b.scheduledStart);
-  const candidates: InsertionCandidate[] = [];
-
-  for (let index = 0; index <= sorted.length; index += 1) {
-    const prev = sorted[index - 1];
-    const next = sorted[index];
-    const prevPoint = prev ? stopPoint(prev, base) : base;
-    const nextPoint = next ? stopPoint(next, base) : null;
-
-    const earliestRaw =
-      index === 0
-        ? bounds.hoursStart
-        : (prev?.scheduledStart ?? bounds.hoursStart) +
-          (prev?.durationMinutes ?? 0) +
-          travelMinutesBetween(prevPoint, incoming, bounds.travelBufferMinutes);
-    const earliest = snapUp(earliestRaw);
-
-    const latestFinish = next
-      ? next.scheduledStart -
-        travelMinutesBetween(incoming, nextPoint ?? incoming, bounds.travelBufferMinutes)
-      : bounds.hoursEnd;
-    const latestStart = latestFinish - durationMinutes;
-    if (earliest > latestStart) continue;
-    if (requestedStart < earliest || requestedStart > latestStart) continue;
-    if (requestedStart + durationMinutes > bounds.hoursEnd) continue;
-
-    candidates.push({
+  return openWindows(base, stops, incoming, durationMinutes)
+    .filter((window) => startFitsWindow(requestedStart, window, durationMinutes))
+    .map((window) => ({
       scheduledStart: requestedStart,
-      extraMiles: extraMilesForInsert(base, sorted, index, incoming),
+      extraMiles: window.extraMiles,
       usedPreference: preferenceFromStart(requestedStart),
-    });
-  }
-
-  return candidates;
+    }));
 }
 
 /**
@@ -320,7 +372,15 @@ export function findRouteInsertionAtHour(
   const bounds = getDayBounds();
   if (stops.length >= bounds.maxAppointmentsPerDay) return null;
   if (durationMinutes > bounds.hoursEnd - bounds.hoursStart) return null;
-  if (!listHourlyStartMinutes().includes(requestedStart)) return null;
+  if (
+    !isOfferedStart(
+      requestedStart,
+      openWindows(base, stops, incoming, durationMinutes),
+      durationMinutes,
+    )
+  ) {
+    return null;
+  }
 
   const pool = collectExactStartCandidates(
     base,
@@ -347,11 +407,26 @@ export function listAvailableHourStarts(
   incoming: GeoPoint,
   durationMinutes: number,
 ) {
-  return listHourlyStartMinutes().filter(
-    (start) =>
-      findRouteInsertionAtHour(base, stops, incoming, durationMinutes, start) !=
-      null,
-  );
+  const bounds = getDayBounds();
+  if (stops.length >= bounds.maxAppointmentsPerDay) return [];
+  if (durationMinutes > bounds.hoursEnd - bounds.hoursStart) return [];
+
+  const windows = openWindows(base, stops, incoming, durationMinutes);
+  const starts = new Set<number>();
+  for (const hour of listHourlyStartMinutes()) {
+    if (isOfferedStart(hour, windows, durationMinutes)) starts.add(hour);
+  }
+  for (const window of windows) {
+    if (window.earliest % 60 === 0) continue;
+    if (isOfferedStart(window.earliest, windows, durationMinutes)) {
+      starts.add(window.earliest);
+    }
+    const firstQuarter = Math.ceil(window.earliest / 15) * 15;
+    for (let minute = firstQuarter; minute <= window.latestStart; minute += 15) {
+      if (isOfferedStart(minute, windows, durationMinutes)) starts.add(minute);
+    }
+  }
+  return [...starts].sort((a, b) => a - b);
 }
 
 function collectInsertions(

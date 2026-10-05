@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { StaffBookingDatePicker } from "@/components/admin/StaffBookingDatePicker";
-import { formatHourLabel } from "@/lib/appointments/closures";
+import { formatMinutesLabel } from "@/lib/appointments/closures";
 import { formatPrice } from "@/lib/business";
 import {
   allBookableServices,
@@ -612,7 +612,7 @@ export function BookForCustomerForm({
         serviceName: selectedService?.name ?? null,
         appointmentDate: appointmentDate || null,
         appointmentTime: slotStartMinutes
-          ? formatHourLabel(Math.floor(Number(slotStartMinutes) / 60))
+          ? formatMinutesLabel(Number(slotStartMinutes))
           : null,
       });
       return;
@@ -1119,7 +1119,7 @@ export function BookForCustomerForm({
             </option>
             {openSlots.map((slot) => (
               <option key={slot} value={slot}>
-                {formatHourLabel(Math.floor(slot / 60))}
+                {formatMinutesLabel(slot)}
               </option>
             ))}
           </select>

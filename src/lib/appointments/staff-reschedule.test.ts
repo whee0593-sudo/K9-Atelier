@@ -8,7 +8,7 @@ import { getUpcomingBookableDates } from "@/lib/booking-slots";
 import { addDaysToIsoDate, todayInBusinessTimezone } from "@/lib/sms/schedule";
 
 describe("staff reschedule input", () => {
-  it("requires a date and hourly start time", () => {
+  it("requires a date and a start inside studio hours", () => {
     assert.deepEqual(parseStaffRescheduleInput(null), {
       error: "Date and start time are required.",
     });
@@ -16,8 +16,17 @@ describe("staff reschedule input", () => {
       error: "Choose a date as YYYY-MM-DD.",
     });
     assert.deepEqual(
-      parseStaffRescheduleInput({ date: "2026-09-24", slotStartMinutes: 601 }),
+      parseStaffRescheduleInput({ date: "2026-09-24", slotStartMinutes: 8 * 60 }),
       { error: "Choose a valid start time." },
+    );
+    const upcoming = getUpcomingBookableDates(1)[0]?.value;
+    assert.ok(upcoming);
+    assert.deepEqual(
+      parseStaffRescheduleInput({
+        date: upcoming,
+        slotStartMinutes: 13 * 60 + 38,
+      }),
+      { date: upcoming, slotStartMinutes: 13 * 60 + 38 },
     );
   });
 

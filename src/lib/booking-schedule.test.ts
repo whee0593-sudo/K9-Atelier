@@ -150,9 +150,21 @@ describe("booking schedule", () => {
     assert.equal(addressAllowedForPlan(jupiterPlan, "33458", jupiter), true);
     assert.equal(addressAllowedForPlan(jupiterPlan, "33401", westPalm), false);
 
-    const oneDog = listAvailableHourStarts(base, stops, jupiter, duration);
-    assert.deepEqual(oneDog, [14 * 60, 15 * 60]);
-    assert.equal(formatArrivalWindow(oneDog[0]!, duration), "2:00–3:23 PM");
+    const oneDog = listAvailableHourStarts(base, stops, westPalm, duration);
+    const earliest = 13 * 60 + 38;
+    assert.equal(oneDog[0], earliest);
+    assert.ok(oneDog.includes(14 * 60));
+    assert.ok(oneDog.includes(15 * 60));
+    assert.equal(oneDog.includes(13 * 60), false);
+    assert.equal(formatArrivalWindow(earliest, duration), "1:38–3:01 PM");
+    const placed = findRouteInsertionAtHour(
+      base,
+      stops,
+      jupiter,
+      duration,
+      earliest,
+    );
+    assert.equal(placed?.scheduledStart, earliest);
 
     assert.deepEqual(
       listAvailableHourStarts(base, stops, jupiter, duration * 3),

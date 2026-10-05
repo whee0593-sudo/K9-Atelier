@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useState } from "react";
-import { formatHourLabel } from "@/lib/appointments/closures";
+import { formatMinutesLabel } from "@/lib/appointments/closures";
 import { canStaffRescheduleAppointment } from "@/lib/appointments/staff-actions";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import { listHourlyStartMinutes } from "@/lib/booking-schedule";
@@ -261,7 +261,7 @@ export function AdminRescheduleAppointmentButton({
                   </option>
                   {slotChoices.map((slot) => (
                     <option key={slot} value={slot}>
-                      {formatHourLabel(slot / 60)}
+                      {formatMinutesLabel(slot)}
                     </option>
                   ))}
                 </select>
