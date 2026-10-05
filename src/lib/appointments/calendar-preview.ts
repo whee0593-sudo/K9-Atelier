@@ -87,6 +87,8 @@ export function buildPreviewCalendarMonth(month: string): {
       isToday: date === today,
       closure: null,
       closureLabel: null,
+      blocks: [],
+      availabilityLabel: null,
     });
   }
 

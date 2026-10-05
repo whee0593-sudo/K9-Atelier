@@ -15,6 +15,14 @@ describe("BookForCustomerForm preview schedule", () => {
     assert.match(html, /Select a date to see available start hours/);
   });
 
+  it("uses the calendar date as the default appointment date", () => {
+    const html = renderToStaticMarkup(
+      <BookForCustomerForm preview initialDate="2026-10-12" />,
+    );
+    assert.match(html, /Mon, Oct 12/);
+    assert.match(html, /value="2026-10-12"/);
+  });
+
   it("keeps the date picker available before the service area is checked", () => {
     const html = renderToStaticMarkup(<BookForCustomerForm />);
     assert.match(html, /id="appointment-date"/);

@@ -88,6 +88,27 @@ describe("calendar month helpers", () => {
     );
   });
 
+  it("shades blocked time and keeps a partial block selectable", () => {
+    const partial = {
+      date: "2026-10-12",
+      isPast: false,
+      isFull: false,
+      isToday: false,
+      closure: null,
+      blocks: [{ allDay: false }],
+    };
+    assert.equal(isAdminCalendarDayMuted(partial), true);
+    assert.equal(isStaffPickerDaySelectable(partial), true);
+    assert.match(adminCalendarDayButtonClass(partial, false), /bg-lavender-light\/70/);
+    assert.equal(
+      isStaffPickerDaySelectable({
+        ...partial,
+        blocks: [{ allDay: true }],
+      }),
+      false,
+    );
+  });
+
   it("does not lock selectable days to a previously chosen date", () => {
     const days = buildEmptyOccupancyMonth("2026-09", "2026-09-18");
     const selectable = staffPickerSelectableDates(days);

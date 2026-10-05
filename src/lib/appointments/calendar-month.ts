@@ -35,13 +35,16 @@ export function currentBusinessCalendarMonth(now = new Date()) {
 }
 
 export function isAdminCalendarDayMuted(
-  day: Pick<AdminCalendarDay, "isPast" | "isFull" | "closure">,
+  day: Pick<AdminCalendarDay, "isPast" | "isFull" | "closure"> & {
+    blocks?: Array<{ allDay?: boolean }>;
+  },
 ) {
   return (
     day.isPast ||
     day.isFull ||
     Boolean(day.closure?.closedAllDay) ||
-    Boolean(day.closure?.closedHours.length)
+    Boolean(day.closure?.closedHours.length) ||
+    Boolean(day.blocks?.length)
   );
 }
 
@@ -51,9 +54,12 @@ export function isAdminCalendarDayMuted(
  * gray is only a hint.
  */
 export function isStaffPickerDaySelectable(
-  day: Pick<AdminCalendarDay, "date" | "isPast" | "isFull" | "closure">,
+  day: Pick<AdminCalendarDay, "date" | "isPast" | "isFull" | "closure"> & {
+    blocks?: Array<{ allDay: boolean }>;
+  },
 ) {
   if (day.isPast || day.isFull || day.closure?.closedAllDay) return false;
+  if (day.blocks?.some((block) => block.allDay)) return false;
   return isDateBookable(parseDateValue(day.date));
 }
 
@@ -64,7 +70,9 @@ export function staffPickerSelectableDates(days: AdminCalendarDay[]) {
 }
 
 export function adminCalendarDayButtonClass(
-  day: Pick<AdminCalendarDay, "isPast" | "isFull" | "isToday" | "closure">,
+  day: Pick<AdminCalendarDay, "isPast" | "isFull" | "isToday" | "closure"> & {
+    blocks?: Array<{ allDay?: boolean }>;
+  },
   selected: boolean,
 ) {
   const muted = isAdminCalendarDayMuted(day);
@@ -98,6 +106,8 @@ export function buildEmptyOccupancyMonth(
       isToday: date === today,
       closure: null,
       closureLabel: null,
+      blocks: [],
+      availabilityLabel: null,
     });
   }
   return days;

@@ -1,9 +1,25 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AdminCalendarMonthGrid } from "@/components/admin/AdminCalendarMonthGrid";
+import {
+  BlockAllDayDialog,
+  BlockTimeDialog,
+  CalendarDateActionMenu,
+  ManageAvailabilityDialog,
+  ViewDayDialog,
+  type DateMenuAction,
+} from "@/components/admin/CalendarDateActions";
 import { AppointmentActionLinks } from "@/components/admin/AppointmentActionLinks";
 import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
+import {
+  availabilityBlockConflictMessage,
+  availabilityBlockLabel,
+  normalizeAvailabilityBlockInput,
+  type AvailabilityBlock,
+  type AvailabilityBlockDraft,
+} from "@/lib/appointments/availability-blocks";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import type { AdminCalendarDay } from "@/lib/appointments/calendar";
 import {
@@ -62,6 +78,22 @@ export function AdminCalendar({
   const [loadingDay, setLoadingDay] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dayVersion, setDayVersion] = useState(0);
+  const [previewBlocks, setPreviewBlocks] = useState<AvailabilityBlock[]>([]);
+  const [menu, setMenu] = useState<{
+    date: string;
+    variant: "popover" | "sheet";
+    top: number;
+    left: number;
+  } | null>(null);
+  const [dialog, setDialog] = useState<
+    | { type: "block-time" | "block-all-day" | "manage" | "view-day"; date: string }
+    | null
+  >(null);
+  const [editingBlock, setEditingBlock] = useState<AvailabilityBlock | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const router = useRouter();
 
   const loadMonth = useCallback(async (nextMonth: string) => {
     setLoadingMonth(true);
@@ -150,6 +182,182 @@ export function AdminCalendar({
     };
   }, [preview, selectedDate, dayVersion]);
 
+  const visibleDays = useMemo(() => {
+    if (!preview) return days;
+    return days.map((day) => {
+      const blocks = previewBlocks.filter((block) => block.serviceDate === day.date);
+      return {
+        ...day,
+        blocks,
+        availabilityLabel: availabilityBlockLabel(blocks),
+      };
+    });
+  }, [days, preview, previewBlocks]);
+
+  const dialogBlocks = useMemo(() => {
+    if (!dialog) return [];
+    return visibleDays.find((day) => day.date === dialog.date)?.blocks ?? [];
+  }, [dialog, visibleDays]);
+
+  function openMenu(date: string, anchor?: HTMLButtonElement) {
+    if (!anchor) return;
+    const mobile = window.matchMedia("(max-width: 767px)").matches;
+    if (mobile) {
+      setMenu({ date, variant: "sheet", top: 0, left: 0 });
+      return;
+    }
+    const rect = anchor.getBoundingClientRect();
+    const width = 260;
+    const estimatedHeight = 280;
+    let left = rect.left;
+    if (left + width > window.innerWidth - 12) {
+      left = Math.max(12, window.innerWidth - width - 12);
+    }
+    let top = rect.bottom + 8;
+    if (top + estimatedHeight > window.innerHeight - 12) {
+      top = Math.max(12, rect.top - estimatedHeight - 8);
+    }
+    setMenu({ date, variant: "popover", top, left });
+  }
+
+  function blocksFor(date: string) {
+    return visibleDays.find((day) => day.date === date)?.blocks ?? [];
+  }
+
+  function applyPreviewDraft(draft: AvailabilityBlockDraft, ignoreId?: string) {
+    const conflict = availabilityBlockConflictMessage(
+      blocksFor(draft.serviceDate),
+      draft,
+      ignoreId,
+    );
+    if (conflict) {
+      setActionError(conflict);
+      return false;
+    }
+    setPreviewBlocks((current) => {
+      if (ignoreId) {
+        return current.map((block) =>
+          block.id === ignoreId ? { ...block, ...draft } : block,
+        );
+      }
+      const id =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `preview-${Date.now()}`;
+      return [...current, { id, ...draft }];
+    });
+    setActionError(null);
+    setEditingBlock(null);
+    setDialog((current) =>
+      current?.type === "manage" ? current : null,
+    );
+    return true;
+  }
+
+  async function saveDraft(draft: AvailabilityBlockDraft, ignoreId?: string) {
+    const normalized = normalizeAvailabilityBlockInput(draft);
+    if (!normalized.ok) {
+      setActionError(normalized.error);
+      return;
+    }
+    if (preview) {
+      applyPreviewDraft(normalized.value, ignoreId);
+      return;
+    }
+    setActionBusy(true);
+    setActionError(null);
+    try {
+      const response = await fetch(
+        ignoreId
+          ? `/api/admin/availability-blocks/${ignoreId}`
+          : "/api/admin/availability-blocks",
+        {
+          method: ignoreId ? "PATCH" : "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            ignoreId
+              ? {
+                  allDay: normalized.value.allDay,
+                  startMinutes: normalized.value.startMinutes,
+                  endMinutes: normalized.value.endMinutes,
+                  reason: normalized.value.reason,
+                }
+              : {
+                  date: normalized.value.serviceDate,
+                  allDay: normalized.value.allDay,
+                  startMinutes: normalized.value.startMinutes,
+                  endMinutes: normalized.value.endMinutes,
+                  reason: normalized.value.reason,
+                },
+          ),
+        },
+      );
+      const body = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setActionError(body.error ?? "Could not save that block.");
+        return;
+      }
+      setEditingBlock(null);
+      setDialog((current) => (current?.type === "manage" ? current : null));
+      await loadMonth(month);
+    } catch {
+      setActionError("Could not save that block.");
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  async function removeBlock(block: AvailabilityBlock) {
+    if (preview) {
+      setPreviewBlocks((current) => current.filter((item) => item.id !== block.id));
+      return;
+    }
+    setRemovingId(block.id);
+    setActionError(null);
+    try {
+      const response = await fetch(`/api/admin/availability-blocks/${block.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const body = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setActionError(body.error ?? "Could not remove that block.");
+        return;
+      }
+      await loadMonth(month);
+    } catch {
+      setActionError("Could not remove that block.");
+    } finally {
+      setRemovingId(null);
+    }
+  }
+
+  function runDateAction(action: DateMenuAction) {
+    if (!menu) return;
+    const date = menu.date;
+    setMenu(null);
+    setActionError(null);
+    setEditingBlock(null);
+    if (action === "book") {
+      const href = preview
+        ? `/admin/book-for-customer/preview?date=${date}`
+        : `/admin/book-for-customer?date=${date}`;
+      router.push(href);
+      return;
+    }
+    if (action === "view-day") {
+      if (date !== selectedDate) {
+        setAppointments([]);
+        setLoadingDay(true);
+      }
+      setSelectedDate(date);
+      setDialog({ type: "view-day", date });
+      return;
+    }
+    setDialog({ type: action, date });
+  }
+
   function refreshSelectedDay() {
     setDayVersion((current) => current + 1);
     void loadMonth(month);
@@ -169,14 +377,121 @@ export function AdminCalendar({
       <div className="mt-4">
         <AdminCalendarMonthGrid
           month={month}
-          days={days}
-          selectedDate={selectedDate}
+          days={visibleDays}
+          selectedDate={menu?.date ?? selectedDate}
           loading={loadingMonth}
-          onPrevMonth={() => setMonth((current) => shiftCalendarMonth(current, -1))}
-          onNextMonth={() => setMonth((current) => shiftCalendarMonth(current, 1))}
-          onSelectDate={setSelectedDate}
+          onPrevMonth={() => {
+            setMenu(null);
+            setMonth((current) => shiftCalendarMonth(current, -1));
+          }}
+          onNextMonth={() => {
+            setMenu(null);
+            setMonth((current) => shiftCalendarMonth(current, 1));
+          }}
+          onSelectDate={openMenu}
         />
       </div>
+
+      {menu ? (
+        <CalendarDateActionMenu
+          date={menu.date}
+          variant={menu.variant}
+          top={menu.top}
+          left={menu.left}
+          hasBlocks={blocksFor(menu.date).length > 0}
+          onClose={() => setMenu(null)}
+          onAction={runDateAction}
+        />
+      ) : null}
+
+      {dialog?.type === "block-time" ? (
+        <BlockTimeDialog
+          key={editingBlock?.id ?? `new-${dialog.date}`}
+          date={dialog.date}
+          block={editingBlock}
+          busy={actionBusy}
+          error={actionError}
+          onClose={() => {
+            setDialog((current) =>
+              editingBlock ? { type: "manage", date: dialog.date } : null,
+            );
+            setEditingBlock(null);
+            setActionError(null);
+          }}
+          onSubmit={(input) =>
+            void saveDraft(
+              {
+                serviceDate: dialog.date,
+                allDay: false,
+                startMinutes: input.startMinutes,
+                endMinutes: input.endMinutes,
+                reason: input.reason,
+              },
+              editingBlock?.id,
+            )
+          }
+        />
+      ) : null}
+
+      {dialog?.type === "block-all-day" ? (
+        <BlockAllDayDialog
+          key={editingBlock?.id ?? `all-${dialog.date}`}
+          date={dialog.date}
+          block={editingBlock}
+          busy={actionBusy}
+          error={actionError}
+          onClose={() => {
+            setDialog((current) =>
+              editingBlock ? { type: "manage", date: dialog.date } : null,
+            );
+            setEditingBlock(null);
+            setActionError(null);
+          }}
+          onSubmit={(reason) =>
+            void saveDraft(
+              {
+                serviceDate: dialog.date,
+                allDay: true,
+                startMinutes: null,
+                endMinutes: null,
+                reason,
+              },
+              editingBlock?.id,
+            )
+          }
+        />
+      ) : null}
+
+      {dialog?.type === "manage" ? (
+        <ManageAvailabilityDialog
+          blocks={dialogBlocks}
+          busyId={removingId}
+          error={actionError}
+          onClose={() => {
+            setDialog(null);
+            setActionError(null);
+          }}
+          onEdit={(block) => {
+            setEditingBlock(block);
+            setActionError(null);
+            setDialog({
+              type: block.allDay ? "block-all-day" : "block-time",
+              date: dialog.date,
+            });
+          }}
+          onRemove={(block) => void removeBlock(block)}
+        />
+      ) : null}
+
+      {dialog?.type === "view-day" ? (
+        <ViewDayDialog
+          date={dialog.date}
+          loading={loadingDay && selectedDate === dialog.date}
+          appointments={selectedDate === dialog.date ? appointments : []}
+          blocks={dialogBlocks}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
 
       <div className="mt-6">
         <h4 className="text-base font-medium text-gold-dark">
