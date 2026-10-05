@@ -349,10 +349,14 @@ export function validateStaffCustomerBookingInput(
   };
 }
 
+const PAYMENT_METHOD_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export function validateCustomerConfirmInput(body: unknown): {
   token: string;
   password: string | null;
   acceptPolicies: true;
+  paymentMethodId: string | null;
 } {
   const record = assertPlainObject(body);
   const token = readString(record, "token", "Confirmation link", 200);
@@ -371,8 +375,20 @@ export function validateCustomerConfirmInput(body: unknown): {
   }
 
   const passwordRaw = record.password;
+  const paymentRaw = record.paymentMethodId;
+  let paymentMethodId: string | null = null;
+  if (paymentRaw != null && paymentRaw !== "") {
+    if (typeof paymentRaw !== "string" || !PAYMENT_METHOD_ID_PATTERN.test(paymentRaw)) {
+      throw new StaffBookingValidationError(
+        "Select a saved card for this appointment.",
+        "paymentMethodId",
+      );
+    }
+    paymentMethodId = paymentRaw;
+  }
+
   if (passwordRaw == null || passwordRaw === "") {
-    return { token, password: null, acceptPolicies: true };
+    return { token, password: null, acceptPolicies: true, paymentMethodId };
   }
   if (typeof passwordRaw !== "string") {
     throw new StaffBookingValidationError("Enter a password.", "password");
@@ -383,5 +399,5 @@ export function validateCustomerConfirmInput(body: unknown): {
       "password",
     );
   }
-  return { token, password: passwordRaw, acceptPolicies: true };
+  return { token, password: passwordRaw, acceptPolicies: true, paymentMethodId };
 }

@@ -120,6 +120,31 @@ export async function saveStaffPaymentSetupIntent(
   return body.method;
 }
 
+export async function createConfirmPaymentSetupIntent(token: string): Promise<{
+  clientSecret: string;
+  publishableKey: string;
+}> {
+  const response = await paymentFetch("/api/confirm-account/payment/setup-intent", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  return readPaymentResponse(response);
+}
+
+export async function saveConfirmPaymentSetupIntent(
+  token: string,
+  setupIntentId: string,
+): Promise<PaymentMethodRecord> {
+  const response = await paymentFetch("/api/confirm-account/payment", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, setupIntentId }),
+  });
+  const body = await readPaymentResponse<{ method: PaymentMethodRecord }>(response);
+  return body.method;
+}
+
 export async function deleteStaffCustomerPaymentMethod(
   customerId: string,
   paymentMethodId: string,

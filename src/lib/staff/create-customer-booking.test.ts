@@ -13,6 +13,7 @@ import {
   isAwaitingCustomerConfirm,
   isCustomerConfirmExpired,
 } from "@/lib/staff/customer-confirm-token";
+import { preferredPaymentMethodId } from "@/lib/staff/customer-confirm-status";
 import {
   buildStaffCreatedBookingEmail,
   buildStaffCreatedBookingSms,
@@ -207,6 +208,38 @@ describe("validateCustomerConfirmInput", () => {
     });
     assert.equal(input.token, token);
     assert.equal(input.password, "secret123");
+    assert.equal(input.paymentMethodId, null);
+  });
+
+  it("accepts a saved card id and rejects a malformed one", () => {
+    const token = "b".repeat(64);
+    const paymentMethodId = "22222222-2222-4222-8222-222222222222";
+    const input = validateCustomerConfirmInput({
+      token,
+      acceptPolicies: true,
+      paymentMethodId,
+    });
+    assert.equal(input.paymentMethodId, paymentMethodId);
+    assert.throws(
+      () =>
+        validateCustomerConfirmInput({
+          token,
+          acceptPolicies: true,
+          paymentMethodId: "not-a-card",
+        }),
+      StaffBookingValidationError,
+    );
+  });
+
+  it("prefers the default card when securing a staff booking", () => {
+    assert.equal(
+      preferredPaymentMethodId([
+        { id: "older", isDefault: false },
+        { id: "default-card", isDefault: true },
+      ]),
+      "default-card",
+    );
+    assert.equal(preferredPaymentMethodId([]), null);
   });
 
   it("rejects a short password", () => {
@@ -276,7 +309,9 @@ describe("staff-created booking copy", () => {
     assert.match(email.html, /Review and Confirm/);
     assert.match(email.text, /rabies vaccination status/);
     assert.match(email.text, /card on file/);
+    assert.match(email.text, /secure this appointment/);
     const sms = buildStaffCreatedBookingSms(appointment, confirmUrl);
+    assert.match(sms, /add a card to secure/i);
     assert.match(sms, /Bella/);
     assert.match(sms, /confirm-account\?token=abc/);
     const multiSms = buildStaffCreatedBookingSms(appointment, confirmUrl, [

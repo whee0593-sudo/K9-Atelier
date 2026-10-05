@@ -7,3 +7,9 @@ export function normalizeStaffEmail(email: string) {
 export function isOwnerEmail(email?: string | null) {
   return Boolean(email && normalizeStaffEmail(email) === OWNER_EMAIL);
 }
+
+export function isInternalCustomerEmail(email?: string | null) {
+  return Boolean(
+    email && normalizeStaffEmail(email).endsWith("@customers.k9atelier.com"),
+  );
+}

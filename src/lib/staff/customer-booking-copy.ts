@@ -22,7 +22,7 @@ export function buildStaffCreatedBookingEmail(
     ? "K9 Atelier reserved this grooming visit for you. Open the link below to confirm the appointment and create your password so you can manage it online."
     : "K9 Atelier reserved this grooming visit for you. Open the link below to confirm the appointment.";
   const closingParagraph =
-    "You are not charged when you confirm. After confirming, open your account to confirm rabies vaccination status and add a card on file. You may also upload a current rabies certificate or vaccination record.";
+    "A card on file is required to secure this appointment. Add one on the review and confirm page if you do not already have one. You are not charged when you confirm. You may also confirm rabies vaccination status in your account and upload a current rabies certificate or vaccination record.";
 
   const text = [
     `Dear ${greetingName},`,
@@ -75,7 +75,7 @@ export function buildStaffCreatedBookingSms(
 ) {
   const dateLabel = formatAppointmentDateLabel(appointment.appointmentDate);
   const petLabel = formatPetNameList(petNames);
-  return `K9 Atelier reserved a visit for ${petLabel} on ${dateLabel} between ${appointment.appointmentTime}. Review and confirm: ${confirmUrl} Reply STOP to opt out.`;
+  return `K9 Atelier reserved a visit for ${petLabel} on ${dateLabel} between ${appointment.appointmentTime}. Review and confirm, and add a card to secure it: ${confirmUrl} Reply STOP to opt out.`;
 }
 
 export type StaffBookingInviteNotice = {

@@ -11,6 +11,7 @@ import {
   missingCustomerProfileFieldLabels,
   ProfileValidationError,
   validateProfileWriteInput,
+  validateStaffCustomerCreateInput,
   validateStaffProfileWriteInput,
 } from "@/lib/profiles/validation";
 
@@ -153,6 +154,25 @@ describe("required customer profile fields", () => {
       email: "tiafrancavilla@gmail.com",
     });
     assert.equal(input.email, "tiafrancavilla@gmail.com");
+  });
+
+  it("lets staff create a customer file with every field left blank", () => {
+    const input = validateStaffCustomerCreateInput({});
+    assert.equal(input.email, null);
+    assert.equal(input.firstName, null);
+    assert.equal(input.lastName, null);
+    assert.equal(input.phone, null);
+    assert.equal(input.password, null);
+    assert.equal(input.pet, null);
+  });
+
+  it("keeps a dog profile when only the pet name is filled in", () => {
+    const input = validateStaffCustomerCreateInput({
+      pet: { name: "Milo" },
+    });
+    assert.equal(input.pet?.name, "Milo");
+    assert.equal(input.pet?.breed, "");
+    assert.equal(input.pet?.weightLbs, null);
   });
 
   it("exposes staff APIs for every persisted guest account surface", () => {

@@ -20,8 +20,8 @@ export default async function ConfirmAccountPage({ searchParams }: Props) {
           Confirm Your Appointment
         </h1>
         <p className="font-body mt-6 text-sm leading-relaxed text-taupe">
-          Review the reservation K9 Atelier made for you. Confirming does not
-          charge your card.
+          Review the reservation K9 Atelier made for you. Add a card on this
+          page to secure the appointment. Confirming does not charge your card.
         </p>
         {trimmed ? (
           <ConfirmAccountForm token={trimmed} />

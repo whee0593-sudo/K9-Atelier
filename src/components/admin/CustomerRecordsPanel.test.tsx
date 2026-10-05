@@ -5,7 +5,10 @@ import { describe, it } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CustomerAdminNotesEditor } from "@/components/admin/CustomerAdminNotesEditor";
-import { CustomerRecordCard } from "@/components/admin/CustomerRecordsPanel";
+import {
+  CustomerRecordCard,
+  CustomerRecordsPanel,
+} from "@/components/admin/CustomerRecordsPanel";
 import {
   latestPetServiceLabel,
   recordExpirationSummaryValue,
@@ -490,5 +493,74 @@ describe("latestPetServiceLabel", () => {
       "Nov 1, 2026",
     );
     assert.equal(recordExpirationSummaryValue({}), "—");
+  });
+});
+
+describe("Create customer profile section", () => {
+  it("sits between administrators and customers", () => {
+    const html = renderToStaticMarkup(
+      <CustomerRecordsPanel
+        preview
+        previewCustomers={[
+          sampleCustomer({
+            kind: "admin",
+            canDelete: false,
+            canFreeze: false,
+            profile: {
+              id: "22222222-2222-4222-8222-222222222222",
+              email: "penny@k9atelier.com",
+              firstName: "Penny",
+              lastName: "K9 Atelier",
+              phone: "+15615933335",
+              preferredContact: "Email",
+              emergencyContactName: "",
+              emergencyContactPhone: "",
+              emergencyContactRelationship: "",
+            },
+          }),
+          sampleCustomer(),
+        ]}
+      />,
+    );
+    const administrators = html.indexOf(">Administrators<");
+    const create = html.indexOf(">Create customer profile<");
+    const customers = html.indexOf(">Customers<");
+    assert.ok(administrators >= 0);
+    assert.ok(create > administrators);
+    assert.ok(customers > create);
+    assert.match(html, /Create profile/);
+    assert.match(html, /First Name/);
+    assert.match(html, /Mobile Phone/);
+    assert.match(html, /Emergency Contact/);
+    assert.match(html, /Pet Profile/);
+    assert.match(html, /Pet Name/);
+    assert.match(html, /Payment Methods/);
+    assert.match(html, /New password/);
+    assert.match(html, /Confirm password/);
+    assert.match(html, /Every field is optional/);
+    const createForm = html.slice(create, customers);
+    assert.doesNotMatch(createForm, /text-gold(?:-dark)?"> \*/);
+    assert.doesNotMatch(createForm, /required/);
+    assert.match(html, /Ada Lovelace/);
+    assert.match(html, /penny@k9atelier.com/);
+  });
+
+  it("creates a customer file from the staff customers route", () => {
+    const panel = readFileSync(
+      path.join(process.cwd(), "src/components/admin/CustomerRecordsPanel.tsx"),
+      "utf8",
+    );
+    const route = readFileSync(
+      path.join(process.cwd(), "src/app/api/admin/customers/route.ts"),
+      "utf8",
+    );
+    const service = readFileSync(
+      path.join(process.cwd(), "src/lib/profiles/staff-service.ts"),
+      "utf8",
+    );
+    assert.match(panel, /<CreateCustomerProfileForm/);
+    assert.match(route, /export async function POST/);
+    assert.match(route, /createStaffCustomer/);
+    assert.match(service, /export async function createStaffCustomer/);
   });
 });

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOwnerSession, getStaffSession } from "@/lib/staff/auth";
@@ -29,6 +30,8 @@ import {
   type CustomerProfile,
   type CustomerProfileRow,
 } from "@/lib/profiles/types";
+import type { StaffCustomerCreateInput } from "@/lib/profiles/validation";
+import type { OptionalStaffPetInput } from "@/lib/pets/validation";
 import {
   mapPaymentMethodRow,
   type PaymentMethodRecord,
@@ -688,4 +691,327 @@ export async function setStaffCustomerPassword(
     return { error: "server" };
   }
   return { ok: true };
+}
+
+const CREATED_PROFILE_SELECT =
+  "id, email, first_name, last_name, phone, preferred_contact, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship";
+
+function isDuplicateAuthEmail(message: string) {
+  return /already been registered|already exists|email address is already/i.test(
+    message,
+  );
+}
+
+function emailLookupPattern(email: string) {
+  return email.replace(/[%_\\]/g, "\\$&");
+}
+
+function filePlaceholderEmail() {
+  return `file.${randomUUID()}@customers.k9atelier.com`;
+}
+
+function profileUpdateRow(input: StaffCustomerCreateInput, email?: string) {
+  return {
+    ...(email ? { email } : {}),
+    first_name: input.firstName,
+    last_name: input.lastName,
+    phone: input.phone,
+    preferred_contact: input.preferredContact,
+    emergency_contact_name: input.emergencyContactName,
+    emergency_contact_phone: input.emergencyContactPhone,
+    emergency_contact_relationship: input.emergencyContactRelationship,
+  };
+}
+
+async function emailAlreadyUsed(
+  admin: ReturnType<typeof createAdminClient>,
+  email: string,
+  exceptUserId?: string,
+) {
+  let query = admin
+    .from("profiles")
+    .select("id")
+    .ilike("email", emailLookupPattern(email))
+    .limit(1);
+  if (exceptUserId) query = query.neq("id", exceptUserId);
+  const { data, error } = await query;
+  if (error) {
+    console.error("createStaffCustomer email lookup failed:", error.message);
+    return { error: "server" as const };
+  }
+  if ((data ?? []).length > 0) {
+    return {
+      error: "conflict" as const,
+      message: "That email is already used by another account.",
+    };
+  }
+  return null;
+}
+
+async function insertOptionalPet(
+  admin: ReturnType<typeof createAdminClient>,
+  customerId: string,
+  pet: OptionalStaffPetInput,
+  actorUserId: string,
+) {
+  const { data, error } = await admin
+    .from("pets")
+    .insert({
+      customer_id: customerId,
+      name: pet.name,
+      breed: pet.breed,
+      weight_lbs: pet.weightLbs,
+      date_of_birth: pet.dateOfBirth,
+      approximate_age_years: pet.approximateAgeYears,
+      sex: pet.sex,
+      temperament_notes: pet.temperamentNotes,
+      health_comfort_notes: pet.healthComfortNotes,
+      grooming_preferences: pet.groomingPreferences,
+      rabies_status: pet.rabiesStatus,
+      rabies_expiration_date: pet.rabiesExpirationDate,
+    })
+    .select(PET_SELECT)
+    .single();
+  if (error || !data) {
+    console.error("createStaffCustomer pet insert failed:", error?.message);
+    return null;
+  }
+
+  if (pet.adminServiceNotes) {
+    const { error: notesError } = await admin.from("pet_admin_notes").insert({
+      pet_id: data.id,
+      notes: pet.adminServiceNotes,
+      updated_by: actorUserId,
+    });
+    if (notesError) {
+      console.error("createStaffCustomer pet notes failed:", notesError.message);
+    }
+  }
+
+  try {
+    const { ensurePetReferralCode } = await import("@/lib/referrals/service");
+    await ensurePetReferralCode({
+      petId: data.id,
+      petName: pet.name,
+      ownerCustomerId: customerId,
+    });
+  } catch (referralError) {
+    console.error("createStaffCustomer referral code failed:", referralError);
+  }
+
+  return {
+    ...mapPetRowToRecord(data as PetRow),
+    adminServiceNotes: pet.adminServiceNotes,
+  };
+}
+
+async function rollbackCreatedUser(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+) {
+  const { error } = await admin.auth.admin.deleteUser(userId);
+  if (error) {
+    console.error("createStaffCustomer rollback failed:", error.message);
+  }
+}
+
+export async function createStaffCustomer(
+  input: StaffCustomerCreateInput,
+): Promise<
+  | { customer: StaffCustomerRecord }
+  | {
+      error: "unauthenticated" | "forbidden" | "conflict" | "not_found" | "server";
+      message?: string;
+    }
+> {
+  const session = await getStaffSession();
+  if ("error" in session) return session;
+
+  const admin = createAdminClient();
+  const actorIsOwner = isOwnerEmail(session.user.email);
+
+  if (input.email) {
+    const staffEmails = await listProtectedStaffEmails(admin);
+    if (isAdminAccountEmail(input.email, staffEmails)) {
+      return {
+        error: "conflict",
+        message: "That email belongs to a staff account.",
+      };
+    }
+    const taken = await emailAlreadyUsed(
+      admin,
+      input.email,
+      input.customerId ?? undefined,
+    );
+    if (taken) return taken;
+  }
+
+  if (input.customerId) {
+    const { data: existing, error: existingError } = await admin
+      .from("profiles")
+      .select(CREATED_PROFILE_SELECT)
+      .eq("id", input.customerId)
+      .maybeSingle();
+    if (existingError) {
+      console.error("createStaffCustomer lookup failed:", existingError.message);
+      return { error: "server" };
+    }
+    if (!existing) return { error: "not_found" };
+
+    if (input.email && normalizeStaffEmail(input.email) !== normalizeStaffEmail(existing.email)) {
+      const { error: authError } = await admin.auth.admin.updateUserById(input.customerId, {
+        email: input.email,
+        email_confirm: true,
+        ...(input.password ? { password: input.password } : {}),
+      });
+      if (authError) {
+        console.error("createStaffCustomer auth update failed:", authError.message);
+        if (isDuplicateAuthEmail(authError.message)) {
+          return {
+            error: "conflict",
+            message: "That email is already used by another account.",
+          };
+        }
+        return { error: "server" };
+      }
+    } else if (input.password) {
+      const { error: passwordError } = await admin.auth.admin.updateUserById(
+        input.customerId,
+        { password: input.password },
+      );
+      if (passwordError) {
+        console.error("createStaffCustomer password failed:", passwordError.message);
+        return { error: "server" };
+      }
+    }
+
+    const { data: profileRow, error: profileError } = await admin
+      .from("profiles")
+      .update(profileUpdateRow(input, input.email ?? undefined))
+      .eq("id", input.customerId)
+      .select(CREATED_PROFILE_SELECT)
+      .maybeSingle();
+    if (profileError || !profileRow) {
+      console.error(
+        "createStaffCustomer profile update failed:",
+        profileError?.message ?? "profile row missing",
+      );
+      return { error: "server" };
+    }
+
+    const pets: StaffCustomerRecord["pets"] = [];
+    if (input.pet) {
+      const inserted = await insertOptionalPet(
+        admin,
+        input.customerId,
+        input.pet,
+        session.user.id,
+      );
+      if (!inserted) return { error: "server" };
+      pets.push(inserted);
+    }
+
+    const actionInput = {
+      actorIsOwner,
+      actorUserId: session.user.id,
+      targetUserId: input.customerId,
+      targetEmail: profileRow.email,
+    };
+    return {
+      customer: {
+        profile: mapProfileRow(profileRow as CustomerProfileRow),
+        pets,
+        paymentMethods: [],
+        kind: "customer",
+        frozen: false,
+        canDelete: !ownerAccountActionBlockReason({
+          ...actionInput,
+          action: "delete",
+        }),
+        canFreeze: !ownerAccountActionBlockReason({
+          ...actionInput,
+          action: "freeze",
+        }),
+      },
+    };
+  }
+
+  const email = input.email ?? filePlaceholderEmail();
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    email_confirm: true,
+    ...(input.password ? { password: input.password } : {}),
+    user_metadata: {
+      first_name: input.firstName,
+      last_name: input.lastName,
+      phone: input.phone,
+    },
+    app_metadata: {
+      staff_created: true,
+      unclaimed: !input.password,
+      file_placeholder_email: !input.email,
+    },
+  });
+  if (error || !data.user) {
+    console.error("createStaffCustomer createUser failed:", error?.message);
+    if (error && isDuplicateAuthEmail(error.message)) {
+      return {
+        error: "conflict",
+        message: "That email is already used by another account.",
+      };
+    }
+    return { error: "server" };
+  }
+
+  const userId = data.user.id;
+  const { data: profileRow, error: profileError } = await admin
+    .from("profiles")
+    .update(profileUpdateRow(input, email))
+    .eq("id", userId)
+    .select(CREATED_PROFILE_SELECT)
+    .maybeSingle();
+
+  if (profileError || !profileRow) {
+    console.error(
+      "createStaffCustomer profile update failed:",
+      profileError?.message ?? "profile row missing",
+    );
+    await rollbackCreatedUser(admin, userId);
+    return { error: "server" };
+  }
+
+  const pets: StaffCustomerRecord["pets"] = [];
+  if (input.pet) {
+    const inserted = await insertOptionalPet(admin, userId, input.pet, session.user.id);
+    if (!inserted) {
+      await rollbackCreatedUser(admin, userId);
+      return { error: "server" };
+    }
+    pets.push(inserted);
+  }
+
+  const actionInput = {
+    actorIsOwner,
+    actorUserId: session.user.id,
+    targetUserId: userId,
+    targetEmail: email,
+  };
+
+  return {
+    customer: {
+      profile: mapProfileRow(profileRow as CustomerProfileRow),
+      pets,
+      paymentMethods: [],
+      kind: "customer",
+      frozen: false,
+      canDelete: !ownerAccountActionBlockReason({
+        ...actionInput,
+        action: "delete",
+      }),
+      canFreeze: !ownerAccountActionBlockReason({
+        ...actionInput,
+        action: "freeze",
+      }),
+    },
+  };
 }

@@ -8,8 +8,19 @@ import type {
 import { isFrozenAuthUser } from "@/lib/auth/frozen-account";
 import { fetchCustomerContact } from "@/lib/email/appointment-context";
 import { notifyCustomerAppointmentConfirmed } from "@/lib/email/appointment-mails";
+import {
+  issueOffSessionSetupIntent,
+  listPaymentMethodsForCustomer,
+  persistSucceededSetupIntent,
+} from "@/lib/payments/service";
+import type { PaymentMethodRecord } from "@/lib/payments/types";
+import { isStripeConfigured } from "@/lib/stripe/config";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
+import {
+  preferredPaymentMethodId,
+  SECURE_APPOINTMENT_CARD_MESSAGE,
+} from "@/lib/staff/customer-confirm-status";
 import {
   hashCustomerConfirmToken,
   isCustomerConfirmExpired,
@@ -57,6 +68,8 @@ export type CustomerConfirmPreview = {
   };
   requiresPassword: boolean;
   createdAccount: boolean;
+  paymentMethods: PaymentMethodRecord[];
+  stripeConfigured: boolean;
 };
 
 async function loadConfirmAppointment(token: string) {
@@ -106,6 +119,8 @@ async function loadConfirmAppointment(token: string) {
 
   const appointment = mapAppointmentRowToRecord(row);
   const requiresPassword = authUser.user.app_metadata?.unclaimed === true;
+  const paymentMethods = await listPaymentMethodsForCustomer(row.customer_id);
+  if (!paymentMethods) return { ok: false as const, error: "server" as const };
 
   return {
     ok: true as const,
@@ -114,6 +129,7 @@ async function loadConfirmAppointment(token: string) {
     appointment,
     user: authUser.user,
     requiresPassword,
+    paymentMethods,
     email: profile?.email ?? authUser.user.email ?? "",
     firstName: profile?.first_name ?? "",
   };
@@ -137,13 +153,36 @@ export async function getCustomerConfirmPreview(
       },
       requiresPassword: result.requiresPassword,
       createdAccount: result.user.app_metadata?.staff_created === true,
+      paymentMethods: result.paymentMethods,
+      stripeConfigured: isStripeConfigured(),
     },
   };
+}
+
+export async function createConfirmAccountSetupIntent(token: string) {
+  const result = await loadConfirmAppointment(token);
+  if (!result.ok) return result;
+  const issued = await issueOffSessionSetupIntent(
+    result.row.customer_id,
+    result.email,
+  );
+  if ("error" in issued) return issued;
+  return issued;
+}
+
+export async function saveConfirmAccountPaymentMethod(
+  token: string,
+  setupIntentId: string,
+) {
+  const result = await loadConfirmAppointment(token);
+  if (!result.ok) return result;
+  return persistSucceededSetupIntent(result.row.customer_id, setupIntentId);
 }
 
 export async function confirmStaffCreatedBooking(input: {
   token: string;
   password: string | null;
+  paymentMethodId: string | null;
 }): Promise<
   | {
       appointment: AppointmentRecord;
@@ -168,6 +207,18 @@ export async function confirmStaffCreatedBooking(input: {
     return {
       error: "conflict",
       message: "Set a password to finish creating this account.",
+    };
+  }
+
+  const paymentMethodId =
+    input.paymentMethodId ?? preferredPaymentMethodId(result.paymentMethods);
+  const ownsMethod =
+    paymentMethodId != null &&
+    result.paymentMethods.some((method) => method.id === paymentMethodId);
+  if (!ownsMethod) {
+    return {
+      error: "conflict",
+      message: SECURE_APPOINTMENT_CARD_MESSAGE,
     };
   }
 
@@ -197,6 +248,7 @@ export async function confirmStaffCreatedBooking(input: {
       customer_confirmed_at: now,
       customer_confirm_token_hash: null,
       customer_confirm_expires_at: null,
+      payment_method_id: paymentMethodId,
     })
     .eq("customer_confirm_token_hash", hashCustomerConfirmToken(input.token))
     .select(APPOINTMENT_SELECT);
