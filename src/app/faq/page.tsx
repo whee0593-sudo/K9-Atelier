@@ -272,7 +272,7 @@ export default function FaqPage() {
       ),
     },
     {
-      q: "Is my arrival time exact?",
+      q: "Is my appointment time exact?",
       a: (
         <FaqParagraphs
           paragraphs={[
