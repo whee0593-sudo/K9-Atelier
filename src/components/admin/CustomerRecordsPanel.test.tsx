@@ -60,6 +60,10 @@ describe("CustomerRecordCard actions", () => {
     assert.match(html, />Freeze</);
     assert.match(html, /Book for customer/);
     assert.match(html, /Ada Lovelace/);
+    assert.match(
+      html,
+      /\/admin\/book-for-customer\?customerId=11111111-1111-4111-8111-111111111111/,
+    );
   });
 
   it("hides access actions on the owner account", () => {

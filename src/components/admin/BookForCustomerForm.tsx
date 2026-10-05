@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { StaffBookingDatePicker } from "@/components/admin/StaffBookingDatePicker";
 import { formatHourLabel } from "@/lib/appointments/closures";
@@ -17,14 +17,26 @@ import {
   slotsForStaffDate,
   staffScheduleHint,
 } from "@/lib/staff/book-for-customer-schedule";
+import {
+  bookingAddressKey,
+  bookingProfileStatusCopy,
+  formatBookingAddress,
+  resolveBookingProfileQuery,
+  type StaffBookingProfile,
+  type StaffBookingProfileAddress,
+  type StaffBookingProfilePet,
+} from "@/lib/staff/customer-booking-profile";
 import type { TravelQuote } from "@/lib/travel";
 
 type Prefill = {
+  customerId?: string;
   firstName?: string;
   lastName?: string;
   email?: string;
   phone?: string;
 };
+
+type FieldSource = "empty" | "saved" | "user";
 
 type QuoteState =
   | { status: "idle" }
@@ -53,6 +65,7 @@ type SuccessState = {
 
 type PetDraft = {
   key: string;
+  id: string | null;
   name: string;
   breed: string;
   weightLbs: string;
@@ -63,7 +76,22 @@ function createPetDraft(): PetDraft {
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
       : `pet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  return { key, name: "", breed: "", weightLbs: "" };
+  return { key, id: null, name: "", breed: "", weightLbs: "" };
+}
+
+function petDraftFromSaved(pet: StaffBookingProfilePet): PetDraft {
+  return {
+    key: pet.id,
+    id: pet.id,
+    name: pet.name,
+    breed: pet.breed,
+    weightLbs: pet.weightLbs > 0 ? String(pet.weightLbs) : "",
+  };
+}
+
+function petsFromProfile(profile: StaffBookingProfile | null | undefined) {
+  if (!profile?.pets.length) return [createPetDraft()];
+  return profile.pets.map(petDraftFromSaved);
 }
 
 const fieldClass =
@@ -73,22 +101,44 @@ const labelClass = "block text-sm font-medium text-text";
 export function BookForCustomerForm({
   prefill,
   preview = false,
+  initialProfile = null,
 }: {
   prefill?: Prefill;
   preview?: boolean;
+  initialProfile?: StaffBookingProfile | null;
 }) {
+  const initialAddress = initialProfile?.addresses[0] ?? null;
   const [firstName, setFirstName] = useState(prefill?.firstName ?? "");
   const [lastName, setLastName] = useState(prefill?.lastName ?? "");
   const [email, setEmail] = useState(prefill?.email ?? "");
   const [phone, setPhone] = useState(prefill?.phone ?? "");
   const [notifyEmail, setNotifyEmail] = useState(Boolean(prefill?.email));
   const [notifySms, setNotifySms] = useState(Boolean(prefill?.phone) || !prefill?.email);
-  const [pets, setPets] = useState<PetDraft[]>(() => [createPetDraft()]);
+  const [pets, setPets] = useState<PetDraft[]>(() => petsFromProfile(initialProfile));
+  const [petsSource, setPetsSource] = useState<FieldSource>(
+    initialProfile?.pets.length ? "saved" : "empty",
+  );
   const [serviceId, setServiceId] = useState("");
-  const [street, setStreet] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [zip, setZip] = useState("");
+  const [street, setStreet] = useState(initialAddress?.street ?? "");
+  const [city, setCity] = useState(initialAddress?.city ?? "");
+  const [state, setState] = useState(initialAddress?.state ?? "");
+  const [zip, setZip] = useState(initialAddress?.zip ?? "");
+  const [addressSource, setAddressSource] = useState<FieldSource>(
+    initialAddress ? "saved" : "empty",
+  );
+  const [foundProfile, setFoundProfile] = useState<StaffBookingProfile | null>(
+    initialProfile,
+  );
+  const [profileNote, setProfileNote] = useState<string | null>(() =>
+    initialProfile ? bookingProfileStatusCopy(initialProfile) : null,
+  );
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [selectedAddressKey, setSelectedAddressKey] = useState(
+    initialAddress ? bookingAddressKey(initialAddress) : "",
+  );
+  const [savedQuoteRequest, setSavedQuoteRequest] =
+    useState<StaffBookingProfileAddress | null>(initialAddress);
   const [quoteState, setQuoteState] = useState<QuoteState>({ status: "idle" });
   const [days, setDays] = useState<AvailabilityDay[]>(() =>
     fallbackStaffScheduleDays(),
@@ -103,6 +153,15 @@ export function BookForCustomerForm({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<SuccessState | null>(null);
   const [copied, setCopied] = useState(false);
+  const petsSourceRef = useRef(petsSource);
+  const addressSourceRef = useRef(addressSource);
+  const foundProfileRef = useRef(foundProfile);
+  const contactRef = useRef({ firstName, lastName, email, phone });
+  const quotedAddressKeyRef = useRef("");
+  petsSourceRef.current = petsSource;
+  addressSourceRef.current = addressSource;
+  foundProfileRef.current = foundProfile;
+  contactRef.current = { firstName, lastName, email, phone };
 
   const petWeights = useMemo(
     () =>
@@ -165,7 +224,21 @@ export function BookForCustomerForm({
         )
       : null;
 
-  function updatePet(key: string, field: keyof Omit<PetDraft, "key">, value: string) {
+  function markPetsEdited() {
+    petsSourceRef.current = "user";
+    setPetsSource("user");
+    setProfileNote(null);
+  }
+
+  function markAddressEdited() {
+    addressSourceRef.current = "user";
+    setAddressSource("user");
+    setSelectedAddressKey("");
+    setProfileNote(null);
+  }
+
+  function updatePet(key: string, field: keyof Omit<PetDraft, "key" | "id">, value: string) {
+    markPetsEdited();
     setPets((current) =>
       current.map((pet) =>
         pet.key === key ? { ...pet, [field]: value } : pet,
@@ -174,16 +247,117 @@ export function BookForCustomerForm({
   }
 
   function addPetRow() {
+    markPetsEdited();
     setPets((current) => [...current, createPetDraft()]);
   }
 
   function removePetRow(key: string) {
+    markPetsEdited();
     setPets((current) =>
       current.length <= 1 ? current : current.filter((pet) => pet.key !== key),
     );
   }
 
-  async function handleQuote() {
+  function applySavedAddress(address: StaffBookingProfileAddress | null) {
+    setStreet(address?.street ?? "");
+    setCity(address?.city ?? "");
+    setState(address?.state ?? "");
+    setZip(address?.zip ?? "");
+    setSelectedAddressKey(address ? bookingAddressKey(address) : "");
+    const nextSource = address ? "saved" : "empty";
+    addressSourceRef.current = nextSource;
+    setAddressSource(nextSource);
+    setQuoteState({ status: "idle" });
+    quotedAddressKeyRef.current = "";
+    setSavedQuoteRequest(address ? { ...address } : null);
+  }
+
+  function fillFromProfile(profile: StaffBookingProfile, mode: "auto" | "force") {
+    const sameCustomer =
+      foundProfileRef.current?.customerId === profile.customerId;
+    foundProfileRef.current = profile;
+    setFoundProfile(profile);
+    if (mode === "auto" && sameCustomer) return;
+
+    const canReplacePets = petsSourceRef.current !== "user";
+    const canReplaceAddress = addressSourceRef.current !== "user";
+    const fillPets =
+      (mode === "force" || canReplacePets) &&
+      (profile.pets.length > 0 || canReplacePets);
+    const fillAddress =
+      (mode === "force" || canReplaceAddress) &&
+      (profile.addresses.length > 0 || canReplaceAddress);
+
+    if (fillPets) {
+      setPets(petsFromProfile(profile));
+      const nextSource = profile.pets.length ? "saved" : "empty";
+      petsSourceRef.current = nextSource;
+      setPetsSource(nextSource);
+    }
+    if (fillAddress) {
+      applySavedAddress(profile.addresses[0] ?? null);
+    }
+    if (!contactRef.current.firstName.trim() && profile.firstName) {
+      setFirstName(profile.firstName);
+    }
+    if (!contactRef.current.lastName.trim() && profile.lastName) {
+      setLastName(profile.lastName);
+    }
+    if (!contactRef.current.email.trim() && profile.email) {
+      setEmail(profile.email);
+      setNotifyEmail(true);
+    }
+    if (!contactRef.current.phone.trim() && profile.phone) {
+      setPhone(profile.phone);
+      setNotifySms(true);
+    }
+    setProfileNote(
+      bookingProfileStatusCopy({
+        pets: fillPets ? profile.pets : [],
+        addresses: fillAddress ? profile.addresses : [],
+      }),
+    );
+  }
+
+  function clearLoadedProfile() {
+    if (!foundProfileRef.current && petsSourceRef.current !== "saved" && addressSourceRef.current !== "saved") {
+      return;
+    }
+    foundProfileRef.current = null;
+    setFoundProfile(null);
+    setProfileNote(null);
+    if (petsSourceRef.current === "saved") {
+      setPets([createPetDraft()]);
+      petsSourceRef.current = "empty";
+      setPetsSource("empty");
+    }
+    if (addressSourceRef.current === "saved") {
+      applySavedAddress(null);
+    }
+  }
+
+  function chooseSavedAddress(key: string) {
+    if (!key) {
+      markAddressEdited();
+      return;
+    }
+    const address = foundProfileRef.current?.addresses.find(
+      (entry) => bookingAddressKey(entry) === key,
+    );
+    if (!address) return;
+    applySavedAddress(address);
+    setProfileNote(
+      bookingProfileStatusCopy({
+        pets: petsSourceRef.current === "saved" ? (foundProfileRef.current?.pets ?? []) : [],
+        addresses: [address],
+      }),
+    );
+  }
+
+  async function quoteAddress(
+    address: { street: string; city: string; state: string; zip: string },
+    signal?: AbortSignal,
+  ) {
     setError(null);
     setQuoteState({ status: "loading" });
     setDays(fallbackStaffScheduleDays());
@@ -193,7 +367,8 @@ export function BookForCustomerForm({
       const response = await fetch("/api/travel-fee", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ street, city, state, zip }),
+        body: JSON.stringify(address),
+        signal,
       });
       const body = (await response.json()) as {
         error?: string;
@@ -204,19 +379,27 @@ export function BookForCustomerForm({
           status: "error",
           message: body.error ?? "Could not check that address.",
         });
-        return;
+        return false;
       }
       if (!body.quote.withinServiceArea) {
         setQuoteState({ status: "error", message: body.quote.summary });
-        return;
+        return false;
       }
       setQuoteState({ status: "ready", quote: body.quote });
-    } catch {
+      return true;
+    } catch (quoteError) {
+      if (signal?.aborted) return false;
+      console.error("Book for customer travel quote failed:", quoteError);
       setQuoteState({
         status: "error",
         message: "Could not check that address.",
       });
+      return false;
     }
+  }
+
+  function handleQuote() {
+    return quoteAddress({ street, city, state, zip });
   }
 
   useEffect(() => {
@@ -224,6 +407,97 @@ export function BookForCustomerForm({
     if (openSlots.some((slot) => String(slot) === slotStartMinutes)) return;
     setSlotStartMinutes("");
   }, [appointmentDate, openSlots, slotStartMinutes]);
+
+  useEffect(() => {
+    if (preview || initialProfile) return;
+    const query = resolveBookingProfileQuery({
+      email,
+      phone,
+      prefillCustomerId: prefill?.customerId,
+      prefillEmail: prefill?.email,
+      prefillPhone: prefill?.phone,
+    });
+    if (!query) {
+      setProfileLoading(false);
+      clearLoadedProfile();
+      return;
+    }
+
+    const controller = new AbortController();
+    const delay = "customerId" in query ? 0 : 400;
+    setProfileLoading(true);
+    setProfileError(null);
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams();
+      if ("customerId" in query) params.set("customerId", query.customerId);
+      else if ("email" in query) params.set("email", query.email);
+      else params.set("phone", query.phone);
+      void fetch(`/api/admin/customer-booking-profile?${params}`, {
+        credentials: "include",
+        signal: controller.signal,
+      })
+        .then(async (response) => {
+          const body = (await response.json()) as {
+            error?: string;
+            profile?: StaffBookingProfile | null;
+          };
+          if (!response.ok) {
+            throw new Error(
+              body.error ??
+                "Could not load saved pets and address for this customer.",
+            );
+          }
+          return body.profile ?? null;
+        })
+        .then((profile) => {
+          if (controller.signal.aborted) return;
+          if (!profile) clearLoadedProfile();
+          else fillFromProfile(profile, "auto");
+        })
+        .catch((loadError: unknown) => {
+          if (controller.signal.aborted) return;
+          console.error("Book for customer profile failed:", loadError);
+          setProfileError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Could not load saved pets and address for this customer.",
+          );
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setProfileLoading(false);
+        });
+    }, delay);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+    // fillFromProfile and clearLoadedProfile read the latest draft through refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    email,
+    phone,
+    prefill?.customerId,
+    prefill?.email,
+    prefill?.phone,
+    preview,
+    initialProfile,
+  ]);
+
+  useEffect(() => {
+    if (preview || !savedQuoteRequest) return;
+    const key = bookingAddressKey(savedQuoteRequest);
+    if (quotedAddressKeyRef.current === key) return;
+    const controller = new AbortController();
+    void quoteAddress(savedQuoteRequest, controller.signal).then((ok) => {
+      if (ok && !controller.signal.aborted) {
+        quotedAddressKeyRef.current = key;
+      }
+    });
+    return () => controller.abort();
+    // quoteAddress is recreated each render and closes over the latest setters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preview, savedQuoteRequest]);
 
   useEffect(() => {
     if (preview) return;
@@ -311,6 +585,7 @@ export function BookForCustomerForm({
 
     const filledPets = pets
       .map((pet) => ({
+        id: pet.id,
         name: pet.name.trim(),
         breed: pet.breed.trim(),
         weightLbs: Number(pet.weightLbs),
@@ -357,7 +632,12 @@ export function BookForCustomerForm({
           notifyEmail,
           notifySms,
           verbalConsent,
-          pets: filledPets,
+          pets: filledPets.map((pet) => ({
+            ...(pet.id ? { id: pet.id } : {}),
+            name: pet.name,
+            breed: pet.breed,
+            weightLbs: pet.weightLbs,
+          })),
           serviceId: serviceId || undefined,
           appointmentDate: appointmentDate || undefined,
           slotStartMinutes: slotStartMinutes
@@ -493,6 +773,30 @@ export function BookForCustomerForm({
         Only an email or mobile phone is required. Leave other fields blank and
         the customer can finish them from the booking link.
       </p>
+      {profileLoading ? (
+        <p className="text-sm text-text-muted">
+          Loading saved pets and address…
+        </p>
+      ) : null}
+      {profileError ? (
+        <p className="text-sm text-red-800" role="alert">
+          {profileError}
+        </p>
+      ) : null}
+      {profileNote ? (
+        <p className="text-sm text-text-muted">{profileNote}</p>
+      ) : null}
+      {foundProfile &&
+      (foundProfile.pets.length > 0 || foundProfile.addresses.length > 0) &&
+      (petsSource === "user" || addressSource === "user") ? (
+        <button
+          type="button"
+          onClick={() => fillFromProfile(foundProfile, "force")}
+          className="rounded-xl border border-lavender/40 px-4 py-2 text-sm text-text hover:border-gold/40"
+        >
+          Load saved pets and address
+        </button>
+      ) : null}
 
       <section className="grid gap-4 sm:grid-cols-2">
         <div>
@@ -654,6 +958,35 @@ export function BookForCustomerForm({
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2">
+        {foundProfile && foundProfile.addresses.length > 1 ? (
+          <div className="sm:col-span-2">
+            <label className={labelClass} htmlFor="saved-address">
+              Saved addresses
+            </label>
+            <select
+              id="saved-address"
+              className={fieldClass}
+              value={
+                foundProfile.addresses.some(
+                  (address) => bookingAddressKey(address) === selectedAddressKey,
+                )
+                  ? selectedAddressKey
+                  : ""
+              }
+              onChange={(event) => chooseSavedAddress(event.target.value)}
+            >
+              <option value="">Custom address</option>
+              {foundProfile.addresses.map((address) => {
+                const key = bookingAddressKey(address);
+                return (
+                  <option key={key} value={key}>
+                    {formatBookingAddress(address)}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        ) : null}
         <div className="sm:col-span-2">
           <label className={labelClass} htmlFor="address-street">
             Street
@@ -662,7 +995,10 @@ export function BookForCustomerForm({
             id="address-street"
             className={fieldClass}
             value={street}
-            onChange={(event) => setStreet(event.target.value)}
+            onChange={(event) => {
+              markAddressEdited();
+              setStreet(event.target.value);
+            }}
           />
         </div>
         <div>
@@ -673,7 +1009,10 @@ export function BookForCustomerForm({
             id="address-city"
             className={fieldClass}
             value={city}
-            onChange={(event) => setCity(event.target.value)}
+            onChange={(event) => {
+              markAddressEdited();
+              setCity(event.target.value);
+            }}
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -685,7 +1024,10 @@ export function BookForCustomerForm({
               id="address-state"
               className={fieldClass}
               value={state}
-              onChange={(event) => setState(event.target.value)}
+              onChange={(event) => {
+                markAddressEdited();
+                setState(event.target.value);
+              }}
             />
           </div>
           <div>
@@ -696,7 +1038,10 @@ export function BookForCustomerForm({
               id="address-zip"
               className={fieldClass}
               value={zip}
-              onChange={(event) => setZip(event.target.value)}
+              onChange={(event) => {
+                markAddressEdited();
+                setZip(event.target.value);
+              }}
             />
           </div>
         </div>

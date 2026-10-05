@@ -39,6 +39,7 @@ function customerLabel(profile: CustomerProfile) {
 
 function bookForCustomerHref(profile: CustomerProfile) {
   const params = new URLSearchParams();
+  if (profile.id) params.set("customerId", profile.id);
   if (profile.email) params.set("email", profile.email);
   if (profile.firstName) params.set("firstName", profile.firstName);
   if (profile.lastName) params.set("lastName", profile.lastName);
