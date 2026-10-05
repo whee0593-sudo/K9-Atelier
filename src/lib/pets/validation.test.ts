@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { mapPetRowToRecord, mapPetProfileToWriteInput, mapPetRecordToUiProfile, mapValidatedInputToInsertRow } from "@/lib/pets/map";
+import { mapPetRowToRecord, mapPetProfileToWriteInput, mapPetRecordToUiProfile, mapValidatedInputToInsertRow, mapValidatedInputToUpdateRow } from "@/lib/pets/map";
 import type { PetRow } from "@/lib/pets/types";
 import {
   PetValidationError,
@@ -36,6 +36,27 @@ describe("validateCreatePetInput", () => {
       rabiesStatus: "current",
     });
     assert.equal(input.rabiesStatus, "current");
+  });
+
+  it("keeps a record expiration date on create", () => {
+    const input = validateCreatePetInput({
+      ...validCreate,
+      rabiesExpirationDate: "2027-06-15",
+    });
+    assert.equal(input.rabiesExpirationDate, "2027-06-15");
+  });
+
+  it("rejects an invalid record expiration date", () => {
+    assert.throws(
+      () =>
+        validateCreatePetInput({
+          ...validCreate,
+          rabiesExpirationDate: "06/15/2027",
+        }),
+      (error: unknown) =>
+        error instanceof PetValidationError &&
+        error.field === "rabiesExpirationDate",
+    );
   });
 
   it("rejects an invalid rabies status", () => {
@@ -146,6 +167,16 @@ describe("validateUpdatePetInput", () => {
     assert.equal(input.name, "Coco");
   });
 
+  it("accepts a record expiration date on its own", () => {
+    const input = validateUpdatePetInput({ rabiesExpirationDate: "2027-06-15" });
+    assert.equal(input.rabiesExpirationDate, "2027-06-15");
+  });
+
+  it("clears a record expiration date", () => {
+    const input = validateUpdatePetInput({ rabiesExpirationDate: "" });
+    assert.equal(input.rabiesExpirationDate, null);
+  });
+
   it("rejects empty update payloads", () => {
     assert.throws(
       () => validateUpdatePetInput({}),
@@ -224,6 +255,7 @@ describe("mapValidatedInputToInsertRow", () => {
       health_comfort_notes: null,
       grooming_preferences: null,
       rabies_status: "medical_exemption",
+      rabies_expiration_date: null,
     });
     assert.equal("customer_id" in row, false);
   });
@@ -316,5 +348,70 @@ describe("mapPetProfileToWriteInput", () => {
 
     assert.equal(input.approximateAgeYears, 3);
     assert.equal(input.dateOfBirth, null);
+    assert.equal(input.rabiesExpirationDate, null);
+  });
+
+  it("sends the record expiration date with the pet profile", () => {
+    const input = mapPetProfileToWriteInput({
+      id: "draft-3",
+      name: "Gigi",
+      breed: "Yorkshire Terrier",
+      weightLbs: 5,
+      vaccineRecordUploaded: false,
+      vaccineExpiration: "2027-06-15",
+    });
+    assert.equal(input.rabiesExpirationDate, "2027-06-15");
+    assert.equal(
+      mapValidatedInputToUpdateRow(input).rabies_expiration_date,
+      "2027-06-15",
+    );
+  });
+});
+
+describe("saved record expiration", () => {
+  it("prefers the date saved on the pet over an older upload", () => {
+    const profile = mapPetRecordToUiProfile({
+      id: "11111111-1111-4111-8111-111111111111",
+      name: "Gigi",
+      breed: "Yorkshire Terrier",
+      weightLbs: 5,
+      dateOfBirth: null,
+      approximateAgeYears: 12,
+      sex: null,
+      temperamentNotes: null,
+      healthComfortNotes: null,
+      groomingPreferences: null,
+      rabiesExpirationDate: "2027-06-15",
+      vaccinationExpirationDate: "2026-01-01",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    });
+    assert.equal(profile.vaccineExpiration, "2027-06-15");
+  });
+
+  it("reads the date back from the pet row", () => {
+    const record = mapPetRowToRecord({
+      id: "11111111-1111-4111-8111-111111111111",
+      customer_id: "22222222-2222-4222-8222-222222222222",
+      name: "Gigi",
+      breed: "Yorkshire Terrier",
+      weight_lbs: 5,
+      date_of_birth: null,
+      approximate_age_years: 12,
+      sex: null,
+      temperament_notes: null,
+      health_comfort_notes: null,
+      grooming_preferences: null,
+      rabies_status: "current",
+      rabies_expiration_date: "2027-06-15T00:00:00.000Z",
+      archived_at: null,
+      created_at: "2026-01-01T00:00:00.000Z",
+      updated_at: "2026-01-01T00:00:00.000Z",
+    });
+    assert.equal(record.rabiesExpirationDate, "2027-06-15");
+    assert.equal(
+      mapPetRecordToUiProfile(record).vaccineExpiration,
+      "2027-06-15",
+    );
   });
 });

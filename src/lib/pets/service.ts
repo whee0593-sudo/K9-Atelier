@@ -14,7 +14,10 @@ import {
   requireAuthenticatedUser,
 } from "@/lib/pets/auth";
 import { PetValidationError } from "@/lib/pets/validation";
-import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
+import {
+  attachVaccinationSummaries,
+  syncPetRabiesExpiration,
+} from "@/lib/vaccinations/service";
 
 export async function listPets(): Promise<
   { pets: PetRecord[] } | { error: "unauthenticated" | "server" }
@@ -125,6 +128,10 @@ export async function updatePet(
   }
 
   if (!data) return { error: "not_found" };
+
+  if (input.rabiesExpirationDate !== undefined) {
+    await syncPetRabiesExpiration(petId, input.rabiesExpirationDate ?? null);
+  }
 
   return { pet: (await attachVaccinationSummaries([mapPetRowToRecord(data as PetRow)]))[0] };
 }

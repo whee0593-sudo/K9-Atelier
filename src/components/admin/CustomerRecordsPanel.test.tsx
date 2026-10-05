@@ -8,6 +8,7 @@ import { CustomerAdminNotesEditor } from "@/components/admin/CustomerAdminNotesE
 import { CustomerRecordCard } from "@/components/admin/CustomerRecordsPanel";
 import {
   latestPetServiceLabel,
+  recordExpirationSummaryValue,
   StaffCustomerPets,
 } from "@/components/admin/StaffCustomerPets";
 import { StaffCustomerPassword } from "@/components/admin/StaffCustomerPassword";
@@ -477,5 +478,17 @@ describe("latestPetServiceLabel", () => {
     assert.match(html, /No service yet/);
     assert.match(html, />Edit</);
     assert.doesNotMatch(html, /<textarea/);
+  });
+
+  it("shows a saved record expiration date on the pet profile", () => {
+    assert.equal(
+      recordExpirationSummaryValue({ rabiesExpirationDate: "2027-06-15" }),
+      "Jun 15, 2027",
+    );
+    assert.equal(
+      recordExpirationSummaryValue({ vaccinationExpirationDate: "2026-11-01" }),
+      "Nov 1, 2026",
+    );
+    assert.equal(recordExpirationSummaryValue({}), "—");
   });
 });

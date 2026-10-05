@@ -9,7 +9,11 @@ import {
   getPetBirthDateHeading,
   getPetBirthDateLabel,
 } from "@/lib/pet-age";
-import { mapPetProfileToWriteInput, mapPetRecordToUiProfile } from "@/lib/pets/map";
+import {
+  displayedRabiesExpiration,
+  mapPetProfileToWriteInput,
+  mapPetRecordToUiProfile,
+} from "@/lib/pets/map";
 import { normalizePetProfile, type PetProfile } from "@/lib/pets";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
 import {
@@ -86,6 +90,14 @@ export function latestPetServiceLabel(
   return time ? `Last service ${date} · ${time}` : `Last service ${date}`;
 }
 
+export function recordExpirationSummaryValue(pet: {
+  rabiesExpirationDate?: string | null;
+  vaccinationExpirationDate?: string | null;
+}) {
+  const iso = displayedRabiesExpiration(pet);
+  return iso ? formatServiceDate(iso) : "—";
+}
+
 function detailValue(value: string | number | null | undefined) {
   if (value == null) return "—";
   const text = String(value).trim();
@@ -143,9 +155,7 @@ function StaffPetDetails({
     { label: "Rabies Record", value: petProfileRabiesRecordLabel(profile) },
     {
       label: "Record Expiration Date",
-      value: pet.vaccinationExpirationDate
-        ? formatServiceDate(pet.vaccinationExpirationDate)
-        : "—",
+      value: recordExpirationSummaryValue(pet),
     },
     {
       label: "Service & Product Notes (Admin Only)",

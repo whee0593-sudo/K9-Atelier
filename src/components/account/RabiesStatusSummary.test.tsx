@@ -29,6 +29,7 @@ describe("rabies profile UI", () => {
     assert.match(html, /Current rabies vaccination/);
     assert.match(html, /Veterinarian-issued medical exemption/);
     assert.match(html, /Rabies Record/);
+    assert.match(html, /Record Expiration Date/);
     assert.match(html, /PDF, JPG, PNG, WEBP, or HEIC/);
     assert.match(html, /Not uploaded/);
     assert.equal(html.includes("Add later"), false);
@@ -45,6 +46,17 @@ describe("rabies profile UI", () => {
     assert.match(html, /Nervous with dryers; prefers gentle handling/);
     assert.match(html, /Senior dog, arthritis; no hot dryer on legs/);
     assert.match(html, /Teddy bear face, 1 inch body length/);
+  });
+
+  it("keeps a saved record expiration date in the pet form", () => {
+    const html = renderToStaticMarkup(
+      <PetProfileFieldsForm
+        pet={pet({ vaccineExpiration: "2027-06-15" })}
+        onPetChange={() => undefined}
+      />,
+    );
+    assert.match(html, /Record Expiration Date/);
+    assert.match(html, /value="2027-06-15"/);
   });
 
   it("does not show per-field helper notes in the booking form either", () => {

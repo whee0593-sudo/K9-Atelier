@@ -124,10 +124,7 @@ export function useCustomerPets() {
           pet.id === id ? normalizePetProfile({ ...pet, ...updates }) : pet,
         );
         const updated = next.find((pet) => pet.id === id);
-        const vaccinationOnlyUpdate = Object.keys(updates).every(
-          (key) => key === "vaccineExpiration",
-        );
-        if (updated && isPersistedPetId(id) && !vaccinationOnlyUpdate) {
+        if (updated && isPersistedPetId(id)) {
           scheduleSave(updated);
         }
         return next;

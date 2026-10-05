@@ -33,4 +33,21 @@ describe("staff pet update privileges", () => {
     assert.match(sql, /GRANT UPDATE \(rabies_status\) ON TABLE public\.pets TO authenticated/);
     assert.match(sql, /GRANT USAGE ON TYPE public\.pet_rabies_status TO authenticated/);
   });
+
+  it("grants authenticated INSERT/UPDATE on pets.rabies_expiration_date", () => {
+    const dir = path.join(process.cwd(), "supabase", "migrations");
+    const file = readdirSync(dir).find((name) =>
+      name.endsWith("_pets_rabies_expiration_date.sql"),
+    );
+    assert.ok(file, "pets_rabies_expiration_date migration is missing");
+    const sql = readFileSync(path.join(dir, file), "utf8");
+    assert.match(
+      sql,
+      /GRANT INSERT \(rabies_expiration_date\) ON TABLE public\.pets TO authenticated/,
+    );
+    assert.match(
+      sql,
+      /GRANT UPDATE \(rabies_expiration_date\) ON TABLE public\.pets TO authenticated/,
+    );
+  });
 });
