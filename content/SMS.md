@@ -134,7 +134,7 @@ Twilio Messaging Service → **Integration** / **A message comes in**：
 - **陌生号码** — 系统里保存的那一版：预约页、留言页，并请对方回复宠物资料
 - **已有档案的客人** — 新版本：称呼名字、预约链接，请对方直接回复，不再要品种/体重等资料
 
-来电会出现在 **Customer Messages → Recent callers**。需要补发时可以再点 **Send text**，也可以手输号码发送。
+来电会出现在 **Customer Messages → Recent callers**。点某一条后面的 **Send text** 会打开短信输入框，写好后点框下面的发送；右上角 × 可以关掉。上面的号码框仍是手输后发送那封未接来电短信。
 
 ---
 

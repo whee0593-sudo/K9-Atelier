@@ -4,6 +4,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import {
+  CallerTextDialog,
   INITIAL_VISIBLE_RECENT_CALLERS,
   RECENT_CALLERS_PAGE_SIZE,
   RecentCallersList,
@@ -37,8 +38,8 @@ describe("Recent callers list", () => {
     const html = renderToStaticMarkup(
       <RecentCallersList
         callers={list}
-        sendingIntro={null}
-        onSendText={() => undefined}
+        sending={false}
+        onSendMessage={() => true}
       />,
     );
 
@@ -53,8 +54,8 @@ describe("Recent callers list", () => {
     const html = renderToStaticMarkup(
       <RecentCallersList
         callers={callers(2)}
-        sendingIntro={null}
-        onSendText={() => undefined}
+        sending={false}
+        onSendMessage={() => true}
       />,
     );
 
@@ -62,12 +63,34 @@ describe("Recent callers list", () => {
     assert.equal(html.match(/Call back/g)?.length, 2);
   });
 
+  it("opens a message box with a send button and a close control", () => {
+    const html = renderToStaticMarkup(
+      <CallerTextDialog
+        open
+        phone="+15615550444"
+        message=""
+        onMessageChange={() => undefined}
+        onClose={() => undefined}
+        onSend={() => undefined}
+      />,
+    );
+
+    assert.match(html, /role="dialog"/);
+    assert.match(html, /<textarea/);
+    assert.match(html, /Write a message/);
+    assert.match(html, />Send text</);
+    assert.match(html, /disabled=""/);
+    assert.match(html, /aria-label="Close"/);
+    assert.match(html, />×</);
+    assert.match(html, /absolute right-3 top-3/);
+  });
+
   it("shows the empty state when nobody has called", () => {
     const html = renderToStaticMarkup(
       <RecentCallersList
         callers={[]}
-        sendingIntro={null}
-        onSendText={() => undefined}
+        sending={false}
+        onSendMessage={() => true}
       />,
     );
 
