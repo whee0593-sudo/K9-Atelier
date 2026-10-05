@@ -30,7 +30,10 @@ import { isFrozenAuthUser } from "@/lib/auth/frozen-account";
 import { isEmailConfigured, sendEmail, siteUrl } from "@/lib/email/resend";
 import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
 import { digitsOnly } from "@/lib/sms/phone";
-import type { StaffCustomerBookingInput } from "@/lib/staff/create-customer-booking-input";
+import type {
+  StaffBookingPetInput,
+  StaffCustomerBookingInput,
+} from "@/lib/staff/create-customer-booking-input";
 import {
   createCustomerConfirmToken,
   customerConfirmExpiryIso,
@@ -362,6 +365,76 @@ async function createStaffCustomerInvite(
   }
 }
 
+async function saveBookingPet(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  pet: StaffBookingPetInput,
+): Promise<
+  | { pet: { id: string } }
+  | { error: "conflict" | "server"; message?: string }
+> {
+  if (pet.id) {
+    const { data: existing, error: existingError } = await admin
+      .from("pets")
+      .select("id, customer_id, archived_at")
+      .eq("id", pet.id)
+      .maybeSingle();
+    if (existingError) {
+      console.error(
+        "createStaffCustomerBooking pet lookup failed:",
+        existingError.message,
+      );
+      return { error: "server" };
+    }
+    if (
+      !existing ||
+      existing.customer_id !== userId ||
+      existing.archived_at != null
+    ) {
+      return {
+        error: "conflict",
+        message: "That dog is not on this customer's file.",
+      };
+    }
+
+    const { data: updated, error: updateError } = await admin
+      .from("pets")
+      .update({
+        name: pet.name,
+        breed: pet.breed,
+        weight_lbs: pet.weightLbs,
+      })
+      .eq("id", pet.id)
+      .select(PET_SELECT)
+      .single();
+    if (updateError || !updated) {
+      console.error(
+        "createStaffCustomerBooking pet update failed:",
+        updateError?.message,
+      );
+      return { error: "server" };
+    }
+    return { pet: updated as { id: string } };
+  }
+
+  const { data: petRow, error: petError } = await admin
+    .from("pets")
+    .insert({
+      customer_id: userId,
+      ...mapValidatedInputToInsertRow(pet),
+    })
+    .select(PET_SELECT)
+    .single();
+  if (petError || !petRow) {
+    console.error(
+      "createStaffCustomerBooking pet insert failed:",
+      petError?.message,
+    );
+    return { error: "server" };
+  }
+  return { pet: petRow as { id: string } };
+}
+
 export async function createStaffCustomerBooking(
   input: StaffCustomerBookingInput,
 ): Promise<
@@ -492,22 +565,9 @@ export async function createStaffCustomerBooking(
     let previousDuration = firstDurationMinutes;
 
     for (const [index, pet] of input.pets.entries()) {
-      const { data: petRow, error: petError } = await admin
-        .from("pets")
-        .insert({
-          customer_id: userId,
-          ...mapValidatedInputToInsertRow(pet),
-        })
-        .select(PET_SELECT)
-        .single();
-
-      if (petError || !petRow) {
-        console.error(
-          "createStaffCustomerBooking pet insert failed:",
-          petError?.message,
-        );
-        return { error: "server" };
-      }
+      const savedPet = await saveBookingPet(admin, userId, pet);
+      if ("error" in savedPet) return savedPet;
+      const petRow = savedPet.pet;
 
       try {
         const { ensurePetReferralCode } = await import("@/lib/referrals/service");

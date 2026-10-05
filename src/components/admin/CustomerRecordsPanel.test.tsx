@@ -6,6 +6,10 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CustomerAdminNotesEditor } from "@/components/admin/CustomerAdminNotesEditor";
 import { CustomerRecordCard } from "@/components/admin/CustomerRecordsPanel";
+import {
+  latestPetServiceLabel,
+  StaffCustomerPets,
+} from "@/components/admin/StaffCustomerPets";
 import { StaffCustomerPassword } from "@/components/admin/StaffCustomerPassword";
 import { StaffCustomerReferrals } from "@/components/admin/StaffCustomerReferrals";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
@@ -60,6 +64,10 @@ describe("CustomerRecordCard actions", () => {
     assert.match(html, />Freeze</);
     assert.match(html, /Book for customer/);
     assert.match(html, /Ada Lovelace/);
+    assert.match(
+      html,
+      /\/admin\/book-for-customer\?customerId=11111111-1111-4111-8111-111111111111/,
+    );
   });
 
   it("hides access actions on the owner account", () => {
@@ -254,5 +262,188 @@ describe("CustomerRecordCard actions", () => {
     assert.match(html, /2100 S Ocean Blvd/);
     assert.match(html, />Edit</);
     assert.match(html, /\+ Add address/);
+  });
+
+  it("shows saved pets as name, age, last service, and Edit", () => {
+    const petId = "55555555-5555-4555-8555-555555555555";
+    const html = renderToStaticMarkup(
+      <CustomerRecordCard
+        customer={sampleCustomer({
+          pets: [
+            {
+              id: petId,
+              name: "Gigi",
+              breed: "Yorkshire Terrier",
+              weightLbs: 5,
+              dateOfBirth: null,
+              approximateAgeYears: 12,
+              sex: "Female",
+              temperamentNotes: "Nervous with dryers",
+              healthComfortNotes: null,
+              groomingPreferences: null,
+              createdAt: "2026-09-01T12:00:00.000Z",
+              updatedAt: "2026-09-01T12:00:00.000Z",
+              adminServiceNotes: "Senior dog",
+              vaccinationBookingStatus: "current",
+              vaccinationHasUpload: false,
+            },
+          ],
+        })}
+        startOpen
+        preview
+        previewHistory={{
+          appointments: [
+            {
+              id: "77777777-7777-4777-8777-777777777777",
+              customerId: "11111111-1111-4111-8111-111111111111",
+              petId,
+              petName: "Gigi",
+              petBreed: "Yorkshire Terrier",
+              serviceId: "signature-bath-care",
+              serviceName: "Signature Bath & Care",
+              addOnIds: [],
+              addOnOptions: {},
+              addressStreet: "2100 S Ocean Blvd",
+              addressCity: "Palm Beach",
+              addressState: "FL",
+              addressZip: "33480",
+              travelDistanceMiles: 4,
+              travelFee: 0,
+              appointmentDate: "2020-06-01",
+              appointmentTime: "10–11 AM",
+              scheduledStart: 600,
+              timePreference: "morning",
+              timezone: "America/New_York",
+              estimatedTotal: 90,
+              newClientDeposit: null,
+              vaccinationStatusAtBooking: "current",
+              status: "confirmed",
+              confirmedAt: "2020-05-20T14:00:00.000Z",
+              customerConfirmedAt: null,
+              createdAt: "2020-05-20T14:00:00.000Z",
+              customerEmail: "ada@example.com",
+              customerName: null,
+              customerFirstName: "Ada",
+              customerLastName: "Lovelace",
+              customerPhone: "+15615550123",
+              reminderSmsSentAt: null,
+              enRouteSmsSentAt: null,
+              serviceStartedAt: null,
+              serviceEndedAt: null,
+            },
+          ],
+          orders: [],
+        }}
+        {...cardHandlers}
+      />,
+    );
+
+    assert.match(html, /Gigi/);
+    assert.match(html, /12 years/);
+    assert.match(html, /Last service Jun 1, 2020 · 10–11 AM/);
+    assert.match(html, /Open Gigi profile/);
+    assert.match(html, /aria-expanded="false"/);
+    assert.match(html, />Edit</);
+    assert.doesNotMatch(html, /Pet Name/);
+    assert.doesNotMatch(html, /Nervous with dryers/);
+    assert.doesNotMatch(html, /Save Pet/);
+    assert.match(html, /\+ Add a pet/);
+  });
+});
+
+describe("latestPetServiceLabel", () => {
+  const petId = "55555555-5555-4555-8555-555555555555";
+  const now = new Date("2026-10-05T16:00:00.000Z");
+
+  it("uses the latest past visit and skips cancelled or future bookings", () => {
+    const label = latestPetServiceLabel(
+      [
+        {
+          petId,
+          status: "cancelled",
+          appointmentDate: "2026-10-01",
+          appointmentTime: "2–3 PM",
+          scheduledStart: 840,
+        },
+        {
+          petId,
+          status: "confirmed",
+          appointmentDate: "2026-09-22",
+          appointmentTime: "10–11 AM",
+          scheduledStart: 600,
+        },
+        {
+          petId,
+          status: "confirmed",
+          appointmentDate: "2026-11-02",
+          appointmentTime: "9–10 AM",
+          scheduledStart: 540,
+        },
+        {
+          petId,
+          status: "confirmed",
+          appointmentDate: "2026-09-22",
+          appointmentTime: "1–2 PM",
+          scheduledStart: 780,
+        },
+      ],
+      petId,
+      now,
+    );
+    assert.equal(label, "Last service Sep 22, 2026 · 1–2 PM");
+  });
+
+  it("says there is no service when every visit is still ahead", () => {
+    assert.equal(
+      latestPetServiceLabel(
+        [
+          {
+            petId,
+            status: "confirmed",
+            appointmentDate: "2026-12-01",
+            appointmentTime: "9–10 AM",
+            scheduledStart: 540,
+          },
+        ],
+        petId,
+        now,
+      ),
+      "No service yet",
+    );
+  });
+
+  it("renders a collapsed row without opening the editor", () => {
+    const html = renderToStaticMarkup(
+      <StaffCustomerPets
+        customerId="11111111-1111-4111-8111-111111111111"
+        preview
+        appointments={[]}
+        pets={[
+          {
+            id: petId,
+            name: "Gigi",
+            breed: "Yorkshire Terrier",
+            weightLbs: 5,
+            dateOfBirth: null,
+            approximateAgeYears: 12,
+            sex: null,
+            temperamentNotes: null,
+            healthComfortNotes: null,
+            groomingPreferences: null,
+            createdAt: "2026-09-01T12:00:00.000Z",
+            updatedAt: "2026-09-01T12:00:00.000Z",
+            adminServiceNotes: "",
+            vaccinationBookingStatus: "missing",
+            vaccinationHasUpload: false,
+          },
+        ]}
+        onPetSaved={noop}
+        onPetCreated={noop}
+        onPetArchived={noop}
+      />,
+    );
+    assert.match(html, /No service yet/);
+    assert.match(html, />Edit</);
+    assert.doesNotMatch(html, /<textarea/);
   });
 });

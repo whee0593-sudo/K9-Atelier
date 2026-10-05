@@ -106,6 +106,31 @@ describe("validateStaffCustomerBookingInput", () => {
     assert.equal(input.pets[0]?.name, "Bella");
   });
 
+  it("keeps a saved pet id so an existing dog is reused", () => {
+    const petId = "33333333-3333-4333-8333-333333333333";
+    const input = validateStaffCustomerBookingInput(
+      validBody({
+        pets: [{ id: petId, name: "Bella", breed: "Poodle", weightLbs: 18 }],
+      }),
+    );
+    assert.equal(input.pets[0]?.id, petId);
+    assert.equal(input.pets[0]?.name, "Bella");
+  });
+
+  it("rejects a pet id that is not a customer file id", () => {
+    assert.throws(
+      () =>
+        validateStaffCustomerBookingInput(
+          validBody({
+            pets: [{ id: "not-a-pet", name: "Bella", breed: "Poodle", weightLbs: 18 }],
+          }),
+        ),
+      (error: unknown) =>
+        error instanceof StaffBookingValidationError &&
+        error.message === "Pet not found.",
+    );
+  });
+
   it("accepts multiple dog profiles", () => {
     const input = validateStaffCustomerBookingInput(
       validBody({
