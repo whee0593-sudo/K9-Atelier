@@ -1,5 +1,5 @@
 import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
-import { listHourlyStartMinutes } from "@/lib/booking-schedule";
+import { isWithinServiceDay } from "@/lib/booking-schedule";
 import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
 import {
@@ -286,7 +286,7 @@ export function validateStaffCustomerBookingInput(
         : typeof slotStartRaw === "string"
           ? Number(slotStartRaw)
           : NaN;
-    if (!Number.isInteger(parsed) || !listHourlyStartMinutes().includes(parsed)) {
+    if (!isWithinServiceDay(parsed)) {
       throw new StaffBookingValidationError(
         "Please choose an available start time.",
         "slotStartMinutes",

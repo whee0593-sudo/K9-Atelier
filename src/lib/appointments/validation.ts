@@ -2,7 +2,7 @@ import { calculateTravelFee } from "@/lib/travel";
 import type { AppointmentWriteInput } from "@/lib/appointments/types";
 import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
 import {
-  listHourlyStartMinutes,
+  isWithinServiceDay,
   preferenceFromStart,
 } from "@/lib/booking-schedule";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
@@ -114,7 +114,7 @@ export function validateCreateAppointmentInput(
         : NaN;
   if (
     !Number.isInteger(slotStartMinutes) ||
-    !listHourlyStartMinutes().includes(slotStartMinutes)
+    !isWithinServiceDay(slotStartMinutes)
   ) {
     throw new AppointmentValidationError(
       "Please choose an available start time.",

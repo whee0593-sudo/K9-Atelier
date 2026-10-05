@@ -5,7 +5,7 @@ import {
   getAvailabilityForAddress,
   getBaseGeoPoint,
 } from "@/lib/appointments/schedule";
-import { listHourlyStartMinutes } from "@/lib/booking-schedule";
+import { isWithinServiceDay } from "@/lib/booking-schedule";
 import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
 import { enforceIpRateLimit } from "@/lib/rate-limit";
 
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
     !zip ||
     !date ||
     typeof slotStartMinutes !== "number" ||
-    !listHourlyStartMinutes().includes(slotStartMinutes) ||
+    !isWithinServiceDay(slotStartMinutes) ||
     typeof weightLbs !== "number"
   ) {
     return NextResponse.json(

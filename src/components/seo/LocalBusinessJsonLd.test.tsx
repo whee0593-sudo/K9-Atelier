@@ -91,7 +91,7 @@ describe("LocalBusiness entity fields", () => {
       "Friday",
     ]);
     assert.equal(hours[0].opens, "09:00");
-    assert.equal(hours[0].closes, "16:00");
+    assert.equal(hours[0].closes, "17:00");
 
     const areas = entity.areaServed as JsonLdNode[];
     assert.deepEqual(

@@ -74,7 +74,8 @@ describe("booking schedule", () => {
   it("lists on-the-hour starts and places an exact hour booking", () => {
     const slots = listAvailableHourStarts(base, [], jupiter, 65);
     assert.ok(slots.includes(9 * 60));
-    assert.equal(slots.includes(15 * 60), false);
+    assert.ok(slots.includes(15 * 60));
+    assert.equal(slots.includes(16 * 60), false);
 
     const first = findRouteInsertionAtHour(base, [], jupiter, 65, 9 * 60);
     assert.ok(first);
@@ -111,6 +112,64 @@ describe("booking schedule", () => {
 
   it("formats mixed AM/PM windows", () => {
     assert.equal(formatArrivalWindow(11 * 60 + 30, 90), "11:30 AM – 1:00 PM");
+  });
+
+  it("keeps afternoon starts after a morning route that ends at 1:23", () => {
+    const duration = 83;
+    const stops = [
+      {
+        lat: jupiter.lat,
+        lon: jupiter.lon,
+        zip: "33469",
+        scheduledStart: 9 * 60,
+        durationMinutes: duration,
+      },
+      {
+        lat: jupiter.lat,
+        lon: jupiter.lon,
+        zip: "33469",
+        scheduledStart: 10 * 60 + 30,
+        durationMinutes: duration,
+      },
+      {
+        lat: jupiter.lat,
+        lon: jupiter.lon,
+        zip: "33469",
+        scheduledStart: 12 * 60,
+        durationMinutes: duration,
+      },
+    ];
+    const jupiterPlan = {
+      serviceDate: "2026-10-09",
+      zoneId: "jupiter",
+      source: "auto" as const,
+      anchor: null,
+    };
+
+    assert.equal(addressAllowedForPlan(jupiterPlan, "33469", jupiter), true);
+    assert.equal(addressAllowedForPlan(jupiterPlan, "33458", jupiter), true);
+    assert.equal(addressAllowedForPlan(jupiterPlan, "33401", westPalm), false);
+
+    const oneDog = listAvailableHourStarts(base, stops, westPalm, duration);
+    const earliest = 13 * 60 + 38;
+    assert.equal(oneDog[0], earliest);
+    assert.ok(oneDog.includes(14 * 60));
+    assert.ok(oneDog.includes(15 * 60));
+    assert.equal(oneDog.includes(13 * 60), false);
+    assert.equal(formatArrivalWindow(earliest, duration), "1:38–3:01 PM");
+    const placed = findRouteInsertionAtHour(
+      base,
+      stops,
+      jupiter,
+      duration,
+      earliest,
+    );
+    assert.equal(placed?.scheduledStart, earliest);
+
+    assert.deepEqual(
+      listAvailableHourStarts(base, stops, jupiter, duration * 3),
+      [],
+    );
   });
 
   it("chains same-address companion dogs back-to-back from the first start", () => {

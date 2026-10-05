@@ -8,7 +8,7 @@ export const metadata = {
     "Website and SMS program terms for K9 Atelier Private Mobile Pet Spa appointments.",
 };
 
-const lastUpdated = "August 20, 2026";
+const lastUpdated = "October 5, 2026";
 
 function Section({
   title,
@@ -104,6 +104,18 @@ export default function TermsPage() {
             condition on the day of service, as disclosed at booking. You are
             responsible for providing accurate account, pet, and address
             information.
+          </p>
+        </Section>
+
+        <Section title="Arrival time">
+          <p>
+            We do our best to arrive at your scheduled time, and every confirmed
+            appointment will be completed.
+          </p>
+          <p>
+            Because this is a mobile service, arrival time may vary due to
+            weather, traffic, and the appointment before yours. We will text you
+            when we are on the way. Thank you for understanding.
           </p>
         </Section>
 

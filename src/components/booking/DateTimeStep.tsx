@@ -7,7 +7,7 @@ import {
   parseDateValue,
   toDateValue,
 } from "@/lib/booking-slots";
-import { formatHourLabel } from "@/lib/appointments/closures";
+import { formatMinutesLabel } from "@/lib/appointments/closures";
 import styles from "./datetime-step.module.css";
 
 const playfair = Playfair_Display({
@@ -166,8 +166,8 @@ export function DateTimeStep({
       <div className={styles.card}>
         <h1 className={styles.title}>Select Date &amp; Time</h1>
         <p className={styles.routeNote}>
-          Choose an available start hour. Arrival is estimated for our mobile
-          route and may vary slightly.
+          Choose an available start time. Timing may vary due to weather or
+          traffic. We will text you when we are on the way.
         </p>
 
         <div className={styles.monthNav}>
@@ -250,7 +250,7 @@ export function DateTimeStep({
                   }`}
                 >
                   <span className={styles.timeLabel}>
-                    {formatHourLabel(Math.floor(start / 60))}
+                    {formatMinutesLabel(start)}
                   </span>
                 </button>
               );

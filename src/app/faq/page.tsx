@@ -14,11 +14,11 @@ export const metadata = {
 const faqGroups = [
   {
     title: "Your Appointment",
-    ids: [0, 1, 2, 7],
+    ids: [0, 1, 2, 11, 7],
   },
   {
     title: "Service & Care",
-    ids: [3, 4, 8, 11],
+    ids: [3, 4, 8, 12],
   },
   {
     title: "The Work",
@@ -169,7 +169,7 @@ export default function FaqPage() {
       a: (
         <FaqParagraphs
           paragraphs={[
-            "Appointments are available Monday through Friday, from 9:00 AM to 4:00 PM Eastern Time. Limited weekend availability may be offered by request.",
+            "Appointments are available Monday through Friday, from 9:00 AM to 5:00 PM Eastern Time. Limited weekend availability may be offered by request.",
             "To begin, create your account and dog profile, confirm rabies vaccination status, select an available date and time, and add a card on file. You may also upload a current rabies certificate or vaccination record.",
             "You will not be charged at the time of booking.",
           ]}
@@ -267,6 +267,17 @@ export default function FaqPage() {
           paragraphs={[
             "Yes. Every dog featured on this website was groomed and styled by me, and all original photos were taken by me.",
             "For a clean and consistent presentation, some images have been digitally edited to remove distracting backgrounds and standardize the setting.",
+          ]}
+        />
+      ),
+    },
+    {
+      q: "Is my appointment time exact?",
+      a: (
+        <FaqParagraphs
+          paragraphs={[
+            "We do our best to arrive at your scheduled time, and every confirmed appointment will be completed.",
+            "Because this is a mobile service, arrival time may vary due to weather, traffic, and the appointment before yours. We will text you when we are on the way. Thank you for understanding.",
           ]}
         />
       ),
