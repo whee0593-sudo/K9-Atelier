@@ -1,7 +1,7 @@
 import type { AppointmentStatus } from "@/lib/appointments/types";
 import type { VaccinationBookingStatus } from "@/lib/vaccinations/types";
 
-export type AppointmentCornerKind = "customer_yes" | "vaccination_alert" | null;
+export type AppointmentCornerKind = "customer_yes" | null;
 
 type MarkInput = {
   status: AppointmentStatus;
@@ -10,32 +10,14 @@ type MarkInput = {
   awaitingCustomerConfirm?: boolean;
 };
 
-const FAILED_VACCINE_STATUSES = new Set<VaccinationBookingStatus>([
-  "needs_review",
-  "needs_attention",
-  "expired",
-  "missing",
-]);
-
 /**
- * Vaccine-blocked bookings show ! until staff books them.
- * Customer reply C is a separate confirm mark, only after the booking succeeded.
+ * Rabies documents are optional and do not block a booking, so the calendar
+ * does not flag vaccination status. Customer reply C is a confirm mark, only
+ * after the booking succeeded.
  */
 export function appointmentCornerMark(appointment: MarkInput): AppointmentCornerKind {
   if (appointment.awaitingCustomerConfirm) {
     return null;
-  }
-
-  if (appointment.status === "pending_confirmation") {
-    return "vaccination_alert";
-  }
-
-  if (
-    appointment.status === "cancelled" &&
-    appointment.vaccinationStatusAtBooking &&
-    FAILED_VACCINE_STATUSES.has(appointment.vaccinationStatusAtBooking)
-  ) {
-    return "vaccination_alert";
   }
 
   if (appointment.status === "confirmed" && appointment.customerConfirmedAt) {

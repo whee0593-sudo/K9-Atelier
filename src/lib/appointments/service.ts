@@ -288,38 +288,6 @@ export async function listCustomerAppointments(): Promise<
   };
 }
 
-export async function listPendingAdminAppointments(): Promise<
-  | { appointments: AdminAppointmentRecord[] }
-  | { error: "unauthenticated" | "forbidden" | "server" }
-> {
-  const { getStaffSession } = await import("@/lib/staff/auth");
-  const session = await getStaffSession();
-  if ("error" in session) return { error: session.error };
-
-  const supabase = await createAuthenticatedSupabaseClient();
-  const { data, error } = await supabase
-    .from("appointments")
-    .select(ADMIN_APPOINTMENT_SELECT)
-    .eq("status", "pending_confirmation")
-    .order("appointment_date", { ascending: true })
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    console.error(
-      "listPendingAdminAppointments failed:",
-      error.code,
-      error.message,
-    );
-    return { error: "server" };
-  }
-
-  return {
-    appointments: ((data ?? []) as unknown as AppointmentRow[])
-      .map(mapAppointmentRowToAdminRecord)
-      .filter((appointment) => !appointment.awaitingCustomerConfirm),
-  };
-}
-
 export async function setAppointmentStatus(
   appointmentId: string,
   status: "confirmed" | "cancelled",
