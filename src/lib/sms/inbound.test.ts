@@ -8,12 +8,16 @@ import {
 } from "@/lib/sms/inbound";
 
 describe("inbound customer SMS", () => {
-  it("accepts YES and Y only", () => {
+  it("accepts C, and still accepts YES from older texts", () => {
+    assert.equal(isCustomerYesReply("C"), true);
+    assert.equal(isCustomerYesReply("c!"), true);
     assert.equal(isCustomerYesReply("YES"), true);
     assert.equal(isCustomerYesReply("yes!"), true);
     assert.equal(isCustomerYesReply("Y"), true);
     assert.equal(isCustomerYesReply("yesterday"), false);
     assert.equal(isCustomerYesReply("NO"), false);
+    assert.equal(isCustomerYesReply("CANCEL"), false);
+    assert.equal(isCustomerYesReply("confirm"), false);
   });
 
   it("leaves STOP and HELP to Twilio", () => {
@@ -33,7 +37,8 @@ describe("inbound customer SMS", () => {
       petName: "Daisy",
       dateLabel: "Wednesday, July 8, 2026",
     });
-    assert.match(body, /we received your YES/);
+    assert.match(body, /we received your confirmation/);
+    assert.equal(body.includes("YES"), false);
     assert.equal(body.includes("appointment is confirmed"), false);
   });
 });

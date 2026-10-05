@@ -19,7 +19,7 @@ const FAILED_VACCINE_STATUSES = new Set<VaccinationBookingStatus>([
 
 /**
  * Vaccine-blocked bookings show ! until staff books them.
- * Customer YES is a separate confirm mark, only after the booking succeeded.
+ * Customer reply C is a separate confirm mark, only after the booking succeeded.
  */
 export function appointmentCornerMark(appointment: MarkInput): AppointmentCornerKind {
   if (appointment.awaitingCustomerConfirm) {
