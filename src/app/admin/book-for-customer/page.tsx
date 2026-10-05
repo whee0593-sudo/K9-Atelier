@@ -5,6 +5,7 @@ export default async function BookForCustomerPage({
   searchParams,
 }: {
   searchParams: Promise<{
+    customerId?: string;
     email?: string;
     firstName?: string;
     lastName?: string;
@@ -32,6 +33,7 @@ export default async function BookForCustomerPage({
       <div className="mt-8">
         <BookForCustomerForm
           prefill={{
+            customerId: query.customerId,
             email: query.email,
             firstName: query.firstName,
             lastName: query.lastName,

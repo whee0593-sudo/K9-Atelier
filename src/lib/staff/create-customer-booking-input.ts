@@ -9,6 +9,7 @@ import {
 import {
   PetValidationError,
   validateCreatePetInput,
+  validatePetId,
 } from "@/lib/pets/validation";
 import type { PetWriteInput } from "@/lib/pets/types";
 
@@ -29,6 +30,10 @@ export type StaffCustomerBookingAddress = {
   zip: string;
 };
 
+export type StaffBookingPetInput = PetWriteInput & {
+  id: string | null;
+};
+
 export type StaffCustomerBookingInput = {
   firstName: string;
   lastName: string;
@@ -37,7 +42,7 @@ export type StaffCustomerBookingInput = {
   notifyEmail: boolean;
   notifySms: boolean;
   mode: "invite" | "booking";
-  pets: PetWriteInput[];
+  pets: StaffBookingPetInput[];
   serviceId: string | null;
   serviceName: string | null;
   addOnIds: string[];
@@ -95,6 +100,25 @@ function readString(
 
 function readBoolean(record: Record<string, unknown>, key: string) {
   return record[key] === true;
+}
+
+function readOptionalPetId(record: Record<string, unknown>, index: number) {
+  const value = record.id;
+  if (value == null || value === "") return null;
+  if (typeof value !== "string") {
+    throw new StaffBookingValidationError("Pet not found.", `pets[${index}].id`);
+  }
+  try {
+    return validatePetId(value);
+  } catch (error) {
+    if (error instanceof PetValidationError) {
+      throw new StaffBookingValidationError(
+        error.message,
+        `pets[${index}].id`,
+      );
+    }
+    throw error;
+  }
 }
 
 function isBlankPetBody(petBody: unknown) {
@@ -189,9 +213,13 @@ export function validateStaffCustomerBookingInput(
     );
   }
 
-  const pets: PetWriteInput[] = filledPetBodies.map((petBody, index) => {
+  const pets: StaffBookingPetInput[] = filledPetBodies.map((petBody, index) => {
     try {
-      return validateCreatePetInput(petBody);
+      const record = assertPlainObject(petBody);
+      const id = readOptionalPetId(record, index);
+      const rest = { ...record };
+      delete rest.id;
+      return { ...validateCreatePetInput(rest), id };
     } catch (error) {
       if (error instanceof PetValidationError) {
         throw new StaffBookingValidationError(
