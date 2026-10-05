@@ -12,8 +12,12 @@ export default function ConfirmAccountPreviewPage() {
           Appointment
         </p>
         <h1 className="font-display mt-4 text-4xl text-ink md:text-5xl">
-          Confirm your visit
+          We’ll come to you
         </h1>
+        <p className="font-body mt-6 text-sm leading-relaxed text-taupe">
+          Confirm this home appointment. K9 Atelier visits you at the address
+          below. Confirming does not charge your card.
+        </p>
         <ConfirmAccountForm
           token="preview"
           preview={{
