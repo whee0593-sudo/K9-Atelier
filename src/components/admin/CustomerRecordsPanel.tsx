@@ -951,6 +951,7 @@ export function CustomerRecordCard({
             customerId={customer.profile.id}
             pets={customer.pets}
             preview={preview}
+            appointments={preview ? previewHistory?.appointments : undefined}
             onPetSaved={onPetSaved}
             onPetCreated={onPetCreated}
             onPetArchived={onPetArchived}
