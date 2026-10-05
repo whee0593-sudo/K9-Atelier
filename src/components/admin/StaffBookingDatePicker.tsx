@@ -67,6 +67,7 @@ export function StaffBookingDatePicker({
       }
       try {
         const response = await fetch(`/api/admin/calendar?month=${nextMonth}`, {
+          cache: "no-store",
           credentials: "include",
         });
         const body = (await response.json()) as {

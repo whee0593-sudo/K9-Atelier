@@ -96,7 +96,7 @@ export function CalendarDateActionMenu({
         <div
           role="dialog"
           aria-label="Date actions"
-          className="w-full rounded-t-2xl border border-lavender/40 bg-cream px-4 pb-6 pt-3 shadow-sm"
+          className="max-h-[90dvh] min-h-0 w-full max-w-full overflow-y-auto overscroll-contain rounded-t-2xl border border-lavender/40 bg-cream px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-sm"
           onClick={(event) => event.stopPropagation()}
         >
           <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-lavender" />
@@ -142,7 +142,7 @@ function DialogFrame({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="max-h-[90vh] w-full overflow-y-auto rounded-t-2xl border border-lavender/40 bg-cream p-5 shadow-sm sm:max-w-md sm:rounded-2xl"
+        className="max-h-[90dvh] min-h-0 w-full max-w-full overflow-y-auto overscroll-contain rounded-t-2xl border border-lavender/40 bg-cream p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-sm sm:max-w-md sm:rounded-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <h3 id={titleId} className="text-lg font-medium text-gold-dark">

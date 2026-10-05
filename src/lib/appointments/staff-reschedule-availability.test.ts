@@ -103,6 +103,15 @@ describe("staff reschedule and cancel server gates", () => {
     assert.match(reschedule, /getStaffSession/);
     assert.match(reschedule, /assignArrivalWindow/);
     assert.match(reschedule, /excludeAppointmentIds: \[appointmentId\]/);
+    assert.equal(
+      reschedule.includes("excludeAppointmentIds: rows") ||
+        reschedule.includes("excludeAppointmentIds: [loaded"),
+      false,
+    );
+    const checkAt = reschedule.indexOf("assignArrivalWindow");
+    const emailSkip = reschedule.indexOf("if (!completed)");
+    assert.ok(checkAt > 0);
+    assert.ok(emailSkip > checkAt);
     assert.match(schedule, /appointmentOverlapsBlocks/);
     assert.match(schedule, /function assignArrivalWindow/);
     assert.match(schedule, /\.neq\("status", "cancelled"\)/);

@@ -112,6 +112,7 @@ export function AdminRescheduleAppointmentButton({
     setLoadingDays(true);
     setError(null);
     void fetch(`/api/admin/appointments/${appointment.id}/availability`, {
+      cache: "no-store",
       credentials: "include",
     })
       .then(async (response) => {
@@ -229,7 +230,7 @@ export function AdminRescheduleAppointmentButton({
             aria-labelledby={titleId}
             className={
               limitToOpenSlots
-                ? "max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-lavender/30 bg-cream p-6 shadow-sm sm:rounded-2xl"
+                ? "max-h-[90dvh] min-h-0 w-full max-w-md overflow-y-auto overscroll-contain rounded-t-2xl border border-lavender/30 bg-cream p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-sm sm:rounded-2xl"
                 : "w-full max-w-md rounded-2xl border border-lavender/30 bg-cream p-6 shadow-sm"
             }
             onClick={(event) => event.stopPropagation()}

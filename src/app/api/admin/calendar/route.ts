@@ -11,5 +11,7 @@ export async function GET(request: Request) {
     }
     return mapStaffServiceError(result.error);
   }
-  return NextResponse.json(result);
+  return NextResponse.json(result, {
+    headers: { "Cache-Control": "private, no-store" },
+  });
 }

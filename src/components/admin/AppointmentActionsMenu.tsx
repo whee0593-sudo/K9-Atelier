@@ -272,7 +272,7 @@ export function AppointmentActionsMenu({
   const panelNode =
     variant === "sheet" ? (
       <div
-        className="fixed inset-0 z-[85] flex items-end bg-ink/40"
+        className="fixed inset-0 z-[100] flex items-end bg-ink/40"
         data-variant="sheet"
         data-appointment-actions
         onClick={onClose}
@@ -281,7 +281,7 @@ export function AppointmentActionsMenu({
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
-          className="flex max-h-[90vh] min-h-0 w-full max-w-full flex-col overflow-y-auto rounded-t-2xl border border-lavender/40 bg-cream px-4 pb-6 pt-3 shadow-sm"
+          className="flex max-h-[90dvh] min-h-0 w-full max-w-full flex-col overflow-y-auto overscroll-contain rounded-t-2xl border border-lavender/40 bg-cream px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-sm"
           onClick={(event) => event.stopPropagation()}
         >
           <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-lavender" />
@@ -290,7 +290,7 @@ export function AppointmentActionsMenu({
       </div>
     ) : (
       <div
-        className="fixed inset-0 z-[85]"
+        className="fixed inset-0 z-[100]"
         data-variant="popover"
         data-appointment-actions
         onClick={onClose}

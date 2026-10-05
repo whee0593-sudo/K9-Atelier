@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AdminCalendarMonthGrid } from "@/components/admin/AdminCalendarMonthGrid";
 import {
@@ -122,11 +122,14 @@ export function AdminCalendar({
   const [previewCancelledIds, setPreviewCancelledIds] = useState<string[]>([]);
   const [previewMoves, setPreviewMoves] = useState<AdminAppointmentRecord[]>([]);
   const router = useRouter();
+  const monthLoadId = useRef(0);
 
   const loadMonth = useCallback(async (nextMonth: string) => {
+    const requestId = ++monthLoadId.current;
     setLoadingMonth(true);
     setError(null);
     if (preview) {
+      if (requestId !== monthLoadId.current) return;
       const body = buildPreviewCalendarMonth(nextMonth);
       setDays(body.days);
       setToday(body.today);
@@ -143,6 +146,7 @@ export function AdminCalendar({
     }
     try {
       const response = await fetch(`/api/admin/calendar?month=${nextMonth}`, {
+        cache: "no-store",
         credentials: "include",
       });
       const body = (await response.json()) as {
@@ -150,6 +154,7 @@ export function AdminCalendar({
         today?: string;
         days?: AdminCalendarDay[];
       };
+      if (requestId !== monthLoadId.current) return;
       if (!response.ok) {
         setError(body.error ?? "Could not load the calendar.");
         return;
@@ -161,9 +166,10 @@ export function AdminCalendar({
         return body.today?.startsWith(nextMonth) ? body.today : (body.days?.[0]?.date ?? null);
       });
     } catch {
+      if (requestId !== monthLoadId.current) return;
       setError("Could not load the calendar.");
     } finally {
-      setLoadingMonth(false);
+      if (requestId === monthLoadId.current) setLoadingMonth(false);
     }
   }, [preview]);
 
@@ -188,6 +194,7 @@ export function AdminCalendar({
     let cancelled = false;
     setLoadingDay(true);
     void fetch(`/api/admin/appointments?date=${selectedDate}`, {
+      cache: "no-store",
       credentials: "include",
     })
       .then(async (response) => {
@@ -595,7 +602,6 @@ export function AdminCalendar({
           blocks={dialogBlocks}
           onClose={() => setDialog(null)}
           onAppointmentClick={(id, anchor) => {
-            setDialog(null);
             openAppointmentMenu(id, anchor);
           }}
           onBlockClick={() => {

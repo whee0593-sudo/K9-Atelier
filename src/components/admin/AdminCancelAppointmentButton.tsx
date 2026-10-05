@@ -131,7 +131,7 @@ export function AdminCancelAppointmentButton({
             aria-labelledby={titleId}
             className={
               sheetOnMobile
-                ? "w-full max-w-md rounded-t-2xl border border-lavender/30 bg-cream p-6 shadow-sm sm:rounded-2xl"
+                ? "max-h-[90dvh] min-h-0 w-full max-w-md overflow-y-auto overscroll-contain rounded-t-2xl border border-lavender/30 bg-cream p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-sm sm:rounded-2xl"
                 : "w-full max-w-md rounded-2xl border border-lavender/30 bg-cream p-6 shadow-sm"
             }
             onClick={(event) => event.stopPropagation()}

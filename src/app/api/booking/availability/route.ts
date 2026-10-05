@@ -73,7 +73,10 @@ export async function GET(request: Request) {
     );
   }
 
-  return NextResponse.json({ days: result.days });
+  return NextResponse.json(
+    { days: result.days },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
 }
 
 export async function POST(request: Request) {
