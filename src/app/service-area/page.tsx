@@ -1,7 +1,11 @@
+import { formatHourLabel } from "@/lib/appointments/closures";
 import { business } from "@/lib/business";
 
 export default function ServiceAreaPage() {
   const { serviceArea, booking } = business;
+  const hoursLabel = `${formatHourLabel(
+    Number(booking.hoursStart.split(":")[0]),
+  )} – ${formatHourLabel(Number(booking.hoursEnd.split(":")[0]))}`;
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
@@ -48,7 +52,7 @@ export default function ServiceAreaPage() {
       <div className="mt-10 rounded-2xl border border-blue/40 bg-blue/10 p-6">
         <h2 className="text-lg font-medium text-text">Booking Hours</h2>
         <p className="mt-3 text-sm text-text-muted">
-          Monday – Friday, {booking.hoursStart} – {booking.hoursEnd}
+          Monday – Friday, {hoursLabel}
         </p>
         <p className="mt-2 text-sm text-text-muted">
           {booking.paymentMethodNote}

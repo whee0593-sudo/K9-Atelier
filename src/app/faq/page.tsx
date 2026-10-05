@@ -169,7 +169,7 @@ export default function FaqPage() {
       a: (
         <FaqParagraphs
           paragraphs={[
-            "Appointments are available Monday through Friday, from 9:00 AM to 4:00 PM Eastern Time. Limited weekend availability may be offered by request.",
+            "Appointments are available Monday through Friday, from 9:00 AM to 5:00 PM Eastern Time. Limited weekend availability may be offered by request.",
             "To begin, create your account and dog profile, confirm rabies vaccination status, select an available date and time, and add a card on file. You may also upload a current rabies certificate or vaccination record.",
             "You will not be charged at the time of booking.",
           ]}

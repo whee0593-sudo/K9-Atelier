@@ -115,7 +115,7 @@
     ],
     "firstBookableDate": "2026-09-20",
     "hoursStart": "09:00",
-    "hoursEnd": "16:00",
+    "hoursEnd": "17:00",
     "timezone": "America/New_York",
     "routing": {
       "maxAppointmentsPerDay": 4,
