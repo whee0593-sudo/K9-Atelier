@@ -72,7 +72,7 @@ describe("services page content", () => {
     const visibleText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
     assert.match(
       visibleText,
-      /Private, one-on-one mobile dog grooming throughout the Palm Beach County area, tailored to your dog\./,
+      /Private, one-on-one mobile dog grooming, tailored to your dog\./,
     );
     assert.match(
       visibleText,
