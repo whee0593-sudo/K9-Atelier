@@ -8,7 +8,6 @@ import {
   getBrandPhoneTelHref,
   getBrandSearchName,
   getGoogleWriteReviewUrl,
-  getServiceAreaFooterSentence,
 } from "@/lib/business";
 import { Container } from "@/components/luxury/Container";
 
@@ -62,8 +61,13 @@ export function Footer() {
             <p className="font-body mt-3 text-[12px] font-medium leading-relaxed text-taupe">
               Private, cage-free mobile dog grooming for dogs up to 45 lbs.
             </p>
-            <p className="font-body mt-1.5 text-[12px] font-medium leading-relaxed text-taupe">
-              {getServiceAreaFooterSentence()}
+            <p className="font-body mt-1.5 text-pretty text-[12px] font-medium leading-relaxed text-taupe">
+              Serving{" "}
+              <span className="whitespace-nowrap">Jupiter Island,</span>{" "}
+              <span className="whitespace-nowrap">Jupiter,</span>{" "}
+              <span className="whitespace-nowrap">Tequesta,</span>{" "}
+              <span className="whitespace-nowrap">Palm Beach Gardens,</span>{" "}
+              <span className="whitespace-nowrap">Palm Beach & West Palm Beach.</span>
             </p>
             {brand.phone && phoneHref ? (
               <a

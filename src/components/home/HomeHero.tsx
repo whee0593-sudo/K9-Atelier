@@ -4,7 +4,7 @@ import { Container } from "@/components/luxury/Container";
 import { Eyebrow } from "@/components/luxury/Eyebrow";
 import { EditorialPhoto } from "@/components/luxury/EditorialPhoto";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
-import { business, getCommunitiesServedLabel } from "@/lib/business";
+import { business } from "@/lib/business";
 import { photoFor } from "@/lib/gallery";
 
 const heroCtaClass =
@@ -26,7 +26,19 @@ function HeroServiceMeta({ className = "" }: { className?: string }) {
     <div
       className={`font-body max-w-xl space-y-3 text-[13px] font-medium uppercase leading-relaxed tracking-[0.12em] text-taupe md:text-[12px] md:tracking-[0.16em] ${className}`}
     >
-      <p className="break-words">{getCommunitiesServedLabel()}</p>
+      <p className="text-pretty">
+        Serving <span className="whitespace-nowrap">Jupiter Island</span>
+        {" · "}
+        <span className="whitespace-nowrap">Jupiter</span>
+        {" · "}
+        <span className="whitespace-nowrap">Tequesta</span>
+        {" · "}
+        <span className="whitespace-nowrap">Palm Beach Gardens</span>
+        {" · "}
+        <span className="whitespace-nowrap">Palm Beach</span>
+        {" · "}
+        <span className="whitespace-nowrap">West Palm Beach</span>
+      </p>
       <p className="break-words">
         By Appointment Only · Dogs up to 45 lbs
       </p>

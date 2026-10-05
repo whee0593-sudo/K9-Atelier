@@ -69,9 +69,14 @@ describe("services page content", () => {
     assert.equal((html.match(/<h1\b/g) ?? []).length, 1);
     assert.match(html, /Grooming, Considered/);
     assert.match(html, /Down to Every Detail\./);
+    const visibleText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
     assert.match(
-      html,
-      /Private, one-on-one mobile dog grooming in Palm Beach, tailored to your dog\./,
+      visibleText,
+      /Private, one-on-one mobile dog grooming throughout the Palm Beach County area, tailored to your dog\./,
+    );
+    assert.match(
+      visibleText,
+      /Jupiter Island, Jupiter, Tequesta, Palm Beach Gardens, Palm Beach and West Palm Beach\./,
     );
     assert.match(html, /Dogs up to 45 lbs · By appointment only/);
   });
