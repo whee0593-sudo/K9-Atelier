@@ -6,6 +6,10 @@ import {
 import { getStripe } from "@/lib/stripe/server";
 import { getStripePublishableKey, isStripeConfigured } from "@/lib/stripe/config";
 import {
+  cardSaveRejection,
+  offSessionCardSetupParams,
+} from "@/lib/payments/card-on-file";
+import {
   mapPaymentMethodRow,
   type PaymentMethodRecord,
   type PaymentMethodRow,
@@ -102,11 +106,9 @@ export async function createStaffCustomerSetupIntent(
   if (!stripeCustomerId) return { error: "server" };
 
   try {
-    const setupIntent = await stripe.setupIntents.create({
-      customer: stripeCustomerId,
-      usage: "off_session",
-      automatic_payment_methods: { enabled: true, allow_redirects: "never" },
-    });
+    const setupIntent = await stripe.setupIntents.create(
+      offSessionCardSetupParams(stripeCustomerId),
+    );
     if (!setupIntent.client_secret) return { error: "server" };
     return { clientSecret: setupIntent.client_secret, publishableKey };
   } catch (error) {
@@ -120,7 +122,7 @@ export async function saveStaffCustomerPaymentMethod(
   setupIntentId: string,
 ): Promise<
   | { method: PaymentMethodRecord }
-  | { error: "unauthenticated" | "forbidden" | "conflict" | "server" }
+  | { error: "unauthenticated" | "forbidden" | "conflict" | "server"; message?: string }
 > {
   const { getStaffSession } = await import("@/lib/staff/auth");
   const session = await getStaffSession();
@@ -165,7 +167,24 @@ export async function saveStaffCustomerPaymentMethod(
   }
 
   const card = paymentMethod.card;
-  if (!card) return { error: "conflict" };
+  const rejection = cardSaveRejection(card);
+  if (!card || rejection) {
+    return {
+      error: "conflict",
+      message: rejection ?? "This card could not be verified. Please try another card.",
+    };
+  }
+  const attached = await ensurePaymentMethodOnCustomer(
+    paymentMethod.id,
+    stripeCustomerId,
+    paymentMethod.customer,
+  );
+  if (!attached) {
+    return {
+      error: "conflict",
+      message: "This card could not be saved for a later charge. Please try another card.",
+    };
+  }
 
   const admin = createAdminClient();
   const { data: existingRow } = await admin
@@ -284,6 +303,66 @@ async function createAndStoreStripeCustomer(
   return customer.id;
 }
 
+export async function assertCardReadyForOffSessionCharge(
+  stripeCustomerId: string,
+  stripePaymentMethodId: string,
+): Promise<{ ok: true } | { error: "conflict" | "server"; message: string }> {
+  const stripe = getStripe();
+  if (!stripe) {
+    return { error: "server", message: "Card charging is not available." };
+  }
+
+  let paymentMethod;
+  try {
+    paymentMethod = await stripe.paymentMethods.retrieve(stripePaymentMethodId);
+  } catch (error) {
+    console.error("assertCardReadyForOffSessionCharge retrieve failed:", error);
+    return { error: "conflict", message: "That card is no longer on file." };
+  }
+
+  const rejection = cardSaveRejection(paymentMethod.card);
+  if (rejection) return { error: "conflict", message: rejection };
+
+  const attached = await ensurePaymentMethodOnCustomer(
+    paymentMethod.id,
+    stripeCustomerId,
+    paymentMethod.customer,
+  );
+  if (!attached) {
+    return {
+      error: "conflict",
+      message:
+        "This card is no longer linked to the account. Ask the customer to add it again.",
+    };
+  }
+  return { ok: true };
+}
+
+async function ensurePaymentMethodOnCustomer(
+  paymentMethodId: string,
+  stripeCustomerId: string,
+  currentCustomer: string | { id: string } | null,
+) {
+  const owner =
+    typeof currentCustomer === "string"
+      ? currentCustomer
+      : currentCustomer?.id ?? null;
+  if (owner === stripeCustomerId) return true;
+  if (owner) return false;
+
+  const stripe = getStripe();
+  if (!stripe) return false;
+  try {
+    await stripe.paymentMethods.attach(paymentMethodId, {
+      customer: stripeCustomerId,
+    });
+    return true;
+  } catch (error) {
+    console.error("ensurePaymentMethodOnCustomer failed:", error);
+    return false;
+  }
+}
+
 function isMissingStripeCustomer(error: unknown) {
   if (!error || typeof error !== "object") return false;
   const stripeError = error as { code?: string; message?: string };
@@ -321,11 +400,9 @@ export async function createSetupIntent(): Promise<
     if (!customerId) return { error: "server" };
 
     try {
-      const setupIntent = await stripe.setupIntents.create({
-        customer: customerId,
-        usage: "off_session",
-        automatic_payment_methods: { enabled: true, allow_redirects: "never" },
-      });
+      const setupIntent = await stripe.setupIntents.create(
+        offSessionCardSetupParams(customerId),
+      );
 
       if (!setupIntent.client_secret) return { error: "server" };
 
@@ -342,11 +419,9 @@ export async function createSetupIntent(): Promise<
       customerId = await getOrCreateStripeCustomerId(user.id, user.email);
       if (!customerId) return { error: "server" };
 
-      const setupIntent = await stripe.setupIntents.create({
-        customer: customerId,
-        usage: "off_session",
-        automatic_payment_methods: { enabled: true, allow_redirects: "never" },
-      });
+      const setupIntent = await stripe.setupIntents.create(
+        offSessionCardSetupParams(customerId),
+      );
 
       if (!setupIntent.client_secret) return { error: "server" };
 
@@ -365,7 +440,7 @@ export async function saveSetupIntentPaymentMethod(
   setupIntentId: string,
 ): Promise<
   | { method: PaymentMethodRecord }
-  | { error: "unauthenticated" | "misconfigured" | "conflict" | "server" }
+  | { error: "unauthenticated" | "misconfigured" | "conflict" | "server"; message?: string }
 > {
   const user = await requireAuthenticatedUser();
   if (!user) return { error: "unauthenticated" };
@@ -409,7 +484,24 @@ export async function saveSetupIntentPaymentMethod(
   }
 
   const card = paymentMethod.card;
-  if (!card) return { error: "conflict" };
+  const rejection = cardSaveRejection(card);
+  if (!card || rejection || !stripeCustomerId) {
+    return {
+      error: "conflict",
+      message: rejection ?? "This card could not be verified. Please try another card.",
+    };
+  }
+  const attached = await ensurePaymentMethodOnCustomer(
+    paymentMethod.id,
+    stripeCustomerId,
+    paymentMethod.customer,
+  );
+  if (!attached) {
+    return {
+      error: "conflict",
+      message: "This card could not be saved for a later charge. Please try another card.",
+    };
+  }
 
   const admin = createAdminClient();
   const { data: existingRow } = await admin

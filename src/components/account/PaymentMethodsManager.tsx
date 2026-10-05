@@ -15,6 +15,11 @@ import {
   savePaymentSetupIntent,
 } from "@/lib/payments/client";
 import {
+  isCardExpired,
+  readSucceededSetupIntentId,
+  withoutSetupIntentRedirect,
+} from "@/lib/payments/card-on-file";
+import {
   formatPaymentMethodLabel,
   type PaymentMethodRecord,
 } from "@/lib/payments/types";
@@ -172,7 +177,35 @@ export function PaymentMethodsManager({
   }, []);
 
   useEffect(() => {
-    void reload();
+    let cancelled = false;
+
+    async function load() {
+      const setupIntentId = readSucceededSetupIntentId(window.location.search);
+      if (setupIntentId) {
+        try {
+          await savePaymentSetupIntent(setupIntentId);
+          window.history.replaceState(
+            null,
+            "",
+            withoutSetupIntentRedirect(window.location.href),
+          );
+        } catch (saveError) {
+          if (!cancelled) {
+            setError(
+              saveError instanceof Error
+                ? saveError.message
+                : "This card could not be saved.",
+            );
+          }
+        }
+      }
+      if (!cancelled) await reload();
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, [reload]);
 
   const stripePromise = useMemo(
@@ -248,6 +281,9 @@ export function PaymentMethodsManager({
                 <p className="text-sm text-text">{formatPaymentMethodLabel(method)}</p>
                 {method.isDefault && (
                   <p className="mt-1 text-xs text-text-muted">Default</p>
+                )}
+                {isCardExpired(method.expMonth, method.expYear) && (
+                  <p className="mt-1 text-xs text-red-800">Expired</p>
                 )}
               </div>
               <button

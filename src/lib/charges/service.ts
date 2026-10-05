@@ -2,6 +2,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getStaffSession } from "@/lib/staff/auth";
 import { fetchAppointmentAdminRecord } from "@/lib/email/appointment-context";
 import {
+  isCardExpired,
+  readOffSessionAuthentication,
+  savedCardChargeConfirmation,
+} from "@/lib/payments/card-on-file";
+import {
+  assertCardReadyForOffSessionCharge,
   getOrCreateStripeCustomerId,
   listStaffCustomerPaymentMethods,
 } from "@/lib/payments/service";
@@ -137,10 +143,15 @@ export async function getCollectContext(
     .eq("id", appointmentId)
     .maybeSingle();
 
+  const usableMethods = methods.methods.filter(
+    (method) => !isCardExpired(method.expMonth, method.expYear),
+  );
   const selectedPaymentMethodId =
-    (appointmentRow?.payment_method_id as string | null) ??
-    methods.methods.find((method) => method.isDefault)?.id ??
-    methods.methods[0]?.id ??
+    usableMethods.find(
+      (method) => method.id === appointmentRow?.payment_method_id,
+    )?.id ??
+    usableMethods.find((method) => method.isDefault)?.id ??
+    usableMethods[0]?.id ??
     null;
 
   const appointmentWithTiming = {
@@ -322,10 +333,17 @@ export async function createAppointmentCharge(
       .eq("id", input.paymentMethodId)
       .eq("customer_id", appointment.customerId)
       .maybeSingle();
-    if (!method) {
+    const savedStripePaymentMethodId = method?.stripe_payment_method_id;
+    if (typeof savedStripePaymentMethodId !== "string") {
       return { error: "conflict", message: "That card is no longer on file." };
     }
-    stripePaymentMethodId = method.stripe_payment_method_id;
+    if (!stripeCustomerId) return { error: "server" };
+    stripePaymentMethodId = savedStripePaymentMethodId;
+    const ready = await assertCardReadyForOffSessionCharge(
+      stripeCustomerId,
+      savedStripePaymentMethodId,
+    );
+    if ("error" in ready) return ready;
   }
 
   const { data: inserted, error: insertError } = await admin
@@ -413,8 +431,7 @@ export async function createAppointmentCharge(
           }
         : {
             payment_method: stripePaymentMethodId,
-            confirm: true,
-            off_session: input.kind === "no_show",
+            ...savedCardChargeConfirmation(),
           }),
     });
 
@@ -455,6 +472,25 @@ export async function createAppointmentCharge(
       .eq("id", inserted.id);
     return { error: "declined", message: "This card could not be charged." };
   } catch (error) {
+    const authentication = readOffSessionAuthentication(error);
+    if (authentication) {
+      await admin
+        .from("appointment_charges")
+        .update({ stripe_payment_intent_id: authentication.paymentIntentId })
+        .eq("id", inserted.id);
+      await attachReservationPaymentIntent(
+        inserted.id,
+        authentication.paymentIntentId,
+      );
+      return {
+        charge: mapCharge({
+          ...(inserted as ChargeRow),
+          stripe_payment_intent_id: authentication.paymentIntentId,
+        }),
+        clientSecret: authentication.clientSecret,
+        requiresAction: true,
+      };
+    }
     console.error("createAppointmentCharge stripe failed:", error);
     await reverseReferralDebit(inserted.id);
     await admin

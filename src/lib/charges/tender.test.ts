@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildPreviewCollectContext } from "@/lib/charges/preview";
+import { isCardExpired } from "@/lib/payments/card-on-file";
 import {
   buildCollectChargePaymentFields,
   collectReceiptPaymentLabel,
@@ -14,6 +15,19 @@ describe("collect checkout payment choice", () => {
     assert.ok(context.methods.length >= 2);
     assert.equal(context.selectedPaymentMethodId, context.methods[0]?.id);
     assert.notEqual(context.methods[1]?.id, context.selectedPaymentMethodId);
+  });
+
+  it("keeps an expired card in the list without selecting it", () => {
+    const context = buildPreviewCollectContext();
+    const expired = context.methods.find((method) =>
+      isCardExpired(
+        method.expMonth,
+        method.expYear,
+        new Date("2026-10-05T12:00:00-04:00"),
+      ),
+    );
+    assert.equal(expired?.last4, "0005");
+    assert.notEqual(context.selectedPaymentMethodId, expired?.id);
   });
 
   it("sends the selected saved card, a new card, or cash", () => {

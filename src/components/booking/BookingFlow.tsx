@@ -36,6 +36,11 @@ import { createDraftBookingPet, isPersistedPetId } from "@/lib/booking-flow";
 import { createCustomerPet } from "@/lib/pets/client";
 import { mapPetProfileToWriteInput } from "@/lib/pets/map";
 import { createClient } from "@/lib/supabase/client";
+import {
+  readSucceededSetupIntentId,
+  withoutSetupIntentRedirect,
+} from "@/lib/payments/card-on-file";
+import { savePaymentSetupIntent } from "@/lib/payments/client";
 import type { PaymentMethodRecord } from "@/lib/payments/types";
 
 const BOOKING_SUCCESS_SESSION_KEY = "k9-booking-success";
@@ -116,6 +121,28 @@ export function BookingFlow({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodRecord | null>(
     null,
   );
+
+  useEffect(() => {
+    const setupIntentId = readSucceededSetupIntentId(window.location.search);
+    if (!setupIntentId) return;
+    let cancelled = false;
+    savePaymentSetupIntent(setupIntentId)
+      .then((method) => {
+        if (cancelled) return;
+        setPaymentMethod(method);
+        window.history.replaceState(
+          null,
+          "",
+          withoutSetupIntentRedirect(window.location.href),
+        );
+      })
+      .catch(() => {
+        // The payment step asks for the card again if the bank redirect did not save.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [careSlotError, setCareSlotError] = useState<string | null>(null);
   const [reserved, setReserved] = useState(false);
   const [createdAppointment, setCreatedAppointment] =

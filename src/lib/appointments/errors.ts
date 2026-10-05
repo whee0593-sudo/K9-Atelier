@@ -28,6 +28,7 @@ export function mapAppointmentServiceError(
     | "conflict"
     | "slot_unavailable"
     | "payment_required"
+    | "payment_expired"
     | "server",
 ) {
   switch (error) {
@@ -49,6 +50,11 @@ export function mapAppointmentServiceError(
     case "payment_required":
       return appointmentJsonError(
         "Please select a saved payment method for this appointment.",
+        409,
+      );
+    case "payment_expired":
+      return appointmentJsonError(
+        "This card is expired. Please add a current card before reserving.",
         409,
       );
     default:

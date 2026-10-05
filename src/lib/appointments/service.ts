@@ -30,6 +30,7 @@ import {
   sendAppointmentCreatedEmails,
   sendAppointmentStatusEmails,
 } from "@/lib/email/appointment-mails";
+import { isCardExpired } from "@/lib/payments/card-on-file";
 import { getCustomerPaymentMethod } from "@/lib/payments/service";
 import { estimateServiceDurationMinutes } from "@/lib/services";
 import {
@@ -96,6 +97,7 @@ export async function createAppointment(
         | "conflict"
         | "slot_unavailable"
         | "payment_required"
+        | "payment_expired"
         | "server";
     }
 > {
@@ -131,6 +133,9 @@ export async function createAppointment(
     input.paymentMethodId,
   );
   if (!paymentMethod) return { error: "payment_required" };
+  if (isCardExpired(paymentMethod.expMonth, paymentMethod.expYear)) {
+    return { error: "payment_expired" };
+  }
 
   const base = await getBaseGeoPoint();
   if (!base) return { error: "server" };

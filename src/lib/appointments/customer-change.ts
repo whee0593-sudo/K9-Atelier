@@ -17,7 +17,14 @@ import {
   notifyCustomerAppointmentChange,
   notifyStaffNewAppointment,
 } from "@/lib/email/appointment-mails";
-import { getOrCreateStripeCustomerId } from "@/lib/payments/service";
+import {
+  isCardExpired,
+  savedCardChargeConfirmation,
+} from "@/lib/payments/card-on-file";
+import {
+  assertCardReadyForOffSessionCharge,
+  getOrCreateStripeCustomerId,
+} from "@/lib/payments/service";
 import { business } from "@/lib/business";
 import { getStripe } from "@/lib/stripe/server";
 import { isStripeConfigured } from "@/lib/stripe/config";
@@ -231,43 +238,28 @@ async function resolvePaymentMethod(
   last4?: string;
 } | null> {
   const admin = createAdminClient();
-  const query = admin
+  const { data } = await admin
     .from("payment_methods")
-    .select("id, stripe_payment_method_id, brand, last4")
-    .eq("customer_id", customerId);
+    .select("id, stripe_payment_method_id, brand, last4, exp_month, exp_year, is_default")
+    .eq("customer_id", customerId)
+    .order("is_default", { ascending: false });
 
-  const { data } = appointmentMethodId
-    ? await query.eq("id", appointmentMethodId).maybeSingle()
-    : await query.order("is_default", { ascending: false }).limit(1).maybeSingle();
+  const usable = (data ?? []).filter(
+    (row) =>
+      row.id &&
+      row.stripe_payment_method_id &&
+      !isCardExpired(Number(row.exp_month), Number(row.exp_year)),
+  );
+  const selected =
+    usable.find((row) => row.id === appointmentMethodId) ?? usable[0];
+  if (!selected?.id || !selected.stripe_payment_method_id) return null;
 
-  if (data?.id && data.stripe_payment_method_id) {
-    return {
-      id: data.id as string,
-      stripePaymentMethodId: data.stripe_payment_method_id as string,
-      brand: (data.brand as string | null) ?? undefined,
-      last4: (data.last4 as string | null) ?? undefined,
-    };
-  }
-
-  if (appointmentMethodId) {
-    const { data: fallback } = await admin
-      .from("payment_methods")
-      .select("id, stripe_payment_method_id, brand, last4")
-      .eq("customer_id", customerId)
-      .order("is_default", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (fallback?.id && fallback.stripe_payment_method_id) {
-      return {
-        id: fallback.id as string,
-        stripePaymentMethodId: fallback.stripe_payment_method_id as string,
-        brand: (fallback.brand as string | null) ?? undefined,
-        last4: (fallback.last4 as string | null) ?? undefined,
-      };
-    }
-  }
-
-  return null;
+  return {
+    id: selected.id as string,
+    stripePaymentMethodId: selected.stripe_payment_method_id as string,
+    brand: (selected.brand as string | null) ?? undefined,
+    last4: (selected.last4 as string | null) ?? undefined,
+  };
 }
 
 async function chargeChangeFee(options: {
@@ -304,6 +296,12 @@ async function chargeChangeFee(options: {
     options.customerEmail,
   );
   if (!stripeCustomerId) return { error: "server" as const };
+
+  const ready = await assertCardReadyForOffSessionCharge(
+    stripeCustomerId,
+    method.stripePaymentMethodId,
+  );
+  if ("error" in ready) return { error: "payment_failed" as const };
 
   const lineItems: ChargeLineItem[] = [
     {
@@ -344,8 +342,7 @@ async function chargeChangeFee(options: {
       currency: "usd",
       customer: stripeCustomerId,
       payment_method: method.stripePaymentMethodId,
-      confirm: true,
-      off_session: true,
+      ...savedCardChargeConfirmation(),
       description: `K9 Atelier ${options.action.replace("_", " ")} fee`,
       metadata: {
         appointment_id: options.appointment.id,

@@ -20,7 +20,12 @@ export async function POST(
 
   if (body.setupIntentId) {
     const result = await saveStaffCustomerPaymentMethod(customerId, body.setupIntentId);
-    if ("error" in result) return mapStaffServiceError(result.error);
+    if ("error" in result) {
+      if (result.error === "conflict" && result.message) {
+        return staffJsonError(result.message, 409);
+      }
+      return mapStaffServiceError(result.error);
+    }
     return NextResponse.json(result);
   }
 

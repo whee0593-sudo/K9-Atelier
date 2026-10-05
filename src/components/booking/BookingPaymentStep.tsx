@@ -16,6 +16,7 @@ import {
   createPaymentSetupIntent,
   fetchCustomerPaymentMethods,
 } from "@/lib/payments/client";
+import { isCardExpired } from "@/lib/payments/card-on-file";
 import {
   formatPaymentMethodLabel,
   type PaymentMethodRecord,
@@ -50,12 +51,15 @@ export function BookingPaymentStep({
       .then((result) => {
         if (cancelled) return;
         setPaymentMethods(result.methods);
+        const usable = result.methods.filter(
+          (method) => !isCardExpired(method.expMonth, method.expYear),
+        );
         const selected =
-          result.methods.find((method) => method.id === initialPaymentMethodId) ??
-          result.methods.find((method) => method.isDefault) ??
-          result.methods[0];
+          usable.find((method) => method.id === initialPaymentMethodId) ??
+          usable.find((method) => method.isDefault) ??
+          usable[0];
         if (selected) setSelectedPaymentMethodId(selected.id);
-        if (result.methods.length === 0) {
+        if (usable.length === 0) {
           setAddingCard(true);
           createPaymentSetupIntent()
             .then((next) => {
@@ -125,7 +129,7 @@ export function BookingPaymentStep({
     const selected = paymentMethods.find(
       (method) => method.id === selectedPaymentMethodId,
     );
-    if (!selected) {
+    if (!selected || isCardExpired(selected.expMonth, selected.expYear)) {
       setError(
         "Please add a payment method to reserve this appointment. You will not be charged now.",
       );
@@ -169,7 +173,8 @@ export function BookingPaymentStep({
           {paymentMethods.length > 0 ? (
             <ul className="space-y-3">
               {paymentMethods.map((method) => {
-                const checked = selectedPaymentMethodId === method.id;
+                const expired = isCardExpired(method.expMonth, method.expYear);
+                const checked = selectedPaymentMethodId === method.id && !expired;
                 return (
                   <li key={method.id}>
                     <label className="flex cursor-pointer items-start gap-3">
@@ -177,12 +182,14 @@ export function BookingPaymentStep({
                         type="radio"
                         name="booking-payment-method"
                         checked={checked}
+                        disabled={expired}
                         onChange={() => setSelectedPaymentMethodId(method.id)}
                         className="mt-0.5 size-4 shrink-0 accent-deep-lavender"
                       />
                       <span className="font-body text-sm text-ink">
                         {formatPaymentMethodLabel(method)}
                         {method.isDefault ? " · Default" : ""}
+                        {expired ? " · Expired" : ""}
                       </span>
                     </label>
                   </li>
