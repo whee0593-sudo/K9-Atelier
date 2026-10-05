@@ -389,7 +389,7 @@ export function BookingLocationTimeStep({
 
       {quote && !quote.withinServiceArea && (
         <div className={`${bookingNoticeClass} mt-8`}>
-          <p className="text-sm text-ink">{quote.summary}</p>
+          <p className="text-sm text-red-700">{quote.summary}</p>
           <Link href="/contact" className={`${bookingSecondaryBtnClass} mt-6`}>
             Contact Us
           </Link>
