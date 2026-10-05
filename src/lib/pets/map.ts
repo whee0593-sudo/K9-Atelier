@@ -6,6 +6,23 @@ import {
   vaccinationHasUpload,
 } from "@/lib/vaccinations/booking";
 
+function dateOnly(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const match = /^(\d{4}-\d{2}-\d{2})/.exec(value);
+  return match?.[1] ?? null;
+}
+
+/** Profile expiration: the date saved on the pet, then a date on an uploaded record. */
+export function displayedRabiesExpiration(
+  record: Pick<PetRecord, "rabiesExpirationDate" | "vaccinationExpirationDate">,
+): string | undefined {
+  return (
+    dateOnly(record.rabiesExpirationDate) ??
+    dateOnly(record.vaccinationExpirationDate) ??
+    undefined
+  );
+}
+
 export function mapPetRowToRecord(row: PetRow): PetRecord {
   return {
     id: row.id,
@@ -22,6 +39,7 @@ export function mapPetRowToRecord(row: PetRow): PetRecord {
     healthComfortNotes: row.health_comfort_notes,
     groomingPreferences: row.grooming_preferences,
     rabiesStatus: parsePetRabiesStatus(row.rabies_status),
+    rabiesExpirationDate: dateOnly(row.rabies_expiration_date),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -42,7 +60,7 @@ export function mapPetRecordToUiProfile(record: PetRecord): PetProfile {
     medicalNotes: record.healthComfortNotes ?? undefined,
     groomingPreferences: record.groomingPreferences ?? undefined,
     rabiesStatus: parsePetRabiesStatus(record.rabiesStatus),
-    vaccineExpiration: record.vaccinationExpirationDate ?? undefined,
+    vaccineExpiration: displayedRabiesExpiration(record),
     vaccinationBookingStatus: record.vaccinationBookingStatus ?? "missing",
     vaccineRecordUploaded: vaccinationHasUpload(record),
     vaccinationLatestRecordId: record.vaccinationLatestRecordId ?? null,
@@ -73,6 +91,7 @@ export function mapPetProfileToWriteInput(pet: PetProfile): PetWriteInput {
     healthComfortNotes: pet.medicalNotes ?? null,
     groomingPreferences: pet.groomingPreferences ?? null,
     rabiesStatus: parsePetRabiesStatus(pet.rabiesStatus),
+    rabiesExpirationDate: dateOnly(pet.vaccineExpiration),
   };
 }
 
@@ -90,6 +109,7 @@ export function mapValidatedInputToInsertRow(
     health_comfort_notes: input.healthComfortNotes ?? null,
     grooming_preferences: input.groomingPreferences ?? null,
     rabies_status: parsePetRabiesStatus(input.rabiesStatus),
+    rabies_expiration_date: dateOnly(input.rabiesExpirationDate),
   };
 }
 
@@ -117,6 +137,9 @@ export function mapValidatedInputToUpdateRow(
   }
   if (input.rabiesStatus !== undefined) {
     row.rabies_status = parsePetRabiesStatus(input.rabiesStatus);
+  }
+  if (input.rabiesExpirationDate !== undefined) {
+    row.rabies_expiration_date = dateOnly(input.rabiesExpirationDate);
   }
 
   return row;

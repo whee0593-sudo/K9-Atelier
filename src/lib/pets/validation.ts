@@ -27,6 +27,7 @@ const CREATE_FIELDS = [
   "healthComfortNotes",
   "groomingPreferences",
   "rabiesStatus",
+  "rabiesExpirationDate",
 ] as const;
 
 const UPDATE_FIELDS = [...CREATE_FIELDS] as const;
@@ -182,6 +183,42 @@ function normalizeSex(value: unknown): string | null {
   return trimmed;
 }
 
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+function normalizeRabiesExpirationDate(value: unknown): string | null {
+  if (value == null || value === "") return null;
+  if (typeof value !== "string") {
+    throw new PetValidationError(
+      "Enter a valid expiration date (YYYY-MM-DD).",
+      "rabiesExpirationDate",
+    );
+  }
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const match = ISO_DATE.exec(trimmed);
+  if (!match) {
+    throw new PetValidationError(
+      "Enter a valid expiration date (YYYY-MM-DD).",
+      "rabiesExpirationDate",
+    );
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    throw new PetValidationError(
+      "Enter a valid expiration date (YYYY-MM-DD).",
+      "rabiesExpirationDate",
+    );
+  }
+  return trimmed;
+}
+
 function normalizeRabiesStatus(value: unknown): PetRabiesStatus | null {
   if (value == null || value === "") return null;
   const parsed = parsePetRabiesStatus(value);
@@ -249,6 +286,10 @@ function validateWriteFields(
       : undefined;
   const rabiesStatus =
     body.rabiesStatus !== undefined ? normalizeRabiesStatus(body.rabiesStatus) : undefined;
+  const rabiesExpirationDate =
+    body.rabiesExpirationDate !== undefined
+      ? normalizeRabiesExpirationDate(body.rabiesExpirationDate)
+      : undefined;
 
   const resolvedDate =
     dateOfBirth !== undefined ? dateOfBirth : mode === "create" ? null : undefined;
@@ -276,6 +317,7 @@ function validateWriteFields(
       healthComfortNotes: healthComfortNotes ?? null,
       groomingPreferences: groomingPreferences ?? null,
       rabiesStatus: rabiesStatus ?? null,
+      rabiesExpirationDate: rabiesExpirationDate ?? null,
     };
   }
 
@@ -289,7 +331,8 @@ function validateWriteFields(
     temperamentNotes === undefined &&
     healthComfortNotes === undefined &&
     groomingPreferences === undefined &&
-    rabiesStatus === undefined
+    rabiesStatus === undefined &&
+    rabiesExpirationDate === undefined
   ) {
     throw new PetValidationError("No valid fields provided to update.");
   }
@@ -311,6 +354,9 @@ function validateWriteFields(
     partial.groomingPreferences = groomingPreferences;
   }
   if (rabiesStatus !== undefined) partial.rabiesStatus = rabiesStatus;
+  if (rabiesExpirationDate !== undefined) {
+    partial.rabiesExpirationDate = rabiesExpirationDate;
+  }
 
   return partial as PetWriteInput;
 }

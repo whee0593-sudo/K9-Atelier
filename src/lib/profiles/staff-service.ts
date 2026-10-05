@@ -12,7 +12,10 @@ import {
   type PetRow,
   type PetWriteInput,
 } from "@/lib/pets/types";
-import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
+import {
+  attachVaccinationSummaries,
+  syncPetRabiesExpiration,
+} from "@/lib/vaccinations/service";
 import {
   FREEZE_BAN_DURATION,
   isFrozenAuthUser,
@@ -506,6 +509,10 @@ export async function updateStaffPet(
       return { error: "server" };
     }
     if (!data) return { error: "not_found" };
+  }
+
+  if (input.rabiesExpirationDate !== undefined) {
+    await syncPetRabiesExpiration(petId, input.rabiesExpirationDate ?? null);
   }
 
   if (adminServiceNotes !== undefined) {

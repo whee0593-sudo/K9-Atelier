@@ -44,6 +44,43 @@ export async function attachVaccinationSummaries(
   return enrichPetRecordsWithVaccination(supabase, pets);
 }
 
+/** Keep the profile date and the latest uploaded record on the same expiration. */
+export async function syncPetRabiesExpiration(
+  petId: string,
+  expirationDate: string | null,
+): Promise<void> {
+  if (!hasSupabaseAdminConfig()) return;
+  const admin = createAdminClient();
+  const { error: petError } = await admin
+    .from("pets")
+    .update({ rabies_expiration_date: expirationDate })
+    .eq("id", petId);
+  if (petError) {
+    console.error("syncPetRabiesExpiration pet failed:", petError.message);
+  }
+
+  const { data: latest, error: lookupError } = await admin
+    .from("pet_vaccination_records")
+    .select("id")
+    .eq("pet_id", petId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (lookupError) {
+    console.error("syncPetRabiesExpiration lookup failed:", lookupError.message);
+    return;
+  }
+  if (!latest) return;
+
+  const { error } = await admin
+    .from("pet_vaccination_records")
+    .update({ expiration_date: expirationDate })
+    .eq("id", latest.id);
+  if (error) {
+    console.error("syncPetRabiesExpiration record failed:", error.message);
+  }
+}
+
 export async function uploadPetVaccination(
   petId: string,
   input: VaccinationUploadInput,
@@ -140,6 +177,10 @@ export async function uploadPetVaccination(
   if (!inserted) {
     await admin.storage.from(VACCINATION_BUCKET).remove([storagePath]);
     return { error: "server" };
+  }
+
+  if (expirationDate) {
+    await syncPetRabiesExpiration(petId, expirationDate);
   }
 
   const { data: refreshedPet, error: refreshError } = await supabase
@@ -259,11 +300,13 @@ export async function uploadStaffPetVaccination(
     return { error: "server" };
   }
 
+  if (expirationDate) {
+    await syncPetRabiesExpiration(petId, expirationDate);
+  }
+
   const { data: refreshedPet, error: refreshError } = await admin
     .from("pets")
-    .select(
-      "id, customer_id, name, breed, weight_lbs, date_of_birth, approximate_age_years, sex, temperament_notes, health_comfort_notes, grooming_preferences, archived_at, created_at, updated_at",
-    )
+    .select(PET_SELECT)
     .eq("id", petId)
     .maybeSingle();
 

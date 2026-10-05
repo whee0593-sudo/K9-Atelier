@@ -15,7 +15,7 @@ export function parsePetRabiesStatus(
 }
 
 export const PET_SELECT =
-  "id, customer_id, name, breed, weight_lbs, date_of_birth, approximate_age_years, sex, temperament_notes, health_comfort_notes, grooming_preferences, rabies_status, archived_at, created_at, updated_at";
+  "id, customer_id, name, breed, weight_lbs, date_of_birth, approximate_age_years, sex, temperament_notes, health_comfort_notes, grooming_preferences, rabies_status, rabies_expiration_date, archived_at, created_at, updated_at";
 
 /** Database row shape (snake_case). */
 export type PetRow = {
@@ -31,6 +31,7 @@ export type PetRow = {
   health_comfort_notes: string | null;
   grooming_preferences: string | null;
   rabies_status?: PetRabiesStatus | null;
+  rabies_expiration_date?: string | null;
   archived_at: string | null;
   created_at: string;
   updated_at: string;
@@ -49,6 +50,8 @@ export type PetRecord = {
   healthComfortNotes: string | null;
   groomingPreferences: string | null;
   rabiesStatus?: PetRabiesStatus | null;
+  /** ISO date YYYY-MM-DD saved on the pet profile. */
+  rabiesExpirationDate?: string | null;
   vaccinationBookingStatus?:
     import("@/lib/vaccinations/types").VaccinationBookingStatus;
   vaccinationExpirationDate?: string | null;
@@ -69,6 +72,7 @@ export type PetWriteInput = {
   healthComfortNotes?: string | null;
   groomingPreferences?: string | null;
   rabiesStatus?: PetRabiesStatus | null;
+  rabiesExpirationDate?: string | null;
 };
 
 export type PetInsertRow = {
@@ -82,6 +86,7 @@ export type PetInsertRow = {
   health_comfort_notes: string | null;
   grooming_preferences: string | null;
   rabies_status: PetRabiesStatus | null;
+  rabies_expiration_date: string | null;
 };
 
 export type PetUpdateRow = Partial<PetInsertRow>;
