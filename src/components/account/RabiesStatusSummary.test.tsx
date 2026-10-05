@@ -24,7 +24,8 @@ describe("rabies profile UI", () => {
     const html = renderToStaticMarkup(
       <PetProfileFieldsForm pet={pet()} onPetChange={() => undefined} />,
     );
-    assert.match(html, /Rabies Vaccination \(optional\)/);
+    assert.match(html, /Rabies Vaccination/);
+    assert.equal(html.includes("Rabies Vaccination (optional)"), false);
     assert.equal(
       html.includes('Rabies Status<span class="text-gold"> *</span>'),
       false,

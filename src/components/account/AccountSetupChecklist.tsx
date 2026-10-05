@@ -80,7 +80,7 @@ export function AccountSetupChecklist() {
           <p className="text-xs font-medium uppercase tracking-[0.14em] text-gold-dark">
             Step 1
           </p>
-          <h3 className="mt-2 font-medium text-text">Rabies vaccination (optional)</h3>
+          <h3 className="mt-2 font-medium text-text">Rabies vaccination</h3>
           <p className="mt-2 text-sm text-text-muted">
             {focusPet
               ? `You can confirm ${focusPet.name}’s rabies status or upload a certificate whenever you have it. This does not affect the reservation.`
