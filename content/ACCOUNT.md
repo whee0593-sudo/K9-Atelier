@@ -48,11 +48,12 @@
 | ~~Coat Type~~ | — | **已移除** |
 | Service & Product Notes | 否 | **仅管理员可见** — 记录每次用的产品与服务 |
 
-**Vaccination Records（疫苗记录 — 每只宠物必填）**
+**Rabies Vaccination（狂犬状态必填；证明文件可选）**
 | 字段 | 必填 | 用途 |
 |------|------|------|
-| Vaccination Expiration Date | 否 | 证书上的过期日（如有） |
-| Upload Vaccination Record | **是** | 上传狂犬/疫苗证明（PDF、JPG、PNG、WEBP、HEIC，最大 10 MB） |
+| Rabies Status | 是 | Current，或兽医出具的医疗豁免 |
+| Record Expiration Date | 否 | 证书上的过期日（如有） |
+| Rabies Record | 否 | 可选上传狂犬/疫苗证明（PDF、JPG、PNG、WEBP、HEIC） |
 
 **管理员专用页面（客人看不到）：** `/admin/pets` — 查看/编辑 Service & Product Notes
 

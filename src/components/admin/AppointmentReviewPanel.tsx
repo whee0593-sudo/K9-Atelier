@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { AdminCalendar } from "@/components/admin/AdminCalendar";
 import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
 import { AppointmentActionLinks } from "@/components/admin/AppointmentActionLinks";
@@ -38,9 +38,15 @@ function formatShortDate(iso: string): string {
   });
 }
 
-export function AppointmentReviewPanel() {
+export function AppointmentReviewPanel({
+  previewAppointments,
+}: {
+  /** Render these cards without calling the staff appointments API. */
+  previewAppointments?: AdminAppointmentRecord[];
+} = {}) {
+  const isPreview = previewAppointments != null;
   const [appointments, setAppointments] = useState<AdminAppointmentRecord[]>(
-    [],
+    previewAppointments ?? [],
   );
   const [todayAppointments, setTodayAppointments] = useState<
     AdminAppointmentRecord[]
@@ -48,7 +54,7 @@ export function AppointmentReviewPanel() {
   const [schedule, setSchedule] = useState<ScheduleDay[]>([]);
   const [zones, setZones] = useState<ZoneOption[]>([]);
   const [paidKinds, setPaidKinds] = useState<Record<string, ChargeKind[]>>({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!isPreview);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [calendarNonce, setCalendarNonce] = useState(0);
@@ -98,8 +104,9 @@ export function AppointmentReviewPanel() {
   }, []);
 
   useEffect(() => {
+    if (isPreview) return;
     void loadAppointments();
-  }, [loadAppointments]);
+  }, [isPreview, loadAppointments]);
 
   async function updateStatus(
     appointmentId: string,
@@ -270,6 +277,7 @@ export function AppointmentReviewPanel() {
       ) : null}
 
       <AdminCalendar
+        preview={isPreview}
         onAppointmentsChanged={() => void loadAppointments({ silent: true })}
         reloadToken={calendarNonce}
       />
@@ -499,23 +507,9 @@ export function AppointmentReviewPanel() {
                         : `From ${formatPrice(appointment.estimatedTotal)}`}
                     </dd>
                   </div>
-                  {appointment.vaccinationStatusAtBooking === "needs_review" ? (
-                    <div className="sm:col-span-2">
-                      <dt className="text-text-muted">Vaccination</dt>
-                      <dd className="text-red-700">
-                        Pending staff review at time of booking
-                      </dd>
-                    </div>
-                  ) : null}
                 </dl>
 
                 <div className="mt-6 flex flex-wrap gap-3">
-                  <Link
-                    href="/admin/vaccinations"
-                    className="rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text transition hover:border-gold/40"
-                  >
-                    Review vaccinations
-                  </Link>
                   <button
                     type="button"
                     disabled={busy}

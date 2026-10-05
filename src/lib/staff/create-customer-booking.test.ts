@@ -328,5 +328,9 @@ describe("appointmentStatusLabel", () => {
       appointmentStatusLabel("pending_confirmation", true),
       "Awaiting Customer Confirmation",
     );
+    assert.equal(
+      appointmentStatusLabel("pending_confirmation"),
+      "Pending Review",
+    );
   });
 });

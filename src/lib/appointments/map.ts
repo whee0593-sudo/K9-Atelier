@@ -102,7 +102,7 @@ export function appointmentStatusLabel(
   if (awaitingCustomerConfirm) return "Awaiting Customer Confirmation";
   switch (status) {
     case "pending_confirmation":
-      return "Pending Vaccination Review";
+      return "Pending Review";
     case "confirmed":
       return "Confirmed";
     case "cancelled":
