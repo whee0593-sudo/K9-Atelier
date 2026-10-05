@@ -28,7 +28,7 @@ describe("home first visit guide", () => {
     );
     assert.equal(
       homeFirstVisitSteps[1].body,
-      "Choose your preferred date, arrival window, and service.",
+      "Choose your preferred date, start time, and service.",
     );
     assert.equal(
       homeFirstVisitSteps[2].body,

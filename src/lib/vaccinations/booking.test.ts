@@ -60,12 +60,32 @@ describe("vaccination booking helpers", () => {
       }),
       true,
     );
+  });
+
+  it("treats name, breed, and weight as the only pet fields required to book", () => {
     assert.equal(
       petProfileReadyToBook({
-        vaccinationBookingStatus: "current",
-        vaccineRecordUploaded: true,
-      } as never),
+        name: "Bella",
+        breed: "Poodle",
+        weightLbs: 12,
+      }),
       true,
+    );
+    assert.equal(
+      petProfileReadyToBook({
+        name: "Bella",
+        breed: "",
+        weightLbs: 12,
+      }),
+      false,
+    );
+    assert.equal(
+      petProfileReadyToBook({
+        name: "Bella",
+        breed: "Poodle",
+        weightLbs: 0,
+      }),
+      false,
     );
   });
 

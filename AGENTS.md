@@ -17,6 +17,7 @@
   - 出行报价：若设置了 `GOOGLE_MAPS_API_KEY`，服务端用 Google Geocoding + Routes。密钥缺失，或 Google 返回 `REQUEST_DENIED` 等配置类错误时，`src/lib/geo.ts` 会回退到 Nominatim + OSRM。Google 返回 `ZERO_RESULTS` 的地址不会再去 OSM 重试。设置说明见 `content/MAPS.md`。
 - **首页（`/`）是极简入口**（logo + “Book Service” / “Online Shop” 按钮），不是长营销页。丰富内容在 `/services`、`/book`、`/service-area` 等。没有 `/home` 路由。
 - **预约是 `/book` 上的 6 步客人流程**：狗狗资料 → 日期时间（先地址再日历）→ 护理/服务 → 主人资料 + 登录密码 → 支付方式存档（不扣款）→ 确认。确认后会保存家庭/狗狗档案，并发送邮件 + 短信。老客人可在主人资料步骤登录。
+- **只有真正必需的信息可以拦住建档或预约。** 客户：名、姓、地址、电话、邮箱。付款：成功保存有效付款方式（预约不扣款）。狗狗：名字、品种、体重。预约：已选服务、可约日期、客户能选的时间段。新建账号还需要登录密码。Arrival Window 由后台排程生成，缺失或为 null 不能返回 400/500，也不能回滚预约。疫苗信息和文件完全可选；上传、存储、通知、营销或其他无关数据库错误都不能挡住预约。详见 `content/BOOKING-RULES.md`。
 - **开箱即用不了 `npm run lint`。** 仓库没有提交 ESLint 配置，`next lint` 会进入交互式 “How would you like to configure ESLint?”，无法非交互运行。`next build` 仍可正常编译和类型检查。
 - **`npm run dev` 运行时不要跑 `npm run build`。** 生产构建会覆盖共用的 `.next` 目录，导致开发服务器出现 `MODULE_NOT_FOUND` / `Cannot find module './xxx.js'` 一类 500。恢复：停掉 dev，`rm -rf .next`，再 `npm run dev`。
 - **Walkthrough 证据只要截图。** UI 验证通过后附截图即可。除非用户明确要求，不要录制或发送演示视频。

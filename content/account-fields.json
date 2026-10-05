@@ -208,7 +208,7 @@
         },
         {
           "id": "vaccineHeading",
-          "label": "Rabies Vaccination",
+          "label": "Rabies Vaccination (optional)",
           "type": "section-heading",
           "required": false
         },
@@ -216,7 +216,7 @@
           "id": "rabiesStatus",
           "label": "Rabies Status",
           "type": "radio",
-          "required": true
+          "required": false
         },
         {
           "id": "vaccineRecord",

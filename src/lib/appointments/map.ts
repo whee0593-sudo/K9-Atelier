@@ -6,6 +6,7 @@ import type {
 import { stringAddOnOptions } from "@/lib/charges/visit-line-items";
 import { getServiceDisplayName } from "@/lib/service-display";
 import type { VaccinationBookingStatus } from "@/lib/vaccinations/types";
+import { displayAppointmentTime } from "@/lib/appointments/arrival-window";
 import { isAwaitingCustomerConfirm } from "@/lib/staff/customer-confirm-status";
 
 function firstRelation<T>(value: T | T[] | null | undefined): T | null {
@@ -51,7 +52,7 @@ export function mapAppointmentRowToRecord(row: AppointmentRow): AppointmentRecor
     travelDistanceMiles: Number(row.travel_distance_miles),
     travelFee: Number(row.travel_fee),
     appointmentDate: row.appointment_date,
-    appointmentTime: row.appointment_time,
+    appointmentTime: displayAppointmentTime(row.appointment_time),
     scheduledStart:
       typeof row.scheduled_start === "number" ? row.scheduled_start : null,
     timePreference:

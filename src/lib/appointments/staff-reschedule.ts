@@ -1,4 +1,5 @@
 import { estimateServiceDurationMinutes } from "@/lib/services";
+import { resolveArrivalForBooking } from "@/lib/appointments/arrival-window";
 import {
   assignArrivalWindow,
   getAvailabilityForAddress,
@@ -225,29 +226,34 @@ export async function rescheduleStaffAppointment(
 
   const durationMinutes = visitDurationMinutes(loaded.row);
   const completed = isCompletedVisit(loaded.row);
-  let nextSchedule = scheduleFromSlot(parsed.slotStartMinutes, durationMinutes);
+  let nextSchedule: {
+    appointmentTime: string | null;
+    scheduledStart: number;
+    timePreference: "morning" | "afternoon";
+  } = scheduleFromSlot(parsed.slotStartMinutes, durationMinutes);
 
   if (!completed) {
     const point = visitPoint(loaded.row);
     if (!point) return { error: "conflict" };
     const base = await getBaseGeoPoint();
-    if (!base) return { error: "misconfigured" };
-    const assignment = await assignArrivalWindow({
-      date: parsed.date,
-      point,
-      zip: loaded.row.address_zip,
-      durationMinutes,
-      slotStartMinutes: parsed.slotStartMinutes,
-      base,
-      excludeAppointmentIds: [appointmentId],
-      allowUnbookableDate: true,
-    });
-    if ("error" in assignment) return assignment;
-    nextSchedule = {
-      appointmentTime: assignment.insertion.appointmentTime,
-      scheduledStart: assignment.insertion.scheduledStart,
-      timePreference: assignment.insertion.usedPreference,
-    };
+    const assignment = base
+      ? await assignArrivalWindow({
+          date: parsed.date,
+          point,
+          zip: loaded.row.address_zip,
+          durationMinutes,
+          slotStartMinutes: parsed.slotStartMinutes,
+          base,
+          excludeAppointmentIds: [appointmentId],
+          allowUnbookableDate: true,
+        })
+      : { error: "misconfigured" as const };
+    const schedule = resolveArrivalForBooking(
+      assignment,
+      parsed.slotStartMinutes,
+    );
+    if ("error" in schedule) return { error: "slot_unavailable" };
+    nextSchedule = schedule;
   }
 
   const admin = createAdminClient();

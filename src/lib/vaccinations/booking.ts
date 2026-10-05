@@ -1,9 +1,9 @@
 import type { PetRecord } from "@/lib/pets/types";
+import type { PetProfile } from "@/lib/pets";
 import {
   parsePetRabiesStatus,
   type PetRabiesStatus,
 } from "@/lib/pets/types";
-import type { PetProfile } from "@/lib/pets";
 import type { VaccinationBookingStatus } from "@/lib/vaccinations/types";
 
 export { parsePetRabiesStatus };
@@ -108,8 +108,19 @@ export function vaccinationStatusLabel(status: VaccinationBookingStatus) {
   }
 }
 
-export function petProfileReadyToBook(pet: PetProfile) {
-  return petHasConfirmedRabiesStatus(pet);
+/** Name, breed, and weight are the only pet details required to book. */
+export function petProfileReadyToBook(pet: {
+  name?: string | null;
+  breed?: string | null;
+  weightLbs?: number | null;
+}) {
+  return Boolean(
+    pet.name?.trim() &&
+      pet.breed?.trim() &&
+      typeof pet.weightLbs === "number" &&
+      Number.isFinite(pet.weightLbs) &&
+      pet.weightLbs > 0,
+  );
 }
 
 export function petProfileVaccinationLabel(pet: PetProfile) {

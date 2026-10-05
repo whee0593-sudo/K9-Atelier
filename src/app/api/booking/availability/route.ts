@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { bookingDurationMinutes } from "@/lib/booking-flow";
+import { resolveArrivalForBooking } from "@/lib/appointments/arrival-window";
 import {
   assignArrivalWindow,
   getAvailabilityForAddress,
@@ -123,42 +124,32 @@ export async function POST(request: Request) {
   }
 
   const base = await getBaseGeoPoint();
-  if (!base) {
-    return NextResponse.json(
-      { error: "Could not locate the studio base for routing." },
-      { status: 500 },
-    );
-  }
+  const result = base
+    ? await assignArrivalWindow({
+        date,
+        point,
+        zip,
+        durationMinutes: bookingDurationMinutes(serviceId, weightLbs, addOnIds),
+        slotStartMinutes,
+        base,
+      })
+    : { error: "misconfigured" as const };
+  const schedule = resolveArrivalForBooking(result, slotStartMinutes);
 
-  const result = await assignArrivalWindow({
-    date,
-    point,
-    zip,
-    durationMinutes: bookingDurationMinutes(serviceId, weightLbs, addOnIds),
-    slotStartMinutes,
-    base,
-  });
-
-  if ("error" in result) {
-    if (result.error === "slot_unavailable") {
-      return NextResponse.json(
-        {
-          error:
-            "That start time is fully booked or no longer available for this address. Please choose another time.",
-        },
-        { status: 409 },
-      );
-    }
+  if ("error" in schedule) {
     return NextResponse.json(
-      { error: "Could not assign an arrival window." },
-      { status: 500 },
+      {
+        error:
+          "That start time is fully booked or no longer available for this address. Please choose another time.",
+      },
+      { status: 409 },
     );
   }
 
   return NextResponse.json({
-    appointmentTime: result.insertion.appointmentTime,
-    scheduledStart: result.insertion.scheduledStart,
-    slotStartMinutes: result.insertion.scheduledStart,
-    usedPreference: result.insertion.usedPreference,
+    appointmentTime: schedule.appointmentTime,
+    scheduledStart: schedule.scheduledStart,
+    slotStartMinutes: schedule.scheduledStart,
+    usedPreference: schedule.timePreference,
   });
 }

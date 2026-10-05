@@ -24,7 +24,11 @@ describe("rabies profile UI", () => {
     const html = renderToStaticMarkup(
       <PetProfileFieldsForm pet={pet()} onPetChange={() => undefined} />,
     );
-    assert.match(html, /Rabies Vaccination/);
+    assert.match(html, /Rabies Vaccination \(optional\)/);
+    assert.equal(
+      html.includes('Rabies Status<span class="text-gold"> *</span>'),
+      false,
+    );
     assert.equal(html.includes("Florida law"), false);
     assert.match(html, /Current rabies vaccination/);
     assert.match(html, /Veterinarian-issued medical exemption/);
@@ -45,7 +49,7 @@ describe("rabies profile UI", () => {
     );
     assert.match(html, /Nervous with dryers; prefers gentle handling/);
     assert.match(html, /Senior dog, arthritis; no hot dryer on legs/);
-    assert.match(html, /Teddy bear face, 1 inch body length/);
+    assert.match(html, /Keep eyelashes, clean around eyes etc\./);
   });
 
   it("keeps a saved record expiration date in the pet form", () => {
