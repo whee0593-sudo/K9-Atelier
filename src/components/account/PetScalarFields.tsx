@@ -187,7 +187,9 @@ export function PetScalarFields({
             <fieldset key={field.id} className="space-y-3">
               <legend className={labelClass}>
                 {field.label}
-                {showRequired ? <span className="text-gold"> *</span> : null}
+                {showRequired && field.required ? (
+                  <span className="text-gold"> *</span>
+                ) : null}
               </legend>
               <div className="space-y-2">
                 {RABIES_STATUS_OPTIONS.map((option) => {

@@ -13,6 +13,7 @@ import {
   DateTimeStep,
   type AvailabilityDay,
 } from "@/components/booking/DateTimeStep";
+import { ARRIVAL_WINDOW_PENDING_LABEL } from "@/lib/appointments/arrival-window";
 import type { TimePreference } from "@/lib/booking-schedule";
 import {
   bookingBackLinkClass,
@@ -180,7 +181,7 @@ export function BookingLocationTimeStep({
         usedPreference?: TimePreference;
         slotStartMinutes?: number;
       };
-      if (!res.ok || !data.appointmentTime) {
+      if (!res.ok) {
         setScheduleError(data.error ?? "Could not reserve that start time.");
         return;
       }
@@ -193,7 +194,7 @@ export function BookingLocationTimeStep({
         },
         quote,
         date,
-        data.appointmentTime,
+        data.appointmentTime?.trim() || ARRIVAL_WINDOW_PENDING_LABEL,
         data.usedPreference ?? "morning",
         data.slotStartMinutes ?? slotStartMinutes,
       );

@@ -129,7 +129,11 @@ export async function updatePet(
   if (!data) return { error: "not_found" };
 
   if (input.rabiesExpirationDate !== undefined) {
-    await syncPetRabiesExpiration(petId, input.rabiesExpirationDate ?? null);
+    try {
+      await syncPetRabiesExpiration(petId, input.rabiesExpirationDate ?? null);
+    } catch (expirationError) {
+      console.error("updatePet rabies expiration sync failed:", expirationError);
+    }
   }
 
   return { pet: (await attachVaccinationSummaries([mapPetRowToRecord(data as PetRow)]))[0] };

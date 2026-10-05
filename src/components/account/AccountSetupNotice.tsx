@@ -8,7 +8,7 @@ export function AccountSetupNotice({
 }) {
   const body =
     step === "pets"
-      ? "Confirm your dog’s rabies vaccination status, then add a card on file. You may also upload a rabies certificate or vaccination record. You are not charged now."
+      ? "Rabies vaccination details are optional. Add them whenever you have them, then save a card on file if you have not already. You are not charged now."
       : "Save a card on file for after the visit. You are not charged now.";
 
   return (

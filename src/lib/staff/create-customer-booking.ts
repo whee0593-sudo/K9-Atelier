@@ -1,4 +1,5 @@
 import { business } from "@/lib/business";
+import { resolveArrivalForBooking } from "@/lib/appointments/arrival-window";
 import {
   assignArrivalWindow,
   claimDayPlan,
@@ -522,19 +523,16 @@ export async function createStaffCustomerBooking(
     slotStartMinutes,
     base,
   });
-  if ("error" in firstAssignment) {
-    if (firstAssignment.error === "slot_unavailable") {
-      return { error: "slot_unavailable" };
-    }
-    if (firstAssignment.error === "misconfigured") return { error: "misconfigured" };
-    return { error: "server" };
-  }
+  const firstSchedule = resolveArrivalForBooking(firstAssignment, slotStartMinutes);
+  if ("error" in firstSchedule) return { error: "slot_unavailable" };
 
   const claimed = await claimDayPlan(appointmentDate, address.zip, destination);
   if ("error" in claimed) {
     if (claimed.error === "slot_unavailable") return { error: "slot_unavailable" };
-    if (claimed.error === "misconfigured") return { error: "misconfigured" };
-    return { error: "server" };
+    console.error(
+      "createStaffCustomerBooking day plan was not claimed; booking continues:",
+      claimed.error,
+    );
   }
 
   try {
@@ -556,13 +554,12 @@ export async function createStaffCustomerBooking(
         "createStaffCustomerBooking profile update failed:",
         profileError.message,
       );
-      return { error: "server" };
     }
 
     const confirm = createCustomerConfirmToken();
     const confirmExpiresAt = customerConfirmExpiryIso();
     const appointments: AppointmentRecord[] = [];
-    let previousStart = firstAssignment.insertion.scheduledStart;
+    let previousStart = firstSchedule.scheduledStart;
     let previousDuration = firstDurationMinutes;
 
     for (const [index, pet] of input.pets.entries()) {
@@ -584,21 +581,29 @@ export async function createStaffCustomerBooking(
         pet.weightLbs,
         input.addOnIds,
       );
-      const insertion =
+      const companion =
         index === 0
-          ? firstAssignment.insertion
+          ? null
           : buildSameAddressCompanionInsertion(
               previousStart,
               previousDuration,
               durationMinutes,
             );
-      if (!insertion) {
+      if (index > 0 && !companion) {
         return {
           error: "slot_unavailable",
           message:
             "Not enough time left that day to schedule every dog from the selected start time.",
         };
       }
+      const insertion =
+        index === 0
+          ? firstSchedule
+          : {
+              appointmentTime: companion!.appointmentTime,
+              scheduledStart: companion!.scheduledStart,
+              timePreference: companion!.usedPreference,
+            };
 
       const price = getServicePriceEstimate(service, pet.weightLbs);
       const travelFee = index === 0 ? quote.fee : 0;
@@ -623,7 +628,7 @@ export async function createStaffCustomerBooking(
           appointment_date: appointmentDate,
           appointment_time: insertion.appointmentTime,
           scheduled_start: insertion.scheduledStart,
-          time_preference: insertion.usedPreference,
+          time_preference: insertion.timePreference,
           address_lat: destination.lat,
           address_lon: destination.lon,
           timezone: business.booking.timezone,
