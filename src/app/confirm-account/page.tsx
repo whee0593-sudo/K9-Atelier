@@ -17,7 +17,7 @@ export default async function ConfirmAccountPage({ searchParams }: Props) {
           Appointment
         </p>
         <h1 className="font-display mt-4 text-4xl text-ink md:text-5xl">
-          Confirm your visit
+          Confirm Your Appointment
         </h1>
         <p className="font-body mt-6 text-sm leading-relaxed text-taupe">
           Review the reservation K9 Atelier made for you. Confirming does not
