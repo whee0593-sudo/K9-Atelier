@@ -88,7 +88,7 @@ export function AdminCalendarMonthGrid({
                   </span>
                   {note ? (
                     <span
-                      className={`mt-1 block max-w-full break-words text-[10px] leading-tight text-gold-dark ${
+                      className={`mt-1 block text-[10px] leading-tight text-gold-dark [overflow-wrap:anywhere] ${
                         day.availabilityLabel
                           ? ""
                           : "font-medium uppercase tracking-wide"
@@ -98,7 +98,7 @@ export function AdminCalendarMonthGrid({
                     </span>
                   ) : null}
                   {day.appointmentCount > 0 ? (
-                    <span className="mt-1 block max-w-full break-words text-[11px]">
+                    <span className="mt-1 block text-[10px] leading-tight">
                       {day.appointmentCount} booked
                     </span>
                   ) : null}
