@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
@@ -11,13 +11,21 @@ import {
   bookingPrimaryBtnClass,
 } from "@/components/booking/booking-ui";
 import { ConfirmAccountNextSteps } from "@/components/account/ConfirmAccountNextSteps";
+import { ConfirmAccountPayment } from "@/components/account/ConfirmAccountPayment";
 import { ACCOUNT_SETUP_PATH, rememberSetupPetId } from "@/lib/account-setup";
 import type { AppointmentRecord } from "@/lib/appointments/types";
+import type { PaymentMethodRecord } from "@/lib/payments/types";
+import {
+  preferredPaymentMethodId,
+  SECURE_APPOINTMENT_CARD_MESSAGE,
+} from "@/lib/staff/customer-confirm-status";
 
 type Preview = {
   appointment: AppointmentRecord;
   customer: { email: string; firstName: string };
   requiresPassword: boolean;
+  paymentMethods?: PaymentMethodRecord[];
+  stripeConfigured?: boolean;
 };
 
 type Props = {
@@ -39,6 +47,9 @@ export function ConfirmAccountForm({ token, preview }: Props) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [acceptPolicies, setAcceptPolicies] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodRecord[]>(
+    preview?.paymentMethods ?? [],
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,12 +70,15 @@ export function ConfirmAccountForm({ token, preview }: Props) {
           });
           return;
         }
+        setPaymentMethods(body.paymentMethods ?? []);
         setLoadState({
           status: "ready",
           preview: {
             appointment: body.appointment,
             customer: body.customer,
             requiresPassword: body.requiresPassword,
+            paymentMethods: body.paymentMethods ?? [],
+            stripeConfigured: body.stripeConfigured,
           },
         });
       } catch {
@@ -86,6 +100,12 @@ export function ConfirmAccountForm({ token, preview }: Props) {
     if (loadState.status !== "ready") return;
     setError(null);
     const appointment = loadState.preview.appointment;
+
+    const selectedPaymentMethodId = preferredPaymentMethodId(paymentMethods);
+    if (!selectedPaymentMethodId) {
+      setError(SECURE_APPOINTMENT_CARD_MESSAGE);
+      return;
+    }
 
     if (preview) {
       if (loadState.preview.requiresPassword) {
@@ -127,6 +147,7 @@ export function ConfirmAccountForm({ token, preview }: Props) {
           token,
           password: loadState.preview.requiresPassword ? password : null,
           acceptPolicies,
+          paymentMethodId: selectedPaymentMethodId,
         }),
       });
       const body = (await response.json()) as {
@@ -215,6 +236,17 @@ export function ConfirmAccountForm({ token, preview }: Props) {
           Account: {customer.email}
         </p>
       </div>
+
+      <ConfirmAccountPayment
+        token={token}
+        preview={Boolean(preview)}
+        methods={paymentMethods}
+        stripeConfigured={loadState.preview.stripeConfigured}
+        onChange={(methods) => {
+          setPaymentMethods(methods);
+          if (methods.length > 0) setError(null);
+        }}
+      />
 
       {requiresPassword ? (
         <>

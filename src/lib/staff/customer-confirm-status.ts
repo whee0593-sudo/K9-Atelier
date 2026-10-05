@@ -33,3 +33,12 @@ export function isAwaitingCustomerConfirm(row: {
 export function customerConfirmPath(token: string) {
   return `/confirm-account?token=${encodeURIComponent(token.trim())}`;
 }
+
+export const SECURE_APPOINTMENT_CARD_MESSAGE =
+  "Add a card to secure this appointment. You will not be charged now.";
+
+export function preferredPaymentMethodId(
+  methods: { id: string; isDefault: boolean }[],
+) {
+  return methods.find((method) => method.isDefault)?.id ?? methods[0]?.id ?? null;
+}

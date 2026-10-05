@@ -705,8 +705,8 @@ export function BookForCustomerForm({
               ? `A customer account was started for ${displayName}. They can finish the required booking details from the link.`
               : `${displayName} can finish the required booking details from the link.`
             : success.createdAccount
-              ? `A customer account was created for ${displayName}.`
-              : `This booking was added to ${displayName}'s existing account.`}
+              ? `A customer account was created for ${displayName}. The visit stays pending until they secure it from the review and confirm link with a card on file.`
+              : `This booking was added to ${displayName}'s existing account. It stays pending until they secure it from the review and confirm link with a card on file.`}
         </p>
         {success.mode === "booking" &&
         success.serviceName &&

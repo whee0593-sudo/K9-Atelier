@@ -22,11 +22,11 @@ export function ConfirmAccountNextSteps({
   return (
     <div className="mt-6 space-y-5">
       <p className="font-body text-sm leading-relaxed text-ink">
-        Your appointment is confirmed. You are not charged now.
+        Your appointment is secured. You are not charged now.
       </p>
       <p className="font-body text-sm leading-relaxed text-taupe">
-        Next, confirm rabies vaccination status for {petLabel} and add a card on
-        file in your account. You may also upload a current rabies certificate
+        Next, confirm rabies vaccination status for {petLabel}. Your card is on
+        file for this visit. You may also upload a current rabies certificate
         or vaccination record.
       </p>
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -37,7 +37,7 @@ export function ConfirmAccountNextSteps({
           Confirm rabies status
         </Link>
         <Link href={paymentSetupHref()} className={bookingSecondaryBtnClass}>
-          Add payment method
+          Review payment method
         </Link>
       </div>
     </div>
