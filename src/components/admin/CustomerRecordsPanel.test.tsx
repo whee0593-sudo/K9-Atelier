@@ -337,6 +337,8 @@ describe("CustomerRecordCard actions", () => {
     assert.match(html, /Gigi/);
     assert.match(html, /12 years/);
     assert.match(html, /Last service Jun 1, 2020 · 10–11 AM/);
+    assert.match(html, /Open Gigi profile/);
+    assert.match(html, /aria-expanded="false"/);
     assert.match(html, />Edit</);
     assert.doesNotMatch(html, /Pet Name/);
     assert.doesNotMatch(html, /Nervous with dryers/);

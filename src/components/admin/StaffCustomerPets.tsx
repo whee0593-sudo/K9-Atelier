@@ -3,10 +3,20 @@
 import React, { useEffect, useState } from "react";
 import { PetProfileFieldsForm } from "@/components/account/PetProfileFieldsForm";
 import { RabiesStatusSummary } from "@/components/account/RabiesStatusSummary";
-import { formatPetAgeLabel, getPetAgeYears } from "@/lib/pet-age";
+import {
+  formatPetAgeLabel,
+  getPetAgeYears,
+  getPetBirthDateHeading,
+  getPetBirthDateLabel,
+} from "@/lib/pet-age";
 import { mapPetProfileToWriteInput, mapPetRecordToUiProfile } from "@/lib/pets/map";
 import { normalizePetProfile, type PetProfile } from "@/lib/pets";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
+import {
+  parsePetRabiesStatus,
+  petProfileRabiesRecordLabel,
+  rabiesStatusDisplayLabel,
+} from "@/lib/vaccinations/booking";
 
 type StaffPet = StaffCustomerRecord["pets"][number];
 
@@ -74,6 +84,89 @@ export function latestPetServiceLabel(
   const date = formatServiceDate(latest.appointmentDate);
   const time = latest.appointmentTime.trim();
   return time ? `Last service ${date} · ${time}` : `Last service ${date}`;
+}
+
+function detailValue(value: string | number | null | undefined) {
+  if (value == null) return "—";
+  const text = String(value).trim();
+  return text || "—";
+}
+
+function lastServiceDetail(label: string) {
+  return label.replace(/^Last service\s+/, "");
+}
+
+function StaffPetDetails({
+  pet,
+  lastService,
+}: {
+  pet: StaffPet;
+  lastService: string;
+}) {
+  const profile = mapPetRecordToUiProfile(pet);
+  const birthHeading = getPetBirthDateHeading(profile);
+  const birthLabel = getPetBirthDateLabel(profile);
+  const rabies = parsePetRabiesStatus(profile.rabiesStatus);
+  const rows: Array<{ label: string; value: string; wide?: boolean }> = [
+    { label: "Pet Name", value: detailValue(pet.name) },
+    { label: "Breed", value: detailValue(pet.breed) },
+    {
+      label: "Weight (lbs)",
+      value: pet.weightLbs > 0 ? String(pet.weightLbs) : "—",
+    },
+    { label: "Age", value: petAgeSummaryLabel(pet) },
+  ];
+  if (birthHeading) {
+    rows.push({ label: birthHeading, value: detailValue(birthLabel) });
+  }
+  rows.push(
+    { label: "Sex", value: detailValue(pet.sex) },
+    {
+      label: "Temperament & Handling Notes",
+      value: detailValue(pet.temperamentNotes),
+      wide: true,
+    },
+    {
+      label: "Health & Comfort Notes",
+      value: detailValue(pet.healthComfortNotes),
+      wide: true,
+    },
+    {
+      label: "Grooming Preferences",
+      value: detailValue(pet.groomingPreferences),
+      wide: true,
+    },
+    {
+      label: "Rabies Status",
+      value: rabies ? rabiesStatusDisplayLabel(rabies) : "Not confirmed",
+    },
+    { label: "Rabies Record", value: petProfileRabiesRecordLabel(profile) },
+    {
+      label: "Record Expiration Date",
+      value: pet.vaccinationExpirationDate
+        ? formatServiceDate(pet.vaccinationExpirationDate)
+        : "—",
+    },
+    {
+      label: "Service & Product Notes (Admin Only)",
+      value: detailValue(pet.adminServiceNotes),
+      wide: true,
+    },
+    { label: "Last Service", value: lastServiceDetail(lastService), wide: true },
+  );
+
+  return (
+    <dl className="grid gap-4 border-t border-lavender/30 px-4 py-4 sm:grid-cols-2">
+      {rows.map((row) => (
+        <div key={row.label} className={row.wide ? "sm:col-span-2" : undefined}>
+          <dt className="text-[10px] font-medium uppercase tracking-[0.14em] text-text-muted">
+            {row.label}
+          </dt>
+          <dd className="mt-1 whitespace-pre-wrap text-sm text-text">{row.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
 }
 
 function createDraftPet(): PetProfile {
@@ -340,6 +433,7 @@ export function StaffCustomerPets({
   onPetArchived: (petId: string) => void;
 }) {
   const [showNewForm, setShowNewForm] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftPet, setDraftPet] = useState<PetProfile>(() => createDraftPet());
   const [submitting, setSubmitting] = useState(false);
@@ -448,52 +542,76 @@ export function StaffCustomerPets({
         <p className="mt-3 text-sm text-text-muted">No pet profiles yet.</p>
       ) : (
         <div className="mt-4 space-y-3">
-          {pets.map((pet) =>
-            editingId === pet.id ? (
+          {pets.map((pet) => {
+            const serviceLabel = latestPetServiceLabel(visits, pet.id);
+            const expanded = openId === pet.id || editingId === pet.id;
+            const editing = editingId === pet.id;
+            return (
               <div
                 key={pet.id}
-                className="rounded-xl border border-lavender/30 px-4 py-4"
+                className="rounded-xl border border-lavender/30"
               >
-                <p className="font-medium text-text">{pet.name}</p>
-                <div className="mt-3 rounded-xl border border-lavender/30 bg-lavender-light/20 px-4 py-4">
-                  <RabiesStatusSummary
-                    pet={mapPetRecordToUiProfile(pet)}
-                    statusLabel="Rabies Status"
-                  />
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (editing) return;
+                      setOpenId((current) => (current === pet.id ? null : pet.id));
+                    }}
+                    aria-expanded={expanded}
+                    aria-label={
+                      expanded
+                        ? `Close ${pet.name} profile`
+                        : `Open ${pet.name} profile`
+                    }
+                    className="min-w-0 flex-1 px-4 py-3 text-left text-sm text-text"
+                  >
+                    <span className="font-medium">{pet.name}</span>
+                    <span className="text-text-muted">
+                      {" · "}
+                      {petAgeSummaryLabel(pet)}
+                      {" · "}
+                      {serviceLabel}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenId(pet.id);
+                      setEditingId(pet.id);
+                    }}
+                    className="mr-3 shrink-0 rounded-xl border border-lavender/40 px-3 py-1.5 text-sm text-text-muted hover:border-gold/40 hover:text-text"
+                  >
+                    Edit
+                  </button>
                 </div>
-                <StaffPetEditor
-                  customerId={customerId}
-                  pet={pet}
-                  preview={preview}
-                  onSaved={onPetSaved}
-                  onArchived={onPetArchived}
-                  onClose={() => setEditingId(null)}
-                />
+                {editing ? (
+                  <div className="border-t border-lavender/30 px-4 py-4">
+                    <div className="rounded-xl border border-lavender/30 bg-lavender-light/20 px-4 py-4">
+                      <RabiesStatusSummary
+                        pet={mapPetRecordToUiProfile(pet)}
+                        statusLabel="Rabies Status"
+                      />
+                    </div>
+                    <StaffPetEditor
+                      customerId={customerId}
+                      pet={pet}
+                      preview={preview}
+                      onSaved={onPetSaved}
+                      onArchived={(petId) => {
+                        setEditingId(null);
+                        setOpenId((current) => (current === petId ? null : current));
+                        onPetArchived(petId);
+                      }}
+                      onClose={() => setEditingId(null)}
+                    />
+                  </div>
+                ) : expanded ? (
+                  <StaffPetDetails pet={pet} lastService={serviceLabel} />
+                ) : null}
               </div>
-            ) : (
-              <div
-                key={pet.id}
-                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border border-lavender/30 px-4 py-3"
-              >
-                <p className="min-w-0 text-sm text-text">
-                  <span className="font-medium">{pet.name}</span>
-                  <span className="text-text-muted">
-                    {" · "}
-                    {petAgeSummaryLabel(pet)}
-                    {" · "}
-                    {latestPetServiceLabel(visits, pet.id)}
-                  </span>
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setEditingId(pet.id)}
-                  className="shrink-0 rounded-xl border border-lavender/40 px-3 py-1.5 text-sm text-text-muted hover:border-gold/40 hover:text-text"
-                >
-                  Edit
-                </button>
-              </div>
-            ),
-          )}
+            );
+          })}
         </div>
       )}
       {showNewForm ? (
