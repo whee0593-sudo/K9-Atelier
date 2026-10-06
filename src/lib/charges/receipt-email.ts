@@ -2,8 +2,6 @@ import {
   getBookAgainUrl,
   getBrandInstagramUrl,
   getBrandWebsiteUrl,
-  getGoogleWriteReviewUrl,
-  getGoogleProfileUrl,
 } from "@/lib/business";
 import { business } from "@/lib/business";
 import { formatLineItemMoney, listedAmountIfChanged } from "@/lib/charges/list-amount";
@@ -88,7 +86,6 @@ export function buildChargeReceiptCardHtml(
   const phone = business.brand.phone?.trim() || null;
   const website = getBrandWebsiteUrl();
   const instagram = getBrandInstagramUrl();
-  const google = getGoogleWriteReviewUrl() || getGoogleProfileUrl();
   const bookAgain = getBookAgainUrl();
   const concern = siteUrl("/contact?topic=concern");
 
@@ -126,7 +123,6 @@ export function buildChargeReceiptCardHtml(
   ].filter(Boolean) as string[];
 
   const buttonRows = [
-    google ? emailButton(google, "Leave A Review") : null,
     emailButton(bookAgain, "Book Again"),
     instagram ? emailButton(instagram, "Instagram") : null,
     emailButton(website, "Website"),

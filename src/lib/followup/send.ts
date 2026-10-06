@@ -1,18 +1,19 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
-import { mapAppointmentRowToAdminRecord } from "@/lib/appointments/map";
-import type { AppointmentRow } from "@/lib/appointments/types";
 import { isEmailConfigured, sendEmail } from "@/lib/email/resend";
 import {
-  buildNextDayFollowUpEmail,
-  buildNextDayFollowUpSms,
-} from "@/lib/followup/copy";
+  FOLLOW_UP_CLAIM_LEASE_MS,
+  followUpClaimOrFilter,
+  type FollowUpChannel,
+} from "@/lib/followup/claim";
+import {
+  deliverHouseholdFollowUps,
+  type FollowUpClaimResult,
+  type FollowUpStore,
+} from "@/lib/followup/deliver";
+import type { FollowUpCharge, FollowUpPet } from "@/lib/followup/eligibility";
 import { recordCustomerSms } from "@/lib/sms/inbox";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
-import {
-  hourInBusinessTimezone,
-  yesterdayInBusinessTimezone,
-} from "@/lib/sms/schedule";
 import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
 
 const FOLLOW_UP_SELECT = `
@@ -39,141 +40,279 @@ const FOLLOW_UP_SELECT = `
   confirmed_at,
   customer_confirmed_at,
   created_at,
-  reminder_sms_sent_at,
-  en_route_sms_sent_at,
-  service_started_at,
   service_ended_at,
   followup_sent_at,
-  pets ( name, breed ),
+  followup_email_sent_at,
+  followup_sms_sent_at,
+  followup_email_claimed_at,
+  followup_sms_claimed_at,
+  pets ( name ),
   profiles ( email, first_name, last_name, phone )
 `;
 
-export type FollowUpRunResult = {
-  sent: number;
-  skipped: number;
-  failed: number;
-  reason?: string;
+type FollowUpRow = {
+  id: string;
+  customer_id: string;
+  address_street: string;
+  address_city: string;
+  address_state: string;
+  address_zip: string;
+  appointment_date: string;
+  status: string;
+  service_ended_at: string | null;
+  followup_email_sent_at: string | null;
+  followup_sms_sent_at: string | null;
+  followup_email_claimed_at: string | null;
+  followup_sms_claimed_at: string | null;
+  pets?: { name: string | null } | { name: string | null }[] | null;
+  profiles?:
+    | {
+        email: string | null;
+        first_name: string | null;
+        last_name: string | null;
+        phone: string | null;
+      }
+    | {
+        email: string | null;
+        first_name: string | null;
+        last_name: string | null;
+        phone: string | null;
+      }[]
+    | null;
 };
 
-export async function sendNextDayFollowUp(
-  now = new Date(),
-): Promise<FollowUpRunResult> {
-  if (hourInBusinessTimezone(now) !== 10) {
-    return { sent: 0, skipped: 0, failed: 0, reason: "outside_10am_window" };
-  }
-  if (!isEmailConfigured() && !isSmsConfigured()) {
+function firstRelation<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function mapFollowUpPet(row: FollowUpRow): FollowUpPet {
+  const pet = firstRelation(row.pets);
+  const profile = firstRelation(row.profiles);
+  return {
+    id: row.id,
+    customerId: row.customer_id,
+    petName: pet?.name?.trim() || "",
+    customerFirstName: profile?.first_name ?? null,
+    customerLastName: profile?.last_name ?? null,
+    customerEmail: profile?.email ?? "",
+    customerPhone: profile?.phone ?? null,
+    appointmentDate: row.appointment_date,
+    addressStreet: row.address_street,
+    addressCity: row.address_city,
+    addressState: row.address_state,
+    addressZip: row.address_zip,
+    status: row.status,
+    serviceEndedAt: row.service_ended_at,
+    followupEmailSentAt: row.followup_email_sent_at,
+    followupSmsSentAt: row.followup_sms_sent_at,
+    followupEmailClaimedAt: row.followup_email_claimed_at,
+    followupSmsClaimedAt: row.followup_sms_claimed_at,
+  };
+}
+
+function channelColumns(channel: FollowUpChannel) {
+  if (channel === "email") {
     return {
-      sent: 0,
-      skipped: 0,
-      failed: 0,
-      reason: "notifications_not_configured",
+      sent: "followup_email_sent_at",
+      claim: "followup_email_claimed_at" as const,
     };
   }
+  return {
+    sent: "followup_sms_sent_at",
+    claim: "followup_sms_claimed_at" as const,
+  };
+}
+
+function createFollowUpStore(): FollowUpStore {
+  const admin = createAdminClient();
+
+  return {
+    async listCompletedInWindow(start, end) {
+      const { data, error } = await admin
+        .from("appointments")
+        .select(FOLLOW_UP_SELECT)
+        .gte("appointment_date", start)
+        .lte("appointment_date", end)
+        .not("service_ended_at", "is", null);
+      if (error) {
+        console.error("sendNextDayFollowUp lookup failed:", error.message);
+        return null;
+      }
+      return ((data ?? []) as unknown as FollowUpRow[]).map(mapFollowUpPet);
+    },
+
+    async listCharges(appointmentIds) {
+      if (appointmentIds.length === 0) return [];
+      const { data, error } = await admin
+        .from("appointment_charges")
+        .select("appointment_id, kind, status, total, refunded_amount")
+        .in("appointment_id", appointmentIds);
+      if (error) {
+        console.error("sendNextDayFollowUp charge lookup failed:", error.message);
+        return null;
+      }
+      return (data ?? []).map(
+        (row) =>
+          ({
+            appointmentId: row.appointment_id as string,
+            kind: row.kind as string,
+            status: row.status as string,
+            total: Number(row.total ?? 0),
+            refundedAmount: Number(row.refunded_amount ?? 0),
+          }) satisfies FollowUpCharge,
+      );
+    },
+
+    async claimChannel(ids, channel, now) {
+      if (ids.length === 0) return { status: "busy" };
+      const columns = channelColumns(channel);
+      const claimAt = now.toISOString();
+      const leaseBefore = new Date(now.getTime() - FOLLOW_UP_CLAIM_LEASE_MS);
+      const { data, error } = await admin
+        .from("appointments")
+        .update({ [columns.claim]: claimAt })
+        .in("id", ids)
+        .is(columns.sent, null)
+        .or(followUpClaimOrFilter(columns.claim, leaseBefore))
+        .select("id");
+      if (error) {
+        console.error("sendNextDayFollowUp claim failed:", error.message);
+        return { status: "busy" };
+      }
+
+      const claimed = ((data ?? []) as Array<{ id: string }>).map((row) => row.id);
+      if (claimed.length === ids.length) {
+        return { status: "claimed", claimAt } satisfies FollowUpClaimResult;
+      }
+
+      const { data: current, error: readError } = await admin
+        .from("appointments")
+        .select("id, followup_email_sent_at, followup_sms_sent_at")
+        .in("id", ids);
+      if (readError || !current) {
+        if (claimed.length > 0) {
+          await admin
+            .from("appointments")
+            .update({ [columns.claim]: null })
+            .in("id", claimed)
+            .eq(columns.claim, claimAt);
+        }
+        console.error(
+          "sendNextDayFollowUp claim reread failed:",
+          readError?.message,
+        );
+        return { status: "busy" };
+      }
+
+      const sentAt = current
+        .map((row) =>
+          channel === "email"
+            ? row.followup_email_sent_at
+            : row.followup_sms_sent_at,
+        )
+        .find((value): value is string => Boolean(value));
+      if (!sentAt) {
+        if (claimed.length > 0) {
+          await admin
+            .from("appointments")
+            .update({ [columns.claim]: null })
+            .in("id", claimed)
+            .eq(columns.claim, claimAt)
+            .is(columns.sent, null);
+        }
+        return { status: "busy" };
+      }
+      if (claimed.length > 0) {
+        await admin
+          .from("appointments")
+          .update({ [columns.sent]: sentAt, [columns.claim]: null })
+          .in("id", claimed)
+          .eq(columns.claim, claimAt)
+          .is(columns.sent, null);
+      }
+      await admin
+        .from("appointments")
+        .update({ [columns.sent]: sentAt, [columns.claim]: null })
+        .in("id", ids)
+        .is(columns.sent, null)
+        .or(followUpClaimOrFilter(columns.claim, leaseBefore));
+      await stampHouseholdFollowUp(admin, ids, sentAt);
+      return { status: "already_sent" };
+    },
+
+    async markChannelSent(ids, channel, sentAt, claimAt) {
+      const columns = channelColumns(channel);
+      const { data, error } = await admin
+        .from("appointments")
+        .update({ [columns.sent]: sentAt, [columns.claim]: null })
+        .in("id", ids)
+        .eq(columns.claim, claimAt)
+        .is(columns.sent, null)
+        .select("id");
+      if (error) {
+        console.error("sendNextDayFollowUp mark failed:", error.message);
+        return false;
+      }
+      if (!data || data.length === 0) return false;
+      await stampHouseholdFollowUp(admin, ids, sentAt);
+      return true;
+    },
+
+    async releaseClaim(ids, channel, claimAt) {
+      const columns = channelColumns(channel);
+      const { error } = await admin
+        .from("appointments")
+        .update({ [columns.claim]: null })
+        .in("id", ids)
+        .eq(columns.claim, claimAt)
+        .is(columns.sent, null);
+      if (error) {
+        console.error("sendNextDayFollowUp release failed:", error.message);
+      }
+    },
+  };
+}
+
+async function stampHouseholdFollowUp(
+  admin: ReturnType<typeof createAdminClient>,
+  ids: string[],
+  sentAt: string,
+) {
+  const { error } = await admin
+    .from("appointments")
+    .update({ followup_sent_at: sentAt })
+    .in("id", ids)
+    .is("followup_sent_at", null)
+    .not("followup_email_sent_at", "is", null)
+    .not("followup_sms_sent_at", "is", null);
+  if (error) {
+    console.error("sendNextDayFollowUp household stamp failed:", error.message);
+  }
+}
+
+export async function sendNextDayFollowUp(now = new Date()) {
   if (!hasSupabaseAdminConfig()) {
     return { sent: 0, skipped: 0, failed: 0, reason: "supabase_admin_missing" };
   }
 
-  const admin = createAdminClient();
-  const targetDate = yesterdayInBusinessTimezone(now);
-  const { data, error } = await admin
-    .from("appointments")
-    .select(FOLLOW_UP_SELECT)
-    .eq("appointment_date", targetDate)
-    .not("service_ended_at", "is", null)
-    .is("followup_sent_at", null)
-    .neq("status", "cancelled");
-
-  if (error) {
-    console.error("sendNextDayFollowUp lookup failed:", error.message);
-    return { sent: 0, skipped: 0, failed: 0, reason: "lookup_failed" };
-  }
-
-  let sent = 0;
-  let skipped = 0;
-  let failed = 0;
-
-  for (const row of (data ?? []) as unknown as AppointmentRow[]) {
-    const appointment = mapAppointmentRowToAdminRecord(row);
-    const names = {
-      firstName: appointment.customerFirstName,
-      petName: appointment.petName,
-    };
-    const email = appointment.customerEmail.trim();
-    const phone = normalizePhoneToE164(appointment.customerPhone ?? "");
-    const canEmail = Boolean(email) && isEmailConfigured();
-    const canSms = Boolean(phone) && isSmsConfigured();
-
-    if (!canEmail && !canSms) {
-      skipped += 1;
-      continue;
-    }
-
-    let emailSent = false;
-    let smsSent = false;
-
-    if (canEmail) {
-      const letter = buildNextDayFollowUpEmail(names);
-      try {
-        emailSent = await sendEmail({
-          to: email,
-          subject: letter.subject,
-          text: letter.text,
-          html: letter.html,
-        });
-      } catch (sendError) {
-        console.error(
-          "sendNextDayFollowUp email failed:",
-          appointment.id,
-          sendError,
-        );
-      }
-    }
-
-    if (canSms && phone) {
-      const body = buildNextDayFollowUpSms(names);
-      try {
-        smsSent = Boolean(await sendSms({ to: phone, body }));
-        if (smsSent) {
-          await recordCustomerSms({
-            direction: "outbound",
-            phone,
-            body,
-            customerId: appointment.customerId,
-            customerName: appointment.customerName,
-            petNames: [appointment.petName],
-          });
-        }
-      } catch (sendError) {
-        console.error(
-          "sendNextDayFollowUp SMS failed:",
-          appointment.id,
-          sendError,
-        );
-      }
-    }
-
-    if (!emailSent && !smsSent) {
-      failed += 1;
-      continue;
-    }
-
-    const { error: markError } = await admin
-      .from("appointments")
-      .update({ followup_sent_at: new Date().toISOString() })
-      .eq("id", appointment.id);
-
-    if (markError) {
-      console.error(
-        "sendNextDayFollowUp mark failed:",
-        appointment.id,
-        markError.message,
-      );
-      failed += 1;
-      continue;
-    }
-
-    sent += 1;
-  }
-
-  return { sent, skipped, failed };
+  return deliverHouseholdFollowUps({
+    now,
+    store: createFollowUpStore(),
+    isEmailConfigured: isEmailConfigured(),
+    isSmsConfigured: isSmsConfigured(),
+    sendEmail: (input) => sendEmail(input),
+    sendSms: (input) => sendSms(input),
+    recordSms: async (input) => {
+      await recordCustomerSms({
+        direction: "outbound",
+        phone: input.phone,
+        body: input.body,
+        customerId: input.customerId,
+        customerName: input.customerName,
+        petNames: input.petNames,
+      });
+    },
+    normalizePhone: normalizePhoneToE164,
+  });
 }

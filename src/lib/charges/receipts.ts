@@ -1,5 +1,5 @@
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
-import { getBookAgainUrl, getGoogleWriteReviewUrl } from "@/lib/business";
+import { getBookAgainUrl } from "@/lib/business";
 import { isEmailConfigured, sendEmail, siteUrl } from "@/lib/email/resend";
 import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
@@ -57,14 +57,15 @@ export async function sendChargeReceiptSms(
   return sendSms({ to, body: buildChargeReceiptSmsText(appointment, charge) });
 }
 
+/** No-show payments are not a completed groom and must not send the after-visit note. */
+export function shouldSendAfterVisitThankYou(kind: string) {
+  return kind !== "no_show";
+}
+
 export function buildAfterVisitThankYouSms(appointment: AdminAppointmentRecord) {
   const petName = appointment.petName?.trim() || "your pet";
-  const google = getGoogleWriteReviewUrl() ?? "";
   return [
     `K9 ATELIER: Thank you for entrusting ${petName}’s care to us. We truly appreciate your business.`,
-    "",
-    "Share your experience on Google:",
-    google,
     "",
     "Reserve your next appointment:",
     getBookAgainUrl(),

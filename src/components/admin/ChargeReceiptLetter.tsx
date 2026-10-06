@@ -20,7 +20,6 @@ export function ChargeReceiptLetter({
   receiptNumber,
   websiteUrl,
   instagramUrl,
-  googleReviewUrl,
 }: {
   appointment: AdminAppointmentRecord;
   charge: AppointmentChargeRecord;
@@ -28,7 +27,6 @@ export function ChargeReceiptLetter({
   receiptNumber?: string | null;
   websiteUrl?: string;
   instagramUrl?: string | null;
-  googleReviewUrl?: string | null;
 }) {
   const petName = appointment.petName?.trim() || null;
   const appointmentDate = formatReceiptDate(appointment.appointmentDate);
@@ -141,7 +139,6 @@ export function ChargeReceiptLetter({
             chargeId={charge.id}
             websiteUrl={websiteUrl}
             instagramUrl={instagramUrl}
-            googleReviewUrl={googleReviewUrl}
           />
         </footer>
       </div>

@@ -83,7 +83,6 @@ export function CollectCheckout({
   brandLinks?: {
     websiteUrl: string;
     instagramUrl: string | null;
-    googleReviewUrl: string | null;
   };
 }) {
   const [context, setContext] = useState<CollectContext | null>(null);
@@ -889,7 +888,6 @@ export function CollectCheckout({
             })}
             websiteUrl={brandLinks?.websiteUrl}
             instagramUrl={brandLinks?.instagramUrl}
-            googleReviewUrl={brandLinks?.googleReviewUrl}
           />
           <ChargeReceiptActions
             customerEmail={appointment.customerEmail}
