@@ -77,6 +77,8 @@ export type AdminAppointmentRecord = AppointmentRecord & {
   enRouteSmsSentAt: string | null;
   serviceStartedAt: string | null;
   serviceEndedAt: string | null;
+  /** Existing pet weight, when the appointment query joined pets.weight_lbs. */
+  petWeightLbs?: number | null;
 };
 
 export type AppointmentRow = {
@@ -115,7 +117,10 @@ export type AppointmentRow = {
   service_started_at?: string | null;
   service_ended_at?: string | null;
   followup_sent_at?: string | null;
-  pets?: { name: string; breed: string } | { name: string; breed: string }[] | null;
+  pets?:
+    | { name: string; breed: string; weight_lbs?: number | null }
+    | { name: string; breed: string; weight_lbs?: number | null }[]
+    | null;
   profiles?: {
     email: string;
     first_name: string | null;

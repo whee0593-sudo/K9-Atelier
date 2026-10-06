@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it, type TestContext } from "node:test";
 import {
   adminCalendarDayButtonClass,
   buildEmptyOccupancyMonth,
@@ -17,6 +17,19 @@ const openDay = {
   isToday: false,
   closure: null,
 };
+
+/** Keep isDateBookable on the fixture calendar instead of the real clock. */
+function pinLocalNoon(
+  t: TestContext,
+  year: number,
+  monthIndex: number,
+  day: number,
+) {
+  t.mock.timers.enable({
+    apis: ["Date"],
+    now: new Date(year, monthIndex, day, 12, 0, 0, 0),
+  });
+}
 
 describe("calendar month helpers", () => {
   it("labels and shifts YYYY-MM values", () => {
@@ -58,7 +71,8 @@ describe("calendar month helpers", () => {
     assert.equal(days[20]?.isPast, false);
   });
 
-  it("keeps a day with a blocked hour selectable for staff booking", () => {
+  it("keeps a day with a blocked hour selectable for staff booking", (t) => {
+    pinLocalNoon(t, 2026, 8, 18);
     const monday = {
       date: "2026-09-21",
       isPast: false,
@@ -88,7 +102,30 @@ describe("calendar month helpers", () => {
     );
   });
 
-  it("does not lock selectable days to a previously chosen date", () => {
+  it("shades blocked time and keeps a partial block selectable", (t) => {
+    pinLocalNoon(t, 2026, 9, 1);
+    const partial = {
+      date: "2026-10-12",
+      isPast: false,
+      isFull: false,
+      isToday: false,
+      closure: null,
+      blocks: [{ allDay: false }],
+    };
+    assert.equal(isAdminCalendarDayMuted(partial), true);
+    assert.equal(isStaffPickerDaySelectable(partial), true);
+    assert.match(adminCalendarDayButtonClass(partial, false), /bg-lavender-light\/70/);
+    assert.equal(
+      isStaffPickerDaySelectable({
+        ...partial,
+        blocks: [{ allDay: true }],
+      }),
+      false,
+    );
+  });
+
+  it("does not lock selectable days to a previously chosen date", (t) => {
+    pinLocalNoon(t, 2026, 8, 18);
     const days = buildEmptyOccupancyMonth("2026-09", "2026-09-18");
     const selectable = staffPickerSelectableDates(days);
     assert.equal(selectable.has("2026-09-21"), true);

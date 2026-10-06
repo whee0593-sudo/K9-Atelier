@@ -21,10 +21,13 @@ export async function GET(request: Request) {
     const paidKinds = await listPaidKindsByAppointment(
       day.appointments.map((appointment) => appointment.id),
     );
-    return NextResponse.json({
-      appointments: day.appointments,
-      paidKinds,
-    });
+    return NextResponse.json(
+      {
+        appointments: day.appointments,
+        paidKinds,
+      },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
   }
 
   const today = await listTodayAdminAppointments();

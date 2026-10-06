@@ -10,6 +10,7 @@ export default async function BookForCustomerPage({
     firstName?: string;
     lastName?: string;
     phone?: string;
+    date?: string;
   }>;
 }) {
   const query = await searchParams;
@@ -39,6 +40,7 @@ export default async function BookForCustomerPage({
             lastName: query.lastName,
             phone: query.phone,
           }}
+          initialDate={query.date}
         />
       </div>
     </div>

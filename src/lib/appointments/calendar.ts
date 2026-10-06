@@ -3,6 +3,12 @@ import { getStaffSession } from "@/lib/staff/auth";
 import { getRoutingConfig } from "@/lib/booking-schedule";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
 import {
+  availabilityBlockLabel,
+  groupBlocksByDate,
+  type AvailabilityBlock,
+} from "@/lib/appointments/availability-blocks";
+import { loadAvailabilityBlocks } from "@/lib/appointments/availability-block-store";
+import {
   closureShortLabel,
   type DayClosureRecord,
 } from "@/lib/appointments/closures";
@@ -16,6 +22,8 @@ export type AdminCalendarDay = {
   isToday: boolean;
   closure: DayClosureRecord | null;
   closureLabel: string | null;
+  blocks: AvailabilityBlock[];
+  availabilityLabel: string | null;
 };
 
 function lastDayOfMonth(year: number, monthIndex: number) {
@@ -63,8 +71,13 @@ export async function listAdminCalendarMonth(
     counts.set(date, (counts.get(date) ?? 0) + 1);
   }
 
-  const closuresResult = await loadDayClosures(fromDate, toDate);
+  const [closuresResult, blocksResult] = await Promise.all([
+    loadDayClosures(fromDate, toDate),
+    loadAvailabilityBlocks(fromDate, toDate),
+  ]);
   if ("error" in closuresResult) return { error: "server" };
+  if ("error" in blocksResult) return { error: "server" };
+  const blocksByDate = groupBlocksByDate(blocksResult.blocks);
 
   const days: AdminCalendarDay[] = [];
   const last = lastDayOfMonth(year, monthIndex);
@@ -72,6 +85,7 @@ export async function listAdminCalendarMonth(
     const date = `${month}-${String(day).padStart(2, "0")}`;
     const appointmentCount = counts.get(date) ?? 0;
     const closure = closuresResult.closures.get(date) ?? null;
+    const blocks = blocksByDate.get(date) ?? [];
     days.push({
       date,
       appointmentCount,
@@ -80,6 +94,8 @@ export async function listAdminCalendarMonth(
       isToday: date === today,
       closure,
       closureLabel: closureShortLabel(closure),
+      blocks,
+      availabilityLabel: availabilityBlockLabel(blocks),
     });
   }
 

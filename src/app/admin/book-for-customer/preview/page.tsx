@@ -37,7 +37,12 @@ const previewProfile: StaffBookingProfile = {
   ],
 };
 
-export default function BookForCustomerPreviewPage() {
+export default async function BookForCustomerPreviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string }>;
+}) {
+  const query = await searchParams;
   return (
     <div>
       <p className="mb-4 rounded-xl border border-gold/40 bg-lavender-light/50 px-4 py-2 text-center text-xs uppercase tracking-[0.16em] text-gold-dark">
@@ -57,6 +62,7 @@ export default function BookForCustomerPreviewPage() {
             phone: previewProfile.phone,
           }}
           initialProfile={previewProfile}
+          initialDate={query.date}
         />
       </div>
     </div>

@@ -98,14 +98,20 @@ const fieldClass =
   "mt-1 w-full rounded-xl border border-lavender/40 bg-cream px-4 py-2.5 text-sm text-text";
 const labelClass = "block text-sm font-medium text-text";
 
+function preferredBookingDate(value: string | undefined) {
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
+}
+
 export function BookForCustomerForm({
   prefill,
   preview = false,
   initialProfile = null,
+  initialDate,
 }: {
   prefill?: Prefill;
   preview?: boolean;
   initialProfile?: StaffBookingProfile | null;
+  initialDate?: string;
 }) {
   const initialAddress = initialProfile?.addresses[0] ?? null;
   const [firstName, setFirstName] = useState(prefill?.firstName ?? "");
@@ -146,7 +152,10 @@ export function BookForCustomerForm({
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [availabilityLoaded, setAvailabilityLoaded] = useState(preview);
-  const [appointmentDate, setAppointmentDate] = useState("");
+  const pinnedDateRef = useRef(preferredBookingDate(initialDate));
+  const [appointmentDate, setAppointmentDate] = useState(() =>
+    preferredBookingDate(initialDate),
+  );
   const [slotStartMinutes, setSlotStartMinutes] = useState("");
   const [verbalConsent, setVerbalConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -361,7 +370,7 @@ export function BookForCustomerForm({
     setError(null);
     setQuoteState({ status: "loading" });
     setDays(fallbackStaffScheduleDays());
-    setAppointmentDate("");
+    setAppointmentDate(pinnedDateRef.current);
     setSlotStartMinutes("");
     try {
       const response = await fetch("/api/travel-fee", {
@@ -530,6 +539,7 @@ export function BookForCustomerForm({
           weightLbs: String(primaryWeightLbs),
           durationMinutes: String(totalDurationMinutes),
         });
+        if (pinnedDateRef.current) params.set("date", pinnedDateRef.current);
         const response = await fetch(`/api/booking/availability?${params}`, {
           credentials: "include",
           signal: controller.signal,
@@ -1076,7 +1086,7 @@ export function BookForCustomerForm({
             value={serviceId}
             onChange={(event) => {
               setServiceId(event.target.value);
-              setAppointmentDate("");
+              setAppointmentDate(pinnedDateRef.current);
               setSlotStartMinutes("");
             }}
           >
@@ -1098,6 +1108,8 @@ export function BookForCustomerForm({
             openDates={openDays.map((day) => day.date)}
             preview={preview}
             onChange={(date) => {
+              pinnedDateRef.current =
+                date === preferredBookingDate(initialDate) ? date : "";
               setAppointmentDate(date);
               setSlotStartMinutes("");
             }}

@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { AdminMessageComposer } from "@/components/admin/AdminMessageComposer";
 
-export default function AdminMessagesPage() {
+export default async function AdminMessagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ customer?: string; phone?: string }>;
+}) {
+  const params = await searchParams;
   return (
     <div>
       <h2 className="text-2xl font-semibold text-gold-dark">
@@ -16,7 +21,10 @@ export default function AdminMessagesPage() {
         </Link>
       </p>
       <div className="mt-8">
-        <AdminMessageComposer />
+        <AdminMessageComposer
+          initialCustomerId={params.customer ?? ""}
+          initialPhone={params.phone ?? ""}
+        />
       </div>
     </div>
   );

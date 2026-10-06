@@ -23,7 +23,10 @@ export async function GET(_request: Request, context: RouteContext) {
       return mapStaffServiceError(result.error);
     }
 
-    return NextResponse.json({ days: result.days });
+    return NextResponse.json(
+      { days: result.days },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
   } catch (error) {
     if (error instanceof AppointmentValidationError) {
       return staffJsonError(error.message, 400);

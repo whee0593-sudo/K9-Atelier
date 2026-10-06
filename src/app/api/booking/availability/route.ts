@@ -52,11 +52,19 @@ export async function GET(request: Request) {
       ? durationOverride
       : bookingDurationMinutes(serviceId, weightLbs, addOnIds);
 
+  const requestedDate = url.searchParams.get("date")?.trim() ?? "";
+  const extraDates =
+    /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) &&
+    isDateBookable(parseDateValue(requestedDate))
+      ? [requestedDate]
+      : [];
+
   const result = await getAvailabilityForAddress({
     point,
     zip,
     durationMinutes,
     base,
+    extraDates,
   });
 
   if ("error" in result) {
@@ -66,7 +74,10 @@ export async function GET(request: Request) {
     );
   }
 
-  return NextResponse.json({ days: result.days });
+  return NextResponse.json(
+    { days: result.days },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
 }
 
 export async function POST(request: Request) {

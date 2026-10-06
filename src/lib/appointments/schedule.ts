@@ -26,6 +26,8 @@ import {
   type DayClosureInput,
   type DayClosureRecord,
 } from "@/lib/appointments/closures";
+import { applyBlocksToSlots, appointmentOverlapsBlocks, groupBlocksByDate } from "@/lib/appointments/availability-blocks";
+import { loadAvailabilityBlocks } from "@/lib/appointments/availability-block-store";
 
 export type OccupiedAppointment = RouteStop & {
   zip: string | null;
@@ -365,13 +367,15 @@ export async function getAvailabilityForAddress(input: {
 
   const fromDate = dates[0]!;
   const toDate = dates[dates.length - 1]!;
-  const [plansResult, occupiedResult, closuresResult] = await Promise.all([
-    loadDayPlans(fromDate, toDate),
-    loadOccupiedStopsByDate(fromDate, toDate, {
-      excludeAppointmentIds: input.excludeAppointmentIds,
-    }),
-    loadDayClosures(fromDate, toDate),
-  ]);
+  const [plansResult, occupiedResult, closuresResult, blocksResult] =
+    await Promise.all([
+      loadDayPlans(fromDate, toDate),
+      loadOccupiedStopsByDate(fromDate, toDate, {
+        excludeAppointmentIds: input.excludeAppointmentIds,
+      }),
+      loadDayClosures(fromDate, toDate),
+      loadAvailabilityBlocks(fromDate, toDate),
+    ]);
   if ("error" in plansResult) {
     console.error("getAvailabilityForAddress plans:", plansResult.error);
   }
@@ -381,12 +385,19 @@ export async function getAvailabilityForAddress(input: {
   if ("error" in closuresResult) {
     console.error("getAvailabilityForAddress closures:", closuresResult.error);
   }
+  if ("error" in blocksResult) {
+    console.error("getAvailabilityForAddress blocks:", blocksResult.error);
+    return {
+      error: blocksResult.error === "misconfigured" ? "misconfigured" : "server",
+    };
+  }
 
   const plans = "error" in plansResult ? new Map() : plansResult.plans;
   const occupiedByDate =
     "error" in occupiedResult ? new Map() : occupiedResult.byDate;
   const closures =
     "error" in closuresResult ? new Map() : closuresResult.closures;
+  const blocksByDate = groupBlocksByDate(blocksResult.blocks);
 
   const days = [];
   for (const date of dates) {
@@ -400,7 +411,8 @@ export async function getAvailabilityForAddress(input: {
     }
 
     const closure = closures.get(date) ?? null;
-    if (closure?.closedAllDay) {
+    const dayBlocks = blocksByDate.get(date) ?? [];
+    if (closure?.closedAllDay || dayBlocks.some((block) => block.allDay)) {
       days.push({ date, available: false, slots: [] as number[] });
       continue;
     }
@@ -430,10 +442,15 @@ export async function getAvailabilityForAddress(input: {
       input.durationMinutes,
     );
     const gated = applyClosureToSlots(openSlots, closure);
+    const withBlocks = applyBlocksToSlots(
+      gated.slots,
+      dayBlocks,
+      input.durationMinutes,
+    );
     days.push({
       date,
-      available: gated.available,
-      slots: gated.slots,
+      available: withBlocks.available,
+      slots: withBlocks.slots,
     });
   }
 
@@ -461,15 +478,28 @@ export async function assignArrivalWindow(input: {
     return { error: "slot_unavailable" as const };
   }
 
-  const [plansResult, closuresResult] = await Promise.all([
+  const [plansResult, closuresResult, blocksResult] = await Promise.all([
     loadDayPlans(input.date, input.date),
     loadDayClosures(input.date, input.date),
+    loadAvailabilityBlocks(input.date, input.date),
   ]);
   if ("error" in plansResult) return plansResult;
   if ("error" in closuresResult) return closuresResult;
+  if ("error" in blocksResult) {
+    return {
+      error: blocksResult.error === "misconfigured" ? "misconfigured" : "server",
+    };
+  }
 
   const closure = closuresResult.closures.get(input.date) ?? null;
-  if (isSlotClosed(closure, input.slotStartMinutes)) {
+  if (
+    isSlotClosed(closure, input.slotStartMinutes) ||
+    appointmentOverlapsBlocks(
+      blocksResult.blocks,
+      input.slotStartMinutes,
+      input.durationMinutes,
+    )
+  ) {
     return { error: "slot_unavailable" as const };
   }
 

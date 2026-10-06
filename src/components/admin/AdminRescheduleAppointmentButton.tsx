@@ -25,22 +25,50 @@ function formatConfirmDate(iso: string): string {
   });
 }
 
-function previewDays(): AvailabilityDay[] {
-  return getUpcomingBookableDates(8).map((day) => ({
-    date: day.value,
-    available: true,
-    slots: listHourlyStartMinutes(),
-  }));
+function previewDays(unavailableDates?: readonly string[]): AvailabilityDay[] {
+  const closed = new Set(unavailableDates ?? []);
+  return getUpcomingBookableDates(8).map((day) => {
+    const unavailable = closed.has(day.value);
+    return {
+      date: day.value,
+      available: !unavailable,
+      slots: unavailable ? [] : listHourlyStartMinutes(),
+    };
+  });
+}
+
+/** Open windows returned by the staff availability API. Calendar reschedule does not invent extra hours. */
+export function staffRescheduleSlotChoices(
+  daySlots: number[] | undefined,
+  hasDate: boolean,
+  limitToOpenSlots: boolean,
+) {
+  if (limitToOpenSlots) return daySlots ?? [];
+  if (daySlots && daySlots.length > 0) return daySlots;
+  if (hasDate) return listHourlyStartMinutes();
+  return [];
 }
 
 export function AdminRescheduleAppointmentButton({
   appointment,
   preview = false,
   onChanged,
+  label = "Change date & time",
+  dialogTitle = "Change date & time",
+  triggerClassName = "rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text transition hover:border-gold/40",
+  limitToOpenSlots = false,
+  unavailableDates,
 }: {
   appointment: AdminAppointmentRecord;
   preview?: boolean;
-  onChanged?: () => void;
+  onChanged?: (next?: { date: string; slotStartMinutes: number }) => void;
+  label?: string;
+  dialogTitle?: string;
+  triggerClassName?: string;
+  /** When true, the arrival list is only the slots the server marked open. */
+  limitToOpenSlots?: boolean;
+  /** Preview-only dates that already have an all-day block. Live saves recheck on the server. */
+  unavailableDates?: string[];
 }) {
   const titleId = useId();
   const [open, setOpen] = useState(false);
@@ -57,11 +85,15 @@ export function AdminRescheduleAppointmentButton({
     () => days.find((day) => day.date === nextDate),
     [days, nextDate],
   );
-  const slotChoices = useMemo(() => {
-    if (selectedDay?.slots.length) return selectedDay.slots;
-    if (nextDate) return listHourlyStartMinutes();
-    return [];
-  }, [nextDate, selectedDay]);
+  const slotChoices = useMemo(
+    () =>
+      staffRescheduleSlotChoices(
+        selectedDay?.slots,
+        Boolean(nextDate),
+        limitToOpenSlots,
+      ),
+    [limitToOpenSlots, nextDate, selectedDay],
+  );
   const minDate = todayInBusinessTimezone();
 
   useEffect(() => {
@@ -78,7 +110,7 @@ export function AdminRescheduleAppointmentButton({
   useEffect(() => {
     if (!open) return;
     if (preview) {
-      setDays(previewDays());
+      setDays(previewDays(unavailableDates));
       setLoadingDays(false);
       return;
     }
@@ -87,6 +119,7 @@ export function AdminRescheduleAppointmentButton({
     setLoadingDays(true);
     setError(null);
     void fetch(`/api/admin/appointments/${appointment.id}/availability`, {
+      cache: "no-store",
       credentials: "include",
     })
       .then(async (response) => {
@@ -115,7 +148,7 @@ export function AdminRescheduleAppointmentButton({
     return () => {
       cancelled = true;
     };
-  }, [appointment.id, open, preview]);
+  }, [appointment.id, open, preview, unavailableDates]);
 
   if (!canStaffRescheduleAppointment(appointment)) return null;
 
@@ -129,8 +162,12 @@ export function AdminRescheduleAppointmentButton({
     if (!nextDate || !nextSlot) return;
 
     if (preview) {
+      if (limitToOpenSlots && !slotChoices.includes(Number(nextSlot))) {
+        setError("That time is unavailable.");
+        return;
+      }
       setOpen(false);
-      onChanged?.();
+      onChanged?.({ date: nextDate, slotStartMinutes: Number(nextSlot) });
       return;
     }
 
@@ -180,14 +217,19 @@ export function AdminRescheduleAppointmentButton({
           );
           setOpen(true);
         }}
-        className="rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text transition hover:border-gold/40"
+        data-appointment-action="reschedule"
+        className={triggerClassName}
       >
-        Change date & time
+        {label}
       </button>
 
       {open ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+          className={
+            limitToOpenSlots
+              ? "fixed inset-0 z-[120] flex items-end justify-center bg-ink/40 p-0 sm:items-center sm:p-4"
+              : "fixed inset-0 z-[120] flex items-center justify-center bg-ink/40 p-4"
+          }
           role="presentation"
           onClick={() => {
             if (!busy) setOpen(false);
@@ -197,11 +239,15 @@ export function AdminRescheduleAppointmentButton({
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            className="w-full max-w-md rounded-2xl border border-lavender/30 bg-cream p-6 shadow-sm"
+            className={
+              limitToOpenSlots
+                ? "max-h-[90dvh] min-h-0 w-full max-w-md overflow-y-auto overscroll-contain rounded-t-2xl border border-lavender/30 bg-cream p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-sm sm:rounded-2xl"
+                : "w-full max-w-md rounded-2xl border border-lavender/30 bg-cream p-6 shadow-sm"
+            }
             onClick={(event) => event.stopPropagation()}
           >
             <h3 id={titleId} className="text-lg font-medium text-gold-dark">
-              Change date & time
+              {dialogTitle}
             </h3>
             <dl className="mt-4 space-y-2 text-sm text-text">
               <div>
@@ -227,7 +273,7 @@ export function AdminRescheduleAppointmentButton({
                   className="block text-sm font-medium text-text"
                   htmlFor={`reschedule-date-${appointment.id}`}
                 >
-                  New date
+                  {limitToOpenSlots ? "Date" : "New date"}
                 </label>
                 <input
                   id={`reschedule-date-${appointment.id}`}
@@ -247,7 +293,7 @@ export function AdminRescheduleAppointmentButton({
                   className="block text-sm font-medium text-text"
                   htmlFor={`reschedule-slot-${appointment.id}`}
                 >
-                  New start time
+                  {limitToOpenSlots ? "Arrival window" : "New start time"}
                 </label>
                 <select
                   id={`reschedule-slot-${appointment.id}`}

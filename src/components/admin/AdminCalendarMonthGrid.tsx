@@ -24,13 +24,13 @@ export function AdminCalendarMonthGrid({
   loading?: boolean;
   onPrevMonth: () => void;
   onNextMonth: () => void;
-  onSelectDate: (date: string) => void;
+  onSelectDate: (date: string, anchor?: HTMLButtonElement) => void;
 }) {
   const leadingBlanks = calendarMonthLeadingBlanks(days);
 
   return (
-    <div>
-      <div className="flex items-center justify-between">
+    <div className="w-full max-w-full">
+      <div className="flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={onPrevMonth}
@@ -50,8 +50,8 @@ export function AdminCalendarMonthGrid({
         </button>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-lavender/30 bg-cream">
-        <div className="grid grid-cols-7 border-b border-lavender/20 bg-lavender-light/40 text-center text-xs font-medium uppercase tracking-wide text-text-muted">
+      <div className="mt-4 w-full max-w-full rounded-2xl border border-lavender/30 bg-cream">
+        <div className="grid w-full grid-cols-7 border-b border-lavender/20 bg-lavender-light/40 text-center text-xs font-medium uppercase tracking-wide text-text-muted">
           {ADMIN_CALENDAR_WEEKDAYS.map((day) => (
             <div key={day} className="px-1 py-2">
               {day}
@@ -61,12 +61,13 @@ export function AdminCalendarMonthGrid({
         {loading ? (
           <p className="px-4 py-8 text-sm text-text-muted">Loading calendar…</p>
         ) : (
-          <div className="grid grid-cols-7">
+          <div className="grid w-full grid-cols-7">
             {Array.from({ length: leadingBlanks }).map((_, index) => (
-              <div key={`blank-${index}`} className="min-h-16 bg-lavender-light/20" />
+              <div key={`blank-${index}`} className="min-h-16 min-w-0 bg-lavender-light/20" />
             ))}
             {days.map((day) => {
               const selected = selectedDate === day.date;
+              const note = day.availabilityLabel ?? day.closureLabel;
               return (
                 <button
                   key={day.date}
@@ -74,9 +75,9 @@ export function AdminCalendarMonthGrid({
                   data-calendar-date={day.date}
                   onClick={(event) => {
                     event.stopPropagation();
-                    onSelectDate(day.date);
+                    onSelectDate(day.date, event.currentTarget);
                   }}
-                  className={`${adminCalendarDayButtonClass(day, selected)} relative z-[1] cursor-pointer touch-manipulation`}
+                  className={`${adminCalendarDayButtonClass(day, selected)} relative z-[1] min-w-0 max-w-full cursor-pointer touch-manipulation`}
                 >
                   <span
                     className={`text-sm ${
@@ -85,13 +86,19 @@ export function AdminCalendarMonthGrid({
                   >
                     {Number(day.date.slice(-2))}
                   </span>
-                  {day.closureLabel ? (
-                    <span className="mt-1 block text-[10px] font-medium uppercase tracking-wide text-gold-dark">
-                      {day.closureLabel}
+                  {note ? (
+                    <span
+                      className={`mt-1 block text-[10px] leading-tight text-gold-dark [overflow-wrap:anywhere] ${
+                        day.availabilityLabel
+                          ? ""
+                          : "font-medium uppercase tracking-wide"
+                      }`}
+                    >
+                      {note}
                     </span>
                   ) : null}
                   {day.appointmentCount > 0 ? (
-                    <span className="mt-1 block text-[11px]">
+                    <span className="mt-1 block text-[10px] leading-tight">
                       {day.appointmentCount} booked
                     </span>
                   ) : null}
