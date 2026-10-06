@@ -443,7 +443,9 @@ async function saveBookingPet(
   return { pet: petRow as { id: string } };
 }
 
-function staffVisitDurations(input: StaffCustomerBookingInput) {
+function staffVisitDurations(
+  input: StaffCustomerBookingInput,
+): { ok: true; durations: number[] } | { ok: false; error: "conflict"; message: string } {
   const durations: number[] = [];
   const serviceId = input.serviceId;
   for (const pet of input.pets) {
@@ -458,7 +460,7 @@ function staffVisitDurations(input: StaffCustomerBookingInput) {
     for (const petServiceId of petServiceIds) {
       const known = allBookableServices().some((entry) => entry.id === petServiceId);
       if (!known) {
-        return { error: "conflict" as const, message: "Unknown service." };
+        return { ok: false, error: "conflict", message: "Unknown service." };
       }
       durations.push(
         estimateServiceDurationMinutes(
@@ -469,7 +471,7 @@ function staffVisitDurations(input: StaffCustomerBookingInput) {
       );
     }
   }
-  return { durations };
+  return { ok: true, durations };
 }
 
 export async function createStaffCustomerBooking(
@@ -557,7 +559,9 @@ export async function createStaffCustomerBooking(
     input.addOnIds,
   );
   const plannedVisits = staffVisitDurations(input);
-  if ("error" in plannedVisits) return plannedVisits;
+  if (!plannedVisits.ok) {
+    return { error: plannedVisits.error, message: plannedVisits.message };
+  }
   const occupied = await loadOccupiedStops(appointmentDate);
   if ("error" in occupied) return occupied;
   const scheduleConflict = describeStaffScheduleConflict({
