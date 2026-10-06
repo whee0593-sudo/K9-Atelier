@@ -9,6 +9,7 @@ type Props = {
   eyebrow?: string;
   title: string;
   titleAs?: "h1" | "h2";
+  titleClassName?: string;
   intro?: string;
   tone?: "ivory" | "white" | "mist";
   children: ReactNode;
@@ -27,15 +28,21 @@ export function ServicesSection({
   eyebrow,
   title,
   titleAs = "h2",
+  titleClassName,
   intro,
   tone = "ivory",
   children,
   showRequestLink = true,
 }: Props) {
   const TitleTag = titleAs;
-  const titleClass = eyebrow
-    ? "font-display mt-4 text-3xl text-ink md:text-4xl"
-    : "font-display text-3xl text-ink md:text-4xl";
+  const titleClass = [
+    eyebrow
+      ? "font-display mt-4 text-3xl text-ink md:text-4xl"
+      : "font-display text-3xl text-ink md:text-4xl",
+    titleClassName,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <section id={id} className={`scroll-mt-[15rem] ${tones[tone]} py-14 md:py-16`}>
