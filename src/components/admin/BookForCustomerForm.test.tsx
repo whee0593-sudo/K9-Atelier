@@ -144,7 +144,7 @@ describe("Book for customer sections", () => {
       />,
     );
     const onFile = html.indexOf("Book for customer on file");
-    const fresh = html.indexOf("Book for a customer");
+    const fresh = html.indexOf("Book for a new customer");
     assert.ok(onFile >= 0);
     assert.ok(fresh > onFile);
     assert.equal(html.match(/aria-expanded="false"/g)?.length, 2);

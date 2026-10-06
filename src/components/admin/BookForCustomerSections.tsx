@@ -100,7 +100,7 @@ export function BookForCustomerSections({
         />
       </FoldSection>
       <FoldSection
-        title="Book for a customer"
+        title="Book for a new customer"
         open={formOpen}
         onToggle={() => setFormOpen((value) => !value)}
       >
