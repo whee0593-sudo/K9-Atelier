@@ -94,27 +94,30 @@ describe("staff reschedule availability", () => {
 });
 
 describe("staff reschedule and cancel server gates", () => {
-  it("rechecks availability inside the staff reschedule service", () => {
+  it("rechecks closures and blocks before saving a staff reschedule", () => {
     const reschedule = readFileSync(
       new URL("./staff-reschedule.ts", import.meta.url),
       "utf8",
     );
     const schedule = readFileSync(new URL("./schedule.ts", import.meta.url), "utf8");
     assert.match(reschedule, /getStaffSession/);
-    assert.match(reschedule, /assignArrivalWindow/);
-    assert.match(reschedule, /excludeAppointmentIds: \[appointmentId\]/);
-    assert.equal(
-      reschedule.includes("excludeAppointmentIds: rows") ||
-        reschedule.includes("excludeAppointmentIds: [loaded"),
-      false,
-    );
-    const rescheduleBodyEarly = reschedule.slice(
+    assert.match(reschedule, /rejectBlockedClockWindow/);
+    assert.match(reschedule, /staffClockStartBlocked/);
+    assert.doesNotMatch(reschedule, /assignArrivalWindow/);
+    assert.doesNotMatch(reschedule, /getAvailabilityForAddress/);
+    const rescheduleBody = reschedule.slice(
       reschedule.indexOf("export async function rescheduleStaffAppointment"),
     );
-    const checkAt = rescheduleBodyEarly.indexOf("await assignArrivalWindow");
-    const emailSkip = rescheduleBodyEarly.indexOf("notifyCustomerAppointmentChange");
+    const checkAt = rescheduleBody.indexOf("await rejectBlockedClockWindow");
+    const writeAt = rescheduleBody.indexOf(".update(");
+    const emailSkip = rescheduleBody.indexOf("notifyCustomerAppointmentChange");
     assert.ok(checkAt > 0);
+    assert.ok(writeAt > checkAt);
     assert.ok(emailSkip > checkAt);
+    assert.doesNotMatch(
+      rescheduleBody.slice(0, checkAt),
+      /appointment_date\s*===/,
+    );
     assert.match(schedule, /appointmentOverlapsBlocks/);
     assert.match(schedule, /function assignArrivalWindow/);
     assert.match(schedule, /\.neq\("status", "cancelled"\)/);
@@ -132,16 +135,6 @@ describe("staff reschedule and cancel server gates", () => {
     assert.ok(exclude > blockCheck);
     assert.doesNotMatch(reschedule, /admin_availability_blocks/);
     assert.doesNotMatch(reschedule, /deleteAvailabilityBlock/);
-    const rescheduleBody = reschedule.slice(
-      reschedule.indexOf("export async function rescheduleStaffAppointment"),
-    );
-    const availabilityCall = rescheduleBody.indexOf("await assignArrivalWindow");
-    assert.ok(availabilityCall > 0);
-    assert.doesNotMatch(
-      rescheduleBody.slice(0, availabilityCall),
-      /appointment_date\s*===/,
-    );
-    assert.match(reschedule, /excludeAppointmentIds: \[appointmentId\]/);
     assert.doesNotMatch(reschedule, /excludeAppointmentIds: blocks/);
   });
 

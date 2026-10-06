@@ -8,6 +8,7 @@ import {
   customerTextHref,
 } from "@/components/admin/AppointmentActionsMenu";
 import { staffRescheduleSlotChoices } from "@/components/admin/AdminRescheduleAppointmentButton";
+import { listStaffClockHourStarts } from "@/lib/appointments/staff-clock-window";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 
 const appointment: AdminAppointmentRecord = {
@@ -166,12 +167,19 @@ describe("appointment actions menu", () => {
 });
 
 describe("calendar reschedule slot list", () => {
-  it("offers only the open windows the server returned", () => {
+  it("keeps a blocked day empty and falls back to every clock hour", () => {
     assert.deepEqual(staffRescheduleSlotChoices([9 * 60, 15 * 60], true, true), [
       9 * 60,
       15 * 60,
     ]);
     assert.deepEqual(staffRescheduleSlotChoices([], true, true), []);
-    assert.deepEqual(staffRescheduleSlotChoices(undefined, true, true), []);
+    assert.deepEqual(
+      staffRescheduleSlotChoices(undefined, true, true),
+      listStaffClockHourStarts(),
+    );
+    assert.deepEqual(staffRescheduleSlotChoices(undefined, false, true), []);
+    const hours = listStaffClockHourStarts();
+    assert.equal(hours[0], 0);
+    assert.equal(hours.at(-1), 23 * 60);
   });
 });
