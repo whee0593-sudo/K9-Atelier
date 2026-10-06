@@ -26,6 +26,12 @@ export async function POST(
           409,
         );
       }
+      if (result.error === "slot_unavailable") {
+        return staffJsonError(
+          "That service makes this visit overlap another visit.",
+          409,
+        );
+      }
       return mapStaffServiceError(result.error);
     }
 

@@ -65,6 +65,8 @@ export type AppointmentRecord = {
   staffCreated?: boolean;
   awaitingCustomerConfirm?: boolean;
   createdAt: string;
+  visitId?: string | null;
+  estimatedDurationMinutes?: number | null;
 };
 
 export type AdminAppointmentRecord = AppointmentRecord & {
@@ -93,8 +95,11 @@ export type AppointmentRow = {
   address_city: string;
   address_state: string;
   address_zip: string;
+  visit_id?: string | null;
   travel_distance_miles: number;
   travel_fee: number;
+  service_price?: number | null;
+  estimated_duration_minutes?: number | null;
   appointment_date: string;
   appointment_time: string | null;
   scheduled_start?: number | null;

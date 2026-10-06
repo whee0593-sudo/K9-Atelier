@@ -1,9 +1,17 @@
 import { estimateServiceDurationMinutes } from "@/lib/services";
-import { resolveArrivalForBooking } from "@/lib/appointments/arrival-window";
+import {
+  appointmentOverlapsBlocks,
+  groupBlocksByDate,
+} from "@/lib/appointments/availability-blocks";
+import { loadAvailabilityBlocks } from "@/lib/appointments/availability-block-store";
+import { isSlotClosed } from "@/lib/appointments/closures";
 import {
   assignArrivalWindow,
   getAvailabilityForAddress,
   getBaseGeoPoint,
+  loadDayClosures,
+  loadOccupiedStops,
+  loadOccupiedStopsByDate,
 } from "@/lib/appointments/schedule";
 import { mapAppointmentRowToAdminRecord } from "@/lib/appointments/map";
 import type {
@@ -11,15 +19,16 @@ import type {
   AppointmentRow,
 } from "@/lib/appointments/types";
 import {
-  formatArrivalWindow,
-  preferenceFromStart,
-} from "@/lib/booking-schedule";
-import {
   isBookableWeekday,
   parseDateValue,
 } from "@/lib/booking-slots";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
 import { parseStaffRescheduleInput } from "@/lib/appointments/staff-reschedule-input";
+import {
+  listVisitArrivalMinutes,
+  scheduleVisitPetChain,
+  visitArrivalFits,
+} from "@/lib/visits/visit";
 import {
   contactFromAdminAppointment,
   type CustomerContact,
@@ -58,6 +67,9 @@ const STAFF_RESCHEDULE_SELECT = `
   staff_created,
   customer_confirm_token_hash,
   customer_confirm_expires_at,
+  visit_id,
+  service_price,
+  estimated_duration_minutes,
   created_at,
   reminder_sms_sent_at,
   en_route_sms_sent_at,
@@ -134,6 +146,12 @@ function visitPoint(row: LoadedAppointment): { lat: number; lon: number } | null
 }
 
 function visitDurationMinutes(row: LoadedAppointment): number {
+  if (
+    typeof row.estimated_duration_minutes === "number" &&
+    row.estimated_duration_minutes > 0
+  ) {
+    return row.estimated_duration_minutes;
+  }
   const pet = firstRelation(row.pets);
   return estimateServiceDurationMinutes(
     row.service_id,
@@ -159,19 +177,20 @@ function isCompletedVisit(row: LoadedAppointment) {
   return Boolean(row.service_started_at || row.service_ended_at);
 }
 
-function scheduleFromSlot(slotStartMinutes: number, durationMinutes: number) {
-  return {
-    appointmentTime: formatArrivalWindow(slotStartMinutes, durationMinutes),
-    scheduledStart: slotStartMinutes,
-    timePreference: preferenceFromStart(slotStartMinutes),
-  };
-}
-
 export async function listStaffAppointmentAvailability(
   appointmentId: string,
 ): Promise<
   | {
       days: Array<{ date: string; available: boolean; slots: number[] }>;
+      visit: {
+        dogCount: number;
+        estimatedDurationMinutes: number;
+        dogs: Array<{
+          petName: string;
+          serviceName: string;
+          durationMinutes: number;
+        }>;
+      };
     }
   | { error: StaffRescheduleError }
 > {
@@ -197,16 +216,76 @@ export async function listStaffAppointmentAvailability(
       isBookableWeekday(parseDateValue(date)) &&
       all.indexOf(date) === index,
   );
+  const visitRows = await loadActiveVisitRows(loaded.row);
+  const visitAppointmentIds = visitRows.map((row) => row.id);
+  const durations = visitRows.map(visitDurationMinutes);
+  const totalDuration = durations.reduce((sum, minutes) => sum + minutes, 0);
   const result = await getAvailabilityForAddress({
     point,
     zip: loaded.row.address_zip,
-    durationMinutes: visitDurationMinutes(loaded.row),
+    durationMinutes: 30,
     base,
-    excludeAppointmentIds: [appointmentId],
+    excludeAppointmentIds: visitAppointmentIds,
     extraDates,
   });
   if ("error" in result) return result;
-  return { days: result.days };
+
+  const dates = result.days.map((day) => day.date);
+  const fromDate = dates[0];
+  const toDate = dates[dates.length - 1];
+  const [occupiedResult, closuresResult, blocksResult] = await Promise.all([
+    fromDate && toDate
+      ? loadOccupiedStopsByDate(fromDate, toDate, {
+          excludeAppointmentIds: visitAppointmentIds,
+        })
+      : Promise.resolve({ byDate: new Map() }),
+    fromDate && toDate
+      ? loadDayClosures(fromDate, toDate)
+      : Promise.resolve({ closures: new Map() }),
+    fromDate && toDate
+      ? loadAvailabilityBlocks(fromDate, toDate)
+      : Promise.resolve({ blocks: [] }),
+  ]);
+  if ("error" in occupiedResult) return occupiedResult;
+  if ("error" in closuresResult) return closuresResult;
+  if ("error" in blocksResult) {
+    return {
+      error: blocksResult.error === "misconfigured" ? "misconfigured" : "server",
+    };
+  }
+  const blocksByDate = groupBlocksByDate(blocksResult.blocks);
+
+  const days = result.days.map((day) => {
+    if (!day.available && day.slots.length === 0) return day;
+    const closure = closuresResult.closures.get(day.date) ?? null;
+    const dayBlocks = blocksByDate.get(day.date) ?? [];
+    if (closure?.closedAllDay || dayBlocks.some((block) => block.allDay)) {
+      return { date: day.date, available: false, slots: [] as number[] };
+    }
+    const stops = occupiedResult.byDate.get(day.date)?.stops ?? [];
+    const slots = listVisitArrivalMinutes({
+      durations,
+      otherStops: stops,
+    }).filter(
+      (start) =>
+        !isSlotClosed(closure, start) &&
+        !appointmentOverlapsBlocks(dayBlocks, start, totalDuration),
+    );
+    return { date: day.date, available: slots.length > 0, slots };
+  });
+
+  return {
+    days,
+    visit: {
+      dogCount: visitRows.length,
+      estimatedDurationMinutes: totalDuration,
+      dogs: visitRows.map((row) => ({
+        petName: firstRelation(row.pets)?.name ?? "Dog",
+        serviceName: row.service_name,
+        durationMinutes: visitDurationMinutes(row),
+      })),
+    },
+  };
 }
 
 export async function rescheduleStaffAppointment(
@@ -229,54 +308,123 @@ export async function rescheduleStaffAppointment(
   const blocked = assertOpenForReschedule(loaded.row);
   if (blocked) return blocked;
 
-  const durationMinutes = visitDurationMinutes(loaded.row);
-  const completed = isCompletedVisit(loaded.row);
-  let nextSchedule: {
-    appointmentTime: string | null;
-    scheduledStart: number;
-    timePreference: "morning" | "afternoon";
-  } = scheduleFromSlot(parsed.slotStartMinutes, durationMinutes);
+  const ordered = [...(await loadActiveVisitRows(loaded.row))].sort(
+    (left, right) =>
+      (left.scheduled_start ?? 0) - (right.scheduled_start ?? 0) ||
+      left.created_at.localeCompare(right.created_at),
+  );
+  const anchor = ordered[0] ?? loaded.row;
+  const visitAppointmentIds = ordered.map((row) => row.id);
+  const durations = ordered.map(visitDurationMinutes);
+  const totalDuration = durations.reduce((sum, minutes) => sum + minutes, 0);
+  const completed = ordered.some(isCompletedVisit);
+  const planned = scheduleVisitPetChain({
+    visitStartMinutes: parsed.slotStartMinutes,
+    durations,
+  });
+  if (!planned.ok) return { error: "slot_unavailable" };
+  let slots = planned.slots;
 
   if (!completed) {
-    const point = visitPoint(loaded.row);
+    const point = visitPoint(anchor);
     if (!point) return { error: "conflict" };
     const base = await getBaseGeoPoint();
     const assignment = base
       ? await assignArrivalWindow({
           date: parsed.date,
           point,
-          zip: loaded.row.address_zip,
-          durationMinutes,
+          zip: anchor.address_zip,
+          durationMinutes: totalDuration,
           slotStartMinutes: parsed.slotStartMinutes,
           base,
-          excludeAppointmentIds: [appointmentId],
+          excludeAppointmentIds: visitAppointmentIds,
           allowUnbookableDate: true,
+          allowUnfittedStart: true,
         })
       : { error: "misconfigured" as const };
-    const schedule = resolveArrivalForBooking(
-      assignment,
-      parsed.slotStartMinutes,
-    );
-    if ("error" in schedule) return { error: "slot_unavailable" };
-    nextSchedule = schedule;
+    if ("error" in assignment) {
+      return {
+        error: assignment.error === "slot_unavailable" ? "slot_unavailable" : assignment.error,
+      };
+    }
+
+    const [occupied, blocksResult] = await Promise.all([
+      loadOccupiedStops(parsed.date, {
+        excludeAppointmentIds: visitAppointmentIds,
+      }),
+      loadAvailabilityBlocks(parsed.date, parsed.date),
+    ]);
+    if ("error" in occupied) return occupied;
+    if ("error" in blocksResult) {
+      return {
+        error: blocksResult.error === "misconfigured" ? "misconfigured" : "server",
+      };
+    }
+    if (
+      appointmentOverlapsBlocks(
+        blocksResult.blocks,
+        parsed.slotStartMinutes,
+        totalDuration,
+      ) ||
+      !visitArrivalFits({
+        visitStartMinutes: parsed.slotStartMinutes,
+        durations,
+        otherStops: occupied.stops,
+      })
+    ) {
+      return { error: "slot_unavailable" };
+    }
+    slots = planned.slots;
   }
 
   const admin = createAdminClient();
+  const { error: clearError } = await admin
+    .from("appointments")
+    .update({ scheduled_start: null })
+    .in("id", visitAppointmentIds);
+  if (clearError) {
+    console.error("rescheduleStaffAppointment clear failed:", clearError.message);
+    return { error: "server" };
+  }
+
+  for (let index = 0; index < ordered.length; index += 1) {
+    const row = ordered[index]!;
+    const slot = slots[index]!;
+    const { error } = await admin
+      .from("appointments")
+      .update({
+        appointment_date: parsed.date,
+        appointment_time: slot.appointmentTime,
+        scheduled_start: slot.scheduledStart,
+        time_preference: slot.usedPreference,
+      })
+      .eq("id", row.id);
+    if (error) {
+      console.error("rescheduleStaffAppointment update failed:", error.message);
+      for (const previous of ordered) {
+        await admin
+          .from("appointments")
+          .update({
+            appointment_date: previous.appointment_date,
+            appointment_time: previous.appointment_time,
+            scheduled_start: previous.scheduled_start,
+            time_preference: previous.time_preference,
+          })
+          .eq("id", previous.id);
+      }
+      if (error.code === "23505") return { error: "slot_unavailable" };
+      return { error: "server" };
+    }
+  }
+
   const { data, error } = await admin
     .from("appointments")
-    .update({
-      appointment_date: parsed.date,
-      appointment_time: nextSchedule.appointmentTime,
-      scheduled_start: nextSchedule.scheduledStart,
-      time_preference: nextSchedule.timePreference,
-    })
-    .eq("id", appointmentId)
     .select(STAFF_RESCHEDULE_SELECT)
+    .eq("id", appointmentId)
     .single();
 
   if (error || !data) {
-    console.error("rescheduleStaffAppointment failed:", error?.message);
-    if (error?.code === "23505") return { error: "slot_unavailable" };
+    console.error("rescheduleStaffAppointment reload failed:", error?.message);
     return { error: "server" };
   }
 
@@ -292,7 +440,13 @@ export async function rescheduleStaffAppointment(
           "reschedule",
           appointment,
           contact,
-          { fee: 0 },
+          {
+            fee: 0,
+            petNames: ordered.map((row) => {
+              const pet = firstRelation(row.pets);
+              return pet?.name ?? "Dog";
+            }),
+          },
         );
       } catch (emailError) {
         console.error("staff reschedule email failed:", emailError);
@@ -301,4 +455,20 @@ export async function rescheduleStaffAppointment(
   }
 
   return { appointment };
+}
+
+async function loadActiveVisitRows(row: LoadedAppointment) {
+  if (!row.visit_id) return [row];
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("appointments")
+    .select(STAFF_RESCHEDULE_SELECT)
+    .eq("visit_id", row.visit_id)
+    .neq("status", "cancelled")
+    .order("scheduled_start", { ascending: true });
+  if (error || !data?.length) {
+    if (error) console.error("loadActiveVisitRows failed:", error.message);
+    return [row];
+  }
+  return data as unknown as LoadedAppointment[];
 }

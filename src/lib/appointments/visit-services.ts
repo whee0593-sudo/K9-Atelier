@@ -1,4 +1,11 @@
+import { loadOccupiedStops } from "@/lib/appointments/schedule";
+import { estimateServiceDurationMinutes } from "@/lib/services";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { compactVisitChildStarts } from "@/lib/visits/compact";
+import {
+  scheduleActivePetsFromVisitArrival,
+  visitArrivalFits,
+} from "@/lib/visits/visit";
 import { getStaffSession } from "@/lib/staff/auth";
 import { sanitizeLineItems } from "@/lib/charges/line-items";
 import { sumLineItems } from "@/lib/charges/money";
@@ -29,6 +36,7 @@ export async function updateAppointmentVisitServices(input: {
         | "forbidden"
         | "not_found"
         | "invalid"
+        | "slot_unavailable"
         | "server";
     }
 > {
@@ -42,7 +50,7 @@ export async function updateAppointmentVisitServices(input: {
   const { data: row, error } = await admin
     .from("appointments")
     .select(
-      "id, customer_id, service_id, service_name, add_on_options, profiles ( first_name, last_name, phone )",
+      "id, customer_id, visit_id, service_id, service_name, add_on_options, appointment_date, pets ( weight_lbs ), profiles ( first_name, last_name, phone )",
     )
     .eq("id", input.appointmentId)
     .maybeSingle();
@@ -54,6 +62,21 @@ export async function updateAppointmentVisitServices(input: {
   if (!row) return { error: "not_found" };
 
   const fields = appointmentFieldsFromVisitLineItems(lineItems);
+  const pet = firstRelation<{ weight_lbs?: number | null }>(row.pets);
+  const durationMinutes = estimateServiceDurationMinutes(
+    fields.serviceId || (row.service_id as string),
+    pet?.weight_lbs ?? 20,
+    fields.addOnIds,
+  );
+  if (row.visit_id) {
+    const fits = await visitServiceChangeFits({
+      visitId: row.visit_id as string,
+      appointmentId: row.id as string,
+      appointmentDate: row.appointment_date as string,
+      durationMinutes,
+    });
+    if ("error" in fits) return fits;
+  }
   const nextOptions = mergeVisitLineItemsIntoOptions(
     (row.add_on_options as Record<string, unknown> | null) ?? {},
     lineItems,
@@ -68,12 +91,27 @@ export async function updateAppointmentVisitServices(input: {
       add_on_options: nextOptions,
       travel_fee: fields.travelFee,
       estimated_total: fields.estimatedTotal,
+      estimated_duration_minutes: durationMinutes,
     })
     .eq("id", row.id);
 
   if (saveError) {
     console.error("updateAppointmentVisitServices save failed:", saveError.message);
     return { error: "server" };
+  }
+
+  if (row.visit_id) {
+    const { error: visitFeeError } = await admin
+      .from("visits")
+      .update({ travel_fee: fields.travelFee })
+      .eq("id", row.visit_id);
+    if (visitFeeError) {
+      console.error(
+        "updateAppointmentVisitServices visit travel fee failed:",
+        visitFeeError.message,
+      );
+    }
+    await compactVisitChildStarts(row.visit_id as string);
   }
 
   const smsSent = await sendVisitServicesUpdatedSms({
@@ -94,6 +132,52 @@ export async function updateAppointmentVisitServices(input: {
     serviceName: fields.serviceName,
     smsSent,
   };
+}
+
+async function visitServiceChangeFits(input: {
+  visitId: string;
+  appointmentId: string;
+  appointmentDate: string;
+  durationMinutes: number;
+}): Promise<{ ok: true } | { error: "server" | "slot_unavailable" }> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("appointments")
+    .select("id, status, scheduled_start, estimated_duration_minutes")
+    .eq("visit_id", input.visitId);
+  if (error) {
+    console.error("visitServiceChangeFits load failed:", error.message);
+    return { error: "server" };
+  }
+  const pets = (data ?? []).map((row) => ({
+    id: row.id as string,
+    status: row.status as "pending_confirmation" | "confirmed" | "cancelled",
+    scheduledStart:
+      typeof row.scheduled_start === "number" ? row.scheduled_start : null,
+    estimatedDurationMinutes:
+      row.id === input.appointmentId
+        ? input.durationMinutes
+        : typeof row.estimated_duration_minutes === "number" &&
+            row.estimated_duration_minutes > 0
+          ? row.estimated_duration_minutes
+          : 60,
+  }));
+  const plan = scheduleActivePetsFromVisitArrival(pets);
+  if (!plan || plan.slots.length === 0) return { ok: true };
+  const occupied = await loadOccupiedStops(input.appointmentDate, {
+    excludeAppointmentIds: pets.map((row) => row.id),
+  });
+  if ("error" in occupied) return { error: "server" };
+  if (
+    !visitArrivalFits({
+      visitStartMinutes: plan.visitStartMinutes,
+      durations: plan.slots.map((slot) => slot.durationMinutes),
+      otherStops: occupied.stops,
+    })
+  ) {
+    return { error: "slot_unavailable" };
+  }
+  return { ok: true };
 }
 
 function firstRelation<T>(value: unknown): T | null {

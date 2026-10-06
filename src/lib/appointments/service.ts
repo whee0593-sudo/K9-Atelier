@@ -30,6 +30,7 @@ import {
 } from "@/lib/email/appointment-mails";
 import { getCustomerPaymentMethod } from "@/lib/payments/service";
 import { estimateServiceDurationMinutes } from "@/lib/services";
+import { servicePriceFromEstimatedTotal } from "@/lib/visits/visit";
 import {
   assignArrivalWindow,
   claimDayPlan,
@@ -53,6 +54,8 @@ const APPOINTMENT_SELECT = `
   appointment_date,
   appointment_time,
   scheduled_start,
+  visit_id,
+  estimated_duration_minutes,
   time_preference,
   address_lat,
   address_lon,
@@ -212,11 +215,43 @@ export async function createAppointment(
   }
 
   const status = "confirmed";
+  const servicePrice = servicePriceFromEstimatedTotal(
+    input.estimatedTotal,
+    input.travelFee,
+  );
+
+  const { data: visitRow, error: visitError } = await supabase
+    .from("visits")
+    .insert({
+      customer_id: user.id,
+      service_date: input.appointmentDate,
+      scheduled_start: schedule.scheduledStart,
+      appointment_time: schedule.appointmentTime,
+      time_preference: schedule.timePreference,
+      timezone: business.booking.timezone,
+      status,
+      address_street: input.address.street,
+      address_city: input.address.city,
+      address_state: input.address.state,
+      address_zip: input.address.zip,
+      address_lat: input.addressLat,
+      address_lon: input.addressLon,
+      travel_distance_miles: input.travelDistanceMiles,
+      travel_fee: input.travelFee,
+    })
+    .select("id")
+    .single();
+
+  if (visitError || !visitRow) {
+    console.error("createAppointment visit insert failed:", visitError?.message);
+    return { error: "server" };
+  }
 
   const { data, error } = await supabase
     .from("appointments")
     .insert({
       customer_id: user.id,
+      visit_id: visitRow.id,
       pet_id: input.petId,
       service_id: input.serviceId,
       service_name: input.serviceName,
@@ -228,6 +263,8 @@ export async function createAppointment(
       address_zip: input.address.zip,
       travel_distance_miles: input.travelDistanceMiles,
       travel_fee: input.travelFee,
+      service_price: servicePrice,
+      estimated_duration_minutes: durationMinutes,
       appointment_date: input.appointmentDate,
       appointment_time: schedule.appointmentTime,
       scheduled_start: schedule.scheduledStart,
@@ -345,6 +382,15 @@ export async function setAppointmentStatus(
   }
 
   if (!data) return { error: "not_found" };
+
+  if (status === "cancelled" && appointmentBeforeUpdate?.visitId) {
+    try {
+      const { compactVisitChildStarts } = await import("@/lib/visits/compact");
+      await compactVisitChildStarts(appointmentBeforeUpdate.visitId);
+    } catch (compactError) {
+      console.error("setAppointmentStatus compact failed:", compactError);
+    }
+  }
 
   if (appointmentBeforeUpdate) {
     const contact = contactFromAdminAppointment(appointmentBeforeUpdate);

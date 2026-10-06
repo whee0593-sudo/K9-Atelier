@@ -74,6 +74,7 @@ export function AppointmentActionsMenu({
   onChanged,
   onCancelled,
   unavailableDates,
+  visitAppointments,
 }: {
   appointment: AdminAppointmentRecord;
   variant: "popover" | "sheet";
@@ -86,6 +87,7 @@ export function AppointmentActionsMenu({
   onChanged?: (next?: { date: string; slotStartMinutes: number }) => void;
   onCancelled?: () => void;
   unavailableDates?: string[];
+  visitAppointments?: AdminAppointmentRecord[];
 }) {
   const titleId = useId();
   const [view, setView] = React.useState(panel);
@@ -236,8 +238,9 @@ export function AppointmentActionsMenu({
             appointment={appointment}
             preview={preview}
             onChanged={onChanged}
-            label="Reschedule"
-            dialogTitle="Reschedule"
+            label="Reschedule visit"
+            dialogTitle="Reschedule visit"
+            visitAppointments={visitAppointments}
             limitToOpenSlots
             unavailableDates={unavailableDates}
             triggerClassName={menuItemClass}

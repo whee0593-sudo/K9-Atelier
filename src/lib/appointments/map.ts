@@ -73,6 +73,11 @@ export function mapAppointmentRowToRecord(row: AppointmentRow): AppointmentRecor
     staffCreated: row.staff_created === true,
     awaitingCustomerConfirm: isAwaitingCustomerConfirm(row),
     createdAt: row.created_at,
+    visitId: row.visit_id ?? null,
+    estimatedDurationMinutes:
+      typeof row.estimated_duration_minutes === "number"
+        ? row.estimated_duration_minutes
+        : null,
   };
 }
 

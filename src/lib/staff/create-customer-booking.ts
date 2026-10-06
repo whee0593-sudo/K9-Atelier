@@ -10,6 +10,7 @@ import {
   buildSameAddressCompanionInsertion,
   buildStaffOverrideCompanionInsertion,
 } from "@/lib/booking-schedule";
+import { snapshotServicePrice } from "@/lib/visits/visit";
 import {
   mapAppointmentRowToRecord,
 } from "@/lib/appointments/map";
@@ -619,6 +620,35 @@ export async function createStaffCustomerBooking(
 
     const confirm = createCustomerConfirmToken();
     const confirmExpiresAt = customerConfirmExpiryIso();
+    const { data: visitRow, error: visitError } = await admin
+      .from("visits")
+      .insert({
+        customer_id: userId,
+        service_date: appointmentDate,
+        scheduled_start: firstSchedule.scheduledStart,
+        appointment_time: firstSchedule.appointmentTime,
+        time_preference: firstSchedule.timePreference,
+        timezone: business.booking.timezone,
+        status: "pending_confirmation",
+        address_street: address.street,
+        address_city: address.city,
+        address_state: address.state,
+        address_zip: address.zip,
+        address_lat: destination.lat,
+        address_lon: destination.lon,
+        travel_distance_miles: quote.distanceMiles,
+        travel_fee: quote.fee,
+      })
+      .select("id")
+      .single();
+    if (visitError || !visitRow) {
+      console.error(
+        "createStaffCustomerBooking visit insert failed:",
+        visitError?.message,
+      );
+      return { error: "server" };
+    }
+    const visitId = visitRow.id as string;
     const appointments: AppointmentRecord[] = [];
     let previousStart = firstSchedule.scheduledStart;
     let previousDuration = firstDurationMinutes;
@@ -701,13 +731,15 @@ export async function createStaffCustomerBooking(
           optionName ?? undefined,
         );
         const travelFee = visitIndex === 0 ? quote.fee : 0;
+        const servicePrice = snapshotServicePrice(price?.from ?? 0);
         const estimatedTotal =
-          Math.round(((price?.from ?? 0) + travelFee) * 100) / 100;
+          Math.round((servicePrice + travelFee) * 100) / 100;
 
         const { data: appointmentRow, error: appointmentError } = await admin
           .from("appointments")
           .insert({
             customer_id: userId,
+            visit_id: visitId,
             pet_id: petRow.id,
             service_id: petService.id,
             service_name: serviceName,
@@ -719,6 +751,8 @@ export async function createStaffCustomerBooking(
             address_zip: address.zip,
             travel_distance_miles: quote.distanceMiles,
             travel_fee: travelFee,
+            service_price: servicePrice,
+            estimated_duration_minutes: durationMinutes,
             appointment_date: appointmentDate,
             appointment_time: insertion.appointmentTime,
             scheduled_start: insertion.scheduledStart,

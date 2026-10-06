@@ -24,7 +24,7 @@ export async function GET(_request: Request, context: RouteContext) {
     }
 
     return NextResponse.json(
-      { days: result.days },
+      { days: result.days, visit: result.visit },
       { headers: { "Cache-Control": "private, no-store" } },
     );
   } catch (error) {

@@ -36,6 +36,8 @@ import {
 import type { ChargeKind } from "@/lib/charges/types";
 import { formatPrice } from "@/lib/business";
 import { formatStaffVisitTiming } from "@/lib/charges/hourly";
+import { formatArrivalWindow } from "@/lib/booking-schedule";
+import { formatEstimatedDuration } from "@/lib/staff/schedule-conflict";
 import { formatServiceAddress } from "@/lib/travel";
 
 function formatLongDate(iso: string) {
@@ -64,6 +66,34 @@ function applyPreviewAppointments(
   return [...kept, ...incoming].sort((left, right) => {
     return (left.scheduledStart ?? 24 * 60) - (right.scheduledStart ?? 24 * 60);
   });
+}
+
+function groupAppointmentsByVisit(appointments: AdminAppointmentRecord[]) {
+  const groups: AdminAppointmentRecord[][] = [];
+  for (const appointment of appointments) {
+    const visitId = appointment.visitId;
+    const current = visitId
+      ? groups.find((group) => group[0]?.visitId === visitId)
+      : undefined;
+    if (current) current.push(appointment);
+    else groups.push([appointment]);
+  }
+  return groups;
+}
+
+function visitArrivalMinutes(group: AdminAppointmentRecord[]) {
+  const starts = group
+    .map((appointment) => appointment.scheduledStart)
+    .filter((value): value is number => typeof value === "number");
+  if (starts.length === 0) return null;
+  return Math.min(...starts);
+}
+
+function visitDurationMinutes(group: AdminAppointmentRecord[]) {
+  return group.reduce(
+    (sum, appointment) => sum + (appointment.estimatedDurationMinutes ?? 0),
+    0,
+  );
 }
 
 function statusLabel(appointment: AdminAppointmentRecord) {
@@ -710,6 +740,11 @@ export function AdminCalendar({
             return (
               <AppointmentActionsMenu
                 appointment={appointment}
+                visitAppointments={
+                  groupAppointmentsByVisit(appointments).find((group) =>
+                    group.some((item) => item.id === appointment.id),
+                  ) ?? [appointment]
+                }
                 variant={appointmentMenu.variant}
                 top={appointmentMenu.top}
                 left={appointmentMenu.left}
@@ -739,9 +774,15 @@ export function AdminCalendar({
           </p>
         ) : (
           <ul className="mt-4 space-y-4">
-            {appointments.map((appointment) => (
+            {groupAppointmentsByVisit(appointments).map((group) => {
+              const appointment = group[0]!;
+              const arrival = visitArrivalMinutes(group);
+              const duration = visitDurationMinutes(group);
+              const household =
+                appointment.customerName ?? appointment.customerEmail;
+              return (
               <li
-                key={appointment.id}
+                key={appointment.visitId || appointment.id}
                 className="rounded-2xl border border-lavender/30 bg-cream"
               >
                 <div
@@ -762,8 +803,10 @@ export function AdminCalendar({
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="font-medium text-gold-dark">
-                      {appointment.petName}
-                      {appointment.petBreed ? (
+                      {group.length > 1
+                        ? `${household} — ${group.length} dogs`
+                        : appointment.petName}
+                      {group.length === 1 && appointment.petBreed ? (
                         <span className="font-normal text-text-muted">
                           {" "}
                           · {appointment.petBreed}
@@ -771,11 +814,20 @@ export function AdminCalendar({
                       ) : null}
                     </p>
                     <p className="mt-1 text-sm text-text-muted">
-                      {appointment.customerName ?? appointment.customerEmail}
-                      {appointment.customerPhone
+                      {group.length > 1
+                        ? arrival != null
+                          ? formatMinutesLabel(arrival)
+                          : appointment.appointmentTime
+                        : appointment.customerName ?? appointment.customerEmail}
+                      {group.length === 1 && appointment.customerPhone
                         ? ` · ${appointment.customerPhone}`
                         : ""}
                     </p>
+                    {group.length > 1 && duration > 0 ? (
+                      <p className="mt-1 text-sm text-text-muted">
+                        Estimated duration: {formatEstimatedDuration(duration)}
+                      </p>
+                    ) : null}
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <AppointmentCornerMark
@@ -789,12 +841,28 @@ export function AdminCalendar({
                       }
                     />
                     <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
-                      {appointment.appointmentTime} ·{" "}
-                      {statusLabel(appointment)}
+                      {group.length > 1 && arrival != null
+                        ? formatMinutesLabel(arrival)
+                        : appointment.appointmentTime}{" "}
+                      · {statusLabel(appointment)}
                     </span>
                   </div>
                 </div>
-                <p className="mt-4 text-sm text-text">{appointment.serviceName}</p>
+                {group.length > 1 ? (
+                  <ul className="mt-4 space-y-1 text-sm text-text">
+                    {group.map((dog) => (
+                      <li key={dog.id}>
+                        {dog.petName} — {dog.serviceName}
+                        {typeof dog.scheduledStart === "number" &&
+                        (dog.estimatedDurationMinutes ?? 0) > 0
+                          ? ` · ${formatArrivalWindow(dog.scheduledStart, dog.estimatedDurationMinutes ?? 0)}`
+                          : ""}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-4 text-sm text-text">{appointment.serviceName}</p>
+                )}
                 <p className="mt-1 text-sm text-text-muted">
                   {formatServiceAddress({
                     street: appointment.addressStreet,
@@ -803,7 +871,7 @@ export function AdminCalendar({
                     zip: appointment.addressZip,
                   })}
                 </p>
-                {appointment.estimatedTotal != null ? (
+                {group.length === 1 && appointment.estimatedTotal != null ? (
                   <p className="mt-2 text-sm text-text">
                     Estimated {formatPrice(appointment.estimatedTotal)}
                   </p>
@@ -817,7 +885,8 @@ export function AdminCalendar({
                 </p>
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </div>
