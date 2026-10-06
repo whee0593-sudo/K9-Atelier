@@ -158,6 +158,15 @@ describe("BookForCustomerForm preview schedule", () => {
     const light = html.slice(lightStart, heavyStart);
     const heavy = html.slice(heavyStart, html.indexOf("</select>", heavyStart));
     assert.match(light, /Custom Full Haircut &amp; Styling/);
+    assert.match(light, />SPA-Dead Sea Mud Bath Treatment</);
+    assert.match(light, />SPA-Aromatherapy Essential Oil Bath Soak</);
+    assert.match(light, />SPA-Sensitive Skin &amp; Dander Soothing Treatment</);
+    assert.match(light, />Specialty care-Extra-gentle senior care</);
+    assert.match(light, />Specialty care-End-of-Life Comfort Care</);
+    assert.match(light, />Add-on care-Dematting@gentle brush-out</);
+    assert.match(light, />Add-on care-DeShedding Treatment</);
+    assert.match(light, />Add-on care-Mini Trim</);
+    assert.doesNotMatch(light, />Dead Sea Mud Bath Treatment</);
     assert.match(light, />Creative coloring-Temporary Fun</);
     assert.match(light, />Creative coloring-Ears &amp; Tail Accent</);
     assert.match(light, />Creative coloring-Paws &amp; Boots Accent</);
@@ -165,8 +174,12 @@ describe("BookForCustomerForm preview schedule", () => {
     assert.doesNotMatch(light, />Temporary Fun</);
     assert.doesNotMatch(light, />Creative Accent Coloring</);
     assert.match(heavy, /Hand Stripping/);
+    assert.match(heavy, />Specialty care-End-of-Life Comfort Care</);
     assert.doesNotMatch(heavy, /Custom Full Haircut/);
     assert.doesNotMatch(heavy, /Temporary Fun/);
+    assert.doesNotMatch(heavy, /SPA-/);
+    assert.doesNotMatch(heavy, /Add-on care-/);
+    assert.doesNotMatch(heavy, /Extra-gentle senior care/);
     assert.match(html, /Dog 1/);
     assert.match(html, /Dog 2/);
     assert.equal((html.match(/>Add service</g) ?? []).length, 2);

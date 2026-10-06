@@ -269,6 +269,30 @@ describe("validateStaffCustomerBookingInput", () => {
     assert.equal(getServicePriceEstimate(coloring, 14), null);
   });
 
+  it("names spa, specialty, and add-on rows by their category", () => {
+    const input = validateStaffCustomerBookingInput(
+      validBody({
+        serviceId: undefined,
+        pet: {
+          name: "Luna",
+          breed: "Poodle",
+          weightLbs: 14,
+          serviceIds: [
+            "dead-sea-mud-bath",
+            "senior-comfort-care",
+            "dematting-brush-out",
+          ],
+        },
+      }),
+    );
+    assert.equal(input.serviceName, "SPA-Dead Sea Mud Bath Treatment");
+    assert.deepEqual(input.pets[0]?.serviceIds, [
+      "dead-sea-mud-bath",
+      "senior-comfort-care",
+      "dematting-brush-out",
+    ]);
+  });
+
   it("rejects coloring until a style is chosen", () => {
     assert.throws(
       () =>

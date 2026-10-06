@@ -8,11 +8,11 @@ import { formatPrice } from "@/lib/business";
 import {
   estimateServiceDurationMinutes,
   getServicePriceEstimate,
-  isServiceAvailableForPet,
 } from "@/lib/services";
 import {
   listStaffServiceChoices,
   parseStaffServiceSelection,
+  staffMenuAllows,
 } from "@/lib/staff/service-choice";
 import {
   fallbackStaffScheduleDays,
@@ -313,7 +313,7 @@ export function BookForCustomerForm({
             if (
               choice &&
               weight != null &&
-              !isServiceAvailableForPet(choice.serviceId, weight)
+              !staffMenuAllows(choice.serviceId, weight)
             ) {
               return "";
             }

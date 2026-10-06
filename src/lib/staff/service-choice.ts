@@ -1,11 +1,38 @@
+import { business } from "@/lib/business";
 import {
   CREATIVE_ACCENT_COLORING_ID,
   allBookableServices,
-  isServiceAvailableForPet,
   type BookableService,
 } from "@/lib/services";
 
 const OPTION_SEPARATOR = "::";
+
+const STAFF_MENU_PREFIX: Record<string, string> = {
+  "dead-sea-mud-bath": "SPA-",
+  "aromatherapy-oil-bath": "SPA-",
+  "sensitive-skin-treatment": "SPA-",
+  "senior-comfort-care": "Specialty care-",
+  "end-of-life-care": "Specialty care-",
+  "dematting-brush-out": "Add-on care-",
+  "deshedding-treatment": "Add-on care-",
+  "mini-trim": "Add-on care-",
+};
+
+const STAFF_MENU_CHILD_NAME: Record<string, string> = {
+  "senior-comfort-care": "Extra-gentle senior care",
+  "dematting-brush-out": "Dematting@gentle brush-out",
+};
+
+export function staffMenuAllows(serviceId: string, weightLbs: number) {
+  if (weightLbs <= business.weightPolicy.maxStandardWeightLbs) return true;
+  return business.weightPolicy.over45AllowedServiceIds.includes(serviceId);
+}
+
+function staffMenuLabel(service: BookableService) {
+  const prefix = STAFF_MENU_PREFIX[service.id];
+  if (!prefix) return service.name;
+  return `${prefix}${STAFF_MENU_CHILD_NAME[service.id] ?? service.name}`;
+}
 
 export type StaffServiceChoice = {
   value: string;
@@ -19,7 +46,8 @@ function choiceForService(
   service: BookableService,
   optionName: string | null,
 ): StaffServiceChoice | null {
-  if (!service.bookableAsPrimary) return null;
+  const grouped = service.id in STAFF_MENU_PREFIX;
+  if (!service.bookableAsPrimary && !grouped) return null;
   const options =
     service.pricingType === "options" ? (service.options ?? []) : [];
   if (options.length > 0) {
@@ -42,7 +70,7 @@ function choiceForService(
     value: service.id,
     serviceId: service.id,
     optionName: null,
-    label: service.name,
+    label: staffMenuLabel(service),
     service,
   };
 }
@@ -51,7 +79,7 @@ function choiceForService(
 export function listStaffServiceChoices(weightLbs: number | null) {
   const choices: StaffServiceChoice[] = [];
   for (const service of allBookableServices()) {
-    if (weightLbs != null && !isServiceAvailableForPet(service.id, weightLbs)) {
+    if (weightLbs != null && !staffMenuAllows(service.id, weightLbs)) {
       continue;
     }
     const options =
