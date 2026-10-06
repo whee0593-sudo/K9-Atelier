@@ -4,8 +4,12 @@ import {
   assignArrivalWindow,
   claimDayPlan,
   getBaseGeoPoint,
+  loadOccupiedStops,
 } from "@/lib/appointments/schedule";
-import { buildSameAddressCompanionInsertion } from "@/lib/booking-schedule";
+import {
+  buildSameAddressCompanionInsertion,
+  buildStaffOverrideCompanionInsertion,
+} from "@/lib/booking-schedule";
 import {
   mapAppointmentRowToRecord,
 } from "@/lib/appointments/map";
@@ -27,6 +31,7 @@ import { keepPrimaryIfReferralFails } from "@/lib/referrals/allocate-code";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import { getStaffSession } from "@/lib/staff/auth";
+import { describeStaffScheduleConflict } from "@/lib/staff/schedule-conflict";
 import { parseStaffServiceSelection } from "@/lib/staff/service-choice";
 import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { isFrozenAuthUser } from "@/lib/auth/frozen-account";
@@ -438,6 +443,35 @@ async function saveBookingPet(
   return { pet: petRow as { id: string } };
 }
 
+function staffVisitDurations(input: StaffCustomerBookingInput) {
+  const durations: number[] = [];
+  const serviceId = input.serviceId;
+  for (const pet of input.pets) {
+    const petServiceIds =
+      pet.serviceIds.length > 0
+        ? pet.serviceIds
+        : pet.serviceId
+          ? [pet.serviceId]
+          : serviceId
+            ? [serviceId]
+            : [];
+    for (const petServiceId of petServiceIds) {
+      const known = allBookableServices().some((entry) => entry.id === petServiceId);
+      if (!known) {
+        return { error: "conflict" as const, message: "Unknown service." };
+      }
+      durations.push(
+        estimateServiceDurationMinutes(
+          petServiceId,
+          pet.weightLbs,
+          input.addOnIds,
+        ),
+      );
+    }
+  }
+  return { durations };
+}
+
 export async function createStaffCustomerBooking(
   input: StaffCustomerBookingInput,
 ): Promise<
@@ -448,6 +482,7 @@ export async function createStaffCustomerBooking(
         | "forbidden"
         | "conflict"
         | "slot_unavailable"
+        | "schedule_conflict"
         | "outside_area"
         | "misconfigured"
         | "server";
@@ -521,6 +556,21 @@ export async function createStaffCustomerBooking(
     firstPet.weightLbs,
     input.addOnIds,
   );
+  const plannedVisits = staffVisitDurations(input);
+  if ("error" in plannedVisits) return plannedVisits;
+  const occupied = await loadOccupiedStops(appointmentDate);
+  if ("error" in occupied) return occupied;
+  const scheduleConflict = describeStaffScheduleConflict({
+    startMinutes: slotStartMinutes,
+    durations: plannedVisits.durations,
+    stops: occupied.stops,
+  });
+  const overrideSchedule = Boolean(
+    scheduleConflict && input.acknowledgeScheduleConflict,
+  );
+  if (scheduleConflict && !input.acknowledgeScheduleConflict) {
+    return { error: "schedule_conflict", message: scheduleConflict };
+  }
   const firstAssignment = await assignArrivalWindow({
     date: appointmentDate,
     point: destination,
@@ -528,6 +578,7 @@ export async function createStaffCustomerBooking(
     durationMinutes: firstDurationMinutes,
     slotStartMinutes,
     base,
+    allowUnfittedStart: overrideSchedule,
   });
   const firstSchedule = resolveArrivalForBooking(firstAssignment, slotStartMinutes);
   if ("error" in firstSchedule) return { error: "slot_unavailable" };
@@ -607,11 +658,17 @@ export async function createStaffCustomerBooking(
         const companion =
           visitIndex === 0
             ? null
-            : buildSameAddressCompanionInsertion(
-                previousStart,
-                previousDuration,
-                durationMinutes,
-              );
+            : overrideSchedule
+              ? buildStaffOverrideCompanionInsertion(
+                  previousStart,
+                  previousDuration,
+                  durationMinutes,
+                )
+              : buildSameAddressCompanionInsertion(
+                  previousStart,
+                  previousDuration,
+                  durationMinutes,
+                );
         if (visitIndex > 0 && !companion) {
           return {
             error: "slot_unavailable",

@@ -98,6 +98,19 @@ describe("staffCreatedAccountBlockReason", () => {
 });
 
 describe("validateStaffCustomerBookingInput", () => {
+  it("lets an admin confirm a schedule conflict instead of treating it as missing", () => {
+    assert.equal(
+      validateStaffCustomerBookingInput(validBody()).acknowledgeScheduleConflict,
+      false,
+    );
+    assert.equal(
+      validateStaffCustomerBookingInput(
+        validBody({ acknowledgeScheduleConflict: true }),
+      ).acknowledgeScheduleConflict,
+      true,
+    );
+  });
+
   it("accepts a complete staff booking", () => {
     const input = validateStaffCustomerBookingInput(validBody());
     assert.equal(input.mode, "booking");

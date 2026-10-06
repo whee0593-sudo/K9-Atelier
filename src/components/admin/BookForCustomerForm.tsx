@@ -51,6 +51,7 @@ type AvailabilityDay = {
   date: string;
   available: boolean;
   slots: number[];
+  conflicts?: Record<string, string>;
 };
 
 type SuccessState = {
@@ -133,11 +134,15 @@ export function BookForCustomerForm({
   preview = false,
   initialProfile = null,
   initialDate,
+  initialSlotStartMinutes = null,
+  initialScheduleDays = null,
 }: {
   prefill?: Prefill;
   preview?: boolean;
   initialProfile?: StaffBookingProfile | null;
   initialDate?: string;
+  initialSlotStartMinutes?: number | null;
+  initialScheduleDays?: AvailabilityDay[] | null;
 }) {
   const initialAddress = initialProfile?.addresses[0] ?? null;
   const [firstName, setFirstName] = useState(prefill?.firstName ?? "");
@@ -172,7 +177,7 @@ export function BookForCustomerForm({
     useState<StaffBookingProfileAddress | null>(initialAddress);
   const [quoteState, setQuoteState] = useState<QuoteState>({ status: "idle" });
   const [days, setDays] = useState<AvailabilityDay[]>(() =>
-    fallbackStaffScheduleDays(),
+    initialScheduleDays ?? fallbackStaffScheduleDays(),
   );
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
@@ -181,7 +186,10 @@ export function BookForCustomerForm({
   const [appointmentDate, setAppointmentDate] = useState(() =>
     preferredBookingDate(initialDate),
   );
-  const [slotStartMinutes, setSlotStartMinutes] = useState("");
+  const [slotStartMinutes, setSlotStartMinutes] = useState(
+    initialSlotStartMinutes != null ? String(initialSlotStartMinutes) : "",
+  );
+  const [conflictPrompt, setConflictPrompt] = useState<string | null>(null);
   const [verbalConsent, setVerbalConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -204,7 +212,6 @@ export function BookForCustomerForm({
         .filter((weight): weight is number => weight != null),
     [pets],
   );
-  const primaryWeightLbs = petWeights[0] ?? Number.NaN;
   const dogServices = useMemo(
     () =>
       pets.map((pet) => {
@@ -262,19 +269,20 @@ export function BookForCustomerForm({
     estimatedServiceTotal != null && quoteState.status === "ready"
       ? Math.round((estimatedServiceTotal + quoteState.quote.fee) * 100) / 100
       : null;
-  const totalDurationMinutes = everyDogServiceReady
-    ? dogServices.reduce(
-        (sum, row) =>
-          sum +
-          row.selected.reduce(
-            (serviceSum, choice) =>
-              serviceSum +
-              estimateServiceDurationMinutes(choice.serviceId, row.weight!),
-            0,
-          ),
-        0,
-      )
-    : null;
+  const visitDurations = useMemo(() => {
+    if (!everyDogServiceReady) return [];
+    return dogServices.flatMap((row) =>
+      row.selected.map((choice) =>
+        estimateServiceDurationMinutes(choice.serviceId, row.weight!),
+      ),
+    );
+  }, [dogServices, everyDogServiceReady]);
+  const visitDurationKey = visitDurations.join(",");
+  const selectedConflict = useMemo(() => {
+    if (!appointmentDate || !slotStartMinutes) return null;
+    const day = days.find((entry) => entry.date === appointmentDate);
+    return day?.conflicts?.[slotStartMinutes] ?? null;
+  }, [appointmentDate, days, slotStartMinutes]);
 
   function bookedServiceLabel() {
     const names = dogServices.flatMap((row) =>
@@ -530,6 +538,10 @@ export function BookForCustomerForm({
   }, [appointmentDate, openSlots, slotStartMinutes]);
 
   useEffect(() => {
+    setConflictPrompt(null);
+  }, [appointmentDate, slotStartMinutes, visitDurationKey]);
+
+  useEffect(() => {
     if (preview || initialProfile) return;
     const query = resolveBookingProfileQuery({
       email,
@@ -627,8 +639,7 @@ export function BookForCustomerForm({
       quoteLon == null ||
       !scheduleServiceId ||
       petWeights.length !== pets.length ||
-      totalDurationMinutes == null ||
-      totalDurationMinutes <= 0
+      visitDurations.length === 0
     ) {
       setAvailabilityLoading(false);
       setAvailabilityLoaded(false);
@@ -647,15 +658,16 @@ export function BookForCustomerForm({
           lat: String(quoteLat),
           lon: String(quoteLon),
           zip,
-          serviceId: scheduleServiceId,
-          weightLbs: String(primaryWeightLbs),
-          durationMinutes: String(totalDurationMinutes),
+          durations: visitDurations.join(","),
         });
         if (pinnedDateRef.current) params.set("date", pinnedDateRef.current);
-        const response = await fetch(`/api/booking/availability?${params}`, {
-          credentials: "include",
-          signal: controller.signal,
-        });
+        const response = await fetch(
+          `/api/admin/customer-bookings/availability?${params}`,
+          {
+            credentials: "include",
+            signal: controller.signal,
+          },
+        );
         const body = (await response.json()) as {
           error?: string;
           days?: AvailabilityDay[];
@@ -688,13 +700,12 @@ export function BookForCustomerForm({
     scheduleServiceId,
     petWeights,
     pets.length,
-    primaryWeightLbs,
-    totalDurationMinutes,
+    visitDurationKey,
+    visitDurations,
     zip,
   ]);
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  async function sendBooking(acknowledgeScheduleConflict: boolean) {
     setError(null);
     setCopied(false);
 
@@ -722,6 +733,11 @@ export function BookForCustomerForm({
     const servicesReady =
       filledPets.length > 0 &&
       filledPets.every((pet) => pet.serviceIds.length > 0);
+
+    if (selectedConflict && !acknowledgeScheduleConflict) {
+      setConflictPrompt(selectedConflict);
+      return;
+    }
 
     if (preview) {
       const inviteOnly =
@@ -762,6 +778,7 @@ export function BookForCustomerForm({
           notifyEmail,
           notifySms,
           verbalConsent,
+          acknowledgeScheduleConflict,
           pets: filledPets.map((pet) => ({
             ...(pet.id ? { id: pet.id } : {}),
             name: pet.name,
@@ -781,6 +798,7 @@ export function BookForCustomerForm({
       });
       const body = (await response.json()) as {
         error?: string;
+        code?: string;
         mode?: "invite" | "booking";
         confirmUrl?: string;
         emailed?: boolean;
@@ -796,6 +814,14 @@ export function BookForCustomerForm({
           appointmentTime: string;
         } | null;
       };
+      if (response.status === 409 && body.code === "schedule_conflict") {
+        setConflictPrompt(
+          body.error ??
+            selectedConflict ??
+            "This start time conflicts with the estimated schedule.",
+        );
+        return;
+      }
       if (!response.ok || !body.confirmUrl || !body.customer) {
         throw new Error(body.error ?? "Could not send this booking link.");
       }
@@ -820,6 +846,11 @@ export function BookForCustomerForm({
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    void sendBooking(false);
   }
 
   if (success) {
@@ -1285,12 +1316,22 @@ export function BookForCustomerForm({
             <option value="">
               {availabilityLoading ? "Loading times…" : "Select a time"}
             </option>
-            {openSlots.map((slot) => (
-              <option key={slot} value={slot}>
-                {formatMinutesLabel(slot)}
-              </option>
-            ))}
+            {openSlots.map((slot) => {
+              const conflict = days.find((day) => day.date === appointmentDate)
+                ?.conflicts?.[String(slot)];
+              return (
+                <option key={slot} value={slot}>
+                  {formatMinutesLabel(slot)}
+                  {conflict ? " — time conflict" : ""}
+                </option>
+              );
+            })}
           </select>
+          {selectedConflict && !conflictPrompt ? (
+            <p className="mt-2 text-sm text-text" role="status">
+              {selectedConflict} You can still book this time.
+            </p>
+          ) : null}
           {availabilityError ? (
             <p className="mt-2 text-sm text-red-800" role="alert">
               {availabilityError}
@@ -1318,6 +1359,37 @@ export function BookForCustomerForm({
         photo, and text-message policies, and to receive this booking link.
       </label>
 
+      {conflictPrompt ? (
+        <div
+          className="rounded-xl border border-gold/50 bg-cream px-4 py-3 text-sm text-text"
+          role="alert"
+        >
+          <p className="font-medium text-gold-dark">Book this time anyway?</p>
+          <p className="mt-2">{conflictPrompt}</p>
+          <p className="mt-2 text-text-muted">
+            Confirming keeps this start time and schedules each service back to
+            back.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={() => void sendBooking(true)}
+              className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white hover:bg-gold-dark disabled:opacity-60"
+            >
+              {submitting ? "Sending…" : "Book anyway"}
+            </button>
+            <button
+              type="button"
+              className="text-sm text-gold-dark hover:underline"
+              onClick={() => setConflictPrompt(null)}
+            >
+              Choose another time
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {error ? (
         <p className="text-sm text-red-800" role="alert">
           {error}
@@ -1325,13 +1397,15 @@ export function BookForCustomerForm({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-xl bg-gold px-6 py-2.5 text-sm font-medium text-white hover:bg-gold-dark disabled:opacity-60"
-        >
-          {submitting ? "Sending…" : "Send booking link"}
-        </button>
+        {conflictPrompt ? null : (
+          <button
+            type="submit"
+            disabled={submitting}
+            className="rounded-xl bg-gold px-6 py-2.5 text-sm font-medium text-white hover:bg-gold-dark disabled:opacity-60"
+          >
+            {submitting ? "Sending…" : "Send booking link"}
+          </button>
+        )}
         <Link href="/admin/pets" className="text-sm text-gold-dark hover:underline">
           Back to customers
         </Link>

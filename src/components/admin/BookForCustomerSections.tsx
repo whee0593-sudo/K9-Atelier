@@ -69,6 +69,8 @@ export function BookForCustomerSections({
   previewCustomers,
   previewHistoryByCustomerId,
   previewReferralsByCustomerId,
+  initialSlotStartMinutes,
+  initialScheduleDays,
 }: {
   prefill?: Prefill;
   preview?: boolean;
@@ -80,6 +82,13 @@ export function BookForCustomerSections({
   previewCustomers?: StaffCustomerRecord[];
   previewHistoryByCustomerId?: Record<string, StaffCustomerHistory>;
   previewReferralsByCustomerId?: Record<string, StaffReferralView>;
+  initialSlotStartMinutes?: number | null;
+  initialScheduleDays?: Array<{
+    date: string;
+    available: boolean;
+    slots: number[];
+    conflicts?: Record<string, string>;
+  }> | null;
 }) {
   const [onFileOpen, setOnFileOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(formInitiallyOpen);
@@ -124,6 +133,8 @@ export function BookForCustomerSections({
             prefill={prefill}
             initialProfile={initialProfile}
             initialDate={initialDate}
+            initialSlotStartMinutes={initialSlotStartMinutes}
+            initialScheduleDays={initialScheduleDays}
           />
         </div>
       </FoldSection>

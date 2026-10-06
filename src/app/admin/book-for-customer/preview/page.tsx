@@ -1,5 +1,6 @@
 import { BookForCustomerSections } from "@/components/admin/BookForCustomerSections";
 import { bookingFormStartsOpen } from "@/lib/staff/booking-form-start";
+import { describeStaffScheduleConflict } from "@/lib/staff/schedule-conflict";
 import type { StaffBookingProfile } from "@/lib/staff/customer-booking-profile";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
 
@@ -83,9 +84,24 @@ const previewCustomers: StaffCustomerRecord[] = [
 export default async function BookForCustomerPreviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; scheduleConflict?: string }>;
 }) {
   const query = await searchParams;
+  const sampleConflict =
+    query.scheduleConflict === "1" && query.date
+      ? describeStaffScheduleConflict({
+          startMinutes: 9 * 60,
+          durations: [113, 98, 83],
+          stops: [
+            {
+              lat: 26.85,
+              lon: -80.1,
+              scheduledStart: 13 * 60,
+              durationMinutes: 90,
+            },
+          ],
+        })
+      : null;
   return (
     <div>
       <p className="mb-4 rounded-xl border border-gold/40 bg-lavender-light/50 px-4 py-2 text-center text-xs uppercase tracking-[0.16em] text-gold-dark">
@@ -103,6 +119,19 @@ export default async function BookForCustomerPreviewPage({
         }}
         initialProfile={previewProfile}
         initialDate={query.date}
+        initialSlotStartMinutes={sampleConflict ? 9 * 60 : null}
+        initialScheduleDays={
+          sampleConflict && query.date
+            ? [
+                {
+                  date: query.date,
+                  available: true,
+                  slots: [9 * 60, 10 * 60, 11 * 60, 12 * 60, 13 * 60, 14 * 60, 15 * 60],
+                  conflicts: { [String(9 * 60)]: sampleConflict },
+                },
+              ]
+            : null
+        }
         previewCustomers={previewCustomers}
       />
     </div>

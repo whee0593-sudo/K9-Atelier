@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { BookForCustomerForm } from "@/components/admin/BookForCustomerForm";
 import { BookForCustomerSections } from "@/components/admin/BookForCustomerSections";
 import { bookingFormStartsOpen } from "@/lib/staff/booking-form-start";
+import { describeStaffScheduleConflict } from "@/lib/staff/schedule-conflict";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
 
 describe("BookForCustomerForm preview schedule", () => {
@@ -205,6 +206,46 @@ const onFileCustomer: StaffCustomerRecord = {
   canDelete: false,
   canFreeze: false,
 };
+
+describe("BookForCustomerForm schedule conflict", () => {
+  it("shows the estimate conflict and still offers the start time", () => {
+    const start = 9 * 60;
+    const message = describeStaffScheduleConflict({
+      startMinutes: start,
+      durations: [113, 98, 83],
+      stops: [
+        {
+          lat: 26.85,
+          lon: -80.1,
+          scheduledStart: 13 * 60,
+          durationMinutes: 90,
+        },
+      ],
+    });
+    assert.ok(message);
+    const html = renderToStaticMarkup(
+      <BookForCustomerForm
+        preview
+        initialDate="2026-10-07"
+        initialSlotStartMinutes={start}
+        initialScheduleDays={[
+          {
+            date: "2026-10-07",
+            available: true,
+            slots: [start, 10 * 60, 14 * 60],
+            conflicts: { [String(start)]: message },
+          },
+        ]}
+      />,
+    );
+    assert.match(html, /Wed, Oct 7/);
+    assert.match(html, /9:00 AM — time conflict/);
+    assert.match(html, /overlaps a visit already scheduled at 1:00 PM/);
+    assert.match(html, /You can still book this time/);
+    assert.match(html, /Send booking link/);
+    assert.doesNotMatch(html, /No start times remain on this day/);
+  });
+});
 
 describe("Book for customer sections", () => {
   it("keeps both booking bars collapsed until they are opened", () => {

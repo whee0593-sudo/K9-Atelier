@@ -7,6 +7,7 @@ import {
   addressAllowedForPlan,
   existingStopsConflictWithZone,
   findRouteInsertionAtHour,
+  formatArrivalWindow,
   getRoutingConfig,
   listAvailableHourStarts,
   listCalendarDates,
@@ -28,6 +29,10 @@ import {
 } from "@/lib/appointments/closures";
 import { applyBlocksToSlots, appointmentOverlapsBlocks, groupBlocksByDate } from "@/lib/appointments/availability-blocks";
 import { loadAvailabilityBlocks } from "@/lib/appointments/availability-block-store";
+import {
+  listStaffOverrideHourStarts,
+  retainConflicts,
+} from "@/lib/staff/schedule-conflict";
 
 export type OccupiedAppointment = RouteStop & {
   zip: string | null;
@@ -347,12 +352,15 @@ export async function getAvailabilityForAddress(input: {
   base: GeoPoint;
   excludeAppointmentIds?: string[];
   extraDates?: string[];
+  /** Staff booking: keep every start hour and attach estimate conflicts. */
+  visitDurations?: number[];
 }): Promise<
   | {
       days: Array<{
         date: string;
         available: boolean;
         slots: number[];
+        conflicts?: Record<string, string>;
       }>;
     }
   | ScheduleError
@@ -435,6 +443,26 @@ export async function getAvailabilityForAddress(input: {
       continue;
     }
 
+    const staffDurations = input.visitDurations?.filter((minutes) => minutes > 0);
+    if (staffDurations && staffDurations.length > 0) {
+      const override = listStaffOverrideHourStarts({
+        base: input.base,
+        incoming: input.point,
+        stops: occupied.stops,
+        durations: staffDurations,
+      });
+      const gated = applyClosureToSlots(override.slots, closure);
+      const withBlocks = applyBlocksToSlots(gated.slots, dayBlocks, 1);
+      const conflicts = retainConflicts(withBlocks.slots, override.conflicts);
+      days.push({
+        date,
+        available: withBlocks.slots.length > 0,
+        slots: withBlocks.slots,
+        conflicts,
+      });
+      continue;
+    }
+
     const openSlots = listAvailableHourStarts(
       input.base,
       occupied.stops,
@@ -466,6 +494,8 @@ export async function assignArrivalWindow(input: {
   base: GeoPoint;
   excludeAppointmentIds?: string[];
   allowUnbookableDate?: boolean;
+  /** Keep the chosen start when the estimate does not fit the route. */
+  allowUnfittedStart?: boolean;
 }): Promise<
   | { insertion: NonNullable<ReturnType<typeof findRouteInsertionAtHour>> }
   | ScheduleError
@@ -497,7 +527,7 @@ export async function assignArrivalWindow(input: {
     appointmentOverlapsBlocks(
       blocksResult.blocks,
       input.slotStartMinutes,
-      input.durationMinutes,
+      input.allowUnfittedStart ? 1 : input.durationMinutes,
     )
   ) {
     return { error: "slot_unavailable" as const };
@@ -525,7 +555,20 @@ export async function assignArrivalWindow(input: {
     input.durationMinutes,
     input.slotStartMinutes,
   );
-  if (!insertion) return { error: "slot_unavailable" as const };
+  if (!insertion) {
+    if (!input.allowUnfittedStart) return { error: "slot_unavailable" as const };
+    return {
+      insertion: {
+        scheduledStart: input.slotStartMinutes,
+        durationMinutes: input.durationMinutes,
+        appointmentTime: formatArrivalWindow(
+          input.slotStartMinutes,
+          input.durationMinutes,
+        ),
+        usedPreference: preferenceFromStart(input.slotStartMinutes),
+      },
+    };
+  }
 
   return { insertion };
 }

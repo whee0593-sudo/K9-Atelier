@@ -56,6 +56,7 @@ export type StaffCustomerBookingInput = {
   slotStartMinutes: number | null;
   address: StaffCustomerBookingAddress | null;
   verbalConsent: boolean;
+  acknowledgeScheduleConflict: boolean;
 };
 
 function resolveBookableService(serviceIdRaw: string, field: string) {
@@ -273,6 +274,7 @@ export function validateStaffCustomerBookingInput(
   }
 
   const verbalConsent = record.verbalConsent === true;
+  const acknowledgeScheduleConflict = record.acknowledgeScheduleConflict === true;
 
   const petsBody = Array.isArray(record.pets)
     ? record.pets
@@ -446,6 +448,7 @@ export function validateStaffCustomerBookingInput(
     slotStartMinutes,
     address,
     verbalConsent,
+    acknowledgeScheduleConflict,
   };
 }
 
