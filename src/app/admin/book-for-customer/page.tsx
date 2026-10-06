@@ -1,7 +1,5 @@
-import {
-  BookForCustomerSections,
-  bookingFormStartsOpen,
-} from "@/components/admin/BookForCustomerSections";
+import { BookForCustomerSections } from "@/components/admin/BookForCustomerSections";
+import { bookingFormStartsOpen } from "@/lib/staff/booking-form-start";
 
 export default async function BookForCustomerPage({
   searchParams,

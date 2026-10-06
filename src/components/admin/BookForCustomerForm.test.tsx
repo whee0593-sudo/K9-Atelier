@@ -3,10 +3,8 @@ import { describe, it } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { BookForCustomerForm } from "@/components/admin/BookForCustomerForm";
-import {
-  BookForCustomerSections,
-  bookingFormStartsOpen,
-} from "@/components/admin/BookForCustomerSections";
+import { BookForCustomerSections } from "@/components/admin/BookForCustomerSections";
+import { bookingFormStartsOpen } from "@/lib/staff/booking-form-start";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
 
 describe("BookForCustomerForm preview schedule", () => {
