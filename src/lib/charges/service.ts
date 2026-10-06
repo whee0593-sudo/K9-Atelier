@@ -32,6 +32,7 @@ import type {
 import { isCashTender, readChargeTender } from "@/lib/charges/tender";
 import {
   sendAfterVisitThankYouSms,
+  shouldSendAfterVisitThankYou,
   sendChargeReceiptEmail,
 } from "@/lib/charges/receipts";
 import { householdVisitKey } from "@/lib/referrals/address";
@@ -597,13 +598,15 @@ async function markChargePaid(
   } catch (issueError) {
     console.error("issueReferralRewardForPaidCharge failed:", issueError);
   }
-  try {
-    const appointment = await fetchAppointmentAdminRecord(charge.appointmentId);
-    if (appointment) {
-      await sendAfterVisitThankYouSms(appointment);
+  if (shouldSendAfterVisitThankYou(charge.kind)) {
+    try {
+      const appointment = await fetchAppointmentAdminRecord(charge.appointmentId);
+      if (appointment) {
+        await sendAfterVisitThankYouSms(appointment);
+      }
+    } catch (smsError) {
+      console.error("after-visit thank-you SMS failed:", smsError);
     }
-  } catch (smsError) {
-    console.error("after-visit thank-you SMS failed:", smsError);
   }
   return charge;
 }

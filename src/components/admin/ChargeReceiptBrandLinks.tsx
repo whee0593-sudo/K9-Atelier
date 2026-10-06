@@ -5,8 +5,6 @@ import {
   getBookAgainPath,
   getBrandInstagramUrl,
   getBrandWebsiteUrl,
-  getGoogleProfileUrl,
-  getGoogleWriteReviewUrl,
 } from "@/lib/business";
 import { storeConcernContext } from "@/lib/support-concern";
 
@@ -18,21 +16,16 @@ export function ChargeReceiptBrandLinks({
   chargeId,
   websiteUrl,
   instagramUrl,
-  googleReviewUrl,
 }: {
   appointmentId: string;
   chargeId: string;
   websiteUrl?: string;
   instagramUrl?: string | null;
-  googleReviewUrl?: string | null;
 }) {
   const siteUrl = websiteUrl || getBrandWebsiteUrl();
   const instagram = instagramUrl ?? getBrandInstagramUrl();
-  const google =
-    googleReviewUrl ?? getGoogleWriteReviewUrl() ?? getGoogleProfileUrl();
 
   const buttons = [
-    google ? { href: google, label: "Leave A Review", external: true } : null,
     { href: getBookAgainPath(), label: "Book Again", external: false },
     instagram ? { href: instagram, label: "Instagram", external: true } : null,
     { href: siteUrl, label: "Website", external: true },

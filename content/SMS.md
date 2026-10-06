@@ -10,7 +10,7 @@
 1. **确认短信** — 预约确认时（若还在等审核，先发一条“已收到”）。确认邮件仍是原来的长信。短信改成：`狗名's appointment on 日期, 时间, 街道名. Reply C to confirm.` 地点只写街道名，不写门牌号、城市、州、邮编。
 2. **提前三天确认** — 每天纽约时间早上 10 点（周末也发，夏令时/冬令时都是 10 点），短信和上面的确认短信相同，请客人回复 C。这和员工/疫苗通过后的预约成功不是同一件事。
 3. **出发短信** — 后台 **Calendar** 最下面的 **Today — drive order**，点 **Text: on the way**。今天还没取消的预约都会出现，包括还在 Pending Review、还没 confirmed 的单，也可以发。每单只发一次。
-4. **美容完成第二天回访** — 同一条早上 10 点 Cron 再发一封邮件和一条短信（问好、征求反馈、请写 Google 好评）。只发给昨天已 checkout、还没发过回访、档案里有邮箱或手机号的预约。
+4. **美容完成之后的回访** — 同一条 Cron 在纽约时间 10 点及之后，给同一上门只发一封邮件和一条短信（问好、请写 Google 好评）。同一客户、同一天、同一服务地址算一次上门，多只狗不各发一套。服务日之后的 3 个日历日内，邮件或短信如果没发出去，下次 Cron 会补发；过了这 3 天就不再发。取消、没做完、no-show、服务费已全额退款的预约不发。收款短信和收据不再附带 Google 评价链接。
 
 ---
 
@@ -38,7 +38,8 @@ A2P 通过时，Twilio 通常已经建好一个 Messaging Service。
 3. `supabase/migrations/20260823160000_customer_sms_inbox.sql` — 后台 Customer Messages 存发出去的短信和客人回复
 4. `supabase/migrations/20260823170000_studio_inbound_calls.sql` — 陌生来电号码，方便发预约/留言短信
 5. `supabase/migrations/20260823180000_staff_sms_reply_targets.sql` — 你从私人手机回短信时，用店号发给最近那位客人
-6. `supabase/migrations/20260922010000_appointment_followup.sql` — 第二天回访邮件/短信已发
+6. `supabase/migrations/20260922010000_appointment_followup.sql` — 第二天回访已发（旧的单一标记）
+7. `supabase/migrations/20261006160000_appointment_followup_channels.sql` — 回访邮件、短信分开记录，并加发送前的短租约
 
 若提示 column already exists，说明以前跑过，可以忽略。
 
@@ -105,7 +106,7 @@ Vercel 用两条各每天一次的 Cron（UTC 14:00 和 15:00）调用 `/api/cro
 
 只给 **3 天后**、员工/疫苗侧已经预约成功（Booked）、还没发过这条短信、档案里有手机号的预约发。短信内容和预约确认短信一样，请客人回复 C。地点只写街道名。
 
-同一条 Cron 也会给 **昨天已完成美容**（员工已 checkout）、还没发过回访的预约发邮件和短信。邮件主题是 Checking in after [狗名]'s groom，短信和邮件都带 Google 好评链接。取消的预约不发。
+同一条 Cron 也会发美容回访。纽约时间正好 10 点不再是唯一机会：10 点之后的这次 Cron 也会发，夏令时、冬令时都一样。一次上门（同一客户、同一天、同一服务地址）只发一封邮件和一条短信，两只狗不会收到两套。邮件主题是 Checking in after [狗名]'s groom，多只狗会写成 Daisy and Milo。短信只有一条 Google 好评链接。服务日之后连续 3 个日历日里，哪个渠道没成功就只补那个渠道。取消、no-show、没 checkout、服务费已全额退款的不发。已经发出去的不会因为退款而撤回。
 
 客人回复 C 只记 `customer_confirmed_at`，**不会**改员工确认状态。后台预约右上角会显示 **confirm**。已经发出去的旧短信如果回 YES，也算确认。请求头需要 `Authorization: Bearer <CRON_SECRET>`。
 

@@ -117,6 +117,10 @@ export type AppointmentRow = {
   service_started_at?: string | null;
   service_ended_at?: string | null;
   followup_sent_at?: string | null;
+  followup_email_sent_at?: string | null;
+  followup_sms_sent_at?: string | null;
+  followup_email_claimed_at?: string | null;
+  followup_sms_claimed_at?: string | null;
   pets?:
     | { name: string; breed: string; weight_lbs?: number | null }
     | { name: string; breed: string; weight_lbs?: number | null }[]
