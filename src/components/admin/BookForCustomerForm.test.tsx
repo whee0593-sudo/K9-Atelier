@@ -163,7 +163,7 @@ describe("BookForCustomerForm preview schedule", () => {
     assert.match(light, />SPA\/Sensitive Skin &amp; Dander Soothing Treatment</);
     assert.match(light, />Specialty care\/Extra-gentle senior care</);
     assert.match(light, />Specialty care\/End-of-Life Comfort Care</);
-    assert.match(light, />Add-on care\/Dematting@gentle brush-out</);
+    assert.match(light, />Add-on care\/Dematting &amp; gentle brush-out</);
     assert.match(light, />Add-on care\/DeShedding Treatment</);
     assert.match(light, />Add-on care\/Mini Trim</);
     assert.doesNotMatch(light, />Dead Sea Mud Bath Treatment</);
