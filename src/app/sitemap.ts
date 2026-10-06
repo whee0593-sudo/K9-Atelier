@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { LONG_COAT_CARE_PATH } from "@/lib/long-coat-care-page";
 import {
   SERVICE_CATEGORY_PATHS,
   SERVICES_PATH,
@@ -9,6 +10,7 @@ const PUBLIC_PATHS = [
   "/",
   SERVICES_PATH,
   ...SERVICE_CATEGORY_PATHS,
+  LONG_COAT_CARE_PATH,
   "/gallery",
   "/reviews",
   "/about",
@@ -32,7 +34,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         ? 1
         : path === SERVICES_PATH
           ? 0.9
-          : SERVICE_CATEGORY_PATHS.includes(path)
+          : SERVICE_CATEGORY_PATHS.includes(path) || path === LONG_COAT_CARE_PATH
             ? 0.8
             : 0.6,
   }));

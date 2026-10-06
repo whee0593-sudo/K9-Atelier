@@ -74,7 +74,9 @@ describe("about page", () => {
       assert.equal(story.includes(line), true, line);
     }
 
-    const text = renderToStaticMarkup(React.createElement(AboutStory))
+    const html = renderToStaticMarkup(React.createElement(AboutStory));
+    const text = html
+      .replace(/<a\b[^>]*>|<\/a>/g, "")
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ");
     assert.match(
@@ -84,6 +86,10 @@ describe("about page", () => {
     assert.match(
       text,
       /Her background includes breed-specific styling, hand stripping, full-coat maintenance, show grooming, creative grooming, and personalized coat care, with an emphasis on preserving coat health while bringing out the character of each breed\./,
+    );
+    assert.match(
+      html,
+      /<a [^>]*href="\/services\/long-coat-care"[^>]*>full-coat maintenance<\/a>/,
     );
     assert.doesNotMatch(text, /every size|all sizes|dogs of every|any breed we accept/i);
   });

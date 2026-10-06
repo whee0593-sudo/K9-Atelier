@@ -141,8 +141,12 @@ describe("homepage SEO", () => {
     assert.equal(h1s.length, 1);
     assert.match(html, /K9 ATELIER — grooming, elevated\./);
     assert.match(html, /Private Mobile Pet Spa · Palm Beach/);
+    const leadText = html
+      .replace(/<a\b[^>]*>|<\/a>/g, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ");
     assert.match(
-      html,
+      leadText,
       /Multiple award-winning show groomer specializing in tailored styling, show-level coat care, extra-gentle senior care and hand stripping\./,
     );
     assert.match(html, /Grooming, tailored to the individual\./);
@@ -168,6 +172,7 @@ describe("homepage SEO", () => {
     );
     const byHref = (href: string) => anchors.find((anchor) => anchor.href === href);
 
+    assert.equal(byHref("/services/long-coat-care")?.text, "show-level coat care");
     assert.match(byHref("/services/full-groom")?.text ?? "", /^Full Grooming\b/);
     assert.match(byHref("/services/bath-coat-care")?.text ?? "", /^Bath & Coat Care\b/);
     assert.match(byHref("/services/hand-stripping")?.text ?? "", /^Hand Stripping\b/);

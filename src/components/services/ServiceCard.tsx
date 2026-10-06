@@ -23,6 +23,9 @@ type Props = {
   requestLabel?: string;
   anchorId?: string;
   headingAs?: "h2" | "h3";
+  detailsInitiallyOpen?: boolean;
+  learnMoreHref?: string;
+  learnMoreLabel?: string;
 };
 
 export function ServiceCard({
@@ -32,9 +35,12 @@ export function ServiceCard({
   requestLabel = "Book an Appointment",
   anchorId,
   headingAs = "h3",
+  detailsInitiallyOpen = false,
+  learnMoreHref,
+  learnMoreLabel,
 }: Props) {
   const Heading = headingAs;
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(detailsInitiallyOpen);
   const panelId = useId();
   const bestFor = serviceCardBestFor(service);
   const duration = serviceDurationLabel(service);
@@ -122,6 +128,17 @@ export function ServiceCard({
             Member Sign In
           </Link>
         )}
+        {learnMoreHref && learnMoreLabel ? (
+          <Link
+            href={learnMoreHref}
+            className="font-body inline-flex min-h-[48px] max-w-full min-w-0 items-center text-left text-[11px] font-medium uppercase leading-snug tracking-[0.12em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne"
+          >
+            {learnMoreLabel}
+            <span aria-hidden="true" className="ml-1.5">
+              →
+            </span>
+          </Link>
+        ) : null}
       </div>
 
       <div

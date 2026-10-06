@@ -11,6 +11,7 @@ import { ServicesHashRedirect } from "@/components/services/ServicesHashRedirect
 import { ServicesNav } from "@/components/services/ServicesNav";
 import { ServicesSection } from "@/components/services/ServicesSection";
 import type { ServiceCategory } from "@/lib/service-page";
+import { LONG_COAT_CARE_PATH } from "@/lib/long-coat-care-page";
 import {
   SERVICE_ANCHORS,
   getServiceById,
@@ -74,6 +75,16 @@ export function ServiceCategoryView({ category }: Props) {
                 headingAs="h2"
                 quiet={service.id === "end-of-life-care"}
                 anchorId={SERVICE_ANCHORS[service.id] ?? service.id}
+                learnMoreHref={
+                  service.id === "long-coat-show-care"
+                    ? LONG_COAT_CARE_PATH
+                    : undefined
+                }
+                learnMoreLabel={
+                  service.id === "long-coat-show-care"
+                    ? "Learn About Long-Coat Care"
+                    : undefined
+                }
               />
             ))}
           </div>

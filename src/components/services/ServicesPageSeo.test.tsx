@@ -26,6 +26,21 @@ const SERVICE_LINKS = [
   ["/services/add-ons", "Add-On Care", "Finishing · Coat support"],
 ] as const;
 
+function hasNestedAnchor(html: string) {
+  let depth = 0;
+  for (const match of html.matchAll(/<a\b[^>]*>|<\/a>/g)) {
+    if (match[0].startsWith("</")) {
+      depth -= 1;
+      if (depth < 0) return true;
+    } else if (depth > 0) {
+      return true;
+    } else {
+      depth += 1;
+    }
+  }
+  return depth !== 0;
+}
+
 function anchors(html: string) {
   return [...html.matchAll(/<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)].map(
     (match) => ({
@@ -94,10 +109,26 @@ describe("services page content", () => {
       const link = links.find((item) => item.href === href);
       assert.ok(link, href);
       assert.match(link.text, new RegExp(`^${name.replace("&", "&")}\\b`));
-      assert.match(link.text, new RegExp(description.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+      const escaped = description.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      if (href === "/services/bath-coat-care") {
+        const visible = html
+          .replace(/<[^>]+>/g, " ")
+          .replace(/&amp;/g, "&")
+          .replace(/\s+/g, " ");
+        assert.match(visible, new RegExp(escaped));
+        assert.equal(link.text.includes("Show-Level Long-Coat Care"), false);
+      } else {
+        assert.match(link.text, new RegExp(escaped));
+      }
       const slug = href.replace("/services/", "") as keyof typeof SERVICES_DIRECTORY_DESCRIPTIONS;
       assert.equal(SERVICES_DIRECTORY_DESCRIPTIONS[slug], description);
     }
+
+    const longCoat = links.find((item) => item.href === "/services/long-coat-care");
+    assert.ok(longCoat);
+    assert.equal(longCoat.text, "Show-Level Long-Coat Care");
+    assert.equal(links.filter((item) => item.href === "/services/bath-coat-care").length, 1);
+    assert.equal(hasNestedAnchor(html), false);
 
     const booking = links.find((item) => item.href === "/book");
     const groomer = links.find((item) => item.href === "/about");
