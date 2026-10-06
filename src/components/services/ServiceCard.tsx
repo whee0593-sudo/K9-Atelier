@@ -26,6 +26,13 @@ type Props = {
   detailsInitiallyOpen?: boolean;
   learnMoreHref?: string;
   learnMoreLabel?: string;
+  detailParagraphs?: readonly string[];
+  leadLink?: {
+    before: string;
+    label: string;
+    after: string;
+    href: string;
+  };
 };
 
 export function ServiceCard({
@@ -38,6 +45,8 @@ export function ServiceCard({
   detailsInitiallyOpen = false,
   learnMoreHref,
   learnMoreLabel,
+  detailParagraphs,
+  leadLink,
 }: Props) {
   const Heading = headingAs;
   const [open, setOpen] = useState(detailsInitiallyOpen);
@@ -64,6 +73,18 @@ export function ServiceCard({
       <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
         {serviceCardSummary(service)}
       </p>
+      {leadLink ? (
+        <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
+          {leadLink.before}
+          <Link
+            href={leadLink.href}
+            className="text-deep-lavender underline decoration-champagne/70 underline-offset-4 transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne"
+          >
+            {leadLink.label}
+          </Link>
+          {leadLink.after}
+        </p>
+      ) : null}
 
       <dl className="mt-6 grid gap-4 sm:grid-cols-3">
         {bestFor && (
@@ -148,7 +169,7 @@ export function ServiceCard({
         }`}
       >
         <div className="overflow-hidden" inert={!open || undefined}>
-          <ServiceDetails service={service} />
+          <ServiceDetails service={service} detailParagraphs={detailParagraphs} />
         </div>
       </div>
     </article>
@@ -178,12 +199,31 @@ function ServiceNote({ service }: { service: BookableService }) {
   );
 }
 
-function ServiceDetails({ service }: { service: BookableService }) {
+function ServiceDetails({
+  service,
+  detailParagraphs,
+}: {
+  service: BookableService;
+  detailParagraphs?: readonly string[];
+}) {
+  const replaceNarrative = Boolean(detailParagraphs?.length);
+
   return (
     <div className="border-t border-gray-line/70 pt-6">
-      <p className="font-body whitespace-pre-line text-sm leading-relaxed text-taupe">
-        {service.description}
-      </p>
+      {replaceNarrative ? (
+        detailParagraphs?.map((paragraph) => (
+          <p
+            key={paragraph}
+            className="font-body mt-4 text-sm leading-relaxed text-taupe first:mt-0"
+          >
+            {paragraph}
+          </p>
+        ))
+      ) : (
+        <p className="font-body whitespace-pre-line text-sm leading-relaxed text-taupe">
+          {service.description}
+        </p>
+      )}
 
       {service.bestFor && (
         <p className="font-body mt-4 text-sm text-taupe">
@@ -194,7 +234,7 @@ function ServiceDetails({ service }: { service: BookableService }) {
         </p>
       )}
 
-      {service.includes && service.includes.length > 0 && (
+      {!replaceNarrative && service.includes && service.includes.length > 0 && (
         <div className="mt-5">
           <p className="font-body text-[11px] font-medium uppercase tracking-[0.14em] text-taupe">
             What’s Included
@@ -247,7 +287,7 @@ function ServiceDetails({ service }: { service: BookableService }) {
         </p>
       )}
 
-      {service.suitableFor && (
+      {!replaceNarrative && service.suitableFor && (
         <p className="font-body mt-4 text-sm text-taupe">
           <span className="font-medium text-ink">Suitable for: </span>
           {service.suitableFor}

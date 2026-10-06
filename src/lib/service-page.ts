@@ -17,6 +17,41 @@ export const BATH_COAT_PATH = "/services/bath-coat-care";
 export const SPA_PATH = "/services/spa";
 export const COLOR_PATH = "/services/color";
 export const SPECIALTY_CARE_PATH = "/services/specialty-care";
+export const SPECIALTY_CARE_PAGE_TITLE =
+  "Extra-Gentle Senior Dog Grooming in Palm Beach | K9 Atelier";
+export const SPECIALTY_CARE_PAGE_DESCRIPTION =
+  "Private mobile senior dog grooming with patient one-on-one care, a slower pace and extra breaks for older dogs who need a gentler appointment.";
+export const SPECIALTY_CARE_PAGE_H1 = "Extra-Gentle Senior Care";
+export const SPECIALTY_CARE_PAGE_INTRO =
+  "Private mobile grooming for senior dogs who benefit from a slower pace, extra breaks and patient one-on-one handling focused on comfort and dignity.";
+export const SPECIALTY_CARE_SENIOR_NAME = "Extra-Gentle Senior Care";
+export const SPECIALTY_CARE_SENIOR_SUMMARY =
+  "Extra-gentle, comfort-focused care for senior dogs who benefit from a slower pace, additional breaks and patient handling.";
+export const SPECIALTY_CARE_SENIOR_BEST_FOR =
+  "Senior dogs who need a slower, gentler grooming experience.";
+export const SPECIALTY_CARE_SENIOR_DETAIL =
+  "Extra-Gentle Senior Care is designed for older dogs who benefit from a slower, more flexible grooming pace. Appointments prioritize comfort and dignity over speed, with additional resting breaks, patient handling, anti-slip support, gentle drying and adjustments for dogs who may be less steady or tire more easily.";
+export const SPECIALTY_CARE_SENIOR_INDIVIDUAL =
+  "Care is individualized to the dog in front of us, with the grooming plan adjusted as needed throughout the appointment.";
+export const SPECIALTY_CARE_PENNY_BEFORE =
+  "Senior grooming at K9 Atelier is provided by ";
+export const SPECIALTY_CARE_PENNY_NAME = "Penny";
+export const SPECIALTY_CARE_PENNY_AFTER =
+  ", a multiple award-winning show groomer known for patient, individualized one-on-one care.";
+export const SPECIALTY_CARE_EOL_SUMMARY =
+  "Compassionate comfort grooming for dogs in the final chapter of life, focused on gentle handling, dignity and minimizing unnecessary stress.";
+export const SPECIALTY_CARE_AREA_SENTENCE =
+  "Serving Jupiter Island, Jupiter, Tequesta, Palm Beach Gardens, Palm Beach and West Palm Beach.";
+export const SPECIALTY_CARE_AREA_SERVED = [
+  "Jupiter Island",
+  "Jupiter",
+  "Tequesta",
+  "Palm Beach Gardens",
+  "Palm Beach",
+  "West Palm Beach",
+] as const;
+export const SPECIALTY_CARE_SERVICE_TYPE = "Mobile Senior Dog Grooming";
+export const SPECIALTY_CARE_SERVICE_ID = "senior-comfort-care";
 export const ADD_ONS_PATH = "/services/add-ons";
 export const FEES_POLICIES_PATH = "/faq#fees-policies";
 export const CONSULTATION_PATH = "/contact?inquiry=grooming-consultation";
@@ -309,13 +344,11 @@ export const SERVICE_CATEGORIES: readonly ServiceCategory[] = [
     showStartingPrice: false,
     serviceIds: SPECIALTY_IDS,
     layout: "cards",
-    pageTitle: "Specialty Care | K9 Atelier",
-    pageDescription:
-      "Unhurried senior comfort care and gentle end-of-life grooming for dogs who need a slower, quieter appointment.",
+    pageTitle: SPECIALTY_CARE_PAGE_TITLE,
+    pageDescription: SPECIALTY_CARE_PAGE_DESCRIPTION,
     pageEyebrow: "Specialty Care",
-    pageH1: "Comfort, Dignity, and Unhurried Time.",
-    pageIntro:
-      "For dogs who need a slower pace — whether for age, recovery, or a quieter last chapter.",
+    pageH1: SPECIALTY_CARE_PAGE_H1,
+    pageIntro: SPECIALTY_CARE_PAGE_INTRO,
   },
   {
     slug: "add-ons",
@@ -363,13 +396,11 @@ const CARD_SUMMARIES: Record<string, string> = {
     "Patient, skin-safe mat removal for light to moderate tangles, always prioritizing your dog’s comfort.",
   "deshedding-treatment":
     "A deep undercoat treatment to release trapped hair and reduce shedding after the bath.",
-  "senior-comfort-care":
-    "Low-stress, adapted care for senior or medically fragile dogs who need a slower, gentler appointment.",
+  "senior-comfort-care": SPECIALTY_CARE_SENIOR_SUMMARY,
   "mini-trim": "Eyes, feet & sanitary areas only.",
   "creative-accent-coloring":
     "Pet-safe, semi-permanent accent color designed specifically for animal coats.",
-  "end-of-life-care":
-    "Compassionate, low-stress comfort grooming that places dignity ahead of cosmetic results.",
+  "end-of-life-care": SPECIALTY_CARE_EOL_SUMMARY,
 };
 
 const CARD_BEST_FOR: Record<string, string> = {
@@ -382,7 +413,7 @@ const CARD_BEST_FOR: Record<string, string> = {
   "sensitive-skin-treatment": "Sensitive, dry, or irritated skin",
   "dematting-brush-out": "Light to moderate tangles",
   "deshedding-treatment": "Heavy-shedding double coats",
-  "senior-comfort-care": "Senior or medically fragile dogs",
+  "senior-comfort-care": SPECIALTY_CARE_SENIOR_BEST_FOR,
   "mini-trim": "Quick tidy between full grooms",
   "creative-accent-coloring": "A playful, pet-safe pop of color",
   "end-of-life-care": "Comfort-first visits in a dog’s final chapter",
@@ -413,6 +444,27 @@ export const SERVICES_HASH_ROUTES: Record<string, string> = {
 
 export function getServiceById(id: string) {
   return allBookableServices().find((service) => service.id === id) ?? null;
+}
+
+/** Public Specialty Care wording. Catalog ids, prices, and booking names stay unchanged. */
+export function specialtyCareDisplayService(service: BookableService): BookableService {
+  if (service.id === SPECIALTY_CARE_SERVICE_ID) {
+    return {
+      ...service,
+      name: SPECIALTY_CARE_SENIOR_NAME,
+      description: `${SPECIALTY_CARE_SENIOR_DETAIL}\n\n${SPECIALTY_CARE_SENIOR_INDIVIDUAL}`,
+      suitableFor: undefined,
+      includes: undefined,
+    };
+  }
+  if (service.id === "end-of-life-care") {
+    return {
+      ...service,
+      description: SPECIALTY_CARE_EOL_SUMMARY,
+      includes: undefined,
+    };
+  }
+  return service;
 }
 
 export function getServicesByIds(ids: readonly string[]) {

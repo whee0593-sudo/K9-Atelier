@@ -1,6 +1,7 @@
 import { BathCoatJsonLd } from "@/components/seo/BathCoatJsonLd";
 import { FullGroomJsonLd } from "@/components/seo/FullGroomJsonLd";
 import { HandStrippingJsonLd } from "@/components/seo/HandStrippingJsonLd";
+import { SpecialtyCareJsonLd } from "@/components/seo/SpecialtyCareJsonLd";
 import { BathCoatEditorial } from "@/components/services/BathCoatEditorial";
 import { CreativeColoringSection } from "@/components/services/CreativeColoringSection";
 import { FullGroomEditorial } from "@/components/services/FullGroomEditorial";
@@ -14,9 +15,17 @@ import type { ServiceCategory } from "@/lib/service-page";
 import { LONG_COAT_CARE_PATH } from "@/lib/long-coat-care-page";
 import {
   SERVICE_ANCHORS,
+  SPECIALTY_CARE_AREA_SENTENCE,
+  SPECIALTY_CARE_PENNY_AFTER,
+  SPECIALTY_CARE_PENNY_BEFORE,
+  SPECIALTY_CARE_PENNY_NAME,
+  SPECIALTY_CARE_SENIOR_DETAIL,
+  SPECIALTY_CARE_SENIOR_INDIVIDUAL,
+  SPECIALTY_CARE_SERVICE_ID,
   getServiceById,
   getServicesByIds,
   spaIncludesItems,
+  specialtyCareDisplayService,
 } from "@/lib/service-page";
 
 type Props = {
@@ -39,6 +48,7 @@ export function ServiceCategoryView({ category }: Props) {
       {category.slug === "bath-coat-care" ? <BathCoatJsonLd /> : null}
       {category.slug === "full-groom" ? <FullGroomJsonLd /> : null}
       {category.slug === "hand-stripping" ? <HandStrippingJsonLd /> : null}
+      {category.slug === "specialty-care" ? <SpecialtyCareJsonLd /> : null}
       <ServicesHashRedirect />
       <ServicesNav />
       <ServicesSection
@@ -46,6 +56,9 @@ export function ServiceCategoryView({ category }: Props) {
         eyebrow={category.pageEyebrow}
         title={category.pageH1}
         titleAs="h1"
+        titleClassName={
+          category.slug === "specialty-care" ? "text-balance text-pretty" : undefined
+        }
         intro={category.pageIntro}
         tone="white"
       >
@@ -68,27 +81,54 @@ export function ServiceCategoryView({ category }: Props) {
           <CreativeColoringSection service={coloring} />
         ) : (
           <div className={serviceGridClass(services.length)}>
-            {services.map((service) => (
-              <ServiceCard
-                key={service.id}
-                service={service}
-                headingAs="h2"
-                quiet={service.id === "end-of-life-care"}
-                anchorId={SERVICE_ANCHORS[service.id] ?? service.id}
-                learnMoreHref={
-                  service.id === "long-coat-show-care"
-                    ? LONG_COAT_CARE_PATH
-                    : undefined
-                }
-                learnMoreLabel={
-                  service.id === "long-coat-show-care"
-                    ? "Learn About Long-Coat Care"
-                    : undefined
-                }
-              />
-            ))}
+            {services.map((service) => {
+              const displayed =
+                category.slug === "specialty-care"
+                  ? specialtyCareDisplayService(service)
+                  : service;
+              return (
+                <ServiceCard
+                  key={service.id}
+                  service={displayed}
+                  headingAs="h2"
+                  quiet={service.id === "end-of-life-care"}
+                  anchorId={SERVICE_ANCHORS[service.id] ?? service.id}
+                  detailsInitiallyOpen={service.id === SPECIALTY_CARE_SERVICE_ID}
+                  detailParagraphs={
+                    service.id === SPECIALTY_CARE_SERVICE_ID
+                      ? [SPECIALTY_CARE_SENIOR_DETAIL, SPECIALTY_CARE_SENIOR_INDIVIDUAL]
+                      : undefined
+                  }
+                  leadLink={
+                    service.id === SPECIALTY_CARE_SERVICE_ID
+                      ? {
+                          before: SPECIALTY_CARE_PENNY_BEFORE,
+                          label: SPECIALTY_CARE_PENNY_NAME,
+                          after: SPECIALTY_CARE_PENNY_AFTER,
+                          href: "/about",
+                        }
+                      : undefined
+                  }
+                  learnMoreHref={
+                    service.id === "long-coat-show-care"
+                      ? LONG_COAT_CARE_PATH
+                      : undefined
+                  }
+                  learnMoreLabel={
+                    service.id === "long-coat-show-care"
+                      ? "Learn About Long-Coat Care"
+                      : undefined
+                  }
+                />
+              );
+            })}
           </div>
         )}
+        {category.slug === "specialty-care" ? (
+          <p className="font-body mx-auto mt-10 max-w-2xl text-center text-pretty text-sm leading-relaxed text-taupe">
+            {SPECIALTY_CARE_AREA_SENTENCE}
+          </p>
+        ) : null}
       </ServicesSection>
       {category.slug === "bath-coat-care" ? <BathCoatEditorial /> : null}
       {category.slug === "full-groom" ? <FullGroomEditorial /> : null}
