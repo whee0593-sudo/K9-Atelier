@@ -107,6 +107,54 @@ describe("BookForCustomerForm preview schedule", () => {
     assert.match(html, /20 Ocean Ave/);
     assert.match(html, /Saved pets and address are filled in from this customer/);
   });
+
+  it("keeps one shared service field when only one dog is listed", () => {
+    const html = renderToStaticMarkup(<BookForCustomerForm preview />);
+    assert.match(html, /id="service-id"/);
+    assert.doesNotMatch(html, /id="pet-service-/);
+  });
+
+  it("puts a service choice under each dog and limits it to that dog's weight", () => {
+    const html = renderToStaticMarkup(
+      <BookForCustomerForm
+        preview
+        initialProfile={{
+          customerId: "11111111-1111-4111-8111-111111111111",
+          firstName: "Ada",
+          lastName: "Lovelace",
+          email: "ada@example.com",
+          phone: "+15615550123",
+          pets: [
+            {
+              id: "22222222-2222-4222-8222-222222222222",
+              name: "Luna",
+              breed: "Poodle",
+              weightLbs: 14.5,
+            },
+            {
+              id: "33333333-3333-4333-8333-333333333333",
+              name: "Bear",
+              breed: "Airedale",
+              weightLbs: 60,
+            },
+          ],
+          addresses: [],
+        }}
+      />,
+    );
+    assert.doesNotMatch(html, /id="service-id"/);
+    const lightStart = html.indexOf('id="pet-service-22222222-2222-4222-8222-222222222222"');
+    const heavyStart = html.indexOf('id="pet-service-33333333-3333-4333-8333-333333333333"');
+    assert.ok(lightStart >= 0);
+    assert.ok(heavyStart > lightStart);
+    const light = html.slice(lightStart, heavyStart);
+    const heavy = html.slice(heavyStart, html.indexOf("</select>", heavyStart));
+    assert.match(light, /Custom Full Haircut &amp; Styling/);
+    assert.match(heavy, /Hand Stripping/);
+    assert.doesNotMatch(heavy, /Custom Full Haircut/);
+    assert.match(html, /Dog 1/);
+    assert.match(html, /Dog 2/);
+  });
 });
 
 const onFileCustomer: StaffCustomerRecord = {

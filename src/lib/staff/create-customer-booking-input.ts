@@ -32,6 +32,7 @@ export type StaffCustomerBookingAddress = {
 
 export type StaffBookingPetInput = PetWriteInput & {
   id: string | null;
+  serviceId: string | null;
 };
 
 export type StaffCustomerBookingInput = {
@@ -51,6 +52,37 @@ export type StaffCustomerBookingInput = {
   address: StaffCustomerBookingAddress | null;
   verbalConsent: boolean;
 };
+
+function resolveBookableService(serviceIdRaw: string, field: string) {
+  if (!serviceIdRaw) return null;
+  const service = allBookableServices().find((entry) => entry.id === serviceIdRaw);
+  if (!service || !service.bookableAsPrimary) {
+    throw new StaffBookingValidationError(
+      "Choose a bookable grooming service.",
+      field,
+    );
+  }
+  return service;
+}
+
+function readPetServiceId(record: Record<string, unknown>, index: number) {
+  const value = record.serviceId;
+  if (value == null || value === "") return "";
+  if (typeof value !== "string") {
+    throw new StaffBookingValidationError(
+      "Service must be text.",
+      `pets[${index}].serviceId`,
+    );
+  }
+  const trimmed = value.trim();
+  if (trimmed.length > 120) {
+    throw new StaffBookingValidationError(
+      "Service must be 120 characters or fewer.",
+      `pets[${index}].serviceId`,
+    );
+  }
+  return trimmed;
+}
 
 const MAX_STAFF_BOOKING_PETS = 8;
 
@@ -213,14 +245,31 @@ export function validateStaffCustomerBookingInput(
     );
   }
 
+  const serviceIdRaw = readOptionalString(record, "serviceId", "Service", 120);
+  const sharedService = resolveBookableService(serviceIdRaw, "serviceId");
   const pets: StaffBookingPetInput[] = filledPetBodies.map((petBody, index) => {
     try {
-      const record = assertPlainObject(petBody);
-      const id = readOptionalPetId(record, index);
-      const rest = { ...record };
+      const petRecord = assertPlainObject(petBody);
+      const id = readOptionalPetId(petRecord, index);
+      const petServiceRaw = readPetServiceId(petRecord, index);
+      const rest = { ...petRecord };
       delete rest.id;
-      return { ...validateCreatePetInput(rest), id };
+      delete rest.serviceId;
+      const pet = validateCreatePetInput(rest);
+      const chosen =
+        resolveBookableService(petServiceRaw, `pets[${index}].serviceId`) ??
+        sharedService;
+      if (chosen && !isServiceAvailableForPet(chosen.id, pet.weightLbs)) {
+        throw new StaffBookingValidationError(
+          filledPetBodies.length > 1
+            ? `That service is not available for dog ${index + 1}'s weight.`
+            : "That service is not available for this dog's weight.",
+          petServiceRaw ? `pets[${index}].serviceId` : "serviceId",
+        );
+      }
+      return { ...pet, id, serviceId: chosen?.id ?? null };
     } catch (error) {
+      if (error instanceof StaffBookingValidationError) throw error;
       if (error instanceof PetValidationError) {
         throw new StaffBookingValidationError(
           error.message,
@@ -230,29 +279,9 @@ export function validateStaffCustomerBookingInput(
       throw error;
     }
   });
-
-  const serviceIdRaw = readOptionalString(record, "serviceId", "Service", 120);
-  const service = serviceIdRaw
-    ? allBookableServices().find((entry) => entry.id === serviceIdRaw)
-    : null;
-  if (serviceIdRaw && (!service || !service.bookableAsPrimary)) {
-    throw new StaffBookingValidationError(
-      "Choose a bookable grooming service.",
-      "serviceId",
-    );
-  }
-  if (service) {
-    for (const [index, pet] of pets.entries()) {
-      if (!isServiceAvailableForPet(service.id, pet.weightLbs)) {
-        throw new StaffBookingValidationError(
-          pets.length > 1
-            ? `That service is not available for dog ${index + 1}'s weight.`
-            : "That service is not available for this dog's weight.",
-          "serviceId",
-        );
-      }
-    }
-  }
+  const primaryService =
+    allBookableServices().find((entry) => entry.id === pets[0]?.serviceId) ??
+    null;
 
   const appointmentDateRaw = readOptionalString(
     record,
@@ -324,7 +353,7 @@ export function validateStaffCustomerBookingInput(
 
   const hasCompleteBooking = Boolean(
     pets.length > 0 &&
-      service &&
+      pets.every((pet) => pet.serviceId) &&
       appointmentDate &&
       slotStartMinutes != null &&
       address,
@@ -339,8 +368,8 @@ export function validateStaffCustomerBookingInput(
     notifySms,
     mode: hasCompleteBooking ? "booking" : "invite",
     pets,
-    serviceId: service?.id ?? null,
-    serviceName: service?.name ?? null,
+    serviceId: primaryService?.id ?? null,
+    serviceName: primaryService?.name ?? null,
     addOnIds,
     appointmentDate,
     slotStartMinutes,

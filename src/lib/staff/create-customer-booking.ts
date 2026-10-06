@@ -502,16 +502,21 @@ export async function createStaffCustomerBooking(
     };
   }
 
-  const service = allBookableServices().find((entry) => entry.id === serviceId);
-  if (!service) return { error: "conflict", message: "Unknown service." };
-
   const firstPet = input.pets[0];
   if (!firstPet) {
     return createStaffCustomerInvite(input);
   }
 
+  const firstServiceId = firstPet.serviceId ?? serviceId;
+  const firstService = allBookableServices().find(
+    (entry) => entry.id === firstServiceId,
+  );
+  if (!firstService || !firstServiceId) {
+    return { error: "conflict", message: "Unknown service." };
+  }
+
   const firstDurationMinutes = estimateServiceDurationMinutes(
-    serviceId,
+    firstServiceId,
     firstPet.weightLbs,
     input.addOnIds,
   );
@@ -576,8 +581,15 @@ export async function createStaffCustomerBooking(
         });
       });
 
+      const petServiceId = pet.serviceId ?? serviceId;
+      const petService = allBookableServices().find(
+        (entry) => entry.id === petServiceId,
+      );
+      if (!petService || !petServiceId) {
+        return { error: "conflict", message: "Unknown service." };
+      }
       const durationMinutes = estimateServiceDurationMinutes(
-        serviceId,
+        petServiceId,
         pet.weightLbs,
         input.addOnIds,
       );
@@ -605,7 +617,7 @@ export async function createStaffCustomerBooking(
               timePreference: companion!.usedPreference,
             };
 
-      const price = getServicePriceEstimate(service, pet.weightLbs);
+      const price = getServicePriceEstimate(petService, pet.weightLbs);
       const travelFee = index === 0 ? quote.fee : 0;
       const estimatedTotal =
         Math.round(((price?.from ?? 0) + travelFee) * 100) / 100;
@@ -615,8 +627,8 @@ export async function createStaffCustomerBooking(
         .insert({
           customer_id: userId,
           pet_id: petRow.id,
-          service_id: serviceId,
-          service_name: serviceName,
+          service_id: petService.id,
+          service_name: petService.name,
           add_on_ids: input.addOnIds,
           add_on_options: {},
           address_street: address.street,

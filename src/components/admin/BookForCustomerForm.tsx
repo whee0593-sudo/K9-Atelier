@@ -69,6 +69,7 @@ type PetDraft = {
   name: string;
   breed: string;
   weightLbs: string;
+  serviceId: string;
 };
 
 function createPetDraft(): PetDraft {
@@ -76,7 +77,7 @@ function createPetDraft(): PetDraft {
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
       : `pet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  return { key, id: null, name: "", breed: "", weightLbs: "" };
+  return { key, id: null, name: "", breed: "", weightLbs: "", serviceId: "" };
 }
 
 function petDraftFromSaved(pet: StaffBookingProfilePet): PetDraft {
@@ -86,7 +87,22 @@ function petDraftFromSaved(pet: StaffBookingProfilePet): PetDraft {
     name: pet.name,
     breed: pet.breed,
     weightLbs: pet.weightLbs > 0 ? String(pet.weightLbs) : "",
+    serviceId: "",
   };
+}
+
+function positiveWeight(weightLbs: string) {
+  const weight = Number(weightLbs);
+  return Number.isFinite(weight) && weight > 0 ? weight : null;
+}
+
+function servicesForPetWeight(weightLbs: string) {
+  const weight = positiveWeight(weightLbs);
+  return allBookableServices().filter(
+    (service) =>
+      service.bookableAsPrimary &&
+      (weight == null || isServiceAvailableForPet(service.id, weight)),
+  );
 }
 
 function petsFromProfile(profile: StaffBookingProfile | null | undefined) {
@@ -172,11 +188,12 @@ export function BookForCustomerForm({
   foundProfileRef.current = foundProfile;
   contactRef.current = { firstName, lastName, email, phone };
 
+  const multiDog = pets.length > 1;
   const petWeights = useMemo(
     () =>
       pets
-        .map((pet) => Number(pet.weightLbs))
-        .filter((weight) => Number.isFinite(weight) && weight > 0),
+        .map((pet) => positiveWeight(pet.weightLbs))
+        .filter((weight): weight is number => weight != null),
     [pets],
   );
   const primaryWeightLbs = petWeights[0] ?? Number.NaN;
@@ -194,6 +211,28 @@ export function BookForCustomerForm({
   );
 
   const selectedService = services.find((service) => service.id === serviceId);
+  const dogServices = useMemo(
+    () =>
+      pets.map((pet) => {
+        const weight = positiveWeight(pet.weightLbs);
+        const options = servicesForPetWeight(pet.weightLbs);
+        return {
+          pet,
+          weight,
+          options,
+          selected: options.find((service) => service.id === pet.serviceId) ?? null,
+        };
+      }),
+    [pets],
+  );
+  const everyDogServiceReady =
+    dogServices.length > 0 &&
+    dogServices.every((row) => row.selected && row.weight != null);
+  const scheduleServiceId = multiDog
+    ? everyDogServiceReady
+      ? dogServices[0]?.selected?.id ?? ""
+      : ""
+    : serviceId;
   const openDays = useMemo(() => selectableStaffDays(days), [days]);
   const openSlots = useMemo(
     () => slotsForStaffDate(days, appointmentDate),
@@ -204,7 +243,7 @@ export function BookForCustomerForm({
   const quoteLon = quoteReady ? quoteState.quote.lon : null;
   const scheduleHint = staffScheduleHint({
     quoteReady: preview || quoteReady,
-    hasService: preview || Boolean(serviceId),
+    hasService: preview || Boolean(scheduleServiceId),
     loading: availabilityLoading,
     error: availabilityError,
     daysLoaded: preview || availabilityLoaded,
@@ -213,8 +252,14 @@ export function BookForCustomerForm({
     slotCount: openSlots.length,
   });
 
-  const estimatedServiceTotal =
-    selectedService && petWeights.length === pets.length
+  const estimatedServiceTotal = multiDog
+    ? everyDogServiceReady
+      ? dogServices.reduce((sum, row) => {
+          const estimate = getServicePriceEstimate(row.selected!, row.weight!);
+          return sum + (estimate?.from ?? 0);
+        }, 0)
+      : null
+    : selectedService && petWeights.length === pets.length
       ? petWeights.reduce((sum, weight) => {
           const estimate = getServicePriceEstimate(selectedService, weight);
           return sum + (estimate?.from ?? 0);
@@ -224,14 +269,34 @@ export function BookForCustomerForm({
     estimatedServiceTotal != null && quoteState.status === "ready"
       ? Math.round((estimatedServiceTotal + quoteState.quote.fee) * 100) / 100
       : null;
-  const totalDurationMinutes =
-    selectedService && petWeights.length === pets.length
+  const totalDurationMinutes = multiDog
+    ? everyDogServiceReady
+      ? dogServices.reduce(
+          (sum, row) =>
+            sum +
+            estimateServiceDurationMinutes(row.selected!.id, row.weight!),
+          0,
+        )
+      : null
+    : selectedService && petWeights.length === pets.length
       ? petWeights.reduce(
           (sum, weight) =>
             sum + estimateServiceDurationMinutes(selectedService.id, weight),
           0,
         )
       : null;
+
+  function bookedServiceLabel() {
+    if (!multiDog) return selectedService?.name ?? null;
+    const names = [
+      ...new Set(
+        dogServices
+          .map((row) => row.selected?.name)
+          .filter((name): name is string => Boolean(name)),
+      ),
+    ];
+    return names.length > 0 ? names.join(", ") : null;
+  }
 
   function markPetsEdited() {
     petsSourceRef.current = "user";
@@ -249,22 +314,47 @@ export function BookForCustomerForm({
   function updatePet(key: string, field: keyof Omit<PetDraft, "key" | "id">, value: string) {
     markPetsEdited();
     setPets((current) =>
-      current.map((pet) =>
-        pet.key === key ? { ...pet, [field]: value } : pet,
-      ),
+      current.map((pet) => {
+        if (pet.key !== key) return pet;
+        const next = { ...pet, [field]: value };
+        if (field === "weightLbs" && next.serviceId) {
+          const weight = positiveWeight(value);
+          if (
+            weight != null &&
+            !isServiceAvailableForPet(next.serviceId, weight)
+          ) {
+            next.serviceId = "";
+          }
+        }
+        return next;
+      }),
     );
   }
 
   function addPetRow() {
     markPetsEdited();
-    setPets((current) => [...current, createPetDraft()]);
+    setPets((current) => {
+      const seeded =
+        current.length === 1
+          ? [
+              {
+                ...current[0],
+                serviceId: current[0].serviceId || serviceId,
+              },
+            ]
+          : current;
+      return [...seeded, createPetDraft()];
+    });
   }
 
   function removePetRow(key: string) {
     markPetsEdited();
-    setPets((current) =>
-      current.length <= 1 ? current : current.filter((pet) => pet.key !== key),
-    );
+    setPets((current) => {
+      if (current.length <= 1) return current;
+      const next = current.filter((pet) => pet.key !== key);
+      if (next.length === 1) setServiceId(next[0]?.serviceId ?? "");
+      return next;
+    });
   }
 
   function applySavedAddress(address: StaffBookingProfileAddress | null) {
@@ -513,7 +603,7 @@ export function BookForCustomerForm({
     if (
       quoteLat == null ||
       quoteLon == null ||
-      !serviceId ||
+      !scheduleServiceId ||
       petWeights.length !== pets.length ||
       totalDurationMinutes == null ||
       totalDurationMinutes <= 0
@@ -535,7 +625,7 @@ export function BookForCustomerForm({
           lat: String(quoteLat),
           lon: String(quoteLon),
           zip,
-          serviceId,
+          serviceId: scheduleServiceId,
           weightLbs: String(primaryWeightLbs),
           durationMinutes: String(totalDurationMinutes),
         });
@@ -573,7 +663,7 @@ export function BookForCustomerForm({
     preview,
     quoteLat,
     quoteLon,
-    serviceId,
+    scheduleServiceId,
     petWeights,
     pets.length,
     primaryWeightLbs,
@@ -599,6 +689,7 @@ export function BookForCustomerForm({
         name: pet.name.trim(),
         breed: pet.breed.trim(),
         weightLbs: Number(pet.weightLbs),
+        serviceId: pet.serviceId,
       }))
       .filter(
         (pet) =>
@@ -606,9 +697,16 @@ export function BookForCustomerForm({
           pet.breed ||
           (Number.isFinite(pet.weightLbs) && pet.weightLbs > 0),
       );
+    const servicesReady = multiDog
+      ? filledPets.length > 0 && filledPets.every((pet) => pet.serviceId)
+      : Boolean(serviceId);
 
     if (preview) {
-      const inviteOnly = filledPets.length === 0 || !serviceId || !appointmentDate || !slotStartMinutes;
+      const inviteOnly =
+        filledPets.length === 0 ||
+        !servicesReady ||
+        !appointmentDate ||
+        !slotStartMinutes;
       setSuccess({
         mode: inviteOnly ? "invite" : "booking",
         confirmUrl: inviteOnly
@@ -619,7 +717,7 @@ export function BookForCustomerForm({
         createdAccount: Boolean(trimmedEmail),
         email: trimmedEmail,
         firstName,
-        serviceName: selectedService?.name ?? null,
+        serviceName: bookedServiceLabel(),
         appointmentDate: appointmentDate || null,
         appointmentTime: slotStartMinutes
           ? formatMinutesLabel(Number(slotStartMinutes))
@@ -647,8 +745,9 @@ export function BookForCustomerForm({
             name: pet.name,
             breed: pet.breed,
             weightLbs: pet.weightLbs,
+            ...(multiDog && pet.serviceId ? { serviceId: pet.serviceId } : {}),
           })),
-          serviceId: serviceId || undefined,
+          serviceId: multiDog ? undefined : serviceId || undefined,
           appointmentDate: appointmentDate || undefined,
           slotStartMinutes: slotStartMinutes
             ? Number(slotStartMinutes)
@@ -687,7 +786,7 @@ export function BookForCustomerForm({
         createdAccount: body.customer.createdAccount,
         email: body.customer.email,
         firstName: body.customer.firstName,
-        serviceName: body.appointment?.serviceName ?? null,
+        serviceName: bookedServiceLabel() ?? body.appointment?.serviceName ?? null,
         appointmentDate: body.appointment?.appointmentDate ?? null,
         appointmentTime: body.appointment?.appointmentTime ?? null,
       });
@@ -953,6 +1052,36 @@ export function BookForCustomerForm({
                   />
                 </div>
               </div>
+              {multiDog ? (
+                <div>
+                  <label className={labelClass} htmlFor={`pet-service-${pet.key}`}>
+                    Service
+                  </label>
+                  <select
+                    id={`pet-service-${pet.key}`}
+                    className={fieldClass}
+                    value={
+                      servicesForPetWeight(pet.weightLbs).some(
+                        (service) => service.id === pet.serviceId,
+                      )
+                        ? pet.serviceId
+                        : ""
+                    }
+                    onChange={(event) => {
+                      updatePet(pet.key, "serviceId", event.target.value);
+                      setAppointmentDate(pinnedDateRef.current);
+                      setSlotStartMinutes("");
+                    }}
+                  >
+                    <option value="">Select a service</option>
+                    {servicesForPetWeight(pet.weightLbs).map((service) => (
+                      <option key={service.id} value={service.id}>
+                        {service.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
             </div>
           );
         })}
@@ -1076,28 +1205,30 @@ export function BookForCustomerForm({
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className={labelClass} htmlFor="service-id">
-            Service
-          </label>
-          <select
-            id="service-id"
-            className={fieldClass}
-            value={serviceId}
-            onChange={(event) => {
-              setServiceId(event.target.value);
-              setAppointmentDate(pinnedDateRef.current);
-              setSlotStartMinutes("");
-            }}
-          >
-            <option value="">Select a service</option>
-            {services.map((service) => (
-              <option key={service.id} value={service.id}>
-                {service.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {multiDog ? null : (
+          <div>
+            <label className={labelClass} htmlFor="service-id">
+              Service
+            </label>
+            <select
+              id="service-id"
+              className={fieldClass}
+              value={serviceId}
+              onChange={(event) => {
+                setServiceId(event.target.value);
+                setAppointmentDate(pinnedDateRef.current);
+                setSlotStartMinutes("");
+              }}
+            >
+              <option value="">Select a service</option>
+              {services.map((service) => (
+                <option key={service.id} value={service.id}>
+                  {service.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div>
           <label className={labelClass} htmlFor="appointment-date">
             Date

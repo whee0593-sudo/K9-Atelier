@@ -143,6 +143,63 @@ describe("validateStaffCustomerBookingInput", () => {
     );
     assert.equal(input.pets.length, 2);
     assert.equal(input.pets[1]?.name, "Max");
+    assert.equal(input.pets[0]?.serviceId, "signature-bath-care");
+    assert.equal(input.pets[1]?.serviceId, "signature-bath-care");
+  });
+
+  it("keeps a different service on each dog", () => {
+    const input = validateStaffCustomerBookingInput(
+      validBody({
+        serviceId: undefined,
+        pets: [
+          {
+            name: "Luna",
+            breed: "Poodle",
+            weightLbs: 14,
+            serviceId: "signature-bath-care",
+          },
+          {
+            name: "Max",
+            breed: "Maltese",
+            weightLbs: 11,
+            serviceId: "custom-full-haircut",
+          },
+        ],
+      }),
+    );
+    assert.equal(input.mode, "booking");
+    assert.equal(input.pets[0]?.serviceId, "signature-bath-care");
+    assert.equal(input.pets[1]?.serviceId, "custom-full-haircut");
+    assert.equal(input.serviceId, "signature-bath-care");
+    assert.equal(input.serviceName, "Signature Bath & Care");
+  });
+
+  it("rejects a service that the dog's weight cannot book", () => {
+    assert.throws(
+      () =>
+        validateStaffCustomerBookingInput(
+          validBody({
+            serviceId: undefined,
+            pets: [
+              {
+                name: "Luna",
+                breed: "Poodle",
+                weightLbs: 14,
+                serviceId: "signature-bath-care",
+              },
+              {
+                name: "Bear",
+                breed: "Airedale",
+                weightLbs: 60,
+                serviceId: "custom-full-haircut",
+              },
+            ],
+          }),
+        ),
+      (error: unknown) =>
+        error instanceof StaffBookingValidationError &&
+        error.field === "pets[1].serviceId",
+    );
   });
 
   it("accepts an email-only invite with no other fields", () => {
