@@ -41,24 +41,48 @@ describe("next-day follow-up copy", () => {
     assert.equal(
       sms,
       [
-        `K9 ATELIER: Thank you for trusting us with Daisy yesterday. If you enjoyed your experience, we'd be grateful for your Google review: ${reviewUrl}`,
+        `K9 ATELIER: Thanks for trusting us with Daisy yesterday. We'd appreciate your Google review: ${reviewUrl}`,
         "Reply STOP to opt out.",
       ].join("\n"),
     );
     assert.equal(sms.split("https://").length - 1, 1);
+    assert.equal(sms.includes("If you enjoyed"), false);
     assert.equal(sms.includes("💜"), false);
     const septets = gsmSeptets(sms);
-    assert.ok(septets);
-    assert.equal(septets > 160, true);
-    assert.equal(Math.ceil(septets / 153), 2);
+    assert.equal(septets, 155);
+    assert.equal(septets <= 160 ? 1 : Math.ceil(septets / 153), 1);
   });
 
   it("names two dogs once in the review SMS", () => {
     const sms = buildNextDayFollowUpSms({
       petNames: ["Milo", "Daisy"],
     });
-    assert.match(sms, /Daisy and Milo/);
-    assert.equal(sms.split("https://").length - 1, 1);
+    assert.equal(
+      sms,
+      [
+        `K9 ATELIER: Thanks for trusting us with Daisy and Milo yesterday. We'd appreciate your Google review: ${followUpReviewUrl()}`,
+        "Reply STOP to opt out.",
+      ].join("\n"),
+    );
+    const septets = gsmSeptets(sms);
+    assert.equal(septets, 164);
+    assert.equal(septets <= 160 ? 1 : Math.ceil(septets / 153), 2);
+  });
+
+  it("uses your pups for three or more dogs", () => {
+    const sms = buildNextDayFollowUpSms({
+      petNames: ["Otto", "Daisy", "Milo"],
+    });
+    assert.equal(
+      sms,
+      [
+        `K9 ATELIER: Thanks for trusting us with your pups yesterday. We'd appreciate your Google review: ${followUpReviewUrl()}`,
+        "Reply STOP to opt out.",
+      ].join("\n"),
+    );
+    const septets = gsmSeptets(sms);
+    assert.equal(septets, 159);
+    assert.equal(septets <= 160 ? 1 : Math.ceil(septets / 153), 1);
   });
 
   it("matches Penny's check-in email", () => {

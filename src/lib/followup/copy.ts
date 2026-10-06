@@ -59,7 +59,7 @@ export function followUpReviewUrl() {
 export function buildNextDayFollowUpSms(input: FollowUpNames) {
   const label = followUpPetLabel(followUpPetNames(input));
   return [
-    `K9 ATELIER: Thank you for trusting us with ${label} yesterday. If you enjoyed your experience, we'd be grateful for your Google review: ${followUpReviewUrl()}`,
+    `K9 ATELIER: Thanks for trusting us with ${label} yesterday. We'd appreciate your Google review: ${followUpReviewUrl()}`,
     SMS_OPT_OUT,
   ].join("\n");
 }
