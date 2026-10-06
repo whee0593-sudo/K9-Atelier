@@ -45,14 +45,14 @@ export function AccountSetupChecklist() {
     null;
   const rabiesDone = focusPet ? !petNeedsRabiesStatus(focusPet) : false;
   const paymentDone = hasCard === true;
-  const allDone = rabiesDone && paymentDone;
+  const allDone = paymentDone;
 
   return (
     <div className="space-y-6">
       <p className="text-sm text-text-muted">
-        Your visit is reserved. Confirm your dog’s rabies vaccination status,
-        then save a card on file. You may also upload a rabies certificate or
-        vaccination record. You are not charged now.
+        Your visit is reserved. Save a card on file if you have not already.
+        Rabies vaccination details are optional and can be added anytime. You
+        are not charged now.
       </p>
 
       {loading ? (
@@ -83,15 +83,15 @@ export function AccountSetupChecklist() {
           <h3 className="mt-2 font-medium text-text">Rabies vaccination</h3>
           <p className="mt-2 text-sm text-text-muted">
             {focusPet
-              ? `Confirm ${focusPet.name}’s rabies status. You may also upload a current rabies certificate or vaccination record.`
-              : "Open your pet profile and confirm rabies vaccination status."}
+              ? `You can confirm ${focusPet.name}’s rabies status or upload a certificate whenever you have it. This does not affect the reservation.`
+              : "You can add rabies details on a pet profile whenever you have them. This does not affect the reservation."}
             {rabiesDone ? " Rabies status is already confirmed." : ""}
           </p>
           <Link
             href={petsSetupHref(focusPet?.id ?? petId)}
             className="mt-4 inline-flex rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white hover:bg-gold-dark"
           >
-            {rabiesDone ? "Review pet profile" : "Confirm rabies status"}
+            {rabiesDone ? "Review pet profile" : "Add rabies details"}
           </Link>
         </li>
         <li className="rounded-2xl border border-lavender/30 bg-cream p-5">

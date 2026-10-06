@@ -32,7 +32,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     ...(category.slug === "full-groom" ||
     category.slug === "hand-stripping" ||
-    category.slug === "bath-coat-care"
+    category.slug === "bath-coat-care" ||
+    category.slug === "specialty-care"
       ? {
           twitter: {
             title: category.pageTitle,

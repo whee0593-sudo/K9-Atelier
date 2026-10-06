@@ -138,12 +138,6 @@ export function PetProfilesManager({
   }, [setup, openedSetupPet, loading, pets, setupPetId]);
 
   async function handleAddPet() {
-    if (!parsePetRabiesStatus(draftPet.rabiesStatus)) {
-      setDraftError(
-        "Please confirm this dog’s rabies vaccination status before saving.",
-      );
-      return;
-    }
     setDraftError(null);
     setSubmittingDraft(true);
     try {
@@ -223,9 +217,7 @@ export function PetProfilesManager({
             <button
               type="button"
               onClick={() => void handleAddPet()}
-              disabled={
-                submittingDraft || !parsePetRabiesStatus(draftPet.rabiesStatus)
-              }
+              disabled={submittingDraft}
               className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
             >
               {submittingDraft ? "Saving…" : "Save Pet"}

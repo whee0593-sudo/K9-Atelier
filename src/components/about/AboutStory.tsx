@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { AboutDeferredPhoto } from "@/components/about/AboutDeferredPhoto";
 import { Container } from "@/components/luxury/Container";
+import { LONG_COAT_CARE_PATH } from "@/lib/long-coat-care-page";
 
 const awards = [
   { year: "2014", title: "Best in Group", breed: "Pomeranian" },
@@ -81,6 +82,9 @@ const captionClass =
 
 const textLinkClass =
   "font-body mt-8 inline-flex max-w-full min-h-[48px] items-center justify-center text-center text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne md:mt-10";
+
+const quietInlineLinkClass =
+  "underline decoration-champagne/80 underline-offset-[0.2em] transition-colors duration-500 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne motion-reduce:transition-none";
 
 /**
  * Show-ring column, not the viewport.
@@ -260,10 +264,9 @@ export function AboutStory() {
                 </p>
                 <p>
                   Her background includes breed-specific styling, hand
-                  stripping, full-coat maintenance, show grooming, creative
-                  grooming, and personalized coat care, with an emphasis on
-                  preserving coat health while bringing out the character of
-                  each breed.
+                  stripping,{" "}
+                  <Link href={LONG_COAT_CARE_PATH} className={quietInlineLinkClass}>full-coat maintenance</Link>
+                  {", show grooming, creative grooming, and personalized coat care, with an emphasis on preserving coat health while bringing out the character of each breed."}
                 </p>
               </div>
             </div>

@@ -108,8 +108,11 @@ describe("staff reschedule and cancel server gates", () => {
         reschedule.includes("excludeAppointmentIds: [loaded"),
       false,
     );
-    const checkAt = reschedule.indexOf("assignArrivalWindow");
-    const emailSkip = reschedule.indexOf("if (!completed)");
+    const rescheduleBodyEarly = reschedule.slice(
+      reschedule.indexOf("export async function rescheduleStaffAppointment"),
+    );
+    const checkAt = rescheduleBodyEarly.indexOf("await assignArrivalWindow");
+    const emailSkip = rescheduleBodyEarly.indexOf("notifyCustomerAppointmentChange");
     assert.ok(checkAt > 0);
     assert.ok(emailSkip > checkAt);
     assert.match(schedule, /appointmentOverlapsBlocks/);
@@ -132,7 +135,7 @@ describe("staff reschedule and cancel server gates", () => {
     const rescheduleBody = reschedule.slice(
       reschedule.indexOf("export async function rescheduleStaffAppointment"),
     );
-    const availabilityCall = rescheduleBody.indexOf("const assignment = await assignArrivalWindow");
+    const availabilityCall = rescheduleBody.indexOf("await assignArrivalWindow");
     assert.ok(availabilityCall > 0);
     assert.doesNotMatch(
       rescheduleBody.slice(0, availabilityCall),

@@ -307,7 +307,7 @@ describe("staff-created booking copy", () => {
     assert.match(email.subject, /confirm/i);
     assert.match(email.text, /confirm-account\?token=abc/);
     assert.match(email.html, /Review and Confirm/);
-    assert.match(email.text, /rabies vaccination status/);
+    assert.match(email.text, /Rabies vaccination details are optional/);
     assert.match(email.text, /card on file/);
     assert.match(email.text, /secure this appointment/);
     const sms = buildStaffCreatedBookingSms(appointment, confirmUrl);
@@ -327,6 +327,10 @@ describe("appointmentStatusLabel", () => {
     assert.equal(
       appointmentStatusLabel("pending_confirmation", true),
       "Awaiting Customer Confirmation",
+    );
+    assert.equal(
+      appointmentStatusLabel("pending_confirmation"),
+      "Pending Review",
     );
   });
 });

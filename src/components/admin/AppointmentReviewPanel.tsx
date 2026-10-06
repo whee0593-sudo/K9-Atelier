@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { AdminCalendar } from "@/components/admin/AdminCalendar";
 import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
 import { AppointmentActionLinks } from "@/components/admin/AppointmentActionLinks";
-import { formatPrice } from "@/lib/business";
 import { formatStaffVisitTiming } from "@/lib/charges/hourly";
+import { appointmentStatusLabel } from "@/lib/appointments/map";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import type { ChargeKind } from "@/lib/charges/types";
 import { formatServiceAddress } from "@/lib/travel";
@@ -38,17 +38,22 @@ function formatShortDate(iso: string): string {
   });
 }
 
-export function AppointmentReviewPanel() {
-  const [appointments, setAppointments] = useState<AdminAppointmentRecord[]>(
-    [],
-  );
+export function AppointmentReviewPanel({
+  preview = false,
+  previewToday = [],
+}: {
+  /** Skip the staff API and show the calendar shell. Used by tests. */
+  preview?: boolean;
+  /** Sample rows for the drive list when `preview` skips the staff API. */
+  previewToday?: AdminAppointmentRecord[];
+} = {}) {
   const [todayAppointments, setTodayAppointments] = useState<
     AdminAppointmentRecord[]
-  >([]);
+  >(previewToday);
   const [schedule, setSchedule] = useState<ScheduleDay[]>([]);
   const [zones, setZones] = useState<ZoneOption[]>([]);
   const [paidKinds, setPaidKinds] = useState<Record<string, ChargeKind[]>>({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!preview);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [calendarNonce, setCalendarNonce] = useState(0);
@@ -63,7 +68,6 @@ export function AppointmentReviewPanel() {
       });
       const body = (await response.json()) as {
         error?: string;
-        appointments?: AdminAppointmentRecord[];
         today?: AdminAppointmentRecord[];
         schedule?: ScheduleDay[];
         zones?: ZoneOption[];
@@ -71,7 +75,7 @@ export function AppointmentReviewPanel() {
       };
 
       if (response.status === 401) {
-        setError("Sign in with your team email to review appointments.");
+        setError("Sign in with your team email to open the calendar.");
         return;
       }
 
@@ -85,7 +89,6 @@ export function AppointmentReviewPanel() {
         return;
       }
 
-      setAppointments(body.appointments ?? []);
       setTodayAppointments(body.today ?? []);
       setSchedule(body.schedule ?? []);
       setZones(body.zones ?? []);
@@ -98,37 +101,9 @@ export function AppointmentReviewPanel() {
   }, []);
 
   useEffect(() => {
+    if (preview) return;
     void loadAppointments();
-  }, [loadAppointments]);
-
-  async function updateStatus(
-    appointmentId: string,
-    status: "confirmed" | "cancelled",
-  ) {
-    setBusyId(appointmentId);
-    setError(null);
-
-    try {
-      const response = await fetch(`/api/admin/appointments/${appointmentId}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      const body = (await response.json()) as { error?: string };
-
-      if (!response.ok) {
-        setError(body.error ?? "Could not update appointment.");
-        return;
-      }
-
-      await loadAppointments({ silent: true });
-    } catch {
-      setError("Could not update appointment.");
-    } finally {
-      setBusyId(null);
-    }
-  }
+  }, [preview, loadAppointments]);
 
   async function sendEnRoute(appointmentId: string) {
     setBusyId(appointmentId);
@@ -233,11 +208,11 @@ export function AppointmentReviewPanel() {
 
   if (loading) {
     return (
-      <p className="mt-8 text-sm text-text-muted">Loading pending appointments…</p>
+      <p className="mt-8 text-sm text-text-muted">Loading calendar…</p>
     );
   }
 
-  if (error && appointments.length === 0 && todayAppointments.length === 0) {
+  if (error && todayAppointments.length === 0 && schedule.length === 0) {
     return (
       <div className="mt-8 rounded-2xl border border-lavender/30 bg-cream p-6">
         <p className="text-sm text-text">{error}</p>
@@ -270,6 +245,7 @@ export function AppointmentReviewPanel() {
       ) : null}
 
       <AdminCalendar
+        preview={preview}
         onAppointmentsChanged={() => void loadAppointments({ silent: true })}
         reloadToken={calendarNonce}
       />
@@ -401,150 +377,12 @@ export function AppointmentReviewPanel() {
         )}
       </section>
 
-      {appointments.length === 0 ? (
-        <div className="rounded-2xl border border-lavender/30 bg-cream p-8 text-center">
-          <p className="font-medium text-gold-dark">All caught up</p>
-          <p className="mt-2 text-sm text-text-muted">
-            No appointments are waiting for staff review.
-          </p>
-        </div>
-      ) : (
-        <ul className="space-y-4">
-          {appointments.map((appointment) => {
-            const busy = busyId === appointment.id;
-            const customerLabel =
-              appointment.customerName ??
-              appointment.customerEmail ??
-              "Unknown customer";
-
-            return (
-              <li
-                key={appointment.id}
-                className="rounded-2xl border border-lavender/30 bg-cream p-6"
-              >
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <h3 className="font-medium text-gold-dark">
-                      {appointment.petName}
-                      {appointment.petBreed ? (
-                        <span className="font-normal text-text-muted">
-                          {" "}
-                          · {appointment.petBreed}
-                        </span>
-                      ) : null}
-                    </h3>
-                    <p className="mt-1 text-sm text-text-muted">
-                      {customerLabel}
-                      {appointment.customerEmail && appointment.customerName
-                        ? ` (${appointment.customerEmail})`
-                        : null}
-                    </p>
-                    {appointment.customerPhone ? (
-                      <p className="mt-1 text-sm text-text-muted">
-                        {appointment.customerPhone}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <AppointmentCornerMark
-                      status={appointment.status}
-                      vaccinationStatusAtBooking={
-                        appointment.vaccinationStatusAtBooking
-                      }
-                      customerConfirmedAt={appointment.customerConfirmedAt}
-                    />
-                    <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
-                      Pending Review
-                    </span>
-                  </div>
-                </div>
-
-                <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
-                  <div>
-                    <dt className="text-text-muted">Service</dt>
-                    <dd className="text-text">{appointment.serviceName}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-text-muted">When</dt>
-                    <dd className="text-text">
-                      {formatShortDate(appointment.appointmentDate)} ·{" "}
-                      {appointment.appointmentTime}
-                    </dd>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <dt className="text-text-muted">Address</dt>
-                    <dd className="text-text">
-                      {formatServiceAddress({
-                        street: appointment.addressStreet,
-                        city: appointment.addressCity,
-                        state: appointment.addressState,
-                        zip: appointment.addressZip,
-                      })}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-text-muted">Travel</dt>
-                    <dd className="text-text">
-                      {appointment.travelDistanceMiles} mi ·{" "}
-                      {appointment.travelFee === 0
-                        ? "Complimentary"
-                        : formatPrice(appointment.travelFee)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-text-muted">Estimated total</dt>
-                    <dd className="text-text">
-                      {appointment.estimatedTotal == null
-                        ? "Not provided"
-                        : `From ${formatPrice(appointment.estimatedTotal)}`}
-                    </dd>
-                  </div>
-                  {appointment.vaccinationStatusAtBooking === "needs_review" ? (
-                    <div className="sm:col-span-2">
-                      <dt className="text-text-muted">Vaccination</dt>
-                      <dd className="text-red-700">
-                        Pending staff review at time of booking
-                      </dd>
-                    </div>
-                  ) : null}
-                </dl>
-
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <Link
-                    href="/admin/vaccinations"
-                    className="rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text transition hover:border-gold/40"
-                  >
-                    Review vaccinations
-                  </Link>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void updateStatus(appointment.id, "confirmed")}
-                    className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-cream transition hover:bg-gold-dark disabled:opacity-50"
-                  >
-                    Approve booking
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void updateStatus(appointment.id, "cancelled")}
-                    className="rounded-xl border border-red-200 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 disabled:opacity-50"
-                  >
-                    Decline
-                  </button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
       <section>
         <h3 className="text-lg font-medium text-gold-dark">Today — drive order</h3>
         {todayAppointments.length === 0 ? (
           <div className="mt-4 rounded-2xl border border-lavender/30 bg-cream p-8 text-center">
             <p className="text-sm text-text-muted">
-              No confirmed appointments on today&apos;s calendar.
+              No appointments on today&apos;s calendar.
             </p>
           </div>
         ) : (
@@ -590,6 +428,12 @@ export function AppointmentReviewPanel() {
                       />
                       <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
                         Stop {index + 1} · {appointment.appointmentTime}
+                      </span>
+                      <span className="text-xs font-medium text-gold-dark">
+                        {appointmentStatusLabel(
+                          appointment.status,
+                          appointment.awaitingCustomerConfirm,
+                        )}
                       </span>
                     </div>
                   </div>

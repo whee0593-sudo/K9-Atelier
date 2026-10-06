@@ -7,6 +7,7 @@ import {
   createAuthenticatedSupabaseClient,
 } from "@/lib/pets/auth";
 import { mapPetRowToRecord, mapValidatedInputToInsertRow, mapValidatedInputToUpdateRow } from "@/lib/pets/map";
+import { keepPrimaryIfReferralFails } from "@/lib/referrals/allocate-code";
 import {
   PET_SELECT,
   type PetRecord,
@@ -611,16 +612,14 @@ export async function createStaffPet(
   }
 
   const pet = mapPetRowToRecord(data as PetRow);
-  try {
+  await keepPrimaryIfReferralFails(pet, async () => {
     const { ensurePetReferralCode } = await import("@/lib/referrals/service");
     await ensurePetReferralCode({
       petId: pet.id,
       petName: pet.name,
       ownerCustomerId: customerId,
     });
-  } catch (referralError) {
-    console.error("createStaffPet referral code failed:", referralError);
-  }
+  });
 
   const loaded = await loadStaffPetWithNotes(pet.id);
   if ("error" in loaded) return loaded;
@@ -788,16 +787,14 @@ async function insertOptionalPet(
     }
   }
 
-  try {
+  await keepPrimaryIfReferralFails(data.id, async () => {
     const { ensurePetReferralCode } = await import("@/lib/referrals/service");
     await ensurePetReferralCode({
       petId: data.id,
       petName: pet.name,
       ownerCustomerId: customerId,
     });
-  } catch (referralError) {
-    console.error("createStaffCustomer referral code failed:", referralError);
-  }
+  });
 
   return {
     ...mapPetRowToRecord(data as PetRow),

@@ -25,6 +25,7 @@ const INTENDED_URLS = [
   "https://k9atelier.com/services/color",
   "https://k9atelier.com/services/specialty-care",
   "https://k9atelier.com/services/add-ons",
+  "https://k9atelier.com/services/long-coat-care",
   "https://k9atelier.com/gallery",
   "https://k9atelier.com/reviews",
   "https://k9atelier.com/about",

@@ -11,7 +11,7 @@ import {
   HOME_PAGE_DESCRIPTION,
   HOME_PAGE_TITLE,
 } from "@/lib/home-seo";
-import { business, getCommunitiesServedLabel } from "@/lib/business";
+import { business } from "@/lib/business";
 
 const REMOVED_HOME_SECTIONS = [
   "HomeAboutTeaser",
@@ -141,15 +141,19 @@ describe("homepage SEO", () => {
     assert.equal(h1s.length, 1);
     assert.match(html, /K9 ATELIER — grooming, elevated\./);
     assert.match(html, /Private Mobile Pet Spa · Palm Beach/);
+    const leadText = html
+      .replace(/<a\b[^>]*>|<\/a>/g, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ");
     assert.match(
-      html,
+      leadText,
       /Multiple award-winning show groomer specializing in tailored styling, show-level coat care, extra-gentle senior care and hand stripping\./,
     );
     assert.match(html, /Grooming, tailored to the individual\./);
-    assert.match(html, new RegExp(getCommunitiesServedLabel().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    const visibleText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
     assert.match(
-      html,
-      /Jupiter · Palm Beach Gardens · West Palm Beach/,
+      visibleText,
+      /Serving Jupiter Island · Jupiter · Tequesta · Palm Beach Gardens · Palm Beach · West Palm Beach/,
     );
     assert.doesNotMatch(
       html,
@@ -168,6 +172,29 @@ describe("homepage SEO", () => {
     );
     const byHref = (href: string) => anchors.find((anchor) => anchor.href === href);
 
+    assert.equal(byHref("/services/long-coat-care")?.text, "show-level coat care");
+    assert.equal(
+      anchors.find((anchor) => anchor.text === "extra-gentle senior care")?.href,
+      "/services/specialty-care",
+    );
+    const leadStart = html.indexOf("Multiple award-winning");
+    const leadHtml = html.slice(leadStart, html.indexOf("Book an Appointment", leadStart));
+    const leadAnchors = [...leadHtml.matchAll(/<a([^>]*)>([\s\S]*?)<\/a>/g)].map(
+      (match) => ({
+        attrs: match[1],
+        text: match[2].replace(/<[^>]+>/g, "").trim(),
+      }),
+    );
+    assert.deepEqual(
+      leadAnchors.map((anchor) => anchor.text),
+      ["show-level coat care", "extra-gentle senior care"],
+    );
+    const className = (attrs: string) => attrs.match(/class="([^"]*)"/)?.[1] ?? "";
+    assert.equal(className(leadAnchors[0]?.attrs ?? ""), className(leadAnchors[1]?.attrs ?? ""));
+    assert.match(leadAnchors[1]?.attrs ?? "", /href="\/services\/specialty-care"/);
+    assert.match(className(leadAnchors[1]?.attrs ?? ""), /underline decoration-champagne\/80/);
+    assert.doesNotMatch(className(leadAnchors[1]?.attrs ?? ""), /inline-flex|bg-deep-lavender/);
+    assert.equal(/<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<a\b/.test(leadHtml), false);
     assert.match(byHref("/services/full-groom")?.text ?? "", /^Full Grooming\b/);
     assert.match(byHref("/services/bath-coat-care")?.text ?? "", /^Bath & Coat Care\b/);
     assert.match(byHref("/services/hand-stripping")?.text ?? "", /^Hand Stripping\b/);
@@ -177,8 +204,13 @@ describe("homepage SEO", () => {
     assert.match(byHref("/services/color")?.text ?? "", /^Creative Color\b/);
     assert.match(byHref("/services/color")?.text ?? "", /Pet-safe color artistry/);
     assert.match(byHref("/services/color")?.text ?? "", /From \$50/);
-    assert.match(byHref("/services/specialty-care")?.text ?? "", /^Specialty Care\b/);
-    assert.match(byHref("/services/specialty-care")?.text ?? "", /Senior · Comfort care/);
+    const specialtyCard = anchors.find(
+      (anchor) =>
+        anchor.href === "/services/specialty-care" &&
+        anchor.text.startsWith("Specialty Care"),
+    );
+    assert.match(specialtyCard?.text ?? "", /^Specialty Care\b/);
+    assert.match(specialtyCard?.text ?? "", /Senior · Comfort care/);
     assert.match(byHref("/gallery")?.text ?? "", /View the Gallery/);
   });
 
@@ -227,9 +259,14 @@ describe("homepage SEO", () => {
     assert.equal(business.brand.phoneDisplay, "561-593-3335");
     assert.match(html, /561-593-3335/);
     assert.match(html, /href="tel:\+15615933335"/);
+    const visibleText = html.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ");
     assert.match(
-      html,
-      /Serving Jupiter, Palm Beach Gardens &amp; West Palm Beach\./,
+      visibleText,
+      /Private, cage-free mobile dog grooming for dogs up to 45 lbs\./,
+    );
+    assert.match(
+      visibleText,
+      /Serving Jupiter Island, Jupiter, Tequesta, Palm Beach Gardens, Palm Beach & West Palm Beach\./,
     );
   });
 });

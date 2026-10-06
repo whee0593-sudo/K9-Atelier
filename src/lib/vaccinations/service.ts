@@ -40,8 +40,13 @@ export async function attachVaccinationSummaries(
   pets: PetRecord[],
 ): Promise<PetRecord[]> {
   if (pets.length === 0) return pets;
-  const supabase = await createAuthenticatedSupabaseClient();
-  return enrichPetRecordsWithVaccination(supabase, pets);
+  try {
+    const supabase = await createAuthenticatedSupabaseClient();
+    return await enrichPetRecordsWithVaccination(supabase, pets);
+  } catch (error) {
+    console.error("attachVaccinationSummaries failed:", error);
+    return pets;
+  }
 }
 
 /** Keep the profile date and the latest uploaded record on the same expiration. */

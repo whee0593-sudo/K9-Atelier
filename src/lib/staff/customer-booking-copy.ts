@@ -1,3 +1,4 @@
+import { ARRIVAL_WINDOW_PENDING_LABEL } from "@/lib/appointments/arrival-window";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 import {
   appointmentDetailRows,
@@ -22,7 +23,7 @@ export function buildStaffCreatedBookingEmail(
     ? "K9 Atelier reserved this grooming visit for you. Open the link below to confirm the appointment and create your password so you can manage it online."
     : "K9 Atelier reserved this grooming visit for you. Open the link below to confirm the appointment.";
   const closingParagraph =
-    "A card on file is required to secure this appointment. Add one on the review and confirm page if you do not already have one. You are not charged when you confirm. You may also confirm rabies vaccination status in your account and upload a current rabies certificate or vaccination record.";
+    "A card on file is required to secure this appointment. Add one on the review and confirm page if you do not already have one. You are not charged when you confirm. Rabies vaccination details are optional and can be added later.";
 
   const text = [
     `Dear ${greetingName},`,
@@ -75,7 +76,12 @@ export function buildStaffCreatedBookingSms(
 ) {
   const dateLabel = formatAppointmentDateLabel(appointment.appointmentDate);
   const petLabel = formatPetNameList(petNames);
-  return `K9 Atelier reserved a visit for ${petLabel} on ${dateLabel} between ${appointment.appointmentTime}. Review and confirm, and add a card to secure it: ${confirmUrl} Reply STOP to opt out.`;
+  const when =
+    appointment.appointmentTime &&
+    appointment.appointmentTime !== ARRIVAL_WINDOW_PENDING_LABEL
+      ? `${dateLabel} between ${appointment.appointmentTime}`
+      : dateLabel;
+  return `K9 Atelier reserved a visit for ${petLabel} on ${when}. Review and confirm, and add a card to secure it: ${confirmUrl} Reply STOP to opt out.`;
 }
 
 export type StaffBookingInviteNotice = {
@@ -91,7 +97,7 @@ export function buildStaffBookingInviteEmail(notice: StaffBookingInviteNotice) {
     ? "K9 Atelier started a booking for you. Open the link below to enter your dog details, choose a service time, and finish your reservation."
     : "K9 Atelier invited you to finish booking online. Open the link below to enter your details and reserve a visit.";
   const closingParagraph =
-    "You are not charged when you book. After booking, you can confirm rabies vaccination status and add a card on file in your account.";
+    "You are not charged when you book. A card on file is required before the visit is secured. Rabies vaccination details are optional.";
 
   const text = [
     `Dear ${greetingName},`,

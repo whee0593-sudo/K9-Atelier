@@ -3,24 +3,31 @@ import { describe, it } from "node:test";
 import { appointmentCornerMark } from "@/lib/appointments/marks";
 
 describe("appointment corner marks", () => {
-  it("shows a red alert while vaccination is still blocking the booking", () => {
+  it("does not flag bookings when a rabies record was never uploaded", () => {
     assert.equal(
       appointmentCornerMark({
         status: "pending_confirmation",
         vaccinationStatusAtBooking: "needs_review",
       }),
-      "vaccination_alert",
+      null,
     );
     assert.equal(
       appointmentCornerMark({
         status: "cancelled",
         vaccinationStatusAtBooking: "needs_review",
       }),
-      "vaccination_alert",
+      null,
+    );
+    assert.equal(
+      appointmentCornerMark({
+        status: "confirmed",
+        vaccinationStatusAtBooking: "missing",
+      }),
+      null,
     );
   });
 
-  it("hides the alert after staff books a vaccination-approved appointment", () => {
+  it("hides marks on a confirmed visit until the customer replies", () => {
     assert.equal(
       appointmentCornerMark({
         status: "confirmed",
@@ -57,7 +64,7 @@ describe("appointment corner marks", () => {
         vaccinationStatusAtBooking: "needs_review",
         customerConfirmedAt: "2026-07-05T13:00:00.000Z",
       }),
-      "vaccination_alert",
+      null,
     );
   });
 });

@@ -20,6 +20,10 @@ Mobile pet grooming business. Website at k9atelier.com.
 
 ## Business rules
 - Booking: valid payment method required; **no charge at booking** (card on file via Stripe Setup Intent when built)
+- Only these details may block a customer from creating a profile or booking: first name, last name, address, phone, email, a saved payment method, dog name, breed, weight, selected service, a bookable date, and a customer-selectable time slot. A login password is also required when creating a new account.
+- Arrival window is assigned by scheduling. A missing or null window must not block booking, return 400/500, or roll the booking back.
+- Vaccination details and file uploads are optional. Upload, storage, or file errors must not block the profile or the booking.
+- Notification, marketing, and unrelated database failures must not block the booking. See `content/BOOKING-RULES.md`.
 - Hours: Mon–Fri 9:00–17:00 (America/New_York)
 - Service area: 10 mi free, then $6.50/mile one-way beyond, max 20 mi
 - Over 45 lbs: hand stripping (no bath) + end-of-life care only

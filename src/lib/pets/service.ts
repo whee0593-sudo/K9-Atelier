@@ -14,6 +14,7 @@ import {
   requireAuthenticatedUser,
 } from "@/lib/pets/auth";
 import { PetValidationError } from "@/lib/pets/validation";
+import { keepPrimaryIfReferralFails } from "@/lib/referrals/allocate-code";
 import {
   attachVaccinationSummaries,
   syncPetRabiesExpiration,
@@ -71,16 +72,14 @@ export async function createPet(
   }
 
   const pet = (await attachVaccinationSummaries([mapPetRowToRecord(data as PetRow)]))[0];
-  try {
+  await keepPrimaryIfReferralFails(pet, async () => {
     const { ensurePetReferralCode } = await import("@/lib/referrals/service");
     await ensurePetReferralCode({
       petId: pet.id,
       petName: pet.name,
       ownerCustomerId: user.id,
     });
-  } catch (error) {
-    console.error("createPet referral code failed:", error);
-  }
+  });
   return { pet };
 }
 
@@ -130,7 +129,11 @@ export async function updatePet(
   if (!data) return { error: "not_found" };
 
   if (input.rabiesExpirationDate !== undefined) {
-    await syncPetRabiesExpiration(petId, input.rabiesExpirationDate ?? null);
+    try {
+      await syncPetRabiesExpiration(petId, input.rabiesExpirationDate ?? null);
+    } catch (expirationError) {
+      console.error("updatePet rabies expiration sync failed:", expirationError);
+    }
   }
 
   return { pet: (await attachVaccinationSummaries([mapPetRowToRecord(data as PetRow)]))[0] };

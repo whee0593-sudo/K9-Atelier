@@ -120,6 +120,20 @@ describe("required customer profile fields", () => {
     assert.equal(input.customerLastName, "Francavilla");
   });
 
+  it("does not require an arrival window or marketing consent to book", () => {
+    const input = validateCreateAppointmentInput(
+      validAppointmentBody({
+        appointmentTime: null,
+        smsConsent: false,
+        photoMarketingConsent: false,
+        servicePoliciesConsent: false,
+      }),
+    );
+    assert.equal(input.appointmentTime, "");
+    assert.equal(input.slotStartMinutes, 600);
+    assert.equal(input.paymentMethodId, "22222222-2222-4222-8222-222222222222");
+  });
+
   it("saves staff edits to a customer file with the admin client", () => {
     const source = readFileSync(
       new URL("./service.ts", import.meta.url),

@@ -193,22 +193,6 @@ export function BookingOwnerStep({
       );
       return;
     }
-    if (!smsConsent) {
-      setError("Please confirm you agree to receive appointment text messages.");
-      return;
-    }
-    if (!photoMarketingConsent) {
-      setError(
-        "Please confirm you consent to photographing and filming your pet for marketing.",
-      );
-      return;
-    }
-    if (!servicePoliciesConsent) {
-      setError(
-        "Please confirm you have read and agree to the cancellation, rescheduling, payment, and incomplete service policies.",
-      );
-      return;
-    }
 
     setLoading(true);
     setError(null);
@@ -218,11 +202,6 @@ export function BookingOwnerStep({
           setError(
             `Choose a login password of at least ${MIN_CUSTOMER_PASSWORD_LENGTH} characters.`,
           );
-          setLoading(false);
-          return;
-        }
-        if (!referralSource) {
-          setError("Please tell us how you heard about K9 Atelier.");
           setLoading(false);
           return;
         }
@@ -263,9 +242,9 @@ export function BookingOwnerStep({
         lastName: lastName.trim(),
         email: email.trim(),
         phone: phone.trim(),
-        smsConsent: true,
-        photoMarketingConsent: true,
-        servicePoliciesConsent: true,
+        smsConsent,
+        photoMarketingConsent,
+        servicePoliciesConsent,
       });
     } catch (err) {
       setError(
@@ -428,7 +407,6 @@ export function BookingOwnerStep({
               type="checkbox"
               checked={smsConsent}
               onChange={(event) => setSmsConsent(event.target.checked)}
-              required
               className="mt-0.5 size-4 shrink-0 accent-deep-lavender"
             />
             <span className="font-body min-w-0 text-[13px] leading-relaxed text-taupe">
@@ -448,7 +426,6 @@ export function BookingOwnerStep({
               type="checkbox"
               checked={photoMarketingConsent}
               onChange={(event) => setPhotoMarketingConsent(event.target.checked)}
-              required
               className="mt-0.5 size-4 shrink-0 accent-deep-lavender"
             />
             <span className="font-body min-w-0 text-[13px] leading-relaxed text-taupe">
@@ -460,7 +437,6 @@ export function BookingOwnerStep({
               type="checkbox"
               checked={servicePoliciesConsent}
               onChange={(event) => setServicePoliciesConsent(event.target.checked)}
-              required
               className="mt-0.5 size-4 shrink-0 accent-deep-lavender"
             />
             <span className="font-body min-w-0 text-[13px] leading-relaxed text-taupe">
@@ -488,14 +464,13 @@ export function BookingOwnerStep({
             <div className="min-w-0 space-y-2 pt-2">
               <label className="block min-w-0" htmlFor="booking-referral-source">
                 <span className={bookingLabelClass}>
-                  How did you hear about K9 Atelier? *
+                  How did you hear about K9 Atelier?
                 </span>
                 <select
                   id="booking-referral-source"
                   className={bookingFieldClass}
                   value={referralSource}
                   onChange={(event) => setReferralSource(event.target.value)}
-                  required
                 >
                   <option value="">Select one</option>
                   {REFERRAL_SOURCE_OPTIONS.map((option) => (

@@ -8,6 +8,7 @@ import {
   changeNoticeBand,
   type AppointmentChangeAction,
 } from "@/lib/appointments/change-policy";
+import { resolveArrivalForBooking } from "@/lib/appointments/arrival-window";
 import { assignArrivalWindow, getBaseGeoPoint } from "@/lib/appointments/schedule";
 import {
   fetchCustomerContact,
@@ -26,10 +27,7 @@ import type { ChargeKind, ChargeLineItem } from "@/lib/charges/types";
 import { mapPetRowToRecord } from "@/lib/pets/map";
 import { PET_SELECT, type PetRow } from "@/lib/pets/types";
 import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
-import {
-  petHasConfirmedRabiesStatus,
-  vaccinationStatusSnapshotForBooking,
-} from "@/lib/vaccinations/booking";
+import { vaccinationStatusSnapshotForBooking } from "@/lib/vaccinations/booking";
 import {
   allBookableServices,
   estimateServiceDurationMinutes,
@@ -558,7 +556,6 @@ async function rescheduleRows(
   | { error: "server" | "slot_unavailable" }
 > {
   const base = await getBaseGeoPoint();
-  if (!base) return { error: "server" as const };
   const admin = createAdminClient();
   const updated: AppointmentRecord[] = [];
 
@@ -571,29 +568,27 @@ async function rescheduleRows(
       20,
       row.add_on_ids ?? [],
     );
-    const assignment = await assignArrivalWindow({
-      date,
-      point: { lat: row.address_lat, lon: row.address_lon },
-      zip: row.address_zip,
-      durationMinutes,
-      slotStartMinutes,
-      base,
-      excludeAppointmentIds: rows.map((entry) => entry.id),
-    });
-    if ("error" in assignment) {
-      if (assignment.error === "slot_unavailable") {
-        return { error: "slot_unavailable" as const };
-      }
-      return { error: "server" as const };
-    }
+    const assignment = base
+      ? await assignArrivalWindow({
+          date,
+          point: { lat: row.address_lat, lon: row.address_lon },
+          zip: row.address_zip,
+          durationMinutes,
+          slotStartMinutes,
+          base,
+          excludeAppointmentIds: rows.map((entry) => entry.id),
+        })
+      : { error: "misconfigured" as const };
+    const schedule = resolveArrivalForBooking(assignment, slotStartMinutes);
+    if ("error" in schedule) return { error: "slot_unavailable" as const };
 
     const { data, error } = await admin
       .from("appointments")
       .update({
         appointment_date: date,
-        appointment_time: assignment.insertion.appointmentTime,
-        scheduled_start: assignment.insertion.scheduledStart,
-        time_preference: assignment.insertion.usedPreference,
+        appointment_time: schedule.appointmentTime,
+        scheduled_start: schedule.scheduledStart,
+        time_preference: schedule.timePreference,
       })
       .eq("id", row.id)
       .select(CHANGE_SELECT)
@@ -646,11 +641,12 @@ async function addDogToVisit(
   }
   if (!petRow) return { error: "not_found" as const };
 
-  const [pet] = await attachVaccinationSummaries([
-    mapPetRowToRecord(petRow as PetRow),
-  ]);
-  if (!petHasConfirmedRabiesStatus(pet)) {
-    return { error: "conflict" as const };
+  let pet = mapPetRowToRecord(petRow as PetRow);
+  try {
+    const [enriched] = await attachVaccinationSummaries([pet]);
+    if (enriched) pet = enriched;
+  } catch (vaccinationError) {
+    console.error("addDogToVisit vaccination summary failed:", vaccinationError);
   }
 
   const service = allBookableServices().find((entry) => entry.id === input.serviceId);
@@ -664,7 +660,6 @@ async function addDogToVisit(
   if (!paymentMethod) return { error: "payment_required" as const };
 
   const base = await getBaseGeoPoint();
-  if (!base) return { error: "server" as const };
 
   const slotStartMinutes =
     typeof visit.scheduled_start === "number"
@@ -672,20 +667,22 @@ async function addDogToVisit(
       : visit.time_preference === "afternoon"
         ? 12 * 60
         : 9 * 60;
-  const assignment = await assignArrivalWindow({
-    date: visit.appointment_date,
-    point: { lat: visit.address_lat, lon: visit.address_lon },
-    zip: visit.address_zip,
-    durationMinutes: estimateServiceDurationMinutes(service.id, pet.weightLbs, []),
-    slotStartMinutes,
-    base,
-  });
-  if ("error" in assignment) {
-    if (assignment.error === "slot_unavailable") {
-      return { error: "slot_unavailable" as const };
-    }
-    return { error: "server" as const };
-  }
+  const assignment = base
+    ? await assignArrivalWindow({
+        date: visit.appointment_date,
+        point: { lat: visit.address_lat, lon: visit.address_lon },
+        zip: visit.address_zip,
+        durationMinutes: estimateServiceDurationMinutes(
+          service.id,
+          pet.weightLbs,
+          [],
+        ),
+        slotStartMinutes,
+        base,
+      })
+    : { error: "misconfigured" as const };
+  const schedule = resolveArrivalForBooking(assignment, slotStartMinutes);
+  if ("error" in schedule) return { error: "slot_unavailable" as const };
 
   const vaccinationStatus = vaccinationStatusSnapshotForBooking(pet);
   const status = "confirmed";
@@ -706,9 +703,9 @@ async function addDogToVisit(
       travel_distance_miles: Number(visit.travel_distance_miles),
       travel_fee: 0,
       appointment_date: visit.appointment_date,
-      appointment_time: assignment.insertion.appointmentTime,
-      scheduled_start: assignment.insertion.scheduledStart,
-      time_preference: assignment.insertion.usedPreference,
+      appointment_time: schedule.appointmentTime,
+      scheduled_start: schedule.scheduledStart,
+      time_preference: schedule.timePreference,
       address_lat: visit.address_lat,
       address_lon: visit.address_lon,
       timezone: business.booking.timezone,

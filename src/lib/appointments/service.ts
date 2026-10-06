@@ -3,6 +3,7 @@ import {
   mapAppointmentRowToAdminRecord,
   mapAppointmentRowToRecord,
 } from "@/lib/appointments/map";
+import { isOperationalAdminAppointment } from "@/lib/appointments/operational-visibility";
 import type {
   AdminAppointmentRecord,
   AppointmentRecord,
@@ -16,11 +17,8 @@ import {
 import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
 import { mapPetRowToRecord } from "@/lib/pets/map";
 import { PET_SELECT, type PetRow } from "@/lib/pets/types";
-import { AppointmentValidationError } from "@/lib/appointments/validation";
-import {
-  petHasConfirmedRabiesStatus,
-  vaccinationStatusSnapshotForBooking,
-} from "@/lib/vaccinations/booking";
+import { resolveArrivalForBooking } from "@/lib/appointments/arrival-window";
+import { vaccinationStatusSnapshotForBooking } from "@/lib/vaccinations/booking";
 import {
   contactFromAdminAppointment,
   fetchAppointmentAdminRecord,
@@ -120,14 +118,18 @@ export async function createAppointment(
   }
   if (!petRow) return { error: "not_found" };
 
-  const [pet] = await attachVaccinationSummaries([
-    mapPetRowToRecord(petRow as PetRow),
-  ]);
-  const vaccinationStatus = vaccinationStatusSnapshotForBooking(pet);
-
-  if (!petHasConfirmedRabiesStatus(pet)) {
-    return { error: "conflict" };
+  const mappedPet = mapPetRowToRecord(petRow as PetRow);
+  let pet = mappedPet;
+  try {
+    const [enriched] = await attachVaccinationSummaries([mappedPet]);
+    if (enriched) pet = enriched;
+  } catch (vaccinationError) {
+    console.error(
+      "createAppointment vaccination summary failed:",
+      vaccinationError,
+    );
   }
+  const vaccinationStatus = vaccinationStatusSnapshotForBooking(pet);
 
   const paymentMethod = await getCustomerPaymentMethod(
     user.id,
@@ -135,38 +137,42 @@ export async function createAppointment(
   );
   if (!paymentMethod) return { error: "payment_required" };
 
-  const base = await getBaseGeoPoint();
-  if (!base) return { error: "server" };
-
   const durationMinutes = estimateServiceDurationMinutes(
     input.serviceId,
     pet.weightLbs,
     input.addOnIds,
   );
   const point = { lat: input.addressLat, lon: input.addressLon };
-  const assignment = await assignArrivalWindow({
-    date: input.appointmentDate,
-    point,
-    zip: input.address.zip,
-    durationMinutes,
-    slotStartMinutes: input.slotStartMinutes,
-    base,
-  });
-  if ("error" in assignment) {
-    if (assignment.error === "slot_unavailable") return { error: "slot_unavailable" };
-    if (assignment.error === "misconfigured") return { error: "server" };
-    return { error: "server" };
-  }
-
-  const claimed = await claimDayPlan(
-    input.appointmentDate,
-    input.address.zip,
-    point,
+  const base = await getBaseGeoPoint();
+  const assignment = base
+    ? await assignArrivalWindow({
+        date: input.appointmentDate,
+        point,
+        zip: input.address.zip,
+        durationMinutes,
+        slotStartMinutes: input.slotStartMinutes,
+        base,
+      })
+    : { error: "misconfigured" as const };
+  const schedule = resolveArrivalForBooking(
+    assignment,
+    input.slotStartMinutes,
   );
-  if ("error" in claimed) {
-    if (claimed.error === "slot_unavailable") return { error: "slot_unavailable" };
-    if (claimed.error === "misconfigured") return { error: "server" };
-    return { error: "server" };
+  if ("error" in schedule) return { error: "slot_unavailable" };
+
+  if (base) {
+    const claimed = await claimDayPlan(
+      input.appointmentDate,
+      input.address.zip,
+      point,
+    );
+    if ("error" in claimed) {
+      if (claimed.error === "slot_unavailable") return { error: "slot_unavailable" };
+      console.error(
+        "createAppointment day plan was not claimed; booking continues:",
+        claimed.error,
+      );
+    }
   }
 
   const { error: phoneError } = await supabase
@@ -180,19 +186,28 @@ export async function createAppointment(
 
   if (phoneError) {
     console.error("createAppointment phone save failed:", phoneError.message);
-    return { error: "server" };
   }
 
+  let referralCodeToAttach: string | null = null;
   if (input.referralCode?.trim()) {
-    const { validateReferralCodeForCustomer } = await import(
-      "@/lib/referrals/service"
-    );
-    const referral = await validateReferralCodeForCustomer(
-      user.id,
-      input.referralCode,
-    );
-    if (!referral.valid) {
-      throw new AppointmentValidationError(referral.message, "referralCode");
+    try {
+      const { validateReferralCodeForCustomer } = await import(
+        "@/lib/referrals/service"
+      );
+      const referral = await validateReferralCodeForCustomer(
+        user.id,
+        input.referralCode,
+      );
+      if (referral.valid) {
+        referralCodeToAttach = input.referralCode;
+      } else {
+        console.error(
+          "createAppointment referral skipped:",
+          referral.message,
+        );
+      }
+    } catch (referralError) {
+      console.error("createAppointment referral check failed:", referralError);
     }
   }
 
@@ -214,9 +229,9 @@ export async function createAppointment(
       travel_distance_miles: input.travelDistanceMiles,
       travel_fee: input.travelFee,
       appointment_date: input.appointmentDate,
-      appointment_time: assignment.insertion.appointmentTime,
-      scheduled_start: assignment.insertion.scheduledStart,
-      time_preference: input.timePreference,
+      appointment_time: schedule.appointmentTime,
+      scheduled_start: schedule.scheduledStart,
+      time_preference: schedule.timePreference,
       address_lat: input.addressLat,
       address_lon: input.addressLon,
       timezone: business.booking.timezone,
@@ -238,13 +253,17 @@ export async function createAppointment(
 
   const appointment = mapAppointmentRowToRecord(data as AppointmentRow);
 
-  if (input.referralCode?.trim()) {
-    const { attachReferralOnBooking } = await import("@/lib/referrals/service");
-    await attachReferralOnBooking({
-      referredCustomerId: user.id,
-      appointmentId: appointment.id,
-      code: input.referralCode,
-    });
+  if (referralCodeToAttach) {
+    try {
+      const { attachReferralOnBooking } = await import("@/lib/referrals/service");
+      await attachReferralOnBooking({
+        referredCustomerId: user.id,
+        appointmentId: appointment.id,
+        code: referralCodeToAttach,
+      });
+    } catch (referralError) {
+      console.error("createAppointment referral attach failed:", referralError);
+    }
   }
 
   try {
@@ -288,38 +307,6 @@ export async function listCustomerAppointments(): Promise<
     appointments: ((data ?? []) as unknown as AppointmentRow[]).map(
       mapAppointmentRowToRecord,
     ),
-  };
-}
-
-export async function listPendingAdminAppointments(): Promise<
-  | { appointments: AdminAppointmentRecord[] }
-  | { error: "unauthenticated" | "forbidden" | "server" }
-> {
-  const { getStaffSession } = await import("@/lib/staff/auth");
-  const session = await getStaffSession();
-  if ("error" in session) return { error: session.error };
-
-  const supabase = await createAuthenticatedSupabaseClient();
-  const { data, error } = await supabase
-    .from("appointments")
-    .select(ADMIN_APPOINTMENT_SELECT)
-    .eq("status", "pending_confirmation")
-    .order("appointment_date", { ascending: true })
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    console.error(
-      "listPendingAdminAppointments failed:",
-      error.code,
-      error.message,
-    );
-    return { error: "server" };
-  }
-
-  return {
-    appointments: ((data ?? []) as unknown as AppointmentRow[])
-      .map(mapAppointmentRowToAdminRecord)
-      .filter((appointment) => !appointment.awaitingCustomerConfirm),
   };
 }
 
@@ -378,7 +365,7 @@ export async function setAppointmentStatus(
   return { ok: true };
 }
 
-export async function listTodayConfirmedAdminAppointments(): Promise<
+export async function listTodayAdminAppointments(): Promise<
   | { appointments: AdminAppointmentRecord[] }
   | { error: "unauthenticated" | "forbidden" | "server" }
 > {
@@ -391,14 +378,14 @@ export async function listTodayConfirmedAdminAppointments(): Promise<
   const { data, error } = await supabase
     .from("appointments")
     .select(ADMIN_TODAY_APPOINTMENT_SELECT)
-    .eq("status", "confirmed")
+    .neq("status", "cancelled")
     .eq("appointment_date", todayInBusinessTimezone())
     .order("scheduled_start", { ascending: true })
     .order("appointment_time", { ascending: true });
 
   if (error) {
     console.error(
-      "listTodayConfirmedAdminAppointments failed:",
+      "listTodayAdminAppointments failed:",
       error.code,
       error.message,
     );
@@ -406,9 +393,11 @@ export async function listTodayConfirmedAdminAppointments(): Promise<
   }
 
   return {
-    appointments: ((data ?? []) as unknown as AppointmentRow[]).map(
-      mapAppointmentRowToAdminRecord,
-    ),
+    appointments: ((data ?? []) as unknown as AppointmentRow[])
+      .map(mapAppointmentRowToAdminRecord)
+      .filter((appointment) =>
+        isOperationalAdminAppointment(appointment.status),
+      ),
   };
 }
 
@@ -466,7 +455,7 @@ export async function sendAppointmentEnRouteNotification(
   if (!isSmsConfigured()) return { error: "misconfigured" };
 
   const appointment = await fetchAppointmentAdminRecord(appointmentId);
-  if (!appointment || appointment.status !== "confirmed") {
+  if (!appointment || !isOperationalAdminAppointment(appointment.status)) {
     return { error: "not_found" };
   }
 

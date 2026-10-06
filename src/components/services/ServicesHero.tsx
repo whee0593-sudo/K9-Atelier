@@ -14,7 +14,14 @@ export function ServicesHero() {
             Down to Every Detail.
           </h1>
           <p className="font-body mx-auto mt-5 max-w-[28rem] text-base leading-[1.7] text-taupe md:mt-6 md:max-w-[32rem] md:text-[17px] md:leading-[1.75]">
-            Private, one-on-one mobile dog grooming in Palm Beach, tailored to your dog.
+            Private, one-on-one mobile dog grooming, tailored to your dog.
+          </p>
+          <p className="font-body mx-auto mt-3 max-w-[28rem] text-pretty text-[13px] leading-relaxed text-taupe md:mt-4 md:max-w-[32rem] md:text-sm">
+            <span className="whitespace-nowrap">Jupiter Island,</span>{" "}
+            <span className="whitespace-nowrap">Jupiter,</span>{" "}
+            <span className="whitespace-nowrap">Tequesta,</span>{" "}
+            <span className="whitespace-nowrap">Palm Beach Gardens,</span>{" "}
+            <span className="whitespace-nowrap">Palm Beach and West Palm Beach.</span>
           </p>
           <p className="font-body mx-auto mt-3 text-[13px] leading-relaxed text-taupe md:mt-4 md:text-sm">
             Dogs up to 45 lbs · By appointment only
