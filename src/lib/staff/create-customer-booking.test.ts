@@ -145,6 +145,8 @@ describe("validateStaffCustomerBookingInput", () => {
     assert.equal(input.pets[1]?.name, "Max");
     assert.equal(input.pets[0]?.serviceId, "signature-bath-care");
     assert.equal(input.pets[1]?.serviceId, "signature-bath-care");
+    assert.deepEqual(input.pets[0]?.serviceIds, ["signature-bath-care"]);
+    assert.deepEqual(input.pets[1]?.serviceIds, ["signature-bath-care"]);
   });
 
   it("keeps a different service on each dog", () => {
@@ -170,8 +172,50 @@ describe("validateStaffCustomerBookingInput", () => {
     assert.equal(input.mode, "booking");
     assert.equal(input.pets[0]?.serviceId, "signature-bath-care");
     assert.equal(input.pets[1]?.serviceId, "custom-full-haircut");
+    assert.deepEqual(input.pets[1]?.serviceIds, ["custom-full-haircut"]);
     assert.equal(input.serviceId, "signature-bath-care");
     assert.equal(input.serviceName, "Signature Bath & Care");
+  });
+
+  it("accepts two different services for the same dog", () => {
+    const input = validateStaffCustomerBookingInput(
+      validBody({
+        serviceId: undefined,
+        pet: {
+          name: "Luna",
+          breed: "Poodle",
+          weightLbs: 14,
+          serviceIds: ["hand-stripping", "signature-bath-care"],
+        },
+      }),
+    );
+    assert.equal(input.mode, "booking");
+    assert.equal(input.pets.length, 1);
+    assert.deepEqual(input.pets[0]?.serviceIds, [
+      "hand-stripping",
+      "signature-bath-care",
+    ]);
+    assert.equal(input.serviceId, "hand-stripping");
+  });
+
+  it("rejects the same service twice for one dog", () => {
+    assert.throws(
+      () =>
+        validateStaffCustomerBookingInput(
+          validBody({
+            serviceId: undefined,
+            pet: {
+              name: "Luna",
+              breed: "Poodle",
+              weightLbs: 14,
+              serviceIds: ["signature-bath-care", "signature-bath-care"],
+            },
+          }),
+        ),
+      (error: unknown) =>
+        error instanceof StaffBookingValidationError &&
+        error.message === "Choose a different service for this dog.",
+    );
   });
 
   it("rejects a service that the dog's weight cannot book", () => {
@@ -198,7 +242,7 @@ describe("validateStaffCustomerBookingInput", () => {
         ),
       (error: unknown) =>
         error instanceof StaffBookingValidationError &&
-        error.field === "pets[1].serviceId",
+        error.field === "pets[1].serviceIds[0]",
     );
   });
 

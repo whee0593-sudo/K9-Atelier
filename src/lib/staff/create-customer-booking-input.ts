@@ -32,7 +32,9 @@ export type StaffCustomerBookingAddress = {
 
 export type StaffBookingPetInput = PetWriteInput & {
   id: string | null;
+  /** First selected service. Kept so a single-service booking stays easy to read. */
   serviceId: string | null;
+  serviceIds: string[];
 };
 
 export type StaffCustomerBookingInput = {
@@ -65,23 +67,68 @@ function resolveBookableService(serviceIdRaw: string, field: string) {
   return service;
 }
 
-function readPetServiceId(record: Record<string, unknown>, index: number) {
-  const value = record.serviceId;
+const MAX_SERVICES_PER_DOG = 4;
+
+function readServiceIdValue(
+  value: unknown,
+  field: string,
+): string {
   if (value == null || value === "") return "";
   if (typeof value !== "string") {
-    throw new StaffBookingValidationError(
-      "Service must be text.",
-      `pets[${index}].serviceId`,
-    );
+    throw new StaffBookingValidationError("Service must be text.", field);
   }
   const trimmed = value.trim();
   if (trimmed.length > 120) {
     throw new StaffBookingValidationError(
       "Service must be 120 characters or fewer.",
-      `pets[${index}].serviceId`,
+      field,
     );
   }
   return trimmed;
+}
+
+function readPetServiceIds(record: Record<string, unknown>, index: number) {
+  const raw = record.serviceIds;
+  const ids: string[] = [];
+  if (raw != null) {
+    if (!Array.isArray(raw)) {
+      throw new StaffBookingValidationError(
+        "Services must be a list.",
+        `pets[${index}].serviceIds`,
+      );
+    }
+    if (raw.length > MAX_SERVICES_PER_DOG) {
+      throw new StaffBookingValidationError(
+        `You can add up to ${MAX_SERVICES_PER_DOG} services for one dog.`,
+        `pets[${index}].serviceIds`,
+      );
+    }
+    raw.forEach((value, serviceIndex) => {
+      const serviceId = readServiceIdValue(
+        value,
+        `pets[${index}].serviceIds[${serviceIndex}]`,
+      );
+      if (serviceId) ids.push(serviceId);
+    });
+  }
+  if (ids.length === 0) {
+    const single = readServiceIdValue(
+      record.serviceId,
+      `pets[${index}].serviceId`,
+    );
+    if (single) ids.push(single);
+  }
+  const seen = new Set<string>();
+  for (const serviceId of ids) {
+    if (seen.has(serviceId)) {
+      throw new StaffBookingValidationError(
+        "Choose a different service for this dog.",
+        `pets[${index}].serviceIds`,
+      );
+    }
+    seen.add(serviceId);
+  }
+  return ids;
 }
 
 const MAX_STAFF_BOOKING_PETS = 8;
@@ -251,23 +298,49 @@ export function validateStaffCustomerBookingInput(
     try {
       const petRecord = assertPlainObject(petBody);
       const id = readOptionalPetId(petRecord, index);
-      const petServiceRaw = readPetServiceId(petRecord, index);
+      const requestedServiceIds = readPetServiceIds(petRecord, index);
       const rest = { ...petRecord };
       delete rest.id;
       delete rest.serviceId;
+      delete rest.serviceIds;
       const pet = validateCreatePetInput(rest);
-      const chosen =
-        resolveBookableService(petServiceRaw, `pets[${index}].serviceId`) ??
-        sharedService;
-      if (chosen && !isServiceAvailableForPet(chosen.id, pet.weightLbs)) {
-        throw new StaffBookingValidationError(
-          filledPetBodies.length > 1
-            ? `That service is not available for dog ${index + 1}'s weight.`
-            : "That service is not available for this dog's weight.",
-          petServiceRaw ? `pets[${index}].serviceId` : "serviceId",
+      const chosenIds =
+        requestedServiceIds.length > 0
+          ? requestedServiceIds
+          : sharedService
+            ? [sharedService.id]
+            : [];
+      const serviceIds = chosenIds.map((serviceId, serviceIndex) => {
+        const chosen = resolveBookableService(
+          serviceId,
+          requestedServiceIds.length > 0
+            ? `pets[${index}].serviceIds[${serviceIndex}]`
+            : "serviceId",
         );
-      }
-      return { ...pet, id, serviceId: chosen?.id ?? null };
+        if (!chosen) {
+          throw new StaffBookingValidationError(
+            "Choose a bookable grooming service.",
+            "serviceId",
+          );
+        }
+        if (!isServiceAvailableForPet(chosen.id, pet.weightLbs)) {
+          throw new StaffBookingValidationError(
+            filledPetBodies.length > 1
+              ? `That service is not available for dog ${index + 1}'s weight.`
+              : "That service is not available for this dog's weight.",
+            requestedServiceIds.length > 0
+              ? `pets[${index}].serviceIds[${serviceIndex}]`
+              : "serviceId",
+          );
+        }
+        return chosen.id;
+      });
+      return {
+        ...pet,
+        id,
+        serviceId: serviceIds[0] ?? null,
+        serviceIds,
+      };
     } catch (error) {
       if (error instanceof StaffBookingValidationError) throw error;
       if (error instanceof PetValidationError) {
@@ -353,7 +426,7 @@ export function validateStaffCustomerBookingInput(
 
   const hasCompleteBooking = Boolean(
     pets.length > 0 &&
-      pets.every((pet) => pet.serviceId) &&
+      pets.every((pet) => pet.serviceIds.length > 0) &&
       appointmentDate &&
       slotStartMinutes != null &&
       address,

@@ -63,13 +63,15 @@ type SuccessState = {
   appointmentTime: string | null;
 };
 
+const MAX_SERVICES_PER_DOG = 4;
+
 type PetDraft = {
   key: string;
   id: string | null;
   name: string;
   breed: string;
   weightLbs: string;
-  serviceId: string;
+  serviceIds: string[];
 };
 
 function createPetDraft(): PetDraft {
@@ -77,7 +79,14 @@ function createPetDraft(): PetDraft {
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
       : `pet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  return { key, id: null, name: "", breed: "", weightLbs: "", serviceId: "" };
+  return {
+    key,
+    id: null,
+    name: "",
+    breed: "",
+    weightLbs: "",
+    serviceIds: [""],
+  };
 }
 
 function petDraftFromSaved(pet: StaffBookingProfilePet): PetDraft {
@@ -87,8 +96,15 @@ function petDraftFromSaved(pet: StaffBookingProfilePet): PetDraft {
     name: pet.name,
     breed: pet.breed,
     weightLbs: pet.weightLbs > 0 ? String(pet.weightLbs) : "",
-    serviceId: "",
+    serviceIds: [""],
   };
+}
+
+function serviceChoices(weightLbs: string, serviceIds: string[], index: number) {
+  const taken = new Set(
+    serviceIds.filter((serviceId, serviceIndex) => serviceIndex !== index && serviceId),
+  );
+  return servicesForPetWeight(weightLbs).filter((service) => !taken.has(service.id));
 }
 
 function positiveWeight(weightLbs: string) {
@@ -140,7 +156,6 @@ export function BookForCustomerForm({
   const [petsSource, setPetsSource] = useState<FieldSource>(
     initialProfile?.pets.length ? "saved" : "empty",
   );
-  const [serviceId, setServiceId] = useState("");
   const [street, setStreet] = useState(initialAddress?.street ?? "");
   const [city, setCity] = useState(initialAddress?.city ?? "");
   const [state, setState] = useState(initialAddress?.state ?? "");
@@ -188,7 +203,6 @@ export function BookForCustomerForm({
   foundProfileRef.current = foundProfile;
   contactRef.current = { firstName, lastName, email, phone };
 
-  const multiDog = pets.length > 1;
   const petWeights = useMemo(
     () =>
       pets
@@ -197,42 +211,28 @@ export function BookForCustomerForm({
     [pets],
   );
   const primaryWeightLbs = petWeights[0] ?? Number.NaN;
-  const services = useMemo(
-    () =>
-      allBookableServices().filter(
-        (service) =>
-          service.bookableAsPrimary &&
-          (petWeights.length === 0 ||
-            petWeights.every((weight) =>
-              isServiceAvailableForPet(service.id, weight),
-            )),
-      ),
-    [petWeights],
-  );
-
-  const selectedService = services.find((service) => service.id === serviceId);
   const dogServices = useMemo(
     () =>
       pets.map((pet) => {
         const weight = positiveWeight(pet.weightLbs);
-        const options = servicesForPetWeight(pet.weightLbs);
-        return {
-          pet,
-          weight,
-          options,
-          selected: options.find((service) => service.id === pet.serviceId) ?? null,
-        };
+        const selected = pet.serviceIds
+          .map(
+            (serviceId) =>
+              servicesForPetWeight(pet.weightLbs).find(
+                (service) => service.id === serviceId,
+              ) ?? null,
+          )
+          .filter((service): service is NonNullable<typeof service> => service != null);
+        return { pet, weight, selected };
       }),
     [pets],
   );
   const everyDogServiceReady =
     dogServices.length > 0 &&
-    dogServices.every((row) => row.selected && row.weight != null);
-  const scheduleServiceId = multiDog
-    ? everyDogServiceReady
-      ? dogServices[0]?.selected?.id ?? ""
-      : ""
-    : serviceId;
+    dogServices.every((row) => row.selected.length > 0 && row.weight != null);
+  const scheduleServiceId = everyDogServiceReady
+    ? dogServices[0]?.selected[0]?.id ?? ""
+    : "";
   const openDays = useMemo(() => selectableStaffDays(days), [days]);
   const openSlots = useMemo(
     () => slotsForStaffDate(days, appointmentDate),
@@ -252,49 +252,39 @@ export function BookForCustomerForm({
     slotCount: openSlots.length,
   });
 
-  const estimatedServiceTotal = multiDog
-    ? everyDogServiceReady
-      ? dogServices.reduce((sum, row) => {
-          const estimate = getServicePriceEstimate(row.selected!, row.weight!);
-          return sum + (estimate?.from ?? 0);
-        }, 0)
-      : null
-    : selectedService && petWeights.length === pets.length
-      ? petWeights.reduce((sum, weight) => {
-          const estimate = getServicePriceEstimate(selectedService, weight);
-          return sum + (estimate?.from ?? 0);
-        }, 0)
-      : null;
+  const estimatedServiceTotal = everyDogServiceReady
+    ? dogServices.reduce(
+        (sum, row) =>
+          sum +
+          row.selected.reduce((serviceSum, service) => {
+            const estimate = getServicePriceEstimate(service, row.weight!);
+            return serviceSum + (estimate?.from ?? 0);
+          }, 0),
+        0,
+      )
+    : null;
   const estimatedTotal =
     estimatedServiceTotal != null && quoteState.status === "ready"
       ? Math.round((estimatedServiceTotal + quoteState.quote.fee) * 100) / 100
       : null;
-  const totalDurationMinutes = multiDog
-    ? everyDogServiceReady
-      ? dogServices.reduce(
-          (sum, row) =>
-            sum +
-            estimateServiceDurationMinutes(row.selected!.id, row.weight!),
-          0,
-        )
-      : null
-    : selectedService && petWeights.length === pets.length
-      ? petWeights.reduce(
-          (sum, weight) =>
-            sum + estimateServiceDurationMinutes(selectedService.id, weight),
-          0,
-        )
-      : null;
+  const totalDurationMinutes = everyDogServiceReady
+    ? dogServices.reduce(
+        (sum, row) =>
+          sum +
+          row.selected.reduce(
+            (serviceSum, service) =>
+              serviceSum +
+              estimateServiceDurationMinutes(service.id, row.weight!),
+            0,
+          ),
+        0,
+      )
+    : null;
 
   function bookedServiceLabel() {
-    if (!multiDog) return selectedService?.name ?? null;
-    const names = [
-      ...new Set(
-        dogServices
-          .map((row) => row.selected?.name)
-          .filter((name): name is string => Boolean(name)),
-      ),
-    ];
+    const names = dogServices.flatMap((row) =>
+      row.selected.map((service) => service.name),
+    );
     return names.length > 0 ? names.join(", ") : null;
   }
 
@@ -311,50 +301,88 @@ export function BookForCustomerForm({
     setProfileNote(null);
   }
 
-  function updatePet(key: string, field: keyof Omit<PetDraft, "key" | "id">, value: string) {
+  function updatePet(
+    key: string,
+    field: "name" | "breed" | "weightLbs",
+    value: string,
+  ) {
     markPetsEdited();
     setPets((current) =>
       current.map((pet) => {
         if (pet.key !== key) return pet;
         const next = { ...pet, [field]: value };
-        if (field === "weightLbs" && next.serviceId) {
+        if (field === "weightLbs") {
           const weight = positiveWeight(value);
-          if (
-            weight != null &&
-            !isServiceAvailableForPet(next.serviceId, weight)
-          ) {
-            next.serviceId = "";
-          }
+          next.serviceIds = next.serviceIds.map((serviceId) => {
+            if (
+              serviceId &&
+              weight != null &&
+              !isServiceAvailableForPet(serviceId, weight)
+            ) {
+              return "";
+            }
+            return serviceId;
+          });
         }
         return next;
       }),
     );
   }
 
+  function updatePetService(key: string, index: number, serviceId: string) {
+    markPetsEdited();
+    setPets((current) =>
+      current.map((pet) => {
+        if (pet.key !== key) return pet;
+        const serviceIds = pet.serviceIds.map((currentId, serviceIndex) =>
+          serviceIndex === index ? serviceId : currentId,
+        );
+        return { ...pet, serviceIds };
+      }),
+    );
+    setAppointmentDate(pinnedDateRef.current);
+    setSlotStartMinutes("");
+  }
+
+  function addPetService(key: string) {
+    markPetsEdited();
+    setPets((current) =>
+      current.map((pet) => {
+        if (pet.key !== key || pet.serviceIds.length >= MAX_SERVICES_PER_DOG) {
+          return pet;
+        }
+        return { ...pet, serviceIds: [...pet.serviceIds, ""] };
+      }),
+    );
+  }
+
+  function removePetService(key: string, index: number) {
+    markPetsEdited();
+    setPets((current) =>
+      current.map((pet) => {
+        if (pet.key !== key || pet.serviceIds.length <= 1) return pet;
+        return {
+          ...pet,
+          serviceIds: pet.serviceIds.filter(
+            (_, serviceIndex) => serviceIndex !== index,
+          ),
+        };
+      }),
+    );
+    setAppointmentDate(pinnedDateRef.current);
+    setSlotStartMinutes("");
+  }
+
   function addPetRow() {
     markPetsEdited();
-    setPets((current) => {
-      const seeded =
-        current.length === 1
-          ? [
-              {
-                ...current[0],
-                serviceId: current[0].serviceId || serviceId,
-              },
-            ]
-          : current;
-      return [...seeded, createPetDraft()];
-    });
+    setPets((current) => [...current, createPetDraft()]);
   }
 
   function removePetRow(key: string) {
     markPetsEdited();
-    setPets((current) => {
-      if (current.length <= 1) return current;
-      const next = current.filter((pet) => pet.key !== key);
-      if (next.length === 1) setServiceId(next[0]?.serviceId ?? "");
-      return next;
-    });
+    setPets((current) =>
+      current.length <= 1 ? current : current.filter((pet) => pet.key !== key),
+    );
   }
 
   function applySavedAddress(address: StaffBookingProfileAddress | null) {
@@ -689,7 +717,7 @@ export function BookForCustomerForm({
         name: pet.name.trim(),
         breed: pet.breed.trim(),
         weightLbs: Number(pet.weightLbs),
-        serviceId: pet.serviceId,
+        serviceIds: pet.serviceIds.filter(Boolean),
       }))
       .filter(
         (pet) =>
@@ -697,9 +725,9 @@ export function BookForCustomerForm({
           pet.breed ||
           (Number.isFinite(pet.weightLbs) && pet.weightLbs > 0),
       );
-    const servicesReady = multiDog
-      ? filledPets.length > 0 && filledPets.every((pet) => pet.serviceId)
-      : Boolean(serviceId);
+    const servicesReady =
+      filledPets.length > 0 &&
+      filledPets.every((pet) => pet.serviceIds.length > 0);
 
     if (preview) {
       const inviteOnly =
@@ -745,9 +773,8 @@ export function BookForCustomerForm({
             name: pet.name,
             breed: pet.breed,
             weightLbs: pet.weightLbs,
-            ...(multiDog && pet.serviceId ? { serviceId: pet.serviceId } : {}),
+            ...(pet.serviceIds.length > 0 ? { serviceIds: pet.serviceIds } : {}),
           })),
-          serviceId: multiDog ? undefined : serviceId || undefined,
           appointmentDate: appointmentDate || undefined,
           slotStartMinutes: slotStartMinutes
             ? Number(slotStartMinutes)
@@ -1052,36 +1079,66 @@ export function BookForCustomerForm({
                   />
                 </div>
               </div>
-              {multiDog ? (
-                <div>
-                  <label className={labelClass} htmlFor={`pet-service-${pet.key}`}>
-                    Service
-                  </label>
-                  <select
-                    id={`pet-service-${pet.key}`}
-                    className={fieldClass}
-                    value={
-                      servicesForPetWeight(pet.weightLbs).some(
-                        (service) => service.id === pet.serviceId,
-                      )
-                        ? pet.serviceId
-                        : ""
-                    }
-                    onChange={(event) => {
-                      updatePet(pet.key, "serviceId", event.target.value);
-                      setAppointmentDate(pinnedDateRef.current);
-                      setSlotStartMinutes("");
-                    }}
+              <div className="space-y-3">
+                {pet.serviceIds.map((serviceId, serviceIndex) => {
+                  const serviceFieldId = `pet-service-${pet.key}-${serviceIndex}`;
+                  const choices = serviceChoices(
+                    pet.weightLbs,
+                    pet.serviceIds,
+                    serviceIndex,
+                  );
+                  return (
+                    <div key={serviceFieldId}>
+                      <div className="flex items-center justify-between gap-3">
+                        <label className={labelClass} htmlFor={serviceFieldId}>
+                          Service
+                        </label>
+                        {pet.serviceIds.length > 1 ? (
+                          <button
+                            type="button"
+                            onClick={() => removePetService(pet.key, serviceIndex)}
+                            className="text-sm text-text-muted hover:text-text"
+                          >
+                            Remove service
+                          </button>
+                        ) : null}
+                      </div>
+                      <select
+                        id={serviceFieldId}
+                        className={fieldClass}
+                        value={
+                          choices.some((service) => service.id === serviceId)
+                            ? serviceId
+                            : ""
+                        }
+                        onChange={(event) =>
+                          updatePetService(
+                            pet.key,
+                            serviceIndex,
+                            event.target.value,
+                          )
+                        }
+                      >
+                        <option value="">Select a service</option>
+                        {choices.map((service) => (
+                          <option key={service.id} value={service.id}>
+                            {service.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })}
+                {pet.serviceIds.length < MAX_SERVICES_PER_DOG ? (
+                  <button
+                    type="button"
+                    onClick={() => addPetService(pet.key)}
+                    className="rounded-xl border border-lavender/40 px-4 py-2 text-sm text-text hover:border-gold/40"
                   >
-                    <option value="">Select a service</option>
-                    {servicesForPetWeight(pet.weightLbs).map((service) => (
-                      <option key={service.id} value={service.id}>
-                        {service.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : null}
+                    Add service
+                  </button>
+                ) : null}
+              </div>
             </div>
           );
         })}
@@ -1205,30 +1262,6 @@ export function BookForCustomerForm({
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2">
-        {multiDog ? null : (
-          <div>
-            <label className={labelClass} htmlFor="service-id">
-              Service
-            </label>
-            <select
-              id="service-id"
-              className={fieldClass}
-              value={serviceId}
-              onChange={(event) => {
-                setServiceId(event.target.value);
-                setAppointmentDate(pinnedDateRef.current);
-                setSlotStartMinutes("");
-              }}
-            >
-              <option value="">Select a service</option>
-              {services.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
         <div>
           <label className={labelClass} htmlFor="appointment-date">
             Date

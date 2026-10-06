@@ -566,8 +566,9 @@ export async function createStaffCustomerBooking(
     const appointments: AppointmentRecord[] = [];
     let previousStart = firstSchedule.scheduledStart;
     let previousDuration = firstDurationMinutes;
+    let visitIndex = 0;
 
-    for (const [index, pet] of input.pets.entries()) {
+    for (const pet of input.pets) {
       const savedPet = await saveBookingPet(admin, userId, pet);
       if ("error" in savedPet) return savedPet;
       const petRow = savedPet.pet;
@@ -581,100 +582,111 @@ export async function createStaffCustomerBooking(
         });
       });
 
-      const petServiceId = pet.serviceId ?? serviceId;
-      const petService = allBookableServices().find(
-        (entry) => entry.id === petServiceId,
-      );
-      if (!petService || !petServiceId) {
-        return { error: "conflict", message: "Unknown service." };
-      }
-      const durationMinutes = estimateServiceDurationMinutes(
-        petServiceId,
-        pet.weightLbs,
-        input.addOnIds,
-      );
-      const companion =
-        index === 0
-          ? null
-          : buildSameAddressCompanionInsertion(
-              previousStart,
-              previousDuration,
-              durationMinutes,
-            );
-      if (index > 0 && !companion) {
-        return {
-          error: "slot_unavailable",
-          message:
-            "Not enough time left that day to schedule every dog from the selected start time.",
-        };
-      }
-      const insertion =
-        index === 0
-          ? firstSchedule
-          : {
-              appointmentTime: companion!.appointmentTime,
-              scheduledStart: companion!.scheduledStart,
-              timePreference: companion!.usedPreference,
-            };
+      const petServiceIds =
+        pet.serviceIds.length > 0
+          ? pet.serviceIds
+          : pet.serviceId
+            ? [pet.serviceId]
+            : serviceId
+              ? [serviceId]
+              : [];
 
-      const price = getServicePriceEstimate(petService, pet.weightLbs);
-      const travelFee = index === 0 ? quote.fee : 0;
-      const estimatedTotal =
-        Math.round(((price?.from ?? 0) + travelFee) * 100) / 100;
-
-      const { data: appointmentRow, error: appointmentError } = await admin
-        .from("appointments")
-        .insert({
-          customer_id: userId,
-          pet_id: petRow.id,
-          service_id: petService.id,
-          service_name: petService.name,
-          add_on_ids: input.addOnIds,
-          add_on_options: {},
-          address_street: address.street,
-          address_city: address.city,
-          address_state: address.state,
-          address_zip: address.zip,
-          travel_distance_miles: quote.distanceMiles,
-          travel_fee: travelFee,
-          appointment_date: appointmentDate,
-          appointment_time: insertion.appointmentTime,
-          scheduled_start: insertion.scheduledStart,
-          time_preference: insertion.timePreference,
-          address_lat: destination.lat,
-          address_lon: destination.lon,
-          timezone: business.booking.timezone,
-          estimated_total: estimatedTotal,
-          new_client_deposit: 0,
-          payment_method_id: null,
-          vaccination_status_at_booking: "missing",
-          status: "pending_confirmation",
-          confirmed_at: null,
-          staff_created: true,
-          customer_confirm_token_hash: confirm.hash,
-          customer_confirm_expires_at: confirmExpiresAt,
-        })
-        .select(APPOINTMENT_SELECT)
-        .single();
-
-      if (appointmentError || !appointmentRow) {
-        console.error(
-          "createStaffCustomerBooking appointment insert failed:",
-          appointmentError?.code,
-          appointmentError?.message,
+      for (const petServiceId of petServiceIds) {
+        const petService = allBookableServices().find(
+          (entry) => entry.id === petServiceId,
         );
-        if (appointmentError?.code === "23505") {
-          return { error: "slot_unavailable" };
+        if (!petService) {
+          return { error: "conflict", message: "Unknown service." };
         }
-        return { error: "server" };
-      }
+        const durationMinutes = estimateServiceDurationMinutes(
+          petServiceId,
+          pet.weightLbs,
+          input.addOnIds,
+        );
+        const companion =
+          visitIndex === 0
+            ? null
+            : buildSameAddressCompanionInsertion(
+                previousStart,
+                previousDuration,
+                durationMinutes,
+              );
+        if (visitIndex > 0 && !companion) {
+          return {
+            error: "slot_unavailable",
+            message:
+              "Not enough time left that day to schedule every service from the selected start time.",
+          };
+        }
+        const insertion =
+          visitIndex === 0
+            ? firstSchedule
+            : {
+                appointmentTime: companion!.appointmentTime,
+                scheduledStart: companion!.scheduledStart,
+                timePreference: companion!.usedPreference,
+              };
 
-      const appointment = mapAppointmentRowToRecord(
-        appointmentRow as AppointmentRow,
-      );
-      appointments.push(appointment);
-      previousStart = insertion.scheduledStart;
-      previousDuration = durationMinutes;
+        const price = getServicePriceEstimate(petService, pet.weightLbs);
+        const travelFee = visitIndex === 0 ? quote.fee : 0;
+        const estimatedTotal =
+          Math.round(((price?.from ?? 0) + travelFee) * 100) / 100;
+
+        const { data: appointmentRow, error: appointmentError } = await admin
+          .from("appointments")
+          .insert({
+            customer_id: userId,
+            pet_id: petRow.id,
+            service_id: petService.id,
+            service_name: petService.name,
+            add_on_ids: input.addOnIds,
+            add_on_options: {},
+            address_street: address.street,
+            address_city: address.city,
+            address_state: address.state,
+            address_zip: address.zip,
+            travel_distance_miles: quote.distanceMiles,
+            travel_fee: travelFee,
+            appointment_date: appointmentDate,
+            appointment_time: insertion.appointmentTime,
+            scheduled_start: insertion.scheduledStart,
+            time_preference: insertion.timePreference,
+            address_lat: destination.lat,
+            address_lon: destination.lon,
+            timezone: business.booking.timezone,
+            estimated_total: estimatedTotal,
+            new_client_deposit: 0,
+            payment_method_id: null,
+            vaccination_status_at_booking: "missing",
+            status: "pending_confirmation",
+            confirmed_at: null,
+            staff_created: true,
+            customer_confirm_token_hash: confirm.hash,
+            customer_confirm_expires_at: confirmExpiresAt,
+          })
+          .select(APPOINTMENT_SELECT)
+          .single();
+
+        if (appointmentError || !appointmentRow) {
+          console.error(
+            "createStaffCustomerBooking appointment insert failed:",
+            appointmentError?.code,
+            appointmentError?.message,
+          );
+          if (appointmentError?.code === "23505") {
+            return { error: "slot_unavailable" };
+          }
+          return { error: "server" };
+        }
+
+        const appointment = mapAppointmentRowToRecord(
+          appointmentRow as AppointmentRow,
+        );
+        appointments.push(appointment);
+        previousStart = insertion.scheduledStart;
+        previousDuration = durationMinutes;
+        visitIndex += 1;
+      }
     }
 
     const appointment = appointments[0]!;

@@ -108,10 +108,12 @@ describe("BookForCustomerForm preview schedule", () => {
     assert.match(html, /Saved pets and address are filled in from this customer/);
   });
 
-  it("keeps one shared service field when only one dog is listed", () => {
+  it("puts the service under the dog and can add a second service", () => {
     const html = renderToStaticMarkup(<BookForCustomerForm preview />);
-    assert.match(html, /id="service-id"/);
-    assert.doesNotMatch(html, /id="pet-service-/);
+    assert.doesNotMatch(html, /id="service-id"/);
+    assert.match(html, /id="pet-service-/);
+    assert.match(html, />Add service</);
+    assert.equal((html.match(/id="pet-service-/g) ?? []).length, 1);
   });
 
   it("puts a service choice under each dog and limits it to that dog's weight", () => {
@@ -143,8 +145,12 @@ describe("BookForCustomerForm preview schedule", () => {
       />,
     );
     assert.doesNotMatch(html, /id="service-id"/);
-    const lightStart = html.indexOf('id="pet-service-22222222-2222-4222-8222-222222222222"');
-    const heavyStart = html.indexOf('id="pet-service-33333333-3333-4333-8333-333333333333"');
+    const lightStart = html.indexOf(
+      'id="pet-service-22222222-2222-4222-8222-222222222222-0"',
+    );
+    const heavyStart = html.indexOf(
+      'id="pet-service-33333333-3333-4333-8333-333333333333-0"',
+    );
     assert.ok(lightStart >= 0);
     assert.ok(heavyStart > lightStart);
     const light = html.slice(lightStart, heavyStart);
@@ -154,6 +160,7 @@ describe("BookForCustomerForm preview schedule", () => {
     assert.doesNotMatch(heavy, /Custom Full Haircut/);
     assert.match(html, /Dog 1/);
     assert.match(html, /Dog 2/);
+    assert.equal((html.match(/>Add service</g) ?? []).length, 2);
   });
 });
 
