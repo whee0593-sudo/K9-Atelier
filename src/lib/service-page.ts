@@ -68,7 +68,23 @@ export const FULL_GROOM_PAGE_DESCRIPTION =
   "Private mobile full grooming in Palm Beach with custom haircuts and styling tailored to your dog\u2019s coat, lifestyle and individual expression.";
 export const FULL_GROOM_PAGE_H1 = "A Complete Style, Done With Patience.";
 export const FULL_GROOM_PAGE_INTRO =
-  "Private mobile full grooming in Palm Beach, with custom haircuts and styling for coats that need more than a bath.";
+  "Private, one-on-one mobile full grooming in Palm Beach, with custom haircuts and styling for coats that need more than a bath.";
+export const FULL_GROOM_GROOMER_BEFORE =
+  "Full grooming at K9 Atelier is provided by ";
+export const FULL_GROOM_GROOMER_NAME = "Penny";
+export const FULL_GROOM_GROOMER_AFTER =
+  ", a multiple award-winning show groomer with experience in breed-appropriate styling and individualized one-on-one care.";
+export const FULL_GROOM_AREA_SENTENCE =
+  "Serving Jupiter Island, Jupiter, Tequesta, Palm Beach Gardens, Palm Beach and West Palm Beach. Full Grooming is available for dogs up to 45 lbs.";
+export const FULL_GROOM_AREA_SERVED = [
+  "Jupiter Island",
+  "Jupiter",
+  "Tequesta",
+  "Palm Beach Gardens",
+  "Palm Beach",
+  "West Palm Beach",
+] as const;
+export const FULL_GROOM_SERVICE_TYPE = "Mobile Full Dog Grooming";
 export const FULL_GROOM_INCLUDED_HEADING = "What\u2019s Included in a Full Groom";
 export const FULL_GROOM_INCLUDED_BODY =
   "A Full Groom begins with complete bath and coat care, followed by a customized haircut and finishing work selected for your dog\u2019s coat, proportions, lifestyle and preferred look. Styling can range from practical maintenance trims to teddy-bear inspired finishes and breed-appropriate styling.";
