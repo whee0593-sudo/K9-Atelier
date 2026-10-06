@@ -591,7 +591,7 @@ export async function createStaffCustomerBooking(
               ? [serviceId]
               : [];
 
-      for (const petServiceId of petServiceIds) {
+      for (const [visitServiceIndex, petServiceId] of petServiceIds.entries()) {
         const petService = allBookableServices().find(
           (entry) => entry.id === petServiceId,
         );
@@ -627,7 +627,12 @@ export async function createStaffCustomerBooking(
                 timePreference: companion!.usedPreference,
               };
 
-        const price = getServicePriceEstimate(petService, pet.weightLbs);
+        const optionName = pet.serviceOptionNames[visitServiceIndex] ?? null;
+        const price = getServicePriceEstimate(
+          petService,
+          pet.weightLbs,
+          optionName ?? undefined,
+        );
         const travelFee = visitIndex === 0 ? quote.fee : 0;
         const estimatedTotal =
           Math.round(((price?.from ?? 0) + travelFee) * 100) / 100;
@@ -638,9 +643,9 @@ export async function createStaffCustomerBooking(
             customer_id: userId,
             pet_id: petRow.id,
             service_id: petService.id,
-            service_name: petService.name,
+            service_name: optionName || petService.name,
             add_on_ids: input.addOnIds,
-            add_on_options: {},
+            add_on_options: optionName ? { [petService.id]: optionName } : {},
             address_street: address.street,
             address_city: address.city,
             address_state: address.state,

@@ -6,11 +6,14 @@ import { StaffBookingDatePicker } from "@/components/admin/StaffBookingDatePicke
 import { formatMinutesLabel } from "@/lib/appointments/closures";
 import { formatPrice } from "@/lib/business";
 import {
-  allBookableServices,
   estimateServiceDurationMinutes,
   getServicePriceEstimate,
   isServiceAvailableForPet,
 } from "@/lib/services";
+import {
+  listStaffServiceChoices,
+  parseStaffServiceSelection,
+} from "@/lib/staff/service-choice";
 import {
   fallbackStaffScheduleDays,
   selectableStaffDays,
@@ -102,21 +105,14 @@ function serviceChoices(weightLbs: string, serviceIds: string[], index: number) 
   const taken = new Set(
     serviceIds.filter((serviceId, serviceIndex) => serviceIndex !== index && serviceId),
   );
-  return servicesForPetWeight(weightLbs).filter((service) => !taken.has(service.id));
+  return listStaffServiceChoices(positiveWeight(weightLbs)).filter(
+    (choice) => !taken.has(choice.value),
+  );
 }
 
 function positiveWeight(weightLbs: string) {
   const weight = Number(weightLbs);
   return Number.isFinite(weight) && weight > 0 ? weight : null;
-}
-
-function servicesForPetWeight(weightLbs: string) {
-  const weight = positiveWeight(weightLbs);
-  return allBookableServices().filter(
-    (service) =>
-      service.bookableAsPrimary &&
-      (weight == null || isServiceAvailableForPet(service.id, weight)),
-  );
 }
 
 function petsFromProfile(profile: StaffBookingProfile | null | undefined) {
@@ -214,13 +210,10 @@ export function BookForCustomerForm({
       pets.map((pet) => {
         const weight = positiveWeight(pet.weightLbs);
         const selected = pet.serviceIds
-          .map(
-            (serviceId) =>
-              servicesForPetWeight(pet.weightLbs).find(
-                (service) => service.id === serviceId,
-              ) ?? null,
-          )
-          .filter((service): service is NonNullable<typeof service> => service != null);
+          .map((serviceId) => parseStaffServiceSelection(serviceId))
+          .filter(
+            (choice): choice is NonNullable<typeof choice> => choice != null,
+          );
         return { pet, weight, selected };
       }),
     [pets],
@@ -229,7 +222,7 @@ export function BookForCustomerForm({
     dogServices.length > 0 &&
     dogServices.every((row) => row.selected.length > 0 && row.weight != null);
   const scheduleServiceId = everyDogServiceReady
-    ? dogServices[0]?.selected[0]?.id ?? ""
+    ? dogServices[0]?.selected[0]?.serviceId ?? ""
     : "";
   const openDays = useMemo(() => selectableStaffDays(days), [days]);
   const openSlots = useMemo(
@@ -254,8 +247,12 @@ export function BookForCustomerForm({
     ? dogServices.reduce(
         (sum, row) =>
           sum +
-          row.selected.reduce((serviceSum, service) => {
-            const estimate = getServicePriceEstimate(service, row.weight!);
+          row.selected.reduce((serviceSum, choice) => {
+            const estimate = getServicePriceEstimate(
+              choice.service,
+              row.weight!,
+              choice.optionName ?? undefined,
+            );
             return serviceSum + (estimate?.from ?? 0);
           }, 0),
         0,
@@ -270,9 +267,9 @@ export function BookForCustomerForm({
         (sum, row) =>
           sum +
           row.selected.reduce(
-            (serviceSum, service) =>
+            (serviceSum, choice) =>
               serviceSum +
-              estimateServiceDurationMinutes(service.id, row.weight!),
+              estimateServiceDurationMinutes(choice.serviceId, row.weight!),
             0,
           ),
         0,
@@ -281,7 +278,7 @@ export function BookForCustomerForm({
 
   function bookedServiceLabel() {
     const names = dogServices.flatMap((row) =>
-      row.selected.map((service) => service.name),
+      row.selected.map((choice) => choice.label),
     );
     return names.length > 0 ? names.join(", ") : null;
   }
@@ -312,10 +309,11 @@ export function BookForCustomerForm({
         if (field === "weightLbs") {
           const weight = positiveWeight(value);
           next.serviceIds = next.serviceIds.map((serviceId) => {
+            const choice = parseStaffServiceSelection(serviceId);
             if (
-              serviceId &&
+              choice &&
               weight != null &&
-              !isServiceAvailableForPet(serviceId, weight)
+              !isServiceAvailableForPet(choice.serviceId, weight)
             ) {
               return "";
             }
@@ -1093,7 +1091,7 @@ export function BookForCustomerForm({
                           id={serviceFieldId}
                           className={fieldClass}
                           value={
-                            choices.some((service) => service.id === serviceId)
+                            choices.some((choice) => choice.value === serviceId)
                               ? serviceId
                               : ""
                           }
@@ -1106,9 +1104,9 @@ export function BookForCustomerForm({
                           }
                         >
                           <option value="">Select a service</option>
-                          {choices.map((service) => (
-                            <option key={service.id} value={service.id}>
-                              {service.name}
+                          {choices.map((choice) => (
+                            <option key={choice.value} value={choice.value}>
+                              {choice.label}
                             </option>
                           ))}
                         </select>

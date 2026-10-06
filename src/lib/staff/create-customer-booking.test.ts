@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { allBookableServices, getServicePriceEstimate } from "@/lib/services";
 import {
   StaffBookingValidationError,
   staffCreatedAccountBlockReason,
@@ -219,6 +220,73 @@ describe("validateStaffCustomerBookingInput", () => {
       }),
     );
     assert.deepEqual(input.pets[0]?.serviceIds, serviceIds);
+  });
+
+  it("keeps every coloring style selectable", () => {
+    const input = validateStaffCustomerBookingInput(
+      validBody({
+        serviceId: undefined,
+        pet: {
+          name: "Luna",
+          breed: "Poodle",
+          weightLbs: 14,
+          serviceIds: [
+            "creative-accent-coloring::Ears & Tail Accent",
+            "creative-accent-coloring::Paws & Boots Accent",
+          ],
+        },
+      }),
+    );
+    assert.deepEqual(input.pets[0]?.serviceIds, [
+      "creative-accent-coloring",
+      "creative-accent-coloring",
+    ]);
+    assert.deepEqual(input.pets[0]?.serviceOptionNames, [
+      "Ears & Tail Accent",
+      "Paws & Boots Accent",
+    ]);
+    assert.equal(input.serviceName, "Ears & Tail Accent");
+    const coloring = allBookableServices().find(
+      (service) => service.id === "creative-accent-coloring",
+    );
+    assert.ok(coloring);
+    assert.equal(
+      getServicePriceEstimate(coloring, 14, "Temporary Fun")?.from,
+      50,
+    );
+    assert.equal(
+      getServicePriceEstimate(coloring, 14, "Ears & Tail Accent")?.from,
+      100,
+    );
+    assert.equal(
+      getServicePriceEstimate(coloring, 14, "Paws & Boots Accent")?.from,
+      350,
+    );
+    assert.equal(
+      getServicePriceEstimate(coloring, 14, "Custom Creative Design"),
+      null,
+    );
+    assert.equal(getServicePriceEstimate(coloring, 14), null);
+  });
+
+  it("rejects coloring until a style is chosen", () => {
+    assert.throws(
+      () =>
+        validateStaffCustomerBookingInput(
+          validBody({
+            serviceId: undefined,
+            pet: {
+              name: "Luna",
+              breed: "Poodle",
+              weightLbs: 14,
+              serviceIds: ["creative-accent-coloring"],
+            },
+          }),
+        ),
+      (error: unknown) =>
+        error instanceof StaffBookingValidationError &&
+        error.message === "Choose a bookable grooming service.",
+    );
   });
 
   it("rejects the same service twice for one dog", () => {

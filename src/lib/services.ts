@@ -564,6 +564,11 @@ export function getServicePriceEstimate(
   if (service.pricingType === "free") {
     return { from: 0, durationLabel: undefined };
   }
+  if (service.pricingType === "options" && service.options?.length) {
+    const option = service.options.find((entry) => entry.name === optionName);
+    if (option?.priceFrom == null) return null;
+    return { from: option.priceFrom, durationLabel: undefined };
+  }
   return null;
 }
 

@@ -6,6 +6,7 @@ import {
   allBookableServices,
   isServiceAvailableForPet,
 } from "@/lib/services";
+import { parseStaffServiceSelection } from "@/lib/staff/service-choice";
 import {
   PetValidationError,
   validateCreatePetInput,
@@ -35,6 +36,8 @@ export type StaffBookingPetInput = PetWriteInput & {
   /** First selected service. Kept so a single-service booking stays easy to read. */
   serviceId: string | null;
   serviceIds: string[];
+  /** Parallel to serviceIds. Set when a service has its own styles, such as coloring. */
+  serviceOptionNames: (string | null)[];
 };
 
 export type StaffCustomerBookingInput = {
@@ -302,36 +305,34 @@ export function validateStaffCustomerBookingInput(
           : sharedService
             ? [sharedService.id]
             : [];
-      const serviceIds = chosenIds.map((serviceId, serviceIndex) => {
-        const chosen = resolveBookableService(
-          serviceId,
+      const selections = chosenIds.map((serviceId, serviceIndex) => {
+        const field =
           requestedServiceIds.length > 0
             ? `pets[${index}].serviceIds[${serviceIndex}]`
-            : "serviceId",
-        );
+            : "serviceId";
+        const chosen = parseStaffServiceSelection(serviceId);
         if (!chosen) {
           throw new StaffBookingValidationError(
             "Choose a bookable grooming service.",
-            "serviceId",
+            field,
           );
         }
-        if (!isServiceAvailableForPet(chosen.id, pet.weightLbs)) {
+        if (!isServiceAvailableForPet(chosen.serviceId, pet.weightLbs)) {
           throw new StaffBookingValidationError(
             filledPetBodies.length > 1
               ? `That service is not available for dog ${index + 1}'s weight.`
               : "That service is not available for this dog's weight.",
-            requestedServiceIds.length > 0
-              ? `pets[${index}].serviceIds[${serviceIndex}]`
-              : "serviceId",
+            field,
           );
         }
-        return chosen.id;
+        return chosen;
       });
       return {
         ...pet,
         id,
-        serviceId: serviceIds[0] ?? null,
-        serviceIds,
+        serviceId: selections[0]?.serviceId ?? null,
+        serviceIds: selections.map((selection) => selection.serviceId),
+        serviceOptionNames: selections.map((selection) => selection.optionName),
       };
     } catch (error) {
       if (error instanceof StaffBookingValidationError) throw error;
@@ -347,6 +348,11 @@ export function validateStaffCustomerBookingInput(
   const primaryService =
     allBookableServices().find((entry) => entry.id === pets[0]?.serviceId) ??
     null;
+  const primaryLabel = parseStaffServiceSelection(
+    pets[0]?.serviceOptionNames[0]
+      ? `${pets[0]?.serviceId}::${pets[0]?.serviceOptionNames[0]}`
+      : (pets[0]?.serviceId ?? ""),
+  )?.label;
 
   const appointmentDateRaw = readOptionalString(
     record,
@@ -434,7 +440,7 @@ export function validateStaffCustomerBookingInput(
     mode: hasCompleteBooking ? "booking" : "invite",
     pets,
     serviceId: primaryService?.id ?? null,
-    serviceName: primaryService?.name ?? null,
+    serviceName: primaryLabel ?? primaryService?.name ?? null,
     addOnIds,
     appointmentDate,
     slotStartMinutes,
