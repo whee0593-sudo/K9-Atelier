@@ -198,6 +198,29 @@ describe("validateStaffCustomerBookingInput", () => {
     assert.equal(input.serviceId, "hand-stripping");
   });
 
+  it("accepts as many services as the dog needs", () => {
+    const serviceIds = [
+      "signature-bath-care",
+      "long-coat-show-care",
+      "dead-sea-mud-bath",
+      "aromatherapy-oil-bath",
+      "sensitive-skin-treatment",
+      "custom-full-haircut",
+    ];
+    const input = validateStaffCustomerBookingInput(
+      validBody({
+        serviceId: undefined,
+        pet: {
+          name: "Luna",
+          breed: "Poodle",
+          weightLbs: 14,
+          serviceIds,
+        },
+      }),
+    );
+    assert.deepEqual(input.pets[0]?.serviceIds, serviceIds);
+  });
+
   it("rejects the same service twice for one dog", () => {
     assert.throws(
       () =>

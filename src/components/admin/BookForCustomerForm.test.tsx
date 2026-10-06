@@ -112,7 +112,9 @@ describe("BookForCustomerForm preview schedule", () => {
     const html = renderToStaticMarkup(<BookForCustomerForm preview />);
     assert.doesNotMatch(html, /id="service-id"/);
     assert.match(html, /id="pet-service-/);
+    assert.match(html, /w-1\/2/);
     assert.match(html, />Add service</);
+    assert.doesNotMatch(html, /Remove service/);
     assert.equal((html.match(/id="pet-service-/g) ?? []).length, 1);
   });
 

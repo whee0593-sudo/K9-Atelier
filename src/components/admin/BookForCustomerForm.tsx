@@ -63,8 +63,6 @@ type SuccessState = {
   appointmentTime: string | null;
 };
 
-const MAX_SERVICES_PER_DOG = 4;
-
 type PetDraft = {
   key: string;
   id: string | null;
@@ -348,9 +346,7 @@ export function BookForCustomerForm({
     markPetsEdited();
     setPets((current) =>
       current.map((pet) => {
-        if (pet.key !== key || pet.serviceIds.length >= MAX_SERVICES_PER_DOG) {
-          return pet;
-        }
+        if (pet.key !== key) return pet;
         return { ...pet, serviceIds: [...pet.serviceIds, ""] };
       }),
     );
@@ -1088,56 +1084,54 @@ export function BookForCustomerForm({
                     serviceIndex,
                   );
                   return (
-                    <div key={serviceFieldId}>
-                      <div className="flex items-center justify-between gap-3">
+                    <div key={serviceFieldId} className="flex items-end gap-3">
+                      <div className="w-1/2">
                         <label className={labelClass} htmlFor={serviceFieldId}>
                           Service
                         </label>
-                        {pet.serviceIds.length > 1 ? (
-                          <button
-                            type="button"
-                            onClick={() => removePetService(pet.key, serviceIndex)}
-                            className="text-sm text-text-muted hover:text-text"
-                          >
-                            Remove service
-                          </button>
-                        ) : null}
+                        <select
+                          id={serviceFieldId}
+                          className={fieldClass}
+                          value={
+                            choices.some((service) => service.id === serviceId)
+                              ? serviceId
+                              : ""
+                          }
+                          onChange={(event) =>
+                            updatePetService(
+                              pet.key,
+                              serviceIndex,
+                              event.target.value,
+                            )
+                          }
+                        >
+                          <option value="">Select a service</option>
+                          {choices.map((service) => (
+                            <option key={service.id} value={service.id}>
+                              {service.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
-                      <select
-                        id={serviceFieldId}
-                        className={fieldClass}
-                        value={
-                          choices.some((service) => service.id === serviceId)
-                            ? serviceId
-                            : ""
-                        }
-                        onChange={(event) =>
-                          updatePetService(
-                            pet.key,
-                            serviceIndex,
-                            event.target.value,
-                          )
-                        }
-                      >
-                        <option value="">Select a service</option>
-                        {choices.map((service) => (
-                          <option key={service.id} value={service.id}>
-                            {service.name}
-                          </option>
-                        ))}
-                      </select>
+                      {pet.serviceIds.length > 1 ? (
+                        <button
+                          type="button"
+                          onClick={() => removePetService(pet.key, serviceIndex)}
+                          className="shrink-0 rounded-xl border border-lavender/40 px-4 py-2.5 text-sm text-text hover:border-gold/40"
+                        >
+                          Remove
+                        </button>
+                      ) : null}
                     </div>
                   );
                 })}
-                {pet.serviceIds.length < MAX_SERVICES_PER_DOG ? (
-                  <button
-                    type="button"
-                    onClick={() => addPetService(pet.key)}
-                    className="rounded-xl border border-lavender/40 px-4 py-2 text-sm text-text hover:border-gold/40"
-                  >
-                    Add service
-                  </button>
-                ) : null}
+                <button
+                  type="button"
+                  onClick={() => addPetService(pet.key)}
+                  className="rounded-xl border border-lavender/40 px-4 py-2 text-sm text-text hover:border-gold/40"
+                >
+                  Add service
+                </button>
               </div>
             </div>
           );

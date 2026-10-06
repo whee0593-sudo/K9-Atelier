@@ -67,8 +67,6 @@ function resolveBookableService(serviceIdRaw: string, field: string) {
   return service;
 }
 
-const MAX_SERVICES_PER_DOG = 4;
-
 function readServiceIdValue(
   value: unknown,
   field: string,
@@ -94,12 +92,6 @@ function readPetServiceIds(record: Record<string, unknown>, index: number) {
     if (!Array.isArray(raw)) {
       throw new StaffBookingValidationError(
         "Services must be a list.",
-        `pets[${index}].serviceIds`,
-      );
-    }
-    if (raw.length > MAX_SERVICES_PER_DOG) {
-      throw new StaffBookingValidationError(
-        `You can add up to ${MAX_SERVICES_PER_DOG} services for one dog.`,
         `pets[${index}].serviceIds`,
       );
     }
