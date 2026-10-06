@@ -245,7 +245,7 @@ describe("validateStaffCustomerBookingInput", () => {
       "Ears & Tail Accent",
       "Paws & Boots Accent",
     ]);
-    assert.equal(input.serviceName, "Creative coloring-Ears & Tail Accent");
+    assert.equal(input.serviceName, "Creative coloring/Ears & Tail Accent");
     const coloring = allBookableServices().find(
       (service) => service.id === "creative-accent-coloring",
     );
@@ -285,7 +285,7 @@ describe("validateStaffCustomerBookingInput", () => {
         },
       }),
     );
-    assert.equal(input.serviceName, "SPA-Dead Sea Mud Bath Treatment");
+    assert.equal(input.serviceName, "SPA/Dead Sea Mud Bath Treatment");
     assert.deepEqual(input.pets[0]?.serviceIds, [
       "dead-sea-mud-bath",
       "senior-comfort-care",

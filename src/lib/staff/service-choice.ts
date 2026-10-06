@@ -8,14 +8,14 @@ import {
 const OPTION_SEPARATOR = "::";
 
 const STAFF_MENU_PREFIX: Record<string, string> = {
-  "dead-sea-mud-bath": "SPA-",
-  "aromatherapy-oil-bath": "SPA-",
-  "sensitive-skin-treatment": "SPA-",
-  "senior-comfort-care": "Specialty care-",
-  "end-of-life-care": "Specialty care-",
-  "dematting-brush-out": "Add-on care-",
-  "deshedding-treatment": "Add-on care-",
-  "mini-trim": "Add-on care-",
+  "dead-sea-mud-bath": "SPA/",
+  "aromatherapy-oil-bath": "SPA/",
+  "sensitive-skin-treatment": "SPA/",
+  "senior-comfort-care": "Specialty care/",
+  "end-of-life-care": "Specialty care/",
+  "dematting-brush-out": "Add-on care/",
+  "deshedding-treatment": "Add-on care/",
+  "mini-trim": "Add-on care/",
 };
 
 const STAFF_MENU_CHILD_NAME: Record<string, string> = {
@@ -60,7 +60,7 @@ function choiceForService(
       optionName: option.name,
       label:
         service.id === CREATIVE_ACCENT_COLORING_ID
-          ? `Creative coloring-${option.name}`
+          ? `Creative coloring/${option.name}`
           : option.name,
       service,
     };
