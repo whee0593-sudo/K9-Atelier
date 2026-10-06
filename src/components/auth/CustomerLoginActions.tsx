@@ -420,13 +420,15 @@ export function CustomerLoginActions({
             >
               Forgot password?
             </button>
-            <button
-              type="button"
-              onClick={() => switchMode("magic")}
-              className="font-body text-left text-xs text-ink underline"
-            >
-              Email me a sign-in link
-            </button>
+            {adminFlow ? null : (
+              <button
+                type="button"
+                onClick={() => switchMode("magic")}
+                className="font-body text-left text-xs text-ink underline"
+              >
+                Email me a sign-in link
+              </button>
+            )}
           </div>
         </div>
       ) : null}
