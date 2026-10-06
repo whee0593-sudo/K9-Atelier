@@ -271,27 +271,6 @@ export function BookingReviewStep({
       return;
     }
 
-    if (!smsConsent) {
-      setError(
-        "Please confirm you agree to receive appointment text messages.",
-      );
-      return;
-    }
-
-    if (!photoMarketingConsent) {
-      setError(
-        "Please confirm you consent to photographing and filming your pet for marketing.",
-      );
-      return;
-    }
-
-    if (!servicePoliciesConsent) {
-      setError(
-        "Please confirm you have read and agree to the cancellation, rescheduling, payment, and incomplete service policies.",
-      );
-      return;
-    }
-
     if (!selectedPaymentMethodId) {
       setError(
         "Please add a payment method to finish this reservation. You will not be charged when you book.",
@@ -335,9 +314,9 @@ export function BookingReviewStep({
         customerPhone: phone,
         customerFirstName: firstName.trim(),
         customerLastName: lastName.trim(),
-        smsConsent: true,
-        photoMarketingConsent: true,
-        servicePoliciesConsent: true,
+        smsConsent,
+        photoMarketingConsent,
+        servicePoliciesConsent,
         referralCode: referralCode.trim() || undefined,
       });
       onReserved(appointment);
@@ -642,8 +621,6 @@ export function BookingReviewStep({
             type="checkbox"
             checked={smsConsent}
             onChange={(event) => setSmsConsent(event.target.checked)}
-            required
-            aria-required="true"
             className="mt-0.5 size-4 shrink-0 accent-deep-lavender"
           />
           <span className="font-body min-w-0 text-[13px] leading-relaxed text-taupe">
@@ -671,8 +648,6 @@ export function BookingReviewStep({
             onChange={(event) =>
               setPhotoMarketingConsent(event.target.checked)
             }
-            required
-            aria-required="true"
             className="mt-0.5 size-4 shrink-0 accent-deep-lavender"
           />
           <span className="font-body min-w-0 text-[13px] leading-relaxed text-taupe">
@@ -686,8 +661,6 @@ export function BookingReviewStep({
             onChange={(event) =>
               setServicePoliciesConsent(event.target.checked)
             }
-            required
-            aria-required="true"
             className="mt-0.5 size-4 shrink-0 accent-deep-lavender"
           />
           <span className="font-body min-w-0 text-[13px] leading-relaxed text-taupe">

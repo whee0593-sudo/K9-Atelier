@@ -10,7 +10,7 @@ describe("ConfirmAccountNextSteps", () => {
     const html = renderToStaticMarkup(
       <ConfirmAccountNextSteps petId="pet-1" petName="Bella" />,
     );
-    assert.match(html, /rabies vaccination status for Bella/);
+    assert.match(html, /Rabies vaccination details for Bella are optional/);
     assert.match(html, /card is on file/);
     assert.match(html, /Complete your profile/);
     assert.match(html, /href="\/account\/setup"/);

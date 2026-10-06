@@ -12,6 +12,7 @@ import {
 } from "@/lib/services";
 import { getServiceDisplayName } from "@/lib/service-display";
 import type { ServiceAddress, TravelQuote } from "@/lib/travel";
+import { ARRIVAL_WINDOW_PENDING_LABEL } from "@/lib/appointments/arrival-window";
 import type { TimePreference } from "@/lib/booking-schedule";
 import { BookingProgress } from "@/components/booking/BookingProgress";
 import {
@@ -285,7 +286,7 @@ export function BookingFlow({
       usedPreference?: TimePreference;
       slotStartMinutes?: number;
     };
-    if (!res.ok || !data.appointmentTime) {
+    if (!res.ok) {
       setCareSlotError(
         data.error ??
           "That time is no longer available for this service. Please choose another date or time.",
@@ -297,7 +298,9 @@ export function BookingFlow({
       setCareOptionsConfirmed(false);
       return false;
     }
-    setAppointmentTime(data.appointmentTime);
+    setAppointmentTime(
+      data.appointmentTime?.trim() || ARRIVAL_WINDOW_PENDING_LABEL,
+    );
     setTimePreference(data.usedPreference ?? timePreference);
     setSlotStartMinutes(data.slotStartMinutes ?? slotStartMinutes);
     setCareOptionsConfirmed(true);
@@ -308,7 +311,7 @@ export function BookingFlow({
     ? 6
     : !selectedPet
       ? 1
-      : !address || !travelQuote || !appointmentDate || !appointmentTime
+      : !address || !travelQuote || !appointmentDate || slotStartMinutes == null
         ? 2
         : !serviceConfirmed || !careOptionsConfirmed
           ? 3
@@ -325,7 +328,7 @@ export function BookingFlow({
     selectedPet &&
     selectedService &&
     appointmentDate &&
-    appointmentTime &&
+    slotStartMinutes != null &&
     address
   ) {
     return (
@@ -336,7 +339,11 @@ export function BookingFlow({
           selectedService.name,
         )}
         appointmentDate={appointmentDate}
-        appointmentTime={createdAppointment?.appointmentTime ?? appointmentTime}
+        appointmentTime={
+          createdAppointment?.appointmentTime ??
+          appointmentTime ??
+          ARRIVAL_WINDOW_PENDING_LABEL
+        }
         address={address}
         appointmentStatus={createdAppointment?.status}
         appointmentId={createdAppointment?.id}
@@ -477,7 +484,6 @@ export function BookingFlow({
         address &&
         travelQuote &&
         appointmentDate &&
-        appointmentTime &&
         slotStartMinutes != null &&
         owner &&
         paymentMethod && (
@@ -489,7 +495,7 @@ export function BookingFlow({
             address={address}
             travelQuote={travelQuote}
             appointmentDate={appointmentDate}
-            appointmentTime={appointmentTime}
+            appointmentTime={appointmentTime ?? ARRIVAL_WINDOW_PENDING_LABEL}
             slotStartMinutes={slotStartMinutes}
             owner={owner}
             paymentMethod={paymentMethod}
@@ -503,7 +509,9 @@ export function BookingFlow({
                 service: selectedService,
                 appointmentDate,
                 appointmentTime:
-                  appointment.appointmentTime || appointmentTime,
+                  appointment.appointmentTime ||
+                  appointmentTime ||
+                  ARRIVAL_WINDOW_PENDING_LABEL,
                 address,
               });
               setSelectedPet(pet);

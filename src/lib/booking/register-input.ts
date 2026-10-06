@@ -17,7 +17,7 @@ export type BookingRegisterInput = {
   firstName: string;
   lastName: string;
   phone: string;
-  referralSource: ReferralSourceValue;
+  referralSource: ReferralSourceValue | null;
   referralName: string | null;
 };
 
@@ -85,17 +85,12 @@ export function validateBookingRegisterInput(body: unknown): BookingRegisterInpu
 
   const referralSourceRaw =
     typeof record.referralSource === "string" ? record.referralSource.trim() : "";
-  if (!referralSourceRaw || !isReferralSourceValue(referralSourceRaw)) {
-    throw new ProfileValidationError(
-      "Please tell us how you heard about K9 Atelier.",
-      "referralSource",
-    );
-  }
-  const referralSource = referralSourceRaw;
-  const referralName = normalizeReferralName(
-    referralSource,
-    record.referralName,
-  );
+  const referralSource = isReferralSourceValue(referralSourceRaw)
+    ? referralSourceRaw
+    : null;
+  const referralName = referralSource
+    ? normalizeReferralName(referralSource, record.referralName)
+    : null;
 
   return {
     email,

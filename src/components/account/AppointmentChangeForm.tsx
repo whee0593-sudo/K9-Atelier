@@ -368,8 +368,8 @@ export function AppointmentChangeForm({
           </label>
           {addablePets.length === 0 ? (
             <p className="text-sm text-text-muted">
-              Add another dog in your pet profiles, with confirmed rabies
-              status, before attaching them to this visit.
+              Add another dog in your pet profiles, with a name, breed, and
+              weight, before attaching them to this visit.
             </p>
           ) : null}
           <label className="block">
