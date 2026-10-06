@@ -10,9 +10,10 @@
 
 | 模板 | HTML 文件 | 主题行（英文，发给客人） |
 |------|-----------|--------------------------|
-| Magic Link | [`magic-link.html`](./magic-link.html) | `Your K9 Atelier sign-in link` |
 | Confirm signup | [`confirm-signup.html`](./confirm-signup.html) | `Welcome to K9 Atelier — confirm your email` |
 | Reset password | [`reset-password.html`](./reset-password.html) | `Reset your K9 Atelier password` |
+
+站点已去掉邮件登录链接。不要再往 Dashboard 粘贴 Magic Link 模板。
 
 打开每个 `.html`，复制全部内容，粘贴到 Dashboard 对应模板正文。
 
@@ -23,7 +24,7 @@
 | 变量 | 用途 |
 |------|------|
 | `{{ .ConfirmationURL }}` | 按钮链接 — 尊重应用的 `emailRedirectTo`（本地端口正确） |
-| `{{ .Token }}` | 在 `/login` 手动输入的 6 位 OTP |
+| `{{ .Token }}` | 重置密码邮件里的 6 位验证码 |
 
 本地开发时，登录按钮**不要**只依赖 `{{ .SiteURL }}`；它不会带上 `npm run dev` 的端口。
 
@@ -52,9 +53,8 @@ Site URL 保持 `https://k9atelier.com`。
 
 ## Dashboard 检查
 
-- [ ] Magic Link 正文已从 `magic-link.html` 粘贴
 - [ ] Confirm signup 正文已从 `confirm-signup.html` 粘贴
 - [ ] Reset password 正文已从 `reset-password.html` 粘贴
-- [ ] 测试邮件显示 **Access My Account** 按钮和 **6 位验证码**
-- [ ] `/login` 上 OTP 登录可用
-- [ ] Magic Link 会打开你发起登录时同一端口的 `/auth/callback`
+- [ ] 注册确认邮件有确认按钮，重置密码邮件有 **6 位验证码**
+- [ ] `/login` 只用密码登录，没有 “Email me a sign-in link”
+- [ ] 重置密码链接会打开你发起重置时同一端口的 `/auth/callback`

@@ -16,6 +16,12 @@ export default function AuthCallbackPage() {
       const recovery =
         result.recovery || requestedNext === "/auth/reset";
 
+      if (result.rejectedSignInLink) {
+        await createClient().auth.signOut();
+        window.location.replace("/login?error=signin-link");
+        return;
+      }
+
       if (result.error || !result.session) {
         window.location.replace(
           recovery ? "/auth/reset" : "/login?error=auth",

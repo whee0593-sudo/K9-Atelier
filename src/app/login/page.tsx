@@ -37,6 +37,15 @@ export default async function LoginPage({ searchParams }: Props) {
             your phone, request a new reset and enter the 6-digit code.
           </p>
         )}
+        {error === "signin-link" && (
+          <p
+            className="font-body mx-auto mt-6 max-w-md text-sm text-red-700"
+            role="alert"
+          >
+            Email sign-in links are no longer available. Sign in with your
+            email and password.
+          </p>
+        )}
         {error === "frozen" && (
           <p
             className="font-body mx-auto mt-6 max-w-md text-sm text-red-700"

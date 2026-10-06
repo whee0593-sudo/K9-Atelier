@@ -1,6 +1,6 @@
 # Supabase Auth 设置（K9 Atelier）
 
-一次性 Dashboard 配置：Magic Link + OTP 登录。进入第三阶段前需要完成。
+一次性 Dashboard 配置：邮箱密码登录、注册确认、重置密码。站点不再提供「邮件登录链接」（Magic Link / Email OTP 登录）。进入第三阶段前需要完成。
 
 项目 ref：`ceejxoobxxoxqhpujrdz`
 
@@ -29,7 +29,7 @@ http://localhost:3003/auth/callback
 http://localhost:3004/auth/callback
 ```
 
-如果 `npm run dev` 用了别的端口，测 Magic Link 前也把该端口加进白名单。
+如果 `npm run dev` 用了别的端口，测注册确认或重置密码前也把该端口加进白名单。
 
 ### Email OTP 位数
 
@@ -37,7 +37,7 @@ http://localhost:3004/auth/callback
 
 设为 **6**（最短可用；Supabase **不支持** 4 位邮箱 OTP）。
 
-允许范围：**6–10** 位。登录页输入框按这个范围校验。
+允许范围：**6–10** 位。重置密码页的验证码输入框按这个范围校验。邮件登录链接已从站点移除，这个位数只给重置密码用。
 
 ---
 
@@ -49,16 +49,16 @@ http://localhost:3004/auth/callback
 
 | 模板 | 文件 | 主题 |
 |------|------|------|
-| **Magic Link** | [`email-templates/magic-link.html`](./email-templates/magic-link.html) | `Your K9 Atelier sign-in link` |
 | **Confirm signup** | [`email-templates/confirm-signup.html`](./email-templates/confirm-signup.html) | `Welcome to K9 Atelier — confirm your email` |
 | **Reset password** | [`email-templates/reset-password.html`](./email-templates/reset-password.html) | `Reset your K9 Atelier password` |
 
+不要再配置 Magic Link 模板。客人与员工都用邮箱和密码登录。
+
 （邮件主题保持英文，因为会发给客人。）
 
-两个模板都包含：
+两个模板的按钮都用 **`{{ .ConfirmationURL }}`**，会尊重应用的 `emailRedirectTo`（任意本地端口都能用）。
 
-- 按钮上的 **`{{ .ConfirmationURL }}`** — 会尊重应用的 `emailRedirectTo`（任意本地端口都能用）
-- **`{{ .Token }}`** — 在 `/login` 手动输入的 6 位 OTP
+重置密码模板另外包含 **`{{ .Token }}`**：6 位验证码，在重置密码页输入。注册确认邮件不再提供登录验证码。
 
 细节见 [`email-templates/README.md`](./email-templates/README.md)。
 
@@ -106,9 +106,9 @@ npm run verify:supabase
 
 - [ ] Site URL = `https://k9atelier.com`
 - [ ] Redirect URLs 包含生产 + localhost 回调
-- [ ] Magic Link 模板已粘贴；邮件里能看到 6 位验证码
 - [ ] Confirm signup 模板已粘贴
 - [ ] 第二阶段 archive migration 已执行
 - [ ] 客户服务地址 migration 已执行
-- [ ] 在 `/login` 测试密码登录和 OTP 备用方式
+- [ ] 在 `/login` 测试密码登录；页面上没有 “Email me a sign-in link”
+- [ ] 重置密码邮件里的链接和 6 位验证码可用
 - [ ] Email provider：允许新注册；Confirm email 打开（注册时发一封确认邮件）

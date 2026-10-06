@@ -2,13 +2,17 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 
 const EMAIL_OTP_TYPES = new Set<string>([
-  "email",
   "signup",
   "invite",
-  "magiclink",
   "recovery",
   "email_change",
 ]);
+
+const EMAIL_SIGN_IN_LINK_TYPES = new Set(["magiclink", "email"]);
+
+export function isEmailSignInLink(type: string | null | undefined) {
+  return Boolean(type && EMAIL_SIGN_IN_LINK_TYPES.has(type));
+}
 
 function urlAuthParams() {
   const url = new URL(window.location.href);
@@ -40,6 +44,15 @@ export async function completeEmailAuthFromUrl() {
   const supabase = createClient();
   const { url, hash, params } = urlAuthParams();
   const typeValue = params.get("type") ?? hash.get("type");
+  if (isEmailSignInLink(typeValue)) {
+    await supabase.auth.signOut();
+    return {
+      error: new Error("Email sign-in links are no longer accepted."),
+      recovery: false,
+      rejectedSignInLink: true,
+      session: null,
+    };
+  }
   const type = typeValue && EMAIL_OTP_TYPES.has(typeValue)
     ? (typeValue as EmailOtpType)
     : null;
@@ -64,11 +77,11 @@ export async function completeEmailAuthFromUrl() {
   } else if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) lastError = error;
-  } else if (email && token) {
+  } else if (email && token && type) {
     const { error } = await supabase.auth.verifyOtp({
       email,
       token,
-      type: type ?? "email",
+      type,
     });
     if (error) lastError = error;
   } else if (accessToken && refreshToken) {
@@ -97,6 +110,7 @@ export async function completeEmailAuthFromUrl() {
   return {
     error: session ? null : lastError ?? new Error("No session"),
     recovery,
+    rejectedSignInLink: false,
     session,
   };
 }
