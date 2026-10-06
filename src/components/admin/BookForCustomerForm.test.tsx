@@ -3,6 +3,11 @@ import { describe, it } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { BookForCustomerForm } from "@/components/admin/BookForCustomerForm";
+import {
+  BookForCustomerSections,
+  bookingFormStartsOpen,
+} from "@/components/admin/BookForCustomerSections";
+import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
 
 describe("BookForCustomerForm preview schedule", () => {
   it("opens a calendar picker instead of a free date field that can land on a closed day", () => {
@@ -103,5 +108,73 @@ describe("BookForCustomerForm preview schedule", () => {
     assert.match(html, /Saved addresses/);
     assert.match(html, /20 Ocean Ave/);
     assert.match(html, /Saved pets and address are filled in from this customer/);
+  });
+});
+
+const onFileCustomer: StaffCustomerRecord = {
+  profile: {
+    id: "11111111-1111-4111-8111-111111111111",
+    email: "ada@example.com",
+    firstName: "Ada",
+    lastName: "Lovelace",
+    phone: "+15615550123",
+    preferredContact: "Text Message",
+    emergencyContactName: "",
+    emergencyContactPhone: "",
+    emergencyContactRelationship: "",
+  },
+  pets: [],
+  paymentMethods: [],
+  kind: "customer",
+  frozen: false,
+  canDelete: false,
+  canFreeze: false,
+};
+
+describe("Book for customer sections", () => {
+  it("keeps both booking bars collapsed until they are opened", () => {
+    const html = renderToStaticMarkup(
+      <BookForCustomerSections
+        showPreviewLink
+        preview
+        previewCustomers={[onFileCustomer]}
+        prefill={{
+          firstName: "Ada",
+          lastName: "Lovelace",
+          email: "ada@example.com",
+        }}
+      />,
+    );
+    const onFile = html.indexOf("Book for customer on file");
+    const fresh = html.indexOf("Book for a customer");
+    assert.ok(onFile >= 0);
+    assert.ok(fresh > onFile);
+    assert.equal(html.match(/aria-expanded="false"/g)?.length, 2);
+    assert.doesNotMatch(html, /Only an email or mobile phone is required/);
+    assert.doesNotMatch(html, /Open preview/);
+    assert.doesNotMatch(html, /Ada Lovelace/);
+  });
+
+  it("opens the existing form when staff arrive from a customer or calendar link", () => {
+    assert.equal(bookingFormStartsOpen({}), false);
+    assert.equal(bookingFormStartsOpen({ date: "tomorrow" }), false);
+    assert.equal(bookingFormStartsOpen({ customerId: onFileCustomer.profile.id }), true);
+    assert.equal(bookingFormStartsOpen({ date: "2026-10-12" }), true);
+
+    const html = renderToStaticMarkup(
+      <BookForCustomerSections
+        showPreviewLink
+        preview
+        formInitiallyOpen
+        previewCustomers={[onFileCustomer]}
+        initialDate="2026-10-12"
+      />,
+    );
+    assert.match(html, /aria-expanded="false"/);
+    assert.match(html, /aria-expanded="true"/);
+    assert.match(html, /Only an email or mobile phone is required/);
+    assert.match(html, /Open preview/);
+    assert.match(html, /Mon, Oct 12/);
+    assert.doesNotMatch(html, /Ada Lovelace/);
   });
 });

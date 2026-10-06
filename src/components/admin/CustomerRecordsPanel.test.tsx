@@ -496,6 +496,42 @@ describe("latestPetServiceLabel", () => {
   });
 });
 
+describe("Customer list for booking on file", () => {
+  it("shows customer profiles without administrators or the create form", () => {
+    const html = renderToStaticMarkup(
+      <CustomerRecordsPanel
+        customersOnly
+        preview
+        previewCustomers={[
+          sampleCustomer({
+            kind: "admin",
+            canDelete: false,
+            canFreeze: false,
+            profile: {
+              id: "22222222-2222-4222-8222-222222222222",
+              email: "penny@k9atelier.com",
+              firstName: "Penny",
+              lastName: "K9 Atelier",
+              phone: "+15615933335",
+              preferredContact: "Email",
+              emergencyContactName: "",
+              emergencyContactPhone: "",
+              emergencyContactRelationship: "",
+            },
+          }),
+          sampleCustomer(),
+        ]}
+      />,
+    );
+    assert.match(html, /Ada Lovelace/);
+    assert.match(html, /Book for customer/);
+    assert.doesNotMatch(html, /penny@k9atelier.com/);
+    assert.doesNotMatch(html, />Administrators</);
+    assert.doesNotMatch(html, />Create customer profile</);
+    assert.doesNotMatch(html, />Customers</);
+  });
+});
+
 describe("Create customer profile section", () => {
   it("sits between administrators and customers", () => {
     const html = renderToStaticMarkup(

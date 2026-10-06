@@ -1,5 +1,9 @@
-import { BookForCustomerForm } from "@/components/admin/BookForCustomerForm";
+import {
+  BookForCustomerSections,
+  bookingFormStartsOpen,
+} from "@/components/admin/BookForCustomerSections";
 import type { StaffBookingProfile } from "@/lib/staff/customer-booking-profile";
+import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
 
 const previewProfile: StaffBookingProfile = {
   customerId: "11111111-1111-4111-8111-111111111111",
@@ -37,6 +41,47 @@ const previewProfile: StaffBookingProfile = {
   ],
 };
 
+const previewCustomers: StaffCustomerRecord[] = [
+  {
+    profile: {
+      id: previewProfile.customerId,
+      email: previewProfile.email,
+      firstName: previewProfile.firstName,
+      lastName: previewProfile.lastName,
+      phone: previewProfile.phone,
+      preferredContact: "Text Message",
+      emergencyContactName: "",
+      emergencyContactPhone: "",
+      emergencyContactRelationship: "",
+    },
+    pets: [],
+    paymentMethods: [],
+    kind: "customer",
+    frozen: false,
+    canDelete: false,
+    canFreeze: false,
+  },
+  {
+    profile: {
+      id: "44444444-4444-4444-8444-444444444444",
+      email: "tiafrancavilla@gmail.com",
+      firstName: "Tia",
+      lastName: "Francavilla",
+      phone: "+15613466778",
+      preferredContact: "",
+      emergencyContactName: "",
+      emergencyContactPhone: "",
+      emergencyContactRelationship: "",
+    },
+    pets: [],
+    paymentMethods: [],
+    kind: "customer",
+    frozen: false,
+    canDelete: false,
+    canFreeze: false,
+  },
+];
+
 export default async function BookForCustomerPreviewPage({
   searchParams,
 }: {
@@ -48,23 +93,20 @@ export default async function BookForCustomerPreviewPage({
       <p className="mb-4 rounded-xl border border-gold/40 bg-lavender-light/50 px-4 py-2 text-center text-xs uppercase tracking-[0.16em] text-gold-dark">
         Preview only · Sample customer file · Submit does not create a live account
       </p>
-      <h2 className="text-2xl font-semibold text-gold-dark">
-        Book for a customer
-      </h2>
-      <div className="mt-8">
-        <BookForCustomerForm
-          preview
-          prefill={{
-            customerId: previewProfile.customerId,
-            firstName: previewProfile.firstName,
-            lastName: previewProfile.lastName,
-            email: previewProfile.email,
-            phone: previewProfile.phone,
-          }}
-          initialProfile={previewProfile}
-          initialDate={query.date}
-        />
-      </div>
+      <BookForCustomerSections
+        preview
+        formInitiallyOpen={bookingFormStartsOpen({ date: query.date })}
+        prefill={{
+          customerId: previewProfile.customerId,
+          firstName: previewProfile.firstName,
+          lastName: previewProfile.lastName,
+          email: previewProfile.email,
+          phone: previewProfile.phone,
+        }}
+        initialProfile={previewProfile}
+        initialDate={query.date}
+        previewCustomers={previewCustomers}
+      />
     </div>
   );
 }

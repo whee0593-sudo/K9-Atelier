@@ -1,5 +1,7 @@
-import Link from "next/link";
-import { BookForCustomerForm } from "@/components/admin/BookForCustomerForm";
+import {
+  BookForCustomerSections,
+  bookingFormStartsOpen,
+} from "@/components/admin/BookForCustomerSections";
 
 export default async function BookForCustomerPage({
   searchParams,
@@ -15,34 +17,17 @@ export default async function BookForCustomerPage({
 }) {
   const query = await searchParams;
   return (
-    <div>
-      <h2 className="text-2xl font-semibold text-gold-dark">
-        Book for a customer
-      </h2>
-      <p className="mt-2 text-sm text-text-muted">
-        Email or phone is enough to send a booking link. The customer can
-        complete the rest online.
-      </p>
-      <p className="mt-2">
-        <Link
-          href="/admin/book-for-customer/preview"
-          className="text-sm font-medium text-gold-dark hover:underline"
-        >
-          Open preview
-        </Link>
-      </p>
-      <div className="mt-8">
-        <BookForCustomerForm
-          prefill={{
-            customerId: query.customerId,
-            email: query.email,
-            firstName: query.firstName,
-            lastName: query.lastName,
-            phone: query.phone,
-          }}
-          initialDate={query.date}
-        />
-      </div>
-    </div>
+    <BookForCustomerSections
+      showPreviewLink
+      formInitiallyOpen={bookingFormStartsOpen(query)}
+      prefill={{
+        customerId: query.customerId,
+        email: query.email,
+        firstName: query.firstName,
+        lastName: query.lastName,
+        phone: query.phone,
+      }}
+      initialDate={query.date}
+    />
   );
 }

@@ -1063,12 +1063,15 @@ export function CustomerRecordsPanel({
   previewCustomers,
   previewHistoryByCustomerId,
   previewReferralsByCustomerId,
+  customersOnly = false,
 }: {
   focusCustomerId?: string;
   preview?: boolean;
   previewCustomers?: StaffCustomerRecord[];
   previewHistoryByCustomerId?: Record<string, StaffCustomerHistory>;
   previewReferralsByCustomerId?: Record<string, StaffReferralView>;
+  /** Customer profile cards only, without administrators or the create form. */
+  customersOnly?: boolean;
 }) {
   const [loadState, setLoadState] = useState<LoadState>(() =>
     preview && previewCustomers
@@ -1282,6 +1285,14 @@ export function CustomerRecordsPanel({
         <h3 className="text-lg font-semibold text-gold-dark">{title}</h3>
         {renderCards(items, empty)}
       </section>
+    );
+  }
+
+  if (customersOnly) {
+    return (
+      <div className="space-y-3">
+        {renderCards(loadState.customers, "No customer accounts yet.")}
+      </div>
     );
   }
 
