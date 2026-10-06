@@ -7,8 +7,12 @@ import {
   AppointmentActionsMenu,
   customerTextHref,
 } from "@/components/admin/AppointmentActionsMenu";
-import { staffRescheduleSlotChoices } from "@/components/admin/AdminRescheduleAppointmentButton";
+import {
+  AdminRescheduleAppointmentButton,
+  staffRescheduleSlotChoices,
+} from "@/components/admin/AdminRescheduleAppointmentButton";
 import { listStaffClockHourStarts } from "@/lib/appointments/staff-clock-window";
+import { addDaysToIsoDate, todayInBusinessTimezone } from "@/lib/sms/schedule";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 
 const appointment: AdminAppointmentRecord = {
@@ -181,5 +185,37 @@ describe("calendar reschedule slot list", () => {
     const hours = listStaffClockHourStarts();
     assert.equal(hours[0], 0);
     assert.equal(hours.at(-1), 23 * 60);
+  });
+
+  it("renders every clock hour, and no hours on an all-day block", () => {
+    const openDate = addDaysToIsoDate(todayInBusinessTimezone(), 2);
+    const openHtml = renderToStaticMarkup(
+      <AdminRescheduleAppointmentButton
+        appointment={{ ...appointment, appointmentDate: openDate }}
+        preview
+        defaultOpen
+        limitToOpenSlots
+        onChanged={() => {}}
+      />,
+    );
+    assert.match(openHtml, /Arrival window/);
+    assert.match(openHtml, /12:00 AM/);
+    assert.match(openHtml, /3:00 PM/);
+    assert.match(openHtml, /11:00 PM/);
+
+    const blockedDate = addDaysToIsoDate(todayInBusinessTimezone(), 5);
+    const blockedHtml = renderToStaticMarkup(
+      <AdminRescheduleAppointmentButton
+        appointment={{ ...appointment, appointmentDate: blockedDate }}
+        preview
+        defaultOpen
+        limitToOpenSlots
+        unavailableDates={[blockedDate]}
+        onChanged={() => {}}
+      />,
+    );
+    assert.match(blockedHtml, /No open start times on that date/);
+    assert.doesNotMatch(blockedHtml, /11:00 PM/);
+    assert.doesNotMatch(blockedHtml, /12:00 AM/);
   });
 });

@@ -63,6 +63,7 @@ export function AdminRescheduleAppointmentButton({
   triggerClassName = "rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text transition hover:border-gold/40",
   limitToOpenSlots = false,
   unavailableDates,
+  defaultOpen = false,
 }: {
   appointment: AdminAppointmentRecord;
   preview?: boolean;
@@ -74,9 +75,11 @@ export function AdminRescheduleAppointmentButton({
   limitToOpenSlots?: boolean;
   /** Preview-only dates that already have an all-day block. Live saves recheck on the server. */
   unavailableDates?: string[];
+  /** Test hook so the dialog markup can be rendered without a click. */
+  defaultOpen?: boolean;
 }) {
   const titleId = useId();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [busy, setBusy] = useState(false);
   const [loadingDays, setLoadingDays] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,19 +89,27 @@ export function AdminRescheduleAppointmentButton({
     appointment.scheduledStart != null ? String(appointment.scheduledStart) : "",
   );
 
+  const calendarDays = preview ? previewDays(unavailableDates) : days;
   const selectedDay = useMemo(
-    () => days.find((day) => day.date === nextDate),
-    [days, nextDate],
+    () => calendarDays.find((day) => day.date === nextDate),
+    [calendarDays, nextDate],
   );
-  const slotChoices = useMemo(
-    () =>
-      staffRescheduleSlotChoices(
-        selectedDay?.slots,
-        Boolean(nextDate) && !loadingDays && !error,
-        limitToOpenSlots,
-      ),
-    [error, limitToOpenSlots, loadingDays, nextDate, selectedDay],
-  );
+  const dateBlocked = Boolean(nextDate && unavailableDates?.includes(nextDate));
+  const slotChoices = useMemo(() => {
+    if (dateBlocked) return [];
+    return staffRescheduleSlotChoices(
+      selectedDay?.slots,
+      Boolean(nextDate) && !loadingDays && !error,
+      limitToOpenSlots,
+    );
+  }, [
+    dateBlocked,
+    error,
+    limitToOpenSlots,
+    loadingDays,
+    nextDate,
+    selectedDay,
+  ]);
   const minDate = todayInBusinessTimezone();
 
   useEffect(() => {
