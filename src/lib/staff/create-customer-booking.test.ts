@@ -245,7 +245,7 @@ describe("validateStaffCustomerBookingInput", () => {
       "Ears & Tail Accent",
       "Paws & Boots Accent",
     ]);
-    assert.equal(input.serviceName, "Ears & Tail Accent");
+    assert.equal(input.serviceName, "Creative coloring-Ears & Tail Accent");
     const coloring = allBookableServices().find(
       (service) => service.id === "creative-accent-coloring",
     );

@@ -27,6 +27,7 @@ import { keepPrimaryIfReferralFails } from "@/lib/referrals/allocate-code";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import { getStaffSession } from "@/lib/staff/auth";
+import { parseStaffServiceSelection } from "@/lib/staff/service-choice";
 import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { isFrozenAuthUser } from "@/lib/auth/frozen-account";
 import { isEmailConfigured, sendEmail, siteUrl } from "@/lib/email/resend";
@@ -628,6 +629,11 @@ export async function createStaffCustomerBooking(
               };
 
         const optionName = pet.serviceOptionNames[visitServiceIndex] ?? null;
+        const serviceName =
+          (optionName
+            ? parseStaffServiceSelection(`${petService.id}::${optionName}`)
+                ?.label
+            : null) || petService.name;
         const price = getServicePriceEstimate(
           petService,
           pet.weightLbs,
@@ -643,7 +649,7 @@ export async function createStaffCustomerBooking(
             customer_id: userId,
             pet_id: petRow.id,
             service_id: petService.id,
-            service_name: optionName || petService.name,
+            service_name: serviceName,
             add_on_ids: input.addOnIds,
             add_on_options: optionName ? { [petService.id]: optionName } : {},
             address_street: address.street,

@@ -158,10 +158,11 @@ describe("BookForCustomerForm preview schedule", () => {
     const light = html.slice(lightStart, heavyStart);
     const heavy = html.slice(heavyStart, html.indexOf("</select>", heavyStart));
     assert.match(light, /Custom Full Haircut &amp; Styling/);
-    assert.match(light, />Temporary Fun</);
-    assert.match(light, />Ears &amp; Tail Accent</);
-    assert.match(light, />Paws &amp; Boots Accent</);
-    assert.match(light, />Custom Creative Design</);
+    assert.match(light, />Creative coloring-Temporary Fun</);
+    assert.match(light, />Creative coloring-Ears &amp; Tail Accent</);
+    assert.match(light, />Creative coloring-Paws &amp; Boots Accent</);
+    assert.match(light, />Creative coloring-Custom Creative Design</);
+    assert.doesNotMatch(light, />Temporary Fun</);
     assert.doesNotMatch(light, />Creative Accent Coloring</);
     assert.match(heavy, /Hand Stripping/);
     assert.doesNotMatch(heavy, /Custom Full Haircut/);

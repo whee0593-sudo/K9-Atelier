@@ -1,4 +1,5 @@
 import {
+  CREATIVE_ACCENT_COLORING_ID,
   allBookableServices,
   isServiceAvailableForPet,
   type BookableService,
@@ -29,7 +30,10 @@ function choiceForService(
       value: `${service.id}${OPTION_SEPARATOR}${option.name}`,
       serviceId: service.id,
       optionName: option.name,
-      label: option.name,
+      label:
+        service.id === CREATIVE_ACCENT_COLORING_ID
+          ? `Creative coloring-${option.name}`
+          : option.name,
       service,
     };
   }
