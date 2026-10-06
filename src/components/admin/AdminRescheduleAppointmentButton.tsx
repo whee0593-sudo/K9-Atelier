@@ -25,12 +25,16 @@ function formatConfirmDate(iso: string): string {
   });
 }
 
-function previewDays(): AvailabilityDay[] {
-  return getUpcomingBookableDates(8).map((day) => ({
-    date: day.value,
-    available: true,
-    slots: listHourlyStartMinutes(),
-  }));
+function previewDays(unavailableDates?: readonly string[]): AvailabilityDay[] {
+  const closed = new Set(unavailableDates ?? []);
+  return getUpcomingBookableDates(8).map((day) => {
+    const unavailable = closed.has(day.value);
+    return {
+      date: day.value,
+      available: !unavailable,
+      slots: unavailable ? [] : listHourlyStartMinutes(),
+    };
+  });
 }
 
 /** Open windows returned by the staff availability API. Calendar reschedule does not invent extra hours. */
@@ -53,6 +57,7 @@ export function AdminRescheduleAppointmentButton({
   dialogTitle = "Change date & time",
   triggerClassName = "rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text transition hover:border-gold/40",
   limitToOpenSlots = false,
+  unavailableDates,
 }: {
   appointment: AdminAppointmentRecord;
   preview?: boolean;
@@ -62,6 +67,8 @@ export function AdminRescheduleAppointmentButton({
   triggerClassName?: string;
   /** When true, the arrival list is only the slots the server marked open. */
   limitToOpenSlots?: boolean;
+  /** Preview-only dates that already have an all-day block. Live saves recheck on the server. */
+  unavailableDates?: string[];
 }) {
   const titleId = useId();
   const [open, setOpen] = useState(false);
@@ -103,7 +110,7 @@ export function AdminRescheduleAppointmentButton({
   useEffect(() => {
     if (!open) return;
     if (preview) {
-      setDays(previewDays());
+      setDays(previewDays(unavailableDates));
       setLoadingDays(false);
       return;
     }
@@ -141,7 +148,7 @@ export function AdminRescheduleAppointmentButton({
     return () => {
       cancelled = true;
     };
-  }, [appointment.id, open, preview]);
+  }, [appointment.id, open, preview, unavailableDates]);
 
   if (!canStaffRescheduleAppointment(appointment)) return null;
 
@@ -155,6 +162,10 @@ export function AdminRescheduleAppointmentButton({
     if (!nextDate || !nextSlot) return;
 
     if (preview) {
+      if (limitToOpenSlots && !slotChoices.includes(Number(nextSlot))) {
+        setError("That time is unavailable.");
+        return;
+      }
       setOpen(false);
       onChanged?.({ date: nextDate, slotStartMinutes: Number(nextSlot) });
       return;

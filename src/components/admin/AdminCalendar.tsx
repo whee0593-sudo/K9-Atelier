@@ -121,8 +121,14 @@ export function AdminCalendar({
   } | null>(null);
   const [previewCancelledIds, setPreviewCancelledIds] = useState<string[]>([]);
   const [previewMoves, setPreviewMoves] = useState<AdminAppointmentRecord[]>([]);
+  const [blockDayAppointments, setBlockDayAppointments] = useState<
+    AdminAppointmentRecord[] | null
+  >(null);
+  const [blockCheckError, setBlockCheckError] = useState<string | null>(null);
   const router = useRouter();
   const monthLoadId = useRef(0);
+  const blockCheckId = useRef(0);
+  const blockCheckDate = useRef<string | null>(null);
 
   const loadMonth = useCallback(async (nextMonth: string) => {
     const requestId = ++monthLoadId.current;
@@ -222,6 +228,53 @@ export function AdminCalendar({
     };
   }, [preview, previewCancelledIds, previewMoves, selectedDate, dayVersion]);
 
+  useEffect(() => {
+    if (dialog?.type !== "block-all-day" || editingBlock) return;
+    const date = dialog.date;
+    if (preview) {
+      setBlockCheckError(null);
+      setBlockDayAppointments(
+        applyPreviewAppointments(
+          buildPreviewCalendarAppointments(date),
+          date,
+          previewCancelledIds,
+          previewMoves,
+        ).filter((item) => item.status !== "cancelled"),
+      );
+      return;
+    }
+
+    const requestId = ++blockCheckId.current;
+    if (blockCheckDate.current !== date) {
+      blockCheckDate.current = date;
+      setBlockDayAppointments(null);
+      setBlockCheckError(null);
+    }
+    void fetch(`/api/admin/appointments?date=${date}`, {
+      cache: "no-store",
+      credentials: "include",
+    })
+      .then(async (response) => {
+        const body = (await response.json()) as {
+          error?: string;
+          appointments?: AdminAppointmentRecord[];
+        };
+        if (requestId !== blockCheckId.current) return;
+        if (!response.ok) {
+          setBlockCheckError(body.error ?? "Could not check existing appointments.");
+          return;
+        }
+        setBlockCheckError(null);
+        setBlockDayAppointments(
+          (body.appointments ?? []).filter((item) => item.status !== "cancelled"),
+        );
+      })
+      .catch(() => {
+        if (requestId !== blockCheckId.current) return;
+        setBlockCheckError("Could not check existing appointments.");
+      });
+  }, [dialog, editingBlock, preview, previewCancelledIds, previewMoves]);
+
   const visibleDays = useMemo(() => {
     if (!preview) return days;
     return days.map((day) => {
@@ -251,6 +304,16 @@ export function AdminCalendar({
     if (!dialog) return [];
     return visibleDays.find((day) => day.date === dialog.date)?.blocks ?? [];
   }, [dialog, visibleDays]);
+
+  const allDayDates = useMemo(
+    () =>
+      preview
+        ? previewBlocks
+            .filter((block) => block.allDay)
+            .map((block) => block.serviceDate)
+        : undefined,
+    [preview, previewBlocks],
+  );
 
   function openMenu(date: string, anchor?: HTMLButtonElement) {
     if (!anchor) return;
@@ -295,12 +358,20 @@ export function AdminCalendar({
     setAppointmentMenu({ id, variant: "popover", top, left });
   }
 
+  function appointmentById(id: string) {
+    return (
+      appointments.find((item) => item.id === id) ??
+      blockDayAppointments?.find((item) => item.id === id) ??
+      null
+    );
+  }
+
   function handleAppointmentChanged(next?: {
     date: string;
     slotStartMinutes: number;
   }) {
     if (preview && appointmentMenu && next) {
-      const current = appointments.find((item) => item.id === appointmentMenu.id);
+      const current = appointmentById(appointmentMenu.id);
       if (current) {
         const moved: AdminAppointmentRecord = {
           ...current,
@@ -464,6 +535,20 @@ export function AdminCalendar({
       setDialog({ type: "view-day", date });
       return;
     }
+    if (action === "block-all-day") {
+      blockCheckDate.current = date;
+      setBlockCheckError(null);
+      setBlockDayAppointments(
+        preview
+          ? applyPreviewAppointments(
+              buildPreviewCalendarAppointments(date),
+              date,
+              previewCancelledIds,
+              previewMoves,
+            ).filter((item) => item.status !== "cancelled")
+          : null,
+      );
+    }
     setDialog({ type: action, date });
   }
 
@@ -550,13 +635,19 @@ export function AdminCalendar({
           date={dialog.date}
           block={editingBlock}
           busy={actionBusy}
-          error={actionError}
+          error={editingBlock ? actionError : (blockCheckError ?? actionError)}
+          appointments={editingBlock ? [] : blockDayAppointments}
+          onAppointmentClick={(id, anchor) => {
+            openAppointmentMenu(id, anchor);
+          }}
           onClose={() => {
+            if (appointmentMenu) return;
             setDialog((current) =>
               editingBlock ? { type: "manage", date: dialog.date } : null,
             );
             setEditingBlock(null);
             setActionError(null);
+            setBlockCheckError(null);
           }}
           onSubmit={(reason) =>
             void saveDraft(
@@ -614,9 +705,7 @@ export function AdminCalendar({
 
       {appointmentMenu
         ? (() => {
-            const appointment = appointments.find(
-              (item) => item.id === appointmentMenu.id,
-            );
+            const appointment = appointmentById(appointmentMenu.id);
             if (!appointment) return null;
             return (
               <AppointmentActionsMenu
@@ -626,6 +715,7 @@ export function AdminCalendar({
                 left={appointmentMenu.left}
                 preview={preview}
                 paidKinds={paidKinds[appointment.id] ?? []}
+                unavailableDates={allDayDates}
                 onClose={() => setAppointmentMenu(null)}
                 onChanged={handleAppointmentChanged}
                 onCancelled={handleAppointmentCancelled}

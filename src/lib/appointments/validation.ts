@@ -84,12 +84,9 @@ export function validateCreateAppointmentInput(
     "Appointment date",
     10,
   );
-  const appointmentTime = readString(
-    record,
-    "appointmentTime",
-    "Appointment time",
-    40,
-  );
+  const appointmentTimeRaw = record.appointmentTime;
+  const appointmentTime =
+    typeof appointmentTimeRaw === "string" ? appointmentTimeRaw.trim() : "";
 
   if (!DATE_PATTERN.test(appointmentDate)) {
     throw new AppointmentValidationError(
@@ -195,24 +192,6 @@ export function validateCreateAppointmentInput(
     throw new AppointmentValidationError(
       "Please enter a valid US mobile number so we can text appointment updates.",
       "customerPhone",
-    );
-  }
-  if (record.smsConsent !== true) {
-    throw new AppointmentValidationError(
-      "Please confirm you agree to receive appointment text messages.",
-      "smsConsent",
-    );
-  }
-  if (record.photoMarketingConsent !== true) {
-    throw new AppointmentValidationError(
-      "Please confirm you consent to photographing and filming your pet for marketing.",
-      "photoMarketingConsent",
-    );
-  }
-  if (record.servicePoliciesConsent !== true) {
-    throw new AppointmentValidationError(
-      "Please confirm you have read and agree to the cancellation, rescheduling, payment, and incomplete service policies.",
-      "servicePoliciesConsent",
     );
   }
   const paymentMethodId = readString(

@@ -15,7 +15,6 @@ import {
 } from "@/lib/pets";
 import { mapPetProfileToWriteInput } from "@/lib/pets/map";
 import { PetValidationError, validateCreatePetInput } from "@/lib/pets/validation";
-import { parsePetRabiesStatus } from "@/lib/vaccinations/booking";
 import { createClient } from "@/lib/supabase/client";
 import { fetchCustomerPets } from "@/lib/pets/client";
 
@@ -68,9 +67,6 @@ export function BookingDogStep({ draftPet, onDraftChange, onContinue }: Props) {
     } catch (err) {
       if (err instanceof PetValidationError) return err.message;
       return "Please complete this dog's details.";
-    }
-    if (!parsePetRabiesStatus(draftPet.rabiesStatus)) {
-      return "Please confirm this dog’s rabies vaccination status.";
     }
     return null;
   }

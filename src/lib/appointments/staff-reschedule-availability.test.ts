@@ -33,14 +33,14 @@ describe("staff reschedule availability", () => {
 
   it("rejects a window that overlaps an availability block", () => {
     assert.equal(appointmentOverlapsBlocks([middayBlock], 12 * 60, 90), true);
-    assert.equal(
-      appointmentOverlapsBlocks(
-        [{ ...middayBlock, allDay: true, startMinutes: null, endMinutes: null }],
-        9 * 60,
-        60,
-      ),
-      true,
-    );
+    const allDay = {
+      ...middayBlock,
+      allDay: true,
+      startMinutes: null,
+      endMinutes: null,
+    };
+    assert.equal(appointmentOverlapsBlocks([allDay], 9 * 60, 90), true);
+    assert.equal(appointmentOverlapsBlocks([allDay], 14 * 60, 90), true);
   });
 
   it("rejects a window that overlaps another appointment", () => {
@@ -108,13 +108,60 @@ describe("staff reschedule and cancel server gates", () => {
         reschedule.includes("excludeAppointmentIds: [loaded"),
       false,
     );
-    const checkAt = reschedule.indexOf("assignArrivalWindow");
-    const emailSkip = reschedule.indexOf("if (!completed)");
+    const rescheduleBodyEarly = reschedule.slice(
+      reschedule.indexOf("export async function rescheduleStaffAppointment"),
+    );
+    const checkAt = rescheduleBodyEarly.indexOf("await assignArrivalWindow");
+    const emailSkip = rescheduleBodyEarly.indexOf("notifyCustomerAppointmentChange");
     assert.ok(checkAt > 0);
     assert.ok(emailSkip > checkAt);
     assert.match(schedule, /appointmentOverlapsBlocks/);
     assert.match(schedule, /function assignArrivalWindow/);
     assert.match(schedule, /\.neq\("status", "cancelled"\)/);
+    const availability = schedule.slice(
+      schedule.indexOf("export async function getAvailabilityForAddress"),
+      schedule.indexOf("export async function assignArrivalWindow"),
+    );
+    assert.match(availability, /block\.allDay/);
+    const assign = schedule.slice(
+      schedule.indexOf("export async function assignArrivalWindow"),
+    );
+    const blockCheck = assign.indexOf("appointmentOverlapsBlocks");
+    const exclude = assign.indexOf("excludeAppointmentIds: input.excludeAppointmentIds");
+    assert.ok(blockCheck > 0);
+    assert.ok(exclude > blockCheck);
+    assert.doesNotMatch(reschedule, /admin_availability_blocks/);
+    assert.doesNotMatch(reschedule, /deleteAvailabilityBlock/);
+    const rescheduleBody = reschedule.slice(
+      reschedule.indexOf("export async function rescheduleStaffAppointment"),
+    );
+    const availabilityCall = rescheduleBody.indexOf("await assignArrivalWindow");
+    assert.ok(availabilityCall > 0);
+    assert.doesNotMatch(
+      rescheduleBody.slice(0, availabilityCall),
+      /appointment_date\s*===/,
+    );
+    assert.match(reschedule, /excludeAppointmentIds: \[appointmentId\]/);
+    assert.doesNotMatch(reschedule, /excludeAppointmentIds: blocks/);
+  });
+
+  it("rejects a same-day move onto an all-day block without ignoring availability rules", () => {
+    const allDay = {
+      ...middayBlock,
+      serviceDate: "2026-10-20",
+      allDay: true,
+      startMinutes: null,
+      endMinutes: null,
+    };
+    const movingId = "bella";
+    const otherAppointments = [
+      { id: movingId, start: 9 * 60 },
+      { id: "milo", start: 13 * 60 + 30 },
+    ].filter((row) => row.id !== movingId);
+    assert.equal(otherAppointments.length, 1);
+    assert.equal(appointmentOverlapsBlocks([allDay], 9 * 60, 90), true);
+    assert.equal(appointmentOverlapsBlocks([allDay], 14 * 60, 90), true);
+    assert.equal(appointmentOverlapsBlocks([], 10 * 60, 90), false);
   });
 
   it("cancels through staff status and leaves cancelled rows out of booked counts", () => {
@@ -124,5 +171,7 @@ describe("staff reschedule and cancel server gates", () => {
     assert.match(service, /staff_set_appointment_status/);
     assert.match(service, /\.neq\("status", "cancelled"\)/);
     assert.match(calendar, /\.neq\("status", "cancelled"\)/);
+    assert.doesNotMatch(service, /admin_availability_blocks/);
+    assert.doesNotMatch(service, /deleteAvailabilityBlock/);
   });
 });

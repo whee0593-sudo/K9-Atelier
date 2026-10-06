@@ -283,7 +283,7 @@ describe("service page helpers", () => {
     );
     assert.equal(
       HAND_STRIPPING_PAGE_DESCRIPTION,
-      "Professional hand stripping in Palm Beach for wire-coated dogs, preserving natural coat texture, color and protection through traditional coat care.",
+      "Professional mobile hand stripping for wire-coated dogs, preserving natural coat texture, color and breed character with private one-on-one care.",
     );
     assert.equal(HAND_STRIPPING_PAGE_H1, "Hand Stripping");
     assert.notEqual(FULL_GROOM_PAGE_TITLE, HAND_STRIPPING_PAGE_TITLE);

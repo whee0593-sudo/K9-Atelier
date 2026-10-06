@@ -1,4 +1,4 @@
-import { AdminCalendar } from "@/components/admin/AdminCalendar";
+import { AppointmentReviewPanel } from "@/components/admin/AppointmentReviewPanel";
 
 export default function CalendarPreviewPage() {
   return (
@@ -9,9 +9,7 @@ export default function CalendarPreviewPage() {
       <h2 className="text-2xl font-semibold text-gold-dark">
         Calendar & Appointments
       </h2>
-      <div className="mt-8">
-        <AdminCalendar preview />
-      </div>
+      <AppointmentReviewPanel preview />
     </div>
   );
 }

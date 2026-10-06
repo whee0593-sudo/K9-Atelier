@@ -6,7 +6,6 @@ import {
   petReadyToBook,
   type PetProfile,
 } from "@/lib/pets";
-import { parsePetRabiesStatus } from "@/lib/vaccinations/booking";
 import { useCustomerPets } from "@/lib/pets/use-customer-pets";
 import { formatPetAgeLabel, getPetAgeYears } from "@/lib/pet-age";
 import {
@@ -44,12 +43,6 @@ export function PetSelector({
   const [draftError, setDraftError] = useState<string | null>(null);
 
   async function saveNewPet() {
-    if (!parsePetRabiesStatus(draftPet.rabiesStatus)) {
-      setDraftError(
-        "Please confirm this dog’s rabies vaccination status before saving.",
-      );
-      return;
-    }
     setDraftError(null);
     setSubmittingDraft(true);
     try {
@@ -116,10 +109,9 @@ export function PetSelector({
                   {pet.name}&apos;s Profile Needs Attention
                 </p>
                 <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
-                  Before we can reserve {pet.name}&apos;s appointment, please
-                  confirm rabies vaccination status in their profile. You may
-                  also upload a current rabies certificate or vaccination
-                  record.
+                  Before we can reserve {pet.name}&apos;s appointment, add
+                  their name, breed, and weight. Vaccination details are
+                  optional.
                 </p>
                 <a
                   href="/account/pets"
@@ -185,9 +177,7 @@ export function PetSelector({
             <button
               type="button"
               onClick={() => void saveNewPet()}
-              disabled={
-                submittingDraft || !parsePetRabiesStatus(draftPet.rabiesStatus)
-              }
+              disabled={submittingDraft}
               className={bookingPrimaryBtnClass}
             >
               {submittingDraft ? "Saving…" : "Save & Continue"}

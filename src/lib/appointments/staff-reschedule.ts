@@ -1,4 +1,5 @@
 import { estimateServiceDurationMinutes } from "@/lib/services";
+import { resolveArrivalForBooking } from "@/lib/appointments/arrival-window";
 import {
   assignArrivalWindow,
   getAvailabilityForAddress,
@@ -9,6 +10,10 @@ import type {
   AdminAppointmentRecord,
   AppointmentRow,
 } from "@/lib/appointments/types";
+import {
+  formatArrivalWindow,
+  preferenceFromStart,
+} from "@/lib/booking-schedule";
 import {
   isBookableWeekday,
   parseDateValue,
@@ -154,6 +159,14 @@ function isCompletedVisit(row: LoadedAppointment) {
   return Boolean(row.service_started_at || row.service_ended_at);
 }
 
+function scheduleFromSlot(slotStartMinutes: number, durationMinutes: number) {
+  return {
+    appointmentTime: formatArrivalWindow(slotStartMinutes, durationMinutes),
+    scheduledStart: slotStartMinutes,
+    timePreference: preferenceFromStart(slotStartMinutes),
+  };
+}
+
 export async function listStaffAppointmentAvailability(
   appointmentId: string,
 ): Promise<
@@ -218,26 +231,35 @@ export async function rescheduleStaffAppointment(
 
   const durationMinutes = visitDurationMinutes(loaded.row);
   const completed = isCompletedVisit(loaded.row);
-  const point = visitPoint(loaded.row);
-  if (!point) return { error: "conflict" };
-  const base = await getBaseGeoPoint();
-  if (!base) return { error: "misconfigured" };
-  const assignment = await assignArrivalWindow({
-    date: parsed.date,
-    point,
-    zip: loaded.row.address_zip,
-    durationMinutes,
-    slotStartMinutes: parsed.slotStartMinutes,
-    base,
-    excludeAppointmentIds: [appointmentId],
-    allowUnbookableDate: true,
-  });
-  if ("error" in assignment) return assignment;
-  const nextSchedule = {
-    appointmentTime: assignment.insertion.appointmentTime,
-    scheduledStart: assignment.insertion.scheduledStart,
-    timePreference: assignment.insertion.usedPreference,
-  };
+  let nextSchedule: {
+    appointmentTime: string | null;
+    scheduledStart: number;
+    timePreference: "morning" | "afternoon";
+  } = scheduleFromSlot(parsed.slotStartMinutes, durationMinutes);
+
+  if (!completed) {
+    const point = visitPoint(loaded.row);
+    if (!point) return { error: "conflict" };
+    const base = await getBaseGeoPoint();
+    const assignment = base
+      ? await assignArrivalWindow({
+          date: parsed.date,
+          point,
+          zip: loaded.row.address_zip,
+          durationMinutes,
+          slotStartMinutes: parsed.slotStartMinutes,
+          base,
+          excludeAppointmentIds: [appointmentId],
+          allowUnbookableDate: true,
+        })
+      : { error: "misconfigured" as const };
+    const schedule = resolveArrivalForBooking(
+      assignment,
+      parsed.slotStartMinutes,
+    );
+    if ("error" in schedule) return { error: "slot_unavailable" };
+    nextSchedule = schedule;
+  }
 
   const admin = createAdminClient();
   const { data, error } = await admin

@@ -96,7 +96,7 @@ export type AppointmentRow = {
   travel_distance_miles: number;
   travel_fee: number;
   appointment_date: string;
-  appointment_time: string;
+  appointment_time: string | null;
   scheduled_start?: number | null;
   time_preference?: "morning" | "afternoon" | null;
   address_lat?: number | null;

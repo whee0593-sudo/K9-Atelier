@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { mapStaffServiceError, staffJsonError } from "@/lib/staff/api-errors";
 import {
   listAdminAppointmentsOnDate,
-  listPendingAdminAppointments,
-  listTodayConfirmedAdminAppointments,
+  listTodayAdminAppointments,
 } from "@/lib/appointments/service";
 import { listAdminScheduleDays } from "@/lib/appointments/schedule";
 import { getRoutingConfig, zoneLabel } from "@/lib/booking-schedule";
@@ -31,13 +30,13 @@ export async function GET(request: Request) {
     );
   }
 
-  const pending = await listPendingAdminAppointments();
-
-  if ("error" in pending) {
-    return mapStaffServiceError(pending.error);
+  const today = await listTodayAdminAppointments();
+  if (
+    "error" in today &&
+    (today.error === "unauthenticated" || today.error === "forbidden")
+  ) {
+    return mapStaffServiceError(today.error);
   }
-
-  const today = await listTodayConfirmedAdminAppointments();
   const todayAppointments = "error" in today ? [] : today.appointments;
   const paidKinds = await listPaidKindsByAppointment(
     todayAppointments.map((appointment) => appointment.id),
@@ -46,7 +45,6 @@ export async function GET(request: Request) {
   const routing = getRoutingConfig();
 
   return NextResponse.json({
-    appointments: pending.appointments,
     today: todayAppointments,
     paidKinds,
     schedule: "error" in schedule ? [] : schedule.days,

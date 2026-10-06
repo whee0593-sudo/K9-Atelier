@@ -147,9 +147,9 @@ export function BookingConfirmStep({
         customerPhone: owner.phone,
         customerFirstName: owner.firstName,
         customerLastName: owner.lastName,
-        smsConsent: true,
-        photoMarketingConsent: true,
-        servicePoliciesConsent: true,
+        smsConsent: owner.smsConsent,
+        photoMarketingConsent: owner.photoMarketingConsent,
+        servicePoliciesConsent: owner.servicePoliciesConsent,
         referralCode: referralCode.trim() || undefined,
       });
       onReserved(appointment, bookingPet);

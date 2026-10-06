@@ -36,25 +36,19 @@ describe("validateBookingRegisterInput", () => {
     assert.equal(input.referralName, "Alex");
   });
 
-  it("rejects a missing referral source", () => {
-    assert.throws(
-      () => validateBookingRegisterInput(validBody({ referralSource: "" })),
-      (error: unknown) =>
-        error instanceof ProfileValidationError &&
-        error.field === "referralSource",
+  it("allows a missing referral source", () => {
+    const input = validateBookingRegisterInput(
+      validBody({ referralSource: "" }),
     );
+    assert.equal(input.referralSource, null);
+    assert.equal(input.referralName, null);
   });
 
-  it("rejects a free-text referral source", () => {
-    assert.throws(
-      () =>
-        validateBookingRegisterInput(
-          validBody({ referralSource: "A flyer at the park" }),
-        ),
-      (error: unknown) =>
-        error instanceof ProfileValidationError &&
-        error.field === "referralSource",
+  it("ignores a free-text referral source", () => {
+    const input = validateBookingRegisterInput(
+      validBody({ referralSource: "A flyer at the park" }),
     );
+    assert.equal(input.referralSource, null);
   });
 
   it("rejects a short password", () => {

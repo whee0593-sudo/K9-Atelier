@@ -7,7 +7,7 @@ export const homeFirstVisitSteps = [
   {
     number: "02",
     title: "Choose Time & Service",
-    body: "Choose your preferred date, arrival window, and service.",
+    body: "Choose your preferred date, start time, and service.",
   },
   {
     number: "03",
