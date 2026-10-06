@@ -17,6 +17,17 @@ export async function POST(request: Request) {
     const result = await createStaffCustomerBooking(input);
 
     if ("error" in result) {
+      if (result.error === "schedule_conflict") {
+        return NextResponse.json(
+          {
+            error:
+              result.message ??
+              "This start time conflicts with the estimated schedule.",
+            code: "schedule_conflict",
+          },
+          { status: 409 },
+        );
+      }
       if (result.error === "slot_unavailable") {
         return staffJsonError(
           result.message ??

@@ -2,11 +2,11 @@ import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
 import { isWithinServiceDay } from "@/lib/booking-schedule";
 import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
+import { allBookableServices } from "@/lib/services";
 import {
-  allBookableServices,
-  isServiceAvailableForPet,
-} from "@/lib/services";
-import { parseStaffServiceSelection } from "@/lib/staff/service-choice";
+  parseStaffServiceSelection,
+  staffMenuAllows,
+} from "@/lib/staff/service-choice";
 import {
   PetValidationError,
   validateCreatePetInput,
@@ -56,6 +56,7 @@ export type StaffCustomerBookingInput = {
   slotStartMinutes: number | null;
   address: StaffCustomerBookingAddress | null;
   verbalConsent: boolean;
+  acknowledgeScheduleConflict: boolean;
 };
 
 function resolveBookableService(serviceIdRaw: string, field: string) {
@@ -273,6 +274,7 @@ export function validateStaffCustomerBookingInput(
   }
 
   const verbalConsent = record.verbalConsent === true;
+  const acknowledgeScheduleConflict = record.acknowledgeScheduleConflict === true;
 
   const petsBody = Array.isArray(record.pets)
     ? record.pets
@@ -317,7 +319,7 @@ export function validateStaffCustomerBookingInput(
             field,
           );
         }
-        if (!isServiceAvailableForPet(chosen.serviceId, pet.weightLbs)) {
+        if (!staffMenuAllows(chosen.serviceId, pet.weightLbs)) {
           throw new StaffBookingValidationError(
             filledPetBodies.length > 1
               ? `That service is not available for dog ${index + 1}'s weight.`
@@ -446,6 +448,7 @@ export function validateStaffCustomerBookingInput(
     slotStartMinutes,
     address,
     verbalConsent,
+    acknowledgeScheduleConflict,
   };
 }
 

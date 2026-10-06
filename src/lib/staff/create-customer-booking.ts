@@ -4,8 +4,12 @@ import {
   assignArrivalWindow,
   claimDayPlan,
   getBaseGeoPoint,
+  loadOccupiedStops,
 } from "@/lib/appointments/schedule";
-import { buildSameAddressCompanionInsertion } from "@/lib/booking-schedule";
+import {
+  buildSameAddressCompanionInsertion,
+  buildStaffOverrideCompanionInsertion,
+} from "@/lib/booking-schedule";
 import {
   mapAppointmentRowToRecord,
 } from "@/lib/appointments/map";
@@ -27,6 +31,8 @@ import { keepPrimaryIfReferralFails } from "@/lib/referrals/allocate-code";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import { getStaffSession } from "@/lib/staff/auth";
+import { describeStaffScheduleConflict } from "@/lib/staff/schedule-conflict";
+import { parseStaffServiceSelection } from "@/lib/staff/service-choice";
 import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { isFrozenAuthUser } from "@/lib/auth/frozen-account";
 import { isEmailConfigured, sendEmail, siteUrl } from "@/lib/email/resend";
@@ -437,6 +443,37 @@ async function saveBookingPet(
   return { pet: petRow as { id: string } };
 }
 
+function staffVisitDurations(
+  input: StaffCustomerBookingInput,
+): { ok: true; durations: number[] } | { ok: false; error: "conflict"; message: string } {
+  const durations: number[] = [];
+  const serviceId = input.serviceId;
+  for (const pet of input.pets) {
+    const petServiceIds =
+      pet.serviceIds.length > 0
+        ? pet.serviceIds
+        : pet.serviceId
+          ? [pet.serviceId]
+          : serviceId
+            ? [serviceId]
+            : [];
+    for (const petServiceId of petServiceIds) {
+      const known = allBookableServices().some((entry) => entry.id === petServiceId);
+      if (!known) {
+        return { ok: false, error: "conflict", message: "Unknown service." };
+      }
+      durations.push(
+        estimateServiceDurationMinutes(
+          petServiceId,
+          pet.weightLbs,
+          input.addOnIds,
+        ),
+      );
+    }
+  }
+  return { ok: true, durations };
+}
+
 export async function createStaffCustomerBooking(
   input: StaffCustomerBookingInput,
 ): Promise<
@@ -447,6 +484,7 @@ export async function createStaffCustomerBooking(
         | "forbidden"
         | "conflict"
         | "slot_unavailable"
+        | "schedule_conflict"
         | "outside_area"
         | "misconfigured"
         | "server";
@@ -520,6 +558,23 @@ export async function createStaffCustomerBooking(
     firstPet.weightLbs,
     input.addOnIds,
   );
+  const plannedVisits = staffVisitDurations(input);
+  if (!plannedVisits.ok) {
+    return { error: plannedVisits.error, message: plannedVisits.message };
+  }
+  const occupied = await loadOccupiedStops(appointmentDate);
+  if ("error" in occupied) return occupied;
+  const scheduleConflict = describeStaffScheduleConflict({
+    startMinutes: slotStartMinutes,
+    durations: plannedVisits.durations,
+    stops: occupied.stops,
+  });
+  const overrideSchedule = Boolean(
+    scheduleConflict && input.acknowledgeScheduleConflict,
+  );
+  if (scheduleConflict && !input.acknowledgeScheduleConflict) {
+    return { error: "schedule_conflict", message: scheduleConflict };
+  }
   const firstAssignment = await assignArrivalWindow({
     date: appointmentDate,
     point: destination,
@@ -527,6 +582,7 @@ export async function createStaffCustomerBooking(
     durationMinutes: firstDurationMinutes,
     slotStartMinutes,
     base,
+    allowUnfittedStart: overrideSchedule,
   });
   const firstSchedule = resolveArrivalForBooking(firstAssignment, slotStartMinutes);
   if ("error" in firstSchedule) return { error: "slot_unavailable" };
@@ -606,11 +662,17 @@ export async function createStaffCustomerBooking(
         const companion =
           visitIndex === 0
             ? null
-            : buildSameAddressCompanionInsertion(
-                previousStart,
-                previousDuration,
-                durationMinutes,
-              );
+            : overrideSchedule
+              ? buildStaffOverrideCompanionInsertion(
+                  previousStart,
+                  previousDuration,
+                  durationMinutes,
+                )
+              : buildSameAddressCompanionInsertion(
+                  previousStart,
+                  previousDuration,
+                  durationMinutes,
+                );
         if (visitIndex > 0 && !companion) {
           return {
             error: "slot_unavailable",
@@ -628,6 +690,11 @@ export async function createStaffCustomerBooking(
               };
 
         const optionName = pet.serviceOptionNames[visitServiceIndex] ?? null;
+        const serviceName =
+          (optionName
+            ? parseStaffServiceSelection(`${petService.id}::${optionName}`)
+                ?.label
+            : null) || petService.name;
         const price = getServicePriceEstimate(
           petService,
           pet.weightLbs,
@@ -643,7 +710,7 @@ export async function createStaffCustomerBooking(
             customer_id: userId,
             pet_id: petRow.id,
             service_id: petService.id,
-            service_name: optionName || petService.name,
+            service_name: serviceName,
             add_on_ids: input.addOnIds,
             add_on_options: optionName ? { [petService.id]: optionName } : {},
             address_street: address.street,

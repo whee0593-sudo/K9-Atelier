@@ -362,6 +362,42 @@ export function buildSameAddressCompanionInsertion(
   };
 }
 
+/** Back-to-back visits at one address, including a chain that runs past closing. */
+export function chainSameAddressVisits(
+  firstStart: number,
+  durations: number[],
+): InsertResult[] {
+  const visits: InsertResult[] = [];
+  let previousStart = firstStart;
+  let previousDuration = 0;
+  durations.forEach((durationMinutes, index) => {
+    const scheduledStart =
+      index === 0 ? firstStart : snapUp(previousStart + previousDuration);
+    visits.push({
+      scheduledStart,
+      durationMinutes,
+      appointmentTime: formatArrivalWindow(scheduledStart, durationMinutes),
+      usedPreference: preferenceFromStart(scheduledStart),
+    });
+    previousStart = scheduledStart;
+    previousDuration = durationMinutes;
+  });
+  return visits;
+}
+
+/** Next same-address visit when an admin confirms a schedule past the usual limits. */
+export function buildStaffOverrideCompanionInsertion(
+  previousStart: number,
+  previousDurationMinutes: number,
+  durationMinutes: number,
+): InsertResult {
+  const chained = chainSameAddressVisits(previousStart, [
+    previousDurationMinutes,
+    durationMinutes,
+  ]);
+  return chained[1]!;
+}
+
 export function findRouteInsertionAtHour(
   base: GeoPoint,
   stops: RouteStop[],

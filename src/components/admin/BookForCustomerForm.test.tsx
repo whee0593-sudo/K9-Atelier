@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { BookForCustomerForm } from "@/components/admin/BookForCustomerForm";
 import { BookForCustomerSections } from "@/components/admin/BookForCustomerSections";
 import { bookingFormStartsOpen } from "@/lib/staff/booking-form-start";
+import { describeStaffScheduleConflict } from "@/lib/staff/schedule-conflict";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
 
 describe("BookForCustomerForm preview schedule", () => {
@@ -158,14 +159,28 @@ describe("BookForCustomerForm preview schedule", () => {
     const light = html.slice(lightStart, heavyStart);
     const heavy = html.slice(heavyStart, html.indexOf("</select>", heavyStart));
     assert.match(light, /Custom Full Haircut &amp; Styling/);
-    assert.match(light, />Temporary Fun</);
-    assert.match(light, />Ears &amp; Tail Accent</);
-    assert.match(light, />Paws &amp; Boots Accent</);
-    assert.match(light, />Custom Creative Design</);
+    assert.match(light, />SPA\/Dead Sea Mud Bath Treatment</);
+    assert.match(light, />SPA\/Aromatherapy Essential Oil Bath Soak</);
+    assert.match(light, />SPA\/Sensitive Skin &amp; Dander Soothing Treatment</);
+    assert.match(light, />Specialty care\/Extra-gentle senior care</);
+    assert.match(light, />Specialty care\/End-of-Life Comfort Care</);
+    assert.match(light, />Add-on care\/Dematting &amp; gentle brush-out</);
+    assert.match(light, />Add-on care\/DeShedding Treatment</);
+    assert.match(light, />Add-on care\/Mini Trim</);
+    assert.doesNotMatch(light, />Dead Sea Mud Bath Treatment</);
+    assert.match(light, />Creative coloring\/Temporary Fun</);
+    assert.match(light, />Creative coloring\/Ears &amp; Tail Accent</);
+    assert.match(light, />Creative coloring\/Paws &amp; Boots Accent</);
+    assert.match(light, />Creative coloring\/Custom Creative Design</);
+    assert.doesNotMatch(light, />Temporary Fun</);
     assert.doesNotMatch(light, />Creative Accent Coloring</);
     assert.match(heavy, /Hand Stripping/);
+    assert.match(heavy, />Specialty care\/End-of-Life Comfort Care</);
     assert.doesNotMatch(heavy, /Custom Full Haircut/);
     assert.doesNotMatch(heavy, /Temporary Fun/);
+    assert.doesNotMatch(heavy, /SPA\//);
+    assert.doesNotMatch(heavy, /Add-on care\//);
+    assert.doesNotMatch(heavy, /Extra-gentle senior care/);
     assert.match(html, /Dog 1/);
     assert.match(html, /Dog 2/);
     assert.equal((html.match(/>Add service</g) ?? []).length, 2);
@@ -191,6 +206,46 @@ const onFileCustomer: StaffCustomerRecord = {
   canDelete: false,
   canFreeze: false,
 };
+
+describe("BookForCustomerForm schedule conflict", () => {
+  it("shows the estimate conflict and still offers the start time", () => {
+    const start = 9 * 60;
+    const message = describeStaffScheduleConflict({
+      startMinutes: start,
+      durations: [113, 98, 83],
+      stops: [
+        {
+          lat: 26.85,
+          lon: -80.1,
+          scheduledStart: 13 * 60,
+          durationMinutes: 90,
+        },
+      ],
+    });
+    assert.ok(message);
+    const html = renderToStaticMarkup(
+      <BookForCustomerForm
+        preview
+        initialDate="2026-10-07"
+        initialSlotStartMinutes={start}
+        initialScheduleDays={[
+          {
+            date: "2026-10-07",
+            available: true,
+            slots: [start, 10 * 60, 14 * 60],
+            conflicts: { [String(start)]: message },
+          },
+        ]}
+      />,
+    );
+    assert.match(html, /Wed, Oct 7/);
+    assert.match(html, /9:00 AM — time conflict/);
+    assert.match(html, /overlaps a visit already scheduled at 1:00 PM/);
+    assert.match(html, /You can still book this time/);
+    assert.match(html, /Send booking link/);
+    assert.doesNotMatch(html, /No start times remain on this day/);
+  });
+});
 
 describe("Book for customer sections", () => {
   it("keeps both booking bars collapsed until they are opened", () => {

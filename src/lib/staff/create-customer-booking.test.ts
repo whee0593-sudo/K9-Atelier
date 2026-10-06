@@ -98,6 +98,19 @@ describe("staffCreatedAccountBlockReason", () => {
 });
 
 describe("validateStaffCustomerBookingInput", () => {
+  it("lets an admin confirm a schedule conflict instead of treating it as missing", () => {
+    assert.equal(
+      validateStaffCustomerBookingInput(validBody()).acknowledgeScheduleConflict,
+      false,
+    );
+    assert.equal(
+      validateStaffCustomerBookingInput(
+        validBody({ acknowledgeScheduleConflict: true }),
+      ).acknowledgeScheduleConflict,
+      true,
+    );
+  });
+
   it("accepts a complete staff booking", () => {
     const input = validateStaffCustomerBookingInput(validBody());
     assert.equal(input.mode, "booking");
@@ -245,7 +258,7 @@ describe("validateStaffCustomerBookingInput", () => {
       "Ears & Tail Accent",
       "Paws & Boots Accent",
     ]);
-    assert.equal(input.serviceName, "Ears & Tail Accent");
+    assert.equal(input.serviceName, "Creative coloring/Ears & Tail Accent");
     const coloring = allBookableServices().find(
       (service) => service.id === "creative-accent-coloring",
     );
@@ -267,6 +280,30 @@ describe("validateStaffCustomerBookingInput", () => {
       null,
     );
     assert.equal(getServicePriceEstimate(coloring, 14), null);
+  });
+
+  it("names spa, specialty, and add-on rows by their category", () => {
+    const input = validateStaffCustomerBookingInput(
+      validBody({
+        serviceId: undefined,
+        pet: {
+          name: "Luna",
+          breed: "Poodle",
+          weightLbs: 14,
+          serviceIds: [
+            "dead-sea-mud-bath",
+            "senior-comfort-care",
+            "dematting-brush-out",
+          ],
+        },
+      }),
+    );
+    assert.equal(input.serviceName, "SPA/Dead Sea Mud Bath Treatment");
+    assert.deepEqual(input.pets[0]?.serviceIds, [
+      "dead-sea-mud-bath",
+      "senior-comfort-care",
+      "dematting-brush-out",
+    ]);
   });
 
   it("rejects coloring until a style is chosen", () => {
