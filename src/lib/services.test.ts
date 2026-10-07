@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { getServiceById } from "./service-page";
 import {
+  bookedServiceAmount,
   getCoatTypePriceForPet,
   getServicePriceEstimate,
   getTierForPet,
+  parseEnteredServicePrice,
   weightTierForPet,
 } from "./services";
 
@@ -120,5 +122,26 @@ describe("unchanged add-on prices", () => {
     assert.equal(getServicePriceEstimate(deshedding, 12)?.from, 30);
     assert.equal(getServicePriceEstimate(deshedding, 20)?.from, 40);
     assert.equal(getServicePriceEstimate(deshedding, 40)?.from, 50);
+  });
+});
+
+describe("custom creative design price", () => {
+  it("uses the amount staff enter and ignores a catalog price", () => {
+    const coloring = getServiceById("creative-accent-coloring");
+    assert.ok(coloring);
+    assert.equal(
+      getServicePriceEstimate(coloring, 14, "Custom Creative Design"),
+      null,
+    );
+    assert.equal(
+      bookedServiceAmount(coloring, 14, "Custom Creative Design", 180),
+      180,
+    );
+    assert.equal(parseEnteredServicePrice("225.50"), 225.5);
+    assert.equal(
+      bookedServiceAmount(coloring, 14, "Custom Creative Design", null),
+      null,
+    );
+    assert.equal(bookedServiceAmount(coloring, 14, "Temporary Fun", 999), 50);
   });
 });

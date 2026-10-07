@@ -15,6 +15,7 @@ import {
   getServiceDisplayName,
 } from "@/lib/service-display";
 import { petMayBenefitFromGentleCare, type PetProfile } from "@/lib/pets";
+import { guestCreativeOptionNotice } from "@/lib/booking-flow";
 import {
   bookingBackLinkClass,
   bookingCardClass,
@@ -85,6 +86,7 @@ export function BookingCareOptionsStep({
   onBack,
 }: Props) {
   const [showCreativeOptions, setShowCreativeOptions] = useState(false);
+  const [creativeNotice, setCreativeNotice] = useState<string | null>(null);
   const addOns = getAvailableAddOns(primaryService.categoryId, primaryService.id);
 
   const standardAddOns = addOns.filter(
@@ -186,13 +188,22 @@ export function BookingCareOptionsStep({
             </button>
             {showCreativeOptions && creative.options && (
               <div className="mt-5 space-y-2 border-t border-gray-line/70 pt-5">
-                {creative.options.map((opt) => (
+                {creative.options.map((opt) => {
+                  const guestNotice = guestCreativeOptionNotice(opt.name);
+                  return (
                   <button
                     key={opt.name}
                     type="button"
-                    onClick={() => onOptionChange(creative.id, opt.name)}
+                    onClick={() => {
+                      if (guestNotice) {
+                        setCreativeNotice(guestNotice);
+                        return;
+                      }
+                      setCreativeNotice(null);
+                      onOptionChange(creative.id, opt.name);
+                    }}
                     className={`w-full rounded-sm border px-4 py-3 text-left text-sm transition ${
-                      addOnOptions[creative.id] === opt.name
+                      !guestNotice && addOnOptions[creative.id] === opt.name
                         ? "border-deep-lavender bg-dusty-lavender/25 text-ink"
                         : "border-gray-line text-taupe hover:border-champagne"
                     }`}
@@ -204,8 +215,14 @@ export function BookingCareOptionsStep({
                         {opt.consultationRequired ? " · Consultation required" : ""}
                       </span>
                     )}
+                    {guestNotice && creativeNotice === guestNotice ? (
+                      <span className="mt-2 block text-sm text-ink" role="status">
+                        {creativeNotice}
+                      </span>
+                    ) : null}
                   </button>
-                ))}
+                  );
+                })}
               </div>
             )}
           </article>

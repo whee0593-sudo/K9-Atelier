@@ -9,10 +9,14 @@ import {
   bookingDurationMinutes,
   createDraftBookingPet,
   getBookingCareCategories,
+  guestCreativeOptionNotice,
   isPersistedPetId,
   nextExpandedCareCategoryId,
 } from "@/lib/booking-flow";
-import { estimateServiceDurationMinutes } from "@/lib/services";
+import {
+  CUSTOM_CREATIVE_DESIGN_GUEST_MESSAGE,
+  estimateServiceDurationMinutes,
+} from "@/lib/services";
 
 describe("booking flow helpers", () => {
   it("defines six public booking steps in the requested order", () => {
@@ -132,6 +136,11 @@ describe("booking flow helpers", () => {
     assert.equal(choices[1]?.priceLabel, "From $100 / section");
     assert.equal(choices[2]?.priceLabel, "From $350");
     assert.equal(choices[3]?.priceLabel, "Consultation required");
+    assert.equal(
+      guestCreativeOptionNotice("Custom Creative Design"),
+      CUSTOM_CREATIVE_DESIGN_GUEST_MESSAGE,
+    );
+    assert.equal(guestCreativeOptionNotice("Temporary Fun"), null);
   });
 
   it("toggles a care category open and closed", () => {

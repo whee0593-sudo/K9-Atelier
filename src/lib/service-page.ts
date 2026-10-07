@@ -373,6 +373,16 @@ export const SERVICE_CATEGORY_PATHS = SERVICE_CATEGORIES.map(
   (category) => category.path,
 );
 
+const SERVICE_PAGE_SERVICE_IDS = SERVICE_CATEGORIES.flatMap((category) => [
+  ...category.serviceIds,
+]);
+
+/** Position of a service on the public Services pages, first to last. */
+export function servicePageOrderIndex(serviceId: string) {
+  const index = SERVICE_PAGE_SERVICE_IDS.indexOf(serviceId);
+  return index === -1 ? SERVICE_PAGE_SERVICE_IDS.length : index;
+}
+
 export function getServiceCategory(slug: string) {
   return SERVICE_CATEGORIES.find((category) => category.slug === slug) ?? null;
 }

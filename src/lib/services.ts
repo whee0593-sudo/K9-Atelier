@@ -75,6 +75,39 @@ export type SelectedService = {
 
 export const CREATIVE_ACCENT_COLORING_ID = "creative-accent-coloring";
 
+/** No catalog price. Staff enter the amount; guests cannot book it yet. */
+export const CUSTOM_CREATIVE_DESIGN_OPTION = "Custom Creative Design";
+
+export const CUSTOM_CREATIVE_DESIGN_GUEST_MESSAGE =
+  "To confirm the custom design, please contact us first.";
+
+export function isCustomCreativeDesignOption(optionName?: string | null) {
+  return optionName?.trim() === CUSTOM_CREATIVE_DESIGN_OPTION;
+}
+
+export function isCustomCreativeDesignSelection(
+  serviceId: string,
+  optionName?: string | null,
+) {
+  return (
+    serviceId === CREATIVE_ACCENT_COLORING_ID &&
+    isCustomCreativeDesignOption(optionName)
+  );
+}
+
+export function parseEnteredServicePrice(value: unknown): number | null {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || value < 0) return null;
+    return Math.round(value * 100) / 100;
+  }
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const amount = Number(trimmed);
+  if (!Number.isFinite(amount) || amount < 0) return null;
+  return Math.round(amount * 100) / 100;
+}
+
 export const CREATIVE_REQUIRED_BASE_IDS = [
   "signature-bath-care",
   "custom-full-haircut",
@@ -570,6 +603,22 @@ export function getServicePriceEstimate(
     return { from: option.priceFrom, durationLabel: undefined };
   }
   return null;
+}
+
+/** Catalog price, or the amount staff typed for Custom Creative Design. */
+export function bookedServiceAmount(
+  service: BookableService,
+  weightLbs: number,
+  optionName?: string | null,
+  enteredPrice?: number | null,
+) {
+  if (isCustomCreativeDesignSelection(service.id, optionName)) {
+    return parseEnteredServicePrice(enteredPrice);
+  }
+  return (
+    getServicePriceEstimate(service, weightLbs, optionName ?? undefined)?.from ??
+    null
+  );
 }
 
 export function getBookableServicesForPet(

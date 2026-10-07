@@ -14,6 +14,7 @@ import {
   bookingCareChoicesForService,
   bookingCareRowsForCategory,
   getBookingCareCategories,
+  guestCreativeOptionNotice,
   nextExpandedCareCategoryId,
 } from "@/lib/booking-flow";
 import {
@@ -117,6 +118,8 @@ function CareColorOptionCard({
   onSelect: (service: BookableService, optionName: string) => void;
 }) {
   const note = coloringOptionDisplayNote(option.note);
+  const guestNotice = guestCreativeOptionNotice(option.name);
+  const [notice, setNotice] = useState<string | null>(null);
 
   return (
     <article
@@ -145,11 +148,22 @@ function CareColorOptionCard({
       )}
       <button
         type="button"
-        onClick={() => onSelect(service, option.name)}
+        onClick={() => {
+          if (guestNotice) {
+            setNotice(guestNotice);
+            return;
+          }
+          onSelect(service, option.name);
+        }}
         className={`${bookingPrimaryBtnClass} mt-6`}
       >
-        {selected ? "Selected" : "Select"}
+        {selected && !guestNotice ? "Selected" : "Select"}
       </button>
+      {notice ? (
+        <p className="font-body mt-4 text-sm leading-relaxed text-ink" role="status">
+          {notice}
+        </p>
+      ) : null}
     </article>
   );
 }

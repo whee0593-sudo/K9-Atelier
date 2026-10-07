@@ -6,8 +6,10 @@ import { StaffBookingDatePicker } from "@/components/admin/StaffBookingDatePicke
 import { formatMinutesLabel } from "@/lib/appointments/closures";
 import { formatPrice } from "@/lib/business";
 import {
+  bookedServiceAmount,
   estimateServiceDurationMinutes,
-  getServicePriceEstimate,
+  isCustomCreativeDesignSelection,
+  parseEnteredServicePrice,
 } from "@/lib/services";
 import {
   listStaffServiceChoices,
@@ -74,6 +76,7 @@ type PetDraft = {
   breed: string;
   weightLbs: string;
   serviceIds: string[];
+  servicePrices: string[];
 };
 
 function createPetDraft(): PetDraft {
@@ -88,6 +91,7 @@ function createPetDraft(): PetDraft {
     breed: "",
     weightLbs: "",
     serviceIds: [""],
+    servicePrices: [""],
   };
 }
 
@@ -99,6 +103,7 @@ function petDraftFromSaved(pet: StaffBookingProfilePet): PetDraft {
     breed: pet.breed,
     weightLbs: pet.weightLbs > 0 ? String(pet.weightLbs) : "",
     serviceIds: [""],
+    servicePrices: [""],
   };
 }
 
@@ -216,11 +221,16 @@ export function BookForCustomerForm({
     () =>
       pets.map((pet) => {
         const weight = positiveWeight(pet.weightLbs);
-        const selected = pet.serviceIds
-          .map((serviceId) => parseStaffServiceSelection(serviceId))
-          .filter(
-            (choice): choice is NonNullable<typeof choice> => choice != null,
-          );
+        const selected = pet.serviceIds.flatMap((serviceId, index) => {
+          const choice = parseStaffServiceSelection(serviceId);
+          if (!choice) return [];
+          return [
+            {
+              choice,
+              priceRaw: pet.servicePrices[index] ?? "",
+            },
+          ];
+        });
         return { pet, weight, selected };
       }),
     [pets],
@@ -229,7 +239,7 @@ export function BookForCustomerForm({
     dogServices.length > 0 &&
     dogServices.every((row) => row.selected.length > 0 && row.weight != null);
   const scheduleServiceId = everyDogServiceReady
-    ? dogServices[0]?.selected[0]?.serviceId ?? ""
+    ? dogServices[0]?.selected[0]?.choice.serviceId ?? ""
     : "";
   const openDays = useMemo(() => selectableStaffDays(days), [days]);
   const openSlots = useMemo(
@@ -254,13 +264,19 @@ export function BookForCustomerForm({
     ? dogServices.reduce(
         (sum, row) =>
           sum +
-          row.selected.reduce((serviceSum, choice) => {
-            const estimate = getServicePriceEstimate(
-              choice.service,
+          row.selected.reduce((serviceSum, line) => {
+            const amount = bookedServiceAmount(
+              line.choice.service,
               row.weight!,
-              choice.optionName ?? undefined,
+              line.choice.optionName,
+              isCustomCreativeDesignSelection(
+                line.choice.serviceId,
+                line.choice.optionName,
+              )
+                ? parseEnteredServicePrice(line.priceRaw)
+                : null,
             );
-            return serviceSum + (estimate?.from ?? 0);
+            return serviceSum + (amount ?? 0);
           }, 0),
         0,
       )
@@ -272,8 +288,8 @@ export function BookForCustomerForm({
   const visitDurations = useMemo(() => {
     if (!everyDogServiceReady) return [];
     return dogServices.flatMap((row) =>
-      row.selected.map((choice) =>
-        estimateServiceDurationMinutes(choice.serviceId, row.weight!),
+      row.selected.map((line) =>
+        estimateServiceDurationMinutes(line.choice.serviceId, row.weight!),
       ),
     );
   }, [dogServices, everyDogServiceReady]);
@@ -286,7 +302,7 @@ export function BookForCustomerForm({
 
   function bookedServiceLabel() {
     const names = dogServices.flatMap((row) =>
-      row.selected.map((choice) => choice.label),
+      row.selected.map((line) => line.choice.label),
     );
     return names.length > 0 ? names.join(", ") : null;
   }
@@ -316,17 +332,24 @@ export function BookForCustomerForm({
         const next = { ...pet, [field]: value };
         if (field === "weightLbs") {
           const weight = positiveWeight(value);
-          next.serviceIds = next.serviceIds.map((serviceId) => {
+          const serviceIds: string[] = [];
+          const servicePrices: string[] = [];
+          next.serviceIds.forEach((serviceId, index) => {
             const choice = parseStaffServiceSelection(serviceId);
             if (
               choice &&
               weight != null &&
               !staffMenuAllows(choice.serviceId, weight)
             ) {
-              return "";
+              serviceIds.push("");
+              servicePrices.push("");
+              return;
             }
-            return serviceId;
+            serviceIds.push(serviceId);
+            servicePrices.push(next.servicePrices[index] ?? "");
           });
+          next.serviceIds = serviceIds;
+          next.servicePrices = servicePrices;
         }
         return next;
       }),
@@ -341,11 +364,38 @@ export function BookForCustomerForm({
         const serviceIds = pet.serviceIds.map((currentId, serviceIndex) =>
           serviceIndex === index ? serviceId : currentId,
         );
-        return { ...pet, serviceIds };
+        const servicePrices = pet.servicePrices.map((price, serviceIndex) => {
+          if (serviceIndex !== index) return price;
+          const choice = parseStaffServiceSelection(serviceId);
+          if (
+            !choice ||
+            !isCustomCreativeDesignSelection(
+              choice.serviceId,
+              choice.optionName,
+            )
+          ) {
+            return "";
+          }
+          return price;
+        });
+        return { ...pet, serviceIds, servicePrices };
       }),
     );
     setAppointmentDate(pinnedDateRef.current);
     setSlotStartMinutes("");
+  }
+
+  function updatePetServicePrice(key: string, index: number, price: string) {
+    markPetsEdited();
+    setPets((current) =>
+      current.map((pet) => {
+        if (pet.key !== key) return pet;
+        const servicePrices = pet.servicePrices.map((currentPrice, serviceIndex) =>
+          serviceIndex === index ? price : currentPrice,
+        );
+        return { ...pet, servicePrices };
+      }),
+    );
   }
 
   function addPetService(key: string) {
@@ -353,7 +403,11 @@ export function BookForCustomerForm({
     setPets((current) =>
       current.map((pet) => {
         if (pet.key !== key) return pet;
-        return { ...pet, serviceIds: [...pet.serviceIds, ""] };
+        return {
+          ...pet,
+          serviceIds: [...pet.serviceIds, ""],
+          servicePrices: [...pet.servicePrices, ""],
+        };
       }),
     );
   }
@@ -366,6 +420,9 @@ export function BookForCustomerForm({
         return {
           ...pet,
           serviceIds: pet.serviceIds.filter(
+            (_, serviceIndex) => serviceIndex !== index,
+          ),
+          servicePrices: pet.servicePrices.filter(
             (_, serviceIndex) => serviceIndex !== index,
           ),
         };
@@ -722,7 +779,12 @@ export function BookForCustomerForm({
         name: pet.name.trim(),
         breed: pet.breed.trim(),
         weightLbs: Number(pet.weightLbs),
-        serviceIds: pet.serviceIds.filter(Boolean),
+        lines: pet.serviceIds
+          .map((serviceId, index) => ({
+            serviceId,
+            price: parseEnteredServicePrice(pet.servicePrices[index] ?? ""),
+          }))
+          .filter((line) => line.serviceId),
       }))
       .filter(
         (pet) =>
@@ -732,7 +794,30 @@ export function BookForCustomerForm({
       );
     const servicesReady =
       filledPets.length > 0 &&
-      filledPets.every((pet) => pet.serviceIds.length > 0);
+      filledPets.every((pet) => pet.lines.length > 0);
+    const addressComplete = Boolean(
+      street.trim() && city.trim() && state.trim() && zip.trim(),
+    );
+    const missingCustomPrice = filledPets.some((pet) =>
+      pet.lines.some((line) => {
+        const choice = parseStaffServiceSelection(line.serviceId);
+        return (
+          choice != null &&
+          isCustomCreativeDesignSelection(choice.serviceId, choice.optionName) &&
+          line.price == null
+        );
+      }),
+    );
+    if (
+      servicesReady &&
+      appointmentDate &&
+      slotStartMinutes &&
+      addressComplete &&
+      missingCustomPrice
+    ) {
+      setError("Enter a price for Custom Creative Design.");
+      return;
+    }
 
     if (selectedConflict && !acknowledgeScheduleConflict) {
       setConflictPrompt(selectedConflict);
@@ -784,7 +869,12 @@ export function BookForCustomerForm({
             name: pet.name,
             breed: pet.breed,
             weightLbs: pet.weightLbs,
-            ...(pet.serviceIds.length > 0 ? { serviceIds: pet.serviceIds } : {}),
+            ...(pet.lines.length > 0
+              ? {
+                  serviceIds: pet.lines.map((line) => line.serviceId),
+                  servicePrices: pet.lines.map((line) => line.price),
+                }
+              : {}),
           })),
           appointmentDate: appointmentDate || undefined,
           slotStartMinutes: slotStartMinutes
@@ -1107,10 +1197,19 @@ export function BookForCustomerForm({
               <div className="space-y-3">
                 {pet.serviceIds.map((serviceId, serviceIndex) => {
                   const serviceFieldId = `pet-service-${pet.key}-${serviceIndex}`;
+                  const priceFieldId = `pet-service-price-${pet.key}-${serviceIndex}`;
                   const choices = serviceChoices(
                     pet.weightLbs,
                     pet.serviceIds,
                     serviceIndex,
+                  );
+                  const selectedChoice = parseStaffServiceSelection(serviceId);
+                  const needsEnteredPrice = Boolean(
+                    selectedChoice &&
+                      isCustomCreativeDesignSelection(
+                        selectedChoice.serviceId,
+                        selectedChoice.optionName,
+                      ),
                   );
                   return (
                     <div key={serviceFieldId} className="flex items-end gap-3">
@@ -1141,6 +1240,32 @@ export function BookForCustomerForm({
                             </option>
                           ))}
                         </select>
+                        {needsEnteredPrice ? (
+                          <div className="mt-3">
+                            <label className={labelClass} htmlFor={priceFieldId}>
+                              Price
+                            </label>
+                            <input
+                              id={priceFieldId}
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              inputMode="decimal"
+                              className={fieldClass}
+                              value={pet.servicePrices[serviceIndex] ?? ""}
+                              onChange={(event) =>
+                                updatePetServicePrice(
+                                  pet.key,
+                                  serviceIndex,
+                                  event.target.value,
+                                )
+                              }
+                            />
+                            <p className="mt-2 text-sm text-text-muted">
+                              This amount is included in the estimated total.
+                            </p>
+                          </div>
+                        ) : null}
                       </div>
                       {pet.serviceIds.length > 1 ? (
                         <button

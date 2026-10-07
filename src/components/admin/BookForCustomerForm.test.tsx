@@ -173,6 +173,28 @@ describe("BookForCustomerForm preview schedule", () => {
     assert.match(light, />Creative coloring\/Paws &amp; Boots Accent</);
     assert.match(light, />Creative coloring\/Custom Creative Design</);
     assert.doesNotMatch(light, />Temporary Fun</);
+    const lightLabels = [...light.matchAll(/<option[^>]*>([^<]*)<\/option>/g)].map(
+      (match) => match[1].replaceAll("&amp;", "&"),
+    );
+    assert.deepEqual(lightLabels, [
+      "Select a service",
+      "Signature Bath & Care",
+      "Show Care for Long Coats",
+      "Custom Full Haircut & Styling",
+      "Hand Stripping",
+      "SPA/Dead Sea Mud Bath Treatment",
+      "SPA/Aromatherapy Essential Oil Bath Soak",
+      "SPA/Sensitive Skin & Dander Soothing Treatment",
+      "Creative coloring/Temporary Fun",
+      "Creative coloring/Ears & Tail Accent",
+      "Creative coloring/Paws & Boots Accent",
+      "Creative coloring/Custom Creative Design",
+      "Specialty care/Extra-gentle senior care",
+      "Specialty care/End-of-Life Comfort Care",
+      "Add-on care/Dematting & gentle brush-out",
+      "Add-on care/DeShedding Treatment",
+      "Add-on care/Mini Trim",
+    ]);
     assert.doesNotMatch(light, />Creative Accent Coloring</);
     assert.match(heavy, /Hand Stripping/);
     assert.match(heavy, />Specialty care\/End-of-Life Comfort Care</);
