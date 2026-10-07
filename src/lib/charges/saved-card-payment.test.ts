@@ -357,6 +357,17 @@ describe("saved card Today's Bill checkout", () => {
       SAVED_CARD_FRIENDLY_ERROR,
     );
     assert.equal(
+      customerFacingStripeMessage(STRIPE_REDIRECT_ERROR),
+      SAVED_CARD_FRIENDLY_ERROR,
+    );
+    assert.equal(
+      customerFacingStripeMessage({
+        type: "validation_error",
+        message: "Your card number is incomplete.",
+      }),
+      "Your card number is incomplete.",
+    );
+    assert.equal(
       customerFacingStripeMessage({
         type: "card_error",
         message: "Your card has insufficient funds.",

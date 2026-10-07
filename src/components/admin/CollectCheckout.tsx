@@ -59,6 +59,36 @@ const TIP_PERCENTS = [15, 18, 20] as const;
 
 const stripePromiseCache = new Map<string, Promise<Stripe | null>>();
 
+function reportStripeCheckoutError(error: unknown) {
+  console.error("checkout stripe client error:", error);
+  const record =
+    error && typeof error === "object"
+      ? (error as {
+          type?: unknown;
+          code?: unknown;
+          decline_code?: unknown;
+          message?: unknown;
+          requestId?: unknown;
+          request_id?: unknown;
+        })
+      : null;
+  const payload = {
+    type: record?.type ?? null,
+    code: record?.code ?? null,
+    declineCode: record?.decline_code ?? null,
+    message: record?.message ?? (error instanceof Error ? error.message : null),
+    requestId: record?.requestId ?? record?.request_id ?? null,
+  };
+  void fetch("/api/admin/charges/client-error", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).catch((logError) => {
+    console.error("checkout stripe client error log failed:", logError);
+  });
+}
+
 function stripePromiseFor(publishableKey: string) {
   const existing = stripePromiseCache.get(publishableKey);
   if (existing) return existing;
@@ -507,7 +537,7 @@ export function CollectCheckout({
           const confirmed = await stripe.confirmCardPayment(body.clientSecret);
           if (confirmed.error || confirmed.paymentIntent?.status !== "succeeded") {
             if (confirmed.error) {
-              console.error("saved card confirmation failed:", confirmed.error);
+              reportStripeCheckoutError(confirmed.error);
             }
             setError(
               confirmed.error
@@ -1334,7 +1364,12 @@ function ConfirmNewCard({
     try {
       const { error: submitError } = await elements.submit();
       if (submitError) {
-        onError(submitError.message ?? "Please complete the card details.");
+        reportStripeCheckoutError(submitError);
+        onError(
+          submitError.message
+            ? customerFacingStripeMessage(submitError)
+            : "Please complete the card details.",
+        );
         return;
       }
       const result = await stripe.confirmPayment({
@@ -1345,7 +1380,7 @@ function ConfirmNewCard({
         },
       });
       if (result.error) {
-        console.error("new card confirmation failed:", result.error);
+        reportStripeCheckoutError(result.error);
         onError(customerFacingStripeMessage(result.error));
         return;
       }
