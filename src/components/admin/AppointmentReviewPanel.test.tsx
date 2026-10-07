@@ -13,6 +13,12 @@ describe("appointment review page", () => {
     assert.match(html, /Route days/);
     assert.match(html, /Today — drive order/);
     assert.match(html, /No appointments on today/);
+    const driveOrder = html.indexOf("Today — drive order");
+    const routeDays = html.indexOf("Route days");
+    const dayList = html.indexOf("Daisy");
+    assert.ok(driveOrder !== -1 && routeDays !== -1 && dayList !== -1);
+    assert.ok(driveOrder < routeDays);
+    assert.ok(routeDays < dayList);
     assert.equal(html.includes("No confirmed appointments"), false);
     assert.equal(html.includes("Approve booking"), false);
     assert.equal(html.includes("Decline"), false);
