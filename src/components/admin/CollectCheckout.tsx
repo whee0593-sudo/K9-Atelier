@@ -8,7 +8,7 @@ import {
 } from "@stripe/react-stripe-js";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChargeMoneyWithList } from "@/components/admin/ChargeMoneyWithList";
 import { catalogLinePatch, listedAmountIfChanged } from "@/lib/charges/list-amount";
 import { formatChargeMoney, sumLineItems } from "@/lib/charges/money";
@@ -29,6 +29,12 @@ import { ChargeReceiptLetter } from "@/components/admin/ChargeReceiptLetter";
 import { ChargeRefundForm } from "@/components/admin/ChargeRefundForm";
 import { collectBillHeading } from "@/lib/charges/receipt-view";
 import { manualCardWallets } from "@/lib/payments/card-wallets";
+import {
+  acquirePaymentSubmission,
+  customerFacingStripeMessage,
+  releasePaymentSubmission,
+  sanitizeCustomerPaymentError,
+} from "@/lib/charges/saved-card-payment";
 import {
   buildCollectChargePaymentFields,
   collectReceiptPaymentLabel,
@@ -100,6 +106,7 @@ export function CollectCheckout({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const paymentLock = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [serviceStartedAt, setServiceStartedAt] = useState<string | null>(null);
   const [serviceEndedAt, setServiceEndedAt] = useState<string | null>(null);
@@ -392,33 +399,38 @@ export function CollectCheckout({
 
   async function startPayment() {
     if (!context) return;
+    if (!acquirePaymentSubmission(paymentLock)) return null;
     if (preview) {
-      const nextCharge: AppointmentChargeRecord = {
-        id: "preview-charge",
-        appointmentId,
-        kind,
-        status: "paid",
-        lineItems,
-        subtotal,
-        tipAmount,
-        total,
-        receiptChannel: null,
-        paidAt: new Date().toISOString(),
-        refundedAmount: 0,
-        paymentMethodId: useCash ? null : selectedMethodId,
-        tender: useCash ? "cash" : "card",
-      };
-      setChargeId(nextCharge.id);
-      setPaidCharge(nextCharge);
-      if (useCash) {
-        setChargedTender("cash");
-        setChargedMethodId(null);
-      } else {
-        setChargedTender("card");
-        if (!useNewCard) setChargedMethodId(selectedMethodId);
+      try {
+        const nextCharge: AppointmentChargeRecord = {
+          id: "preview-charge",
+          appointmentId,
+          kind,
+          status: "paid",
+          lineItems,
+          subtotal,
+          tipAmount,
+          total,
+          receiptChannel: null,
+          paidAt: new Date().toISOString(),
+          refundedAmount: 0,
+          paymentMethodId: useCash ? null : selectedMethodId,
+          tender: useCash ? "cash" : "card",
+        };
+        setChargeId(nextCharge.id);
+        setPaidCharge(nextCharge);
+        if (useCash) {
+          setChargedTender("cash");
+          setChargedMethodId(null);
+        } else {
+          setChargedTender("card");
+          if (!useNewCard) setChargedMethodId(selectedMethodId);
+        }
+        setStep("receipt");
+        return;
+      } finally {
+        releasePaymentSubmission(paymentLock);
       }
-      setStep("receipt");
-      return;
     }
     setBusy(true);
     setError(null);
@@ -460,7 +472,12 @@ export function CollectCheckout({
         requiresAction?: boolean;
       };
       if (!response.ok) {
-        setError(body.error ?? "Could not charge this card.");
+        setError(
+          sanitizeCustomerPaymentError(
+            body.error,
+            "Could not charge this card.",
+          ),
+        );
         return;
       }
       if (body.charge?.id) setChargeId(body.charge.id);
@@ -489,8 +506,13 @@ export function CollectCheckout({
           }
           const confirmed = await stripe.confirmCardPayment(body.clientSecret);
           if (confirmed.error || confirmed.paymentIntent?.status !== "succeeded") {
+            if (confirmed.error) {
+              console.error("saved card confirmation failed:", confirmed.error);
+            }
             setError(
-              confirmed.error?.message ?? "This card could not be charged.",
+              confirmed.error
+                ? customerFacingStripeMessage(confirmed.error)
+                : "This card could not be charged.",
             );
             return null;
           }
@@ -518,6 +540,7 @@ export function CollectCheckout({
     } catch {
       setError("Could not charge this card.");
     } finally {
+      releasePaymentSubmission(paymentLock);
       setBusy(false);
     }
     return null;
@@ -1322,7 +1345,8 @@ function ConfirmNewCard({
         },
       });
       if (result.error) {
-        onError(result.error.message ?? "This card could not be charged.");
+        console.error("new card confirmation failed:", result.error);
+        onError(customerFacingStripeMessage(result.error));
         return;
       }
       const paymentIntent = result.paymentIntent;

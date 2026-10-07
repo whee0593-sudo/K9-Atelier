@@ -31,6 +31,12 @@ import type {
 } from "@/lib/charges/types";
 import { isCashTender, readChargeTender } from "@/lib/charges/tender";
 import {
+  attemptSavedCardCharge,
+  customerFacingStripeMessage,
+  savedCardIdempotencyKey,
+  type AttemptCharge,
+} from "@/lib/charges/saved-card-payment";
+import {
   sendAfterVisitThankYouSms,
   sendChargeReceiptEmail,
 } from "@/lib/charges/receipts";
@@ -328,6 +334,31 @@ export async function createAppointmentCharge(
     stripePaymentMethodId = method.stripe_payment_method_id;
   }
 
+  if (cents > 0 && !useCash && !useNewCard) {
+    if (!stripe || !stripeCustomerId || !stripePaymentMethodId || !input.paymentMethodId) {
+      return { error: "server" };
+    }
+    return chargeSavedPaymentMethod({
+      stripe,
+      userId: session.user.id,
+      customerId: appointment.customerId,
+      petName: appointment.petName,
+      appointmentId: input.appointmentId,
+      kind: input.kind,
+      lineItems,
+      subtotal,
+      tipAmount,
+      total,
+      newClientDiscount,
+      referralCreditApplied,
+      creditCents: quote.creditCents,
+      paymentMethodId: input.paymentMethodId,
+      amountCents: cents,
+      stripeCustomerId,
+      stripePaymentMethodId,
+    });
+  }
+
   const { data: inserted, error: insertError } = await admin
     .from("appointment_charges")
     .insert({
@@ -461,12 +492,249 @@ export async function createAppointmentCharge(
       .from("appointment_charges")
       .update({ status: "failed" })
       .eq("id", inserted.id);
-    const message =
-      error && typeof error === "object" && "message" in error
-        ? String((error as { message: string }).message)
-        : "This card could not be charged.";
-    return { error: "declined", message };
+    return {
+      error: "declined",
+      message: customerFacingStripeMessage(error),
+    };
   }
+}
+
+function chargeRowToAttempt(row: ChargeRow & { created_at?: string }): AttemptCharge {
+  return {
+    id: row.id,
+    appointmentId: row.appointment_id,
+    kind: row.kind,
+    status: row.status,
+    lineItems: row.line_items,
+    subtotal: Number(row.subtotal),
+    tipAmount: Number(row.tip_amount),
+    total: Number(row.total),
+    newClientDiscount: 0,
+    referralCreditApplied: 0,
+    paymentMethodId: row.payment_method_id ?? null,
+    stripePaymentIntentId: row.stripe_payment_intent_id,
+    createdAt: row.created_at ?? new Date(0).toISOString(),
+    receiptChannel: row.receipt_channel,
+    paidAt: row.paid_at,
+    refundedAmount: Number(row.refunded_amount ?? 0),
+    tender: readChargeTender(row.tender),
+  };
+}
+
+function attemptToRecord(charge: AttemptCharge): AppointmentChargeRecord {
+  return {
+    id: charge.id,
+    appointmentId: charge.appointmentId,
+    kind: charge.kind,
+    status: charge.status,
+    lineItems: charge.lineItems,
+    subtotal: charge.subtotal,
+    tipAmount: charge.tipAmount,
+    total: charge.total,
+    receiptChannel: charge.receiptChannel,
+    paidAt: charge.paidAt,
+    refundedAmount: charge.refundedAmount,
+    paymentMethodId: charge.paymentMethodId,
+    tender: charge.tender,
+  };
+}
+
+async function chargeSavedPaymentMethod(input: {
+  stripe: NonNullable<ReturnType<typeof getStripe>>;
+  userId: string;
+  customerId: string;
+  petName: string;
+  appointmentId: string;
+  kind: ChargeKind;
+  lineItems: ChargeLineItem[];
+  subtotal: number;
+  tipAmount: number;
+  total: number;
+  newClientDiscount: number;
+  referralCreditApplied: number;
+  creditCents: number;
+  paymentMethodId: string;
+  amountCents: number;
+  stripeCustomerId: string;
+  stripePaymentMethodId: string;
+}): Promise<
+  | {
+      charge: AppointmentChargeRecord;
+      clientSecret?: string;
+      requiresAction?: boolean;
+    }
+  | {
+      error: "conflict" | "declined" | "server";
+      message?: string;
+    }
+> {
+  const admin = createAdminClient();
+  const select = `${CHARGE_SELECT}, created_at`;
+  const result = await attemptSavedCardCharge(
+    {
+      appointmentId: input.appointmentId,
+      kind: input.kind,
+      lineItems: input.lineItems,
+      subtotal: input.subtotal,
+      tipAmount: input.tipAmount,
+      total: input.total,
+      newClientDiscount: input.newClientDiscount,
+      referralCreditApplied: input.referralCreditApplied,
+      creditCents: input.creditCents,
+      createdBy: input.userId,
+      paymentMethodId: input.paymentMethodId,
+      amountCents: input.amountCents,
+      stripeCustomerId: input.stripeCustomerId,
+      stripePaymentMethodId: input.stripePaymentMethodId,
+      offSession: input.kind === "no_show",
+      description:
+        input.kind === "no_show"
+          ? `K9 Atelier no-show · ${input.petName}`
+          : `K9 Atelier grooming · ${input.petName}`,
+    },
+    {
+      findPaid: async () => {
+        const { data, error } = await admin
+          .from("appointment_charges")
+          .select(select)
+          .eq("appointment_id", input.appointmentId)
+          .eq("kind", input.kind)
+          .eq("status", "paid")
+          .maybeSingle();
+        if (error) {
+          console.error("chargeSavedPaymentMethod paid lookup failed:", error.message);
+          throw error;
+        }
+        return data
+          ? chargeRowToAttempt(data as ChargeRow & { created_at?: string })
+          : null;
+      },
+      findLatestPending: async () => {
+        const { data, error } = await admin
+          .from("appointment_charges")
+          .select(select)
+          .eq("appointment_id", input.appointmentId)
+          .eq("kind", input.kind)
+          .eq("status", "pending")
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (error) {
+          console.error(
+            "chargeSavedPaymentMethod pending lookup failed:",
+            error.message,
+          );
+          throw error;
+        }
+        const row = data?.[0] as (ChargeRow & { created_at?: string }) | undefined;
+        return row ? chargeRowToAttempt(row) : null;
+      },
+      insertPending: async (row) => {
+        const { data, error } = await admin
+          .from("appointment_charges")
+          .insert(row)
+          .select(select)
+          .single();
+        if (error || !data) {
+          console.error("createAppointmentCharge insert failed:", error?.message);
+          throw error ?? new Error("insert failed");
+        }
+        return chargeRowToAttempt(data as ChargeRow & { created_at?: string });
+      },
+      linkPaymentIntent: async (chargeId, paymentIntentId) => {
+        const { error } = await admin
+          .from("appointment_charges")
+          .update({ stripe_payment_intent_id: paymentIntentId })
+          .eq("id", chargeId);
+        if (error) {
+          console.error("chargeSavedPaymentMethod link intent failed:", error.message);
+          throw error;
+        }
+        await attachReservationPaymentIntent(chargeId, paymentIntentId);
+      },
+      markPaid: async (chargeId, paymentMethodId) => {
+        const paid = await markChargePaid(chargeId, paymentMethodId);
+        if (!paid) return null;
+        const { data } = await admin
+          .from("appointment_charges")
+          .select(select)
+          .eq("id", chargeId)
+          .maybeSingle();
+        return data
+          ? chargeRowToAttempt(data as ChargeRow & { created_at?: string })
+          : chargeRowToAttempt({
+              id: paid.id,
+              appointment_id: paid.appointmentId,
+              kind: paid.kind,
+              status: paid.status,
+              line_items: paid.lineItems,
+              subtotal: paid.subtotal,
+              tip_amount: paid.tipAmount,
+              total: paid.total,
+              receipt_channel: paid.receiptChannel,
+              paid_at: paid.paidAt,
+              stripe_payment_intent_id: null,
+              refunded_amount: paid.refundedAmount,
+              payment_method_id: paid.paymentMethodId ?? null,
+              tender: paid.tender ?? "card",
+            });
+      },
+      markFailed: async (chargeId) => {
+        await reverseReferralDebit(chargeId);
+        await admin
+          .from("appointment_charges")
+          .update({ status: "failed" })
+          .eq("id", chargeId);
+      },
+      reserveCredit: async (chargeId) => {
+        const reserved = await reserveReferralCredit({
+          customerId: input.customerId,
+          chargeId,
+          appointmentId: input.appointmentId,
+          amountCents: input.creditCents,
+          adminUserId: input.userId,
+        });
+        if (!reserved.ok) {
+          return {
+            ok: false,
+            message: "That referral credit is no longer available.",
+          };
+        }
+        return { ok: true };
+      },
+      createPaymentIntent: async (params, options) => {
+        const paymentIntent = await input.stripe.paymentIntents.create(params, {
+          idempotencyKey: options.idempotencyKey || savedCardIdempotencyKey(params.metadata.charge_id),
+        });
+        return {
+          id: paymentIntent.id,
+          status: paymentIntent.status,
+          client_secret: paymentIntent.client_secret,
+        };
+      },
+      retrievePaymentIntent: async (id) => {
+        const paymentIntent = await input.stripe.paymentIntents.retrieve(id);
+        return {
+          id: paymentIntent.id,
+          status: paymentIntent.status,
+          client_secret: paymentIntent.client_secret,
+        };
+      },
+    },
+  );
+
+  if (!result.ok) {
+    if (result.stripeError) {
+      console.error("createAppointmentCharge stripe failed:", result.stripeError);
+    }
+    return { error: result.error, message: result.message };
+  }
+
+  return {
+    charge: attemptToRecord(result.charge),
+    ...(result.requiresAction
+      ? { clientSecret: result.clientSecret, requiresAction: true as const }
+      : {}),
+  };
 }
 
 export async function confirmAppointmentCharge(
