@@ -248,7 +248,111 @@ export function AppointmentReviewPanel({
         preview={preview}
         onAppointmentsChanged={() => void loadAppointments({ silent: true })}
         reloadToken={calendarNonce}
-      />
+        between={
+          <>
+      <section>
+        <h3 className="text-lg font-medium text-gold-dark">Today — drive order</h3>
+        {todayAppointments.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-lavender/30 bg-cream p-8 text-center">
+            <p className="text-sm text-text-muted">
+              No appointments on today&apos;s calendar.
+            </p>
+          </div>
+        ) : (
+          <ul className="mt-4 space-y-4">
+            {todayAppointments.map((appointment, index) => {
+              const busy = busyId === appointment.id;
+              const customerLabel =
+                appointment.customerName ??
+                appointment.customerEmail ??
+                "Unknown customer";
+              const alreadySent = Boolean(appointment.enRouteSmsSentAt);
+
+              return (
+                <li
+                  key={appointment.id}
+                  className="rounded-2xl border border-lavender/30 bg-cream p-6"
+                >
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="font-medium text-gold-dark">
+                        {appointment.petName}
+                        {appointment.petBreed ? (
+                          <span className="font-normal text-text-muted">
+                            {" "}
+                            · {appointment.petBreed}
+                          </span>
+                        ) : null}
+                      </h3>
+                      <p className="mt-1 text-sm text-text-muted">
+                        {customerLabel}
+                        {appointment.customerPhone
+                          ? ` · ${appointment.customerPhone}`
+                          : ""}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <AppointmentCornerMark
+                        status={appointment.status}
+                        vaccinationStatusAtBooking={
+                          appointment.vaccinationStatusAtBooking
+                        }
+                        customerConfirmedAt={appointment.customerConfirmedAt}
+                      />
+                      <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
+                        Stop {index + 1} · {appointment.appointmentTime}
+                      </span>
+                      <span className="text-xs font-medium text-gold-dark">
+                        {appointmentStatusLabel(
+                          appointment.status,
+                          appointment.awaitingCustomerConfirm,
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="mt-4 text-sm text-text">
+                    {appointment.serviceName}
+                  </p>
+                  <p className="mt-1 text-sm text-text-muted">
+                    {formatServiceAddress({
+                      street: appointment.addressStreet,
+                      city: appointment.addressCity,
+                      state: appointment.addressState,
+                      zip: appointment.addressZip,
+                    })}
+                  </p>
+                  <p className="mt-2 text-sm text-gold-dark">
+                    {formatStaffVisitTiming(
+                      appointment.serviceStartedAt,
+                      appointment.serviceEndedAt,
+                      appointment.timezone,
+                    )}
+                  </p>
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      disabled={busy || alreadySent || !appointment.customerPhone}
+                      onClick={() => void sendEnRoute(appointment.id)}
+                      className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-cream transition hover:bg-gold-dark disabled:opacity-50"
+                    >
+                      {alreadySent
+                        ? "On-the-way text sent"
+                        : appointment.customerPhone
+                          ? "Text: on the way"
+                          : "No mobile number"}
+                    </button>
+                    <AppointmentActionLinks
+                      appointment={appointment}
+                      paidKinds={paidKinds[appointment.id] ?? []}
+                      onChanged={() => void loadAppointments({ silent: true })}
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       <section>
         <h3 className="text-lg font-medium text-gold-dark">Route days</h3>
@@ -376,110 +480,9 @@ export function AppointmentReviewPanel({
           </ul>
         )}
       </section>
-
-      <section>
-        <h3 className="text-lg font-medium text-gold-dark">Today — drive order</h3>
-        {todayAppointments.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-lavender/30 bg-cream p-8 text-center">
-            <p className="text-sm text-text-muted">
-              No appointments on today&apos;s calendar.
-            </p>
-          </div>
-        ) : (
-          <ul className="mt-4 space-y-4">
-            {todayAppointments.map((appointment, index) => {
-              const busy = busyId === appointment.id;
-              const customerLabel =
-                appointment.customerName ??
-                appointment.customerEmail ??
-                "Unknown customer";
-              const alreadySent = Boolean(appointment.enRouteSmsSentAt);
-
-              return (
-                <li
-                  key={appointment.id}
-                  className="rounded-2xl border border-lavender/30 bg-cream p-6"
-                >
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <h3 className="font-medium text-gold-dark">
-                        {appointment.petName}
-                        {appointment.petBreed ? (
-                          <span className="font-normal text-text-muted">
-                            {" "}
-                            · {appointment.petBreed}
-                          </span>
-                        ) : null}
-                      </h3>
-                      <p className="mt-1 text-sm text-text-muted">
-                        {customerLabel}
-                        {appointment.customerPhone
-                          ? ` · ${appointment.customerPhone}`
-                          : ""}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <AppointmentCornerMark
-                        status={appointment.status}
-                        vaccinationStatusAtBooking={
-                          appointment.vaccinationStatusAtBooking
-                        }
-                        customerConfirmedAt={appointment.customerConfirmedAt}
-                      />
-                      <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
-                        Stop {index + 1} · {appointment.appointmentTime}
-                      </span>
-                      <span className="text-xs font-medium text-gold-dark">
-                        {appointmentStatusLabel(
-                          appointment.status,
-                          appointment.awaitingCustomerConfirm,
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="mt-4 text-sm text-text">
-                    {appointment.serviceName}
-                  </p>
-                  <p className="mt-1 text-sm text-text-muted">
-                    {formatServiceAddress({
-                      street: appointment.addressStreet,
-                      city: appointment.addressCity,
-                      state: appointment.addressState,
-                      zip: appointment.addressZip,
-                    })}
-                  </p>
-                  <p className="mt-2 text-sm text-gold-dark">
-                    {formatStaffVisitTiming(
-                      appointment.serviceStartedAt,
-                      appointment.serviceEndedAt,
-                      appointment.timezone,
-                    )}
-                  </p>
-                  <div className="mt-6 flex flex-wrap gap-3">
-                    <button
-                      type="button"
-                      disabled={busy || alreadySent || !appointment.customerPhone}
-                      onClick={() => void sendEnRoute(appointment.id)}
-                      className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-cream transition hover:bg-gold-dark disabled:opacity-50"
-                    >
-                      {alreadySent
-                        ? "On-the-way text sent"
-                        : appointment.customerPhone
-                          ? "Text: on the way"
-                          : "No mobile number"}
-                    </button>
-                    <AppointmentActionLinks
-                      appointment={appointment}
-                      paidKinds={paidKinds[appointment.id] ?? []}
-                      onChanged={() => void loadAppointments({ silent: true })}
-                    />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+          </>
+        }
+      />
 
       <button
         type="button"
