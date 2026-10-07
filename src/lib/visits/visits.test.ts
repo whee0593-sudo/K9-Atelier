@@ -15,6 +15,7 @@ import {
   scheduleVisitPetChain,
   snapshotServiceAddress,
   snapshotServicePrice,
+  visitArrivalFields,
   visitArrivalFits,
   visitEstimatedDurationMinutes,
   visitServiceTotal,
@@ -424,7 +425,7 @@ describe("visit snapshots", () => {
 });
 
 describe("historical visit backfill migration", () => {
-  it("does not reference undeclared cluster variables", () => {
+  it("merges only a shared confirmation token and refuses visit deletes", () => {
     const sql = readFileSync(
       new URL(
         "../../../supabase/migrations/20261006120000_visits.sql",
@@ -432,12 +433,52 @@ describe("historical visit backfill migration", () => {
       ),
       "utf8",
     );
+    const integrity = readFileSync(
+      new URL(
+        "../../../supabase/migrations/20261007140000_visit_integrity.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
     assert.equal(sql.includes("cluster_customer"), false);
     assert.equal(sql.includes("cluster_date"), false);
     assert.equal(sql.includes("cluster_address"), false);
-    assert.match(sql, /interval '15 seconds'/);
+    assert.equal(sql.includes("interval '15 seconds'"), false);
     assert.match(sql, /customer_confirm_token_hash/);
+    assert.match(sql, /'single:' \|\| id::text/);
+    assert.match(sql, /REFERENCES public\.visits \(id\) ON DELETE RESTRICT/);
+    assert.doesNotMatch(sql, /REFERENCES public\.visits \(id\) ON DELETE CASCADE/);
     assert.match(sql, /visits\.travel_fee is the source of truth/i);
+    assert.match(sql, /public\.visit_arrival_label\(v_start\)/);
+    assert.match(integrity, /ON DELETE RESTRICT/);
+    assert.match(integrity, /FUNCTION public\.create_staff_visit/);
+    assert.match(integrity, /FUNCTION public\.replace_visit_schedule/);
+    assert.match(
+      integrity,
+      /REVOKE ALL ON FUNCTION public\.create_staff_visit\(jsonb, jsonb\) FROM authenticated/,
+    );
+    assert.match(
+      integrity,
+      /GRANT EXECUTE ON FUNCTION public\.create_staff_visit\(jsonb, jsonb\) TO service_role/,
+    );
+    assert.match(
+      integrity,
+      /GRANT EXECUTE ON FUNCTION public\.replace_visit_schedule\(uuid, date, integer, text, jsonb\) TO service_role/,
+    );
+    assert.match(integrity, /visits_appointment_time_matches_start/);
+    assert.doesNotMatch(integrity, /ON DELETE CASCADE/);
+  });
+});
+
+describe("visit arrival source of truth", () => {
+  it("derives the display label from the canonical arrival minute", () => {
+    assert.deepEqual(visitArrivalFields(15 * 60 + 30), {
+      scheduledStart: 15 * 60 + 30,
+      appointmentTime: "3:30 PM",
+    });
+    assert.equal(visitArrivalFields(15 * 60).appointmentTime, "3:00 PM");
+    assert.equal(visitArrivalFields(0).appointmentTime, "12:00 AM");
+    assert.equal(visitArrivalFields(12 * 60).appointmentTime, "12:00 PM");
   });
 });
 
@@ -458,7 +499,7 @@ describe("historical visit backfill", () => {
     ]);
   });
 
-  it("merges only a tight consecutive create, not every same-day address match", () => {
+  it("does not merge dogs created seconds apart at the same address", () => {
     const groups = planHistoricalVisits([
       row("daisy", { createdAt: "2026-11-01T14:00:00.000Z", scheduledStart: 600 }),
       row("milo", { createdAt: "2026-11-01T14:00:02.000Z", scheduledStart: 675 }),
@@ -473,9 +514,21 @@ describe("historical visit backfill", () => {
         appointmentIds: group.appointmentIds,
       })),
       [
-        { reason: "consecutive_cluster", appointmentIds: ["daisy", "milo"] },
+        { reason: "unmatched_single", appointmentIds: ["daisy"] },
+        { reason: "unmatched_single", appointmentIds: ["milo"] },
         { reason: "unmatched_single", appointmentIds: ["later"] },
       ],
+    );
+  });
+
+  it("does not treat a blank confirmation token as a shared booking", () => {
+    const groups = planHistoricalVisits([
+      row("a", { confirmTokenHash: "  ", scheduledStart: 600 }),
+      row("b", { confirmTokenHash: "", scheduledStart: 675 }),
+    ]);
+    assert.deepEqual(
+      groups.map((group) => group.reason),
+      ["unmatched_single", "unmatched_single"],
     );
   });
 

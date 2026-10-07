@@ -50,7 +50,33 @@ COMMENT ON COLUMN public.visits.travel_fee IS
   'Source of truth for the single travel fee on this visit. Not a per-dog fee.';
 
 COMMENT ON COLUMN public.visits.scheduled_start IS
-  'Overall visit start in minutes from midnight. Pet appointments are chained after this start.';
+  'Canonical visit arrival, in minutes from midnight. Pet appointments are chained after this start. visits.appointment_time is derived from this value.';
+
+COMMENT ON COLUMN public.visits.appointment_time IS
+  'Display label derived from scheduled_start, for example 3:30 PM. Do not write a different clock time here.';
+
+CREATE OR REPLACE FUNCTION public.visit_arrival_label(p_minutes integer)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+SET search_path = ''
+AS $$
+  SELECT CASE
+    WHEN p_minutes IS NULL THEN NULL::text
+    ELSE
+      (CASE
+        WHEN (p_minutes / 60) % 12 = 0 THEN 12
+        ELSE (p_minutes / 60) % 12
+      END)::text
+      || ':'
+      || pg_catalog.lpad((pg_catalog.mod(p_minutes, 60))::text, 2, '0')
+      || CASE WHEN (p_minutes / 60) >= 12 THEN ' PM' ELSE ' AM' END
+  END;
+$$;
+
+REVOKE ALL ON FUNCTION public.visit_arrival_label(integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.visit_arrival_label(integer) TO authenticated, service_role;
 
 CREATE INDEX visits_customer_service_date_idx
   ON public.visits (customer_id, service_date DESC);
@@ -96,7 +122,6 @@ DECLARE
   v_open integer;
   v_status public.visit_status;
   v_start integer;
-  v_time text;
   v_pref text;
   v_date date;
 BEGIN
@@ -127,18 +152,23 @@ BEGIN
     v_status := 'confirmed';
   END IF;
 
-  SELECT scheduled_start, appointment_time, time_preference, appointment_date
-  INTO v_start, v_time, v_pref, v_date
+  SELECT scheduled_start, time_preference, appointment_date
+  INTO v_start, v_pref, v_date
   FROM public.appointments
   WHERE visit_id = v_visit
     AND status <> 'cancelled'
   ORDER BY scheduled_start NULLS LAST, created_at
   LIMIT 1;
 
+  -- appointment_time is always the label of the canonical arrival.
+  -- Child appointment_time may still be a route window and is not copied.
   UPDATE public.visits
   SET status = v_status,
       scheduled_start = COALESCE(v_start, scheduled_start),
-      appointment_time = COALESCE(v_time, appointment_time),
+      appointment_time = CASE
+        WHEN v_start IS NOT NULL THEN public.visit_arrival_label(v_start)
+        ELSE appointment_time
+      END,
       time_preference = COALESCE(v_pref, time_preference),
       service_date = COALESCE(v_date, service_date)
   WHERE id = v_visit;
@@ -160,7 +190,8 @@ CREATE TRIGGER appointments_sync_visit
 
 -- ---------------------------------------------------------------------------
 -- Conservative historical backfill. See src/lib/visits/backfill.ts.
--- Same customer + date + address is not merged by itself.
+-- Only a shared customer_confirm_token_hash merges appointments into one visit.
+-- Same customer, date, address, or a short create gap is not evidence.
 -- ---------------------------------------------------------------------------
 CREATE TEMP TABLE visit_backfill_rows ON COMMIT DROP AS
 SELECT
@@ -181,64 +212,17 @@ CREATE TEMP TABLE visit_backfill_groups (
 INSERT INTO visit_backfill_groups (appointment_id, group_key)
 SELECT id, 'token:' || customer_confirm_token_hash
 FROM visit_backfill_rows
-WHERE customer_confirm_token_hash IS NOT NULL;
+WHERE customer_confirm_token_hash IS NOT NULL
+  AND btrim(customer_confirm_token_hash) <> '';
 
-DO $$
-DECLARE
-  rec record;
-  prev record;
-  cluster_first timestamptz;
-  cluster_ids uuid[] := ARRAY[]::uuid[];
-BEGIN
-  FOR rec IN
-    SELECT *
-    FROM visit_backfill_rows row
-    WHERE NOT EXISTS (
-      SELECT 1
-      FROM visit_backfill_groups grouped
-      WHERE grouped.appointment_id = row.id
-    )
-    ORDER BY customer_id, appointment_date, address_key, created_at, scheduled_start NULLS LAST, id
-  LOOP
-    -- ELSIF is not evaluated on the first row, so prev is assigned before it is read.
-    -- Same customer + date + address is not enough. The row must also be created
-    -- within 15 seconds of the cluster start and have a later start time.
-    IF cardinality(cluster_ids) = 0 THEN
-      cluster_ids := ARRAY[rec.id];
-      cluster_first := rec.created_at;
-    ELSIF prev.customer_id = rec.customer_id
-      AND prev.appointment_date = rec.appointment_date
-      AND prev.address_key = rec.address_key
-      AND rec.created_at >= cluster_first
-      AND rec.created_at - cluster_first <= interval '15 seconds'
-      AND prev.scheduled_start IS NOT NULL
-      AND rec.scheduled_start IS NOT NULL
-      AND rec.scheduled_start > prev.scheduled_start
-    THEN
-      cluster_ids := cluster_ids || rec.id;
-    ELSE
-      IF cardinality(cluster_ids) > 1 THEN
-        INSERT INTO visit_backfill_groups (appointment_id, group_key)
-        SELECT unnest(cluster_ids), 'cluster:' || cluster_ids[1]::text;
-      ELSIF cardinality(cluster_ids) = 1 THEN
-        INSERT INTO visit_backfill_groups (appointment_id, group_key)
-        VALUES (cluster_ids[1], 'single:' || cluster_ids[1]::text);
-      END IF;
-      cluster_ids := ARRAY[rec.id];
-      cluster_first := rec.created_at;
-    END IF;
-    prev := rec;
-  END LOOP;
-
-  IF cardinality(cluster_ids) > 1 THEN
-    INSERT INTO visit_backfill_groups (appointment_id, group_key)
-    SELECT unnest(cluster_ids), 'cluster:' || cluster_ids[1]::text;
-  ELSIF cardinality(cluster_ids) = 1 THEN
-    INSERT INTO visit_backfill_groups (appointment_id, group_key)
-    VALUES (cluster_ids[1], 'single:' || cluster_ids[1]::text);
-  END IF;
-END;
-$$;
+INSERT INTO visit_backfill_groups (appointment_id, group_key)
+SELECT id, 'single:' || id::text
+FROM visit_backfill_rows AS row
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM visit_backfill_groups grouped
+  WHERE grouped.appointment_id = row.id
+);
 
 CREATE TEMP TABLE visit_backfill_ids ON COMMIT DROP AS
 SELECT group_key, gen_random_uuid() AS visit_id
@@ -278,7 +262,10 @@ SELECT
     LIMIT 1
   ),
   (
-    SELECT aa.appointment_time
+    SELECT CASE
+      WHEN aa.scheduled_start IS NOT NULL THEN public.visit_arrival_label(aa.scheduled_start)
+      ELSE aa.appointment_time
+    END
     FROM public.appointments aa
     JOIN visit_backfill_groups gg ON gg.appointment_id = aa.id
     WHERE gg.group_key = ids.group_key
@@ -338,7 +325,7 @@ ALTER TABLE public.appointments
 
 ALTER TABLE public.appointments
   ADD CONSTRAINT appointments_visit_id_fkey
-  FOREIGN KEY (visit_id) REFERENCES public.visits (id) ON DELETE CASCADE;
+  FOREIGN KEY (visit_id) REFERENCES public.visits (id) ON DELETE RESTRICT;
 
 CREATE INDEX appointments_visit_id_idx
   ON public.appointments (visit_id, scheduled_start);

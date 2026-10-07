@@ -24,6 +24,7 @@ import {
 } from "@/lib/booking-slots";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
 import { parseStaffRescheduleInput } from "@/lib/appointments/staff-reschedule-input";
+import { replaceVisitSchedule } from "@/lib/visits/persist";
 import {
   listVisitArrivalMinutes,
   scheduleVisitPetChain,
@@ -377,46 +378,27 @@ export async function rescheduleStaffAppointment(
     slots = planned.slots;
   }
 
-  const admin = createAdminClient();
-  const { error: clearError } = await admin
-    .from("appointments")
-    .update({ scheduled_start: null })
-    .in("id", visitAppointmentIds);
-  if (clearError) {
-    console.error("rescheduleStaffAppointment clear failed:", clearError.message);
-    return { error: "server" };
-  }
+  const visitId = ordered[0]?.visit_id;
+  if (!visitId) return { error: "server" };
+  const written = await replaceVisitSchedule({
+    visitId,
+    serviceDate: parsed.date,
+    visitStartMinutes: slots[0]!.scheduledStart,
+    timePreference: slots[0]!.usedPreference,
+    children: ordered.map((row, index) => {
+      const slot = slots[index]!;
+      return {
+        id: row.id,
+        scheduledStart: slot.scheduledStart,
+        durationMinutes: slot.durationMinutes,
+        appointmentTime: slot.appointmentTime,
+        timePreference: slot.usedPreference,
+      };
+    }),
+  });
+  if ("error" in written) return written;
 
-  for (let index = 0; index < ordered.length; index += 1) {
-    const row = ordered[index]!;
-    const slot = slots[index]!;
-    const { error } = await admin
-      .from("appointments")
-      .update({
-        appointment_date: parsed.date,
-        appointment_time: slot.appointmentTime,
-        scheduled_start: slot.scheduledStart,
-        time_preference: slot.usedPreference,
-        estimated_duration_minutes: slot.durationMinutes,
-      })
-      .eq("id", row.id);
-    if (error) {
-      console.error("rescheduleStaffAppointment update failed:", error.message);
-      for (const previous of ordered) {
-        await admin
-          .from("appointments")
-          .update({
-            appointment_date: previous.appointment_date,
-            appointment_time: previous.appointment_time,
-            scheduled_start: previous.scheduled_start,
-            time_preference: previous.time_preference,
-          })
-          .eq("id", previous.id);
-      }
-      if (error.code === "23505") return { error: "slot_unavailable" };
-      return { error: "server" };
-    }
-  }
+  const admin = createAdminClient();
 
   const { data, error } = await admin
     .from("appointments")

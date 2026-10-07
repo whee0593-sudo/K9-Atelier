@@ -1,24 +1,16 @@
 /**
- * Historical appointments have no visit_id.
- * Group only when the evidence is strong. Same customer, date, and address
- * is NOT enough: that household can have two separate visits.
+ * Historical appointments have no visit_id until the visits migration runs.
  *
- * The SQL migration uses these same rules:
- * 1. A shared customer_confirm_token_hash is one staff multi-pet booking.
- * 2. Otherwise, rows join a cluster only when they share customer, date, and
- *    the exact normalized street|zip key, were created within 15 seconds of
- *    the first row in that cluster, and have strictly increasing start times.
- * 3. Everything else stays its own visit.
+ * Only one fact is strong enough to merge them: a shared
+ * customer_confirm_token_hash from one staff multi-pet booking.
+ * Same customer, date, street, ZIP, or a short gap between created_at
+ * values is not evidence. Those rows each become their own visit.
+ * A wrong merge is harder to undo than two visits that staff can relate later.
  *
- * Street matching is exact after trim/lowercase and a 5-digit ZIP. "Main Street"
- * and "Main St" are left apart on purpose.
+ * No other stored column identifies a multi-pet booking. There is no
+ * batch id. Date and address are reused by later visits to the same home.
  */
-export const HISTORICAL_CLUSTER_GAP_MS = 15_000;
-
-export type HistoricalVisitReason =
-  | "confirm_token"
-  | "consecutive_cluster"
-  | "unmatched_single";
+export type HistoricalVisitReason = "confirm_token" | "unmatched_single";
 
 export type HistoricalAppointment = {
   id: string;
@@ -71,50 +63,14 @@ export function planHistoricalVisits(
   const remaining = appointments
     .filter((appointment) => !consumed.has(appointment.id))
     .sort(compareAppointments);
-
-  let cluster: HistoricalAppointment[] = [];
-  const flush = () => {
-    if (cluster.length === 0) return;
-    groups.push({
-      reason: cluster.length > 1 ? "consecutive_cluster" : "unmatched_single",
-      appointmentIds: cluster.map((appointment) => appointment.id),
-    });
-    cluster = [];
-  };
-
   for (const appointment of remaining) {
-    const first = cluster[0];
-    const previous = cluster[cluster.length - 1];
-    if (
-      first &&
-      previous &&
-      canJoinCluster(first, previous, appointment)
-    ) {
-      cluster.push(appointment);
-      continue;
-    }
-    flush();
-    cluster = [appointment];
+    groups.push({
+      reason: "unmatched_single",
+      appointmentIds: [appointment.id],
+    });
   }
-  flush();
 
   return groups;
-}
-
-function canJoinCluster(
-  first: HistoricalAppointment,
-  previous: HistoricalAppointment,
-  next: HistoricalAppointment,
-) {
-  if (first.customerId !== next.customerId) return false;
-  if (first.appointmentDate !== next.appointmentDate) return false;
-  if (historicalAddressKey(first) !== historicalAddressKey(next)) return false;
-  const elapsed = Date.parse(next.createdAt) - Date.parse(first.createdAt);
-  if (!Number.isFinite(elapsed) || elapsed < 0 || elapsed > HISTORICAL_CLUSTER_GAP_MS) {
-    return false;
-  }
-  if (previous.scheduledStart == null || next.scheduledStart == null) return false;
-  return next.scheduledStart > previous.scheduledStart;
 }
 
 function compareAppointments(left: HistoricalAppointment, right: HistoricalAppointment) {

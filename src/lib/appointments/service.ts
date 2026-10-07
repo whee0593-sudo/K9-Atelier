@@ -30,7 +30,10 @@ import {
 } from "@/lib/email/appointment-mails";
 import { getCustomerPaymentMethod } from "@/lib/payments/service";
 import { estimateServiceDurationMinutes } from "@/lib/services";
-import { servicePriceFromEstimatedTotal } from "@/lib/visits/visit";
+import {
+  servicePriceFromEstimatedTotal,
+  visitArrivalFields,
+} from "@/lib/visits/visit";
 import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
 import {
   assignArrivalWindow,
@@ -220,14 +223,15 @@ export async function createAppointment(
     input.estimatedTotal,
     input.travelFee,
   );
+  const arrival = visitArrivalFields(schedule.scheduledStart);
 
   const { data: visitRow, error: visitError } = await supabase
     .from("visits")
     .insert({
       customer_id: user.id,
       service_date: input.appointmentDate,
-      scheduled_start: schedule.scheduledStart,
-      appointment_time: schedule.appointmentTime,
+      scheduled_start: arrival.scheduledStart,
+      appointment_time: arrival.appointmentTime,
       time_preference: schedule.timePreference,
       timezone: business.booking.timezone,
       status,

@@ -44,6 +44,7 @@ import {
   visitArrivalFits,
 } from "@/lib/visits/visit";
 import { compactVisitChildStarts } from "@/lib/visits/compact";
+import { replaceVisitSchedule } from "@/lib/visits/persist";
 import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
 import { getServiceDisplayName } from "@/lib/service-display";
 import type { TimePreference } from "@/lib/booking-schedule";
@@ -593,6 +594,7 @@ function durationMinutesForRow(row: ChangeRow) {
 }
 
 async function writeVisitSchedule(
+  visitId: string | null,
   rows: Array<{
     id: string;
     appointmentTime: string | null;
@@ -602,35 +604,21 @@ async function writeVisitSchedule(
     durationMinutes: number;
   }>,
 ): Promise<{ ok: true } | { error: "server" | "slot_unavailable" }> {
-  const admin = createAdminClient();
-  const ids = rows.map((row) => row.id);
-  const { error: clearError } = await admin
-    .from("appointments")
-    .update({ scheduled_start: null })
-    .in("id", ids);
-  if (clearError) {
-    console.error("writeVisitSchedule clear failed:", clearError.message);
-    return { error: "server" };
-  }
-
-  for (const row of rows) {
-    const { error } = await admin
-      .from("appointments")
-      .update({
-        appointment_date: row.date,
-        appointment_time: row.appointmentTime,
-        scheduled_start: row.scheduledStart,
-        time_preference: row.timePreference,
-        estimated_duration_minutes: row.durationMinutes,
-      })
-      .eq("id", row.id);
-    if (error) {
-      console.error("writeVisitSchedule update failed:", error.message);
-      if (error.code === "23505") return { error: "slot_unavailable" };
-      return { error: "server" };
-    }
-  }
-  return { ok: true };
+  const first = rows[0];
+  if (!visitId || !first) return { error: "server" };
+  return replaceVisitSchedule({
+    visitId,
+    serviceDate: first.date,
+    visitStartMinutes: first.scheduledStart,
+    timePreference: first.timePreference,
+    children: rows.map((row) => ({
+      id: row.id,
+      scheduledStart: row.scheduledStart,
+      durationMinutes: row.durationMinutes,
+      appointmentTime: row.appointmentTime,
+      timePreference: row.timePreference,
+    })),
+  });
 }
 
 async function rescheduleRows(
@@ -683,7 +671,7 @@ async function rescheduleRows(
     durationMinutes: planned.slots[index]!.durationMinutes,
   }));
 
-  const written = await writeVisitSchedule(chained);
+  const written = await writeVisitSchedule(first.visit_id ?? null, chained);
   if ("error" in written) return written;
 
   const admin = createAdminClient();

@@ -148,6 +148,17 @@ export function servicePriceFromEstimatedTotal(
 }
 
 /**
+ * visits.scheduled_start is the only visit arrival.
+ * visits.appointment_time is the display label of that minute.
+ */
+export function visitArrivalFields(scheduledStart: number) {
+  return {
+    scheduledStart,
+    appointmentTime: formatMinutesLabel(scheduledStart),
+  };
+}
+
+/**
  * Visit-level scheduler.
  * The admin chooses one arrival. Each active dog then gets its own
  * scheduled_start, back-to-back by exact duration, with no gap and no

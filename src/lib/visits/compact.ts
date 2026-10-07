@@ -1,10 +1,13 @@
-import { formatMinutesLabel } from "@/lib/appointments/closures";
 import type { AppointmentStatus } from "@/lib/appointments/types";
 import { preferenceFromStart } from "@/lib/booking-schedule";
 import { estimateServiceDurationMinutes } from "@/lib/services";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
-import { scheduleActivePetsFromVisitArrival } from "@/lib/visits/visit";
+import { replaceVisitSchedule } from "@/lib/visits/persist";
+import {
+  scheduleActivePetsFromVisitArrival,
+  visitArrivalFields,
+} from "@/lib/visits/visit";
 
 type CompactRow = {
   id: string;
@@ -67,33 +70,21 @@ export async function compactVisitChildStarts(
   const plan = scheduleActivePetsFromVisitArrival(pets);
   if (!plan || plan.slots.length === 0) return { ok: true };
 
-  const ids = plan.slots.map((slot) => slot.id);
-  const { error: clearError } = await admin
-    .from("appointments")
-    .update({ scheduled_start: null })
-    .in("id", ids);
-  if (clearError) {
-    console.error("compactVisitChildStarts clear failed:", clearError.message);
-    return { error: "server" };
-  }
-
-  const arrival = formatMinutesLabel(plan.visitStartMinutes);
+  const arrival = visitArrivalFields(plan.visitStartMinutes);
   const preference = preferenceFromStart(plan.visitStartMinutes);
-  for (const slot of plan.slots) {
-    const { error: updateError } = await admin
-      .from("appointments")
-      .update({
-        scheduled_start: slot.scheduledStart,
-        appointment_time: arrival,
-        time_preference: preference,
-        estimated_duration_minutes: slot.durationMinutes,
-      })
-      .eq("id", slot.id);
-    if (updateError) {
-      console.error("compactVisitChildStarts update failed:", updateError.message);
-      return { error: "server" };
-    }
-  }
-
+  const written = await replaceVisitSchedule({
+    visitId,
+    serviceDate: null,
+    visitStartMinutes: arrival.scheduledStart,
+    timePreference: preference,
+    children: plan.slots.map((slot) => ({
+      id: slot.id,
+      scheduledStart: slot.scheduledStart,
+      durationMinutes: slot.durationMinutes,
+      appointmentTime: arrival.appointmentTime,
+      timePreference: preference,
+    })),
+  });
+  if ("error" in written) return { error: "server" };
   return { ok: true };
 }
