@@ -27,7 +27,7 @@ export async function syncVisitTravelFeeMirror(
 
   const { data, error } = await admin
     .from("appointments")
-    .select("id, status, travel_fee, scheduled_start")
+    .select("id, status, travel_fee, scheduled_start, visit_sequence")
     .eq("visit_id", visitId);
   if (error) {
     console.error("syncVisitTravelFeeMirror appointment load failed:", error.message);
@@ -40,6 +40,8 @@ export async function syncVisitTravelFeeMirror(
     travelFee: Number(row.travel_fee ?? 0),
     scheduledStart:
       typeof row.scheduled_start === "number" ? row.scheduled_start : null,
+    visitSequence:
+      typeof row.visit_sequence === "number" ? row.visit_sequence : null,
   }));
   const plan = planTravelFeeMirror(rows, Number(visit.travel_fee ?? 0));
   const current = new Map(rows.map((row) => [row.id, row.travelFee]));

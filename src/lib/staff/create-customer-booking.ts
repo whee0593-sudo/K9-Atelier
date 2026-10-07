@@ -728,6 +728,7 @@ export async function createStaffCustomerBooking(
           travel_fee: travelFee,
           service_price: servicePrice,
           estimated_duration_minutes: durationMinutes,
+          visit_sequence: visitIndex + 1,
           appointment_date: appointmentDate,
           appointment_time: insertion.appointmentTime,
           scheduled_start: insertion.scheduledStart,

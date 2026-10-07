@@ -122,6 +122,24 @@ before(async () => {
   );
   await db.exec(migration);
   await db.exec(`
+    CREATE SCHEMA IF NOT EXISTS auth;
+    CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid
+    LANGUAGE sql AS $$ SELECT NULL::uuid $$;
+    CREATE TABLE IF NOT EXISTS public.pets (
+      id uuid PRIMARY KEY,
+      customer_id uuid NOT NULL,
+      archived_at timestamptz
+    );
+  `);
+  const sequence = readFileSync(
+    path.join(
+      process.cwd(),
+      "supabase/migrations/20261007180000_visit_sequence.sql",
+    ),
+    "utf8",
+  );
+  await db.exec(sequence);
+  await db.exec(`
     CREATE TRIGGER appointments_sync_visit
       AFTER INSERT OR UPDATE OF status, service_ended_at, scheduled_start,
         appointment_time, time_preference, appointment_date, visit_id
@@ -482,3 +500,156 @@ function appointmentJson(input: {
     'customer_confirm_expires_at', '2026-12-01T00:00:00Z'
   )`;
 }
+
+const SEQ_VISIT = "ffffffff-ffff-4fff-8fff-ffffffffffff";
+const SEQ_A = "10000000-0000-4000-8000-000000000001";
+const SEQ_B = "20000000-0000-4000-8000-000000000002";
+const SEQ_C = "30000000-0000-4000-8000-000000000003";
+const SEQ_PET = "40000000-0000-4000-8000-000000000004";
+
+describe("visit sequence in postgres", () => {
+  it("backfills equal or null starts by appointment id", async () => {
+    await insertVisit({ id: SEQ_VISIT, start: 10 * 60, date: "2026-12-03" });
+    await db.exec(
+      "ALTER TABLE public.appointments DISABLE TRIGGER appointments_assign_visit_sequence",
+    );
+    await db.exec(`
+      INSERT INTO public.appointments (
+        id, customer_id, visit_id, pet_id, service_id, service_name,
+        address_street, address_city, address_state, address_zip,
+        appointment_date, scheduled_start, status
+      ) VALUES
+        ('${SEQ_B}', '${CUSTOMER}', '${SEQ_VISIT}', '${SEQ_PET}', 'bath', 'Later',
+         '1 Main', 'Jupiter', 'FL', '33458', '2026-12-03', ${10 * 60}, 'confirmed'),
+        ('${SEQ_A}', '${CUSTOMER}', '${SEQ_VISIT}', '${SEQ_PET}', 'bath', 'Earlier id',
+         '1 Main', 'Jupiter', 'FL', '33458', '2026-12-03', ${10 * 60}, 'cancelled'),
+        ('${SEQ_C}', '${CUSTOMER}', '${SEQ_VISIT}', '${SEQ_PET}', 'bath', 'No start',
+         '1 Main', 'Jupiter', 'FL', '33458', '2026-12-03', NULL, 'confirmed')
+    `);
+    await db.exec(`
+      WITH ranked AS (
+        SELECT
+          id,
+          row_number() OVER (
+            PARTITION BY visit_id
+            ORDER BY scheduled_start ASC NULLS LAST, id ASC
+          ) AS seq
+        FROM public.appointments
+        WHERE visit_id = '${SEQ_VISIT}'
+      )
+      UPDATE public.appointments AS appointment
+      SET visit_sequence = ranked.seq
+      FROM ranked
+      WHERE appointment.id = ranked.id
+        AND appointment.visit_sequence IS NULL
+    `);
+    await db.exec(
+      "ALTER TABLE public.appointments ENABLE TRIGGER appointments_assign_visit_sequence",
+    );
+    const rows = await db.query<{ id: string; visit_sequence: number }>(
+      `SELECT id::text, visit_sequence
+       FROM public.appointments
+       WHERE visit_id = $1
+       ORDER BY visit_sequence`,
+      [SEQ_VISIT],
+    );
+    assert.deepEqual(
+      rows.rows.map((row) => [row.id, row.visit_sequence]),
+      [
+        [SEQ_A, 1],
+        [SEQ_B, 2],
+        [SEQ_C, 3],
+      ],
+    );
+  });
+
+  it("writes submission order even when clock times run backward", async () => {
+    const created = await db.query<{ id: string }>(
+      `SELECT public.create_staff_visit(
+        ${visitJson(15 * 60 + 30, "2026-12-04")},
+        jsonb_build_array(
+          ${appointmentJson({ petId: PET_A, start: 18 * 60, date: "2026-12-04", name: "Daisy", travelFee: 12.5 })},
+          ${appointmentJson({ petId: PET_B, start: 11 * 60, date: "2026-12-04", name: "Milo" })},
+          ${appointmentJson({ petId: PET_C, start: 9 * 60, date: "2026-12-04", name: "Coco" })}
+        )
+      )::text AS id`,
+    );
+    const visitId = created.rows[0]?.id;
+    const dogs = await db.query<{ service_name: string; visit_sequence: number }>(
+      `SELECT service_name, visit_sequence
+       FROM public.appointments
+       WHERE visit_id = $1
+       ORDER BY visit_sequence`,
+      [visitId],
+    );
+    assert.deepEqual(
+      dogs.rows.map((row) => [row.service_name, row.visit_sequence]),
+      [
+        ["Daisy", 1],
+        ["Milo", 2],
+        ["Coco", 3],
+      ],
+    );
+  });
+
+  it("rolls back a service change that does not fit the visit", async () => {
+    const visitId = "99999999-9999-4999-8999-999999999999";
+    const appointmentId = "88888888-8888-4888-8888-888888888888";
+    await insertVisit({ id: visitId, start: 10 * 60, date: "2026-12-05" });
+    await insertAppointment({
+      id: appointmentId,
+      visitId,
+      petId: PET_A,
+      start: 10 * 60,
+      date: "2026-12-05",
+      name: "Bath",
+    });
+    const before = await db.query<{ service_name: string; scheduled_start: number }>(
+      "SELECT service_name, scheduled_start FROM public.appointments WHERE id = $1",
+      [appointmentId],
+    );
+    const rejected = await rejectSql(`
+      SELECT public.apply_visit_service_change(
+        '${appointmentId}',
+        '${visitId}',
+        jsonb_build_object(
+          'service_id', 'strip',
+          'service_name', 'Hand Strip',
+          'add_on_ids', '[]'::jsonb,
+          'add_on_options', '{}'::jsonb,
+          'travel_fee', 12.5,
+          'estimated_total', 90,
+          'estimated_duration_minutes', 80
+        ),
+        '2026-12-05'::date,
+        9999,
+        'morning',
+        jsonb_build_array(jsonb_build_object(
+          'id', '${appointmentId}',
+          'scheduled_start', 9999,
+          'estimated_duration_minutes', 80,
+          'appointment_time', '10:00 AM',
+          'time_preference', 'morning'
+        ))
+      )
+    `);
+    assert.match(rejected, /appointments_scheduled_start_range|check constraint/i);
+    const after = await db.query<{
+      service_name: string;
+      scheduled_start: number;
+      estimated_duration_minutes: number | null;
+    }>(
+      `SELECT service_name, scheduled_start, estimated_duration_minutes
+       FROM public.appointments WHERE id = $1`,
+      [appointmentId],
+    );
+    assert.equal(after.rows[0]?.service_name, before.rows[0]?.service_name);
+    assert.equal(after.rows[0]?.scheduled_start, before.rows[0]?.scheduled_start);
+    assert.equal(after.rows[0]?.estimated_duration_minutes, null);
+    const visit = await db.query<{ travel_fee: string }>(
+      "SELECT travel_fee::text FROM public.visits WHERE id = $1",
+      [visitId],
+    );
+    assert.equal(visit.rows[0]?.travel_fee, "0.00");
+  });
+});

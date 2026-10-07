@@ -270,6 +270,7 @@ export async function createAppointment(
       travel_fee: input.travelFee,
       service_price: servicePrice,
       estimated_duration_minutes: durationMinutes,
+      visit_sequence: 1,
       appointment_date: input.appointmentDate,
       appointment_time: schedule.appointmentTime,
       scheduled_start: schedule.scheduledStart,

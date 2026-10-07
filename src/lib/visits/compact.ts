@@ -3,8 +3,10 @@ import { preferenceFromStart } from "@/lib/booking-schedule";
 import { estimateServiceDurationMinutes } from "@/lib/services";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
+import { resolveAppointmentDuration } from "@/lib/visits/duration";
 import { replaceVisitSchedule } from "@/lib/visits/persist";
 import {
+  hasVisitSequence,
   scheduleActivePetsFromVisitArrival,
   visitArrivalFields,
 } from "@/lib/visits/visit";
@@ -14,6 +16,9 @@ type CompactRow = {
   status: AppointmentStatus;
   scheduled_start: number | null;
   estimated_duration_minutes: number | null;
+  visit_sequence: number | null;
+  appointment_date: string;
+  service_ended_at: string | null;
   service_id: string;
   add_on_ids: string[] | null;
   pets?:
@@ -39,9 +44,10 @@ export async function compactVisitChildStarts(
   const { data, error } = await admin
     .from("appointments")
     .select(
-      "id, status, scheduled_start, estimated_duration_minutes, service_id, add_on_ids, pets ( weight_lbs )",
+      "id, status, scheduled_start, estimated_duration_minutes, visit_sequence, appointment_date, service_ended_at, service_id, add_on_ids, pets ( weight_lbs )",
     )
-    .eq("visit_id", visitId);
+    .eq("visit_id", visitId)
+    .order("visit_sequence", { ascending: true });
 
   if (error) {
     console.error("compactVisitChildStarts load failed:", error.message);
@@ -50,22 +56,37 @@ export async function compactVisitChildStarts(
 
   const pets = ((data ?? []) as CompactRow[]).map((row) => {
     const pet = firstPet(row.pets);
-    const stored = row.estimated_duration_minutes;
-    const duration =
-      typeof stored === "number" && stored > 0
-        ? stored
-        : estimateServiceDurationMinutes(
-            row.service_id,
-            pet?.weight_lbs ?? 20,
-            row.add_on_ids ?? [],
-          );
+    const decision = resolveAppointmentDuration({
+      storedMinutes: row.estimated_duration_minutes,
+      status: row.status,
+      appointmentDate: row.appointment_date,
+      serviceEndedAt: row.service_ended_at,
+      liveEstimateMinutes: estimateServiceDurationMinutes(
+        row.service_id,
+        pet?.weight_lbs ?? 20,
+        row.add_on_ids ?? [],
+      ),
+    });
     return {
       id: row.id,
       status: row.status,
-      estimatedDurationMinutes: duration,
+      estimatedDurationMinutes: decision.minutes ?? 0,
       scheduledStart: row.scheduled_start,
+      visitSequence: row.visit_sequence,
+      decision,
     };
   });
+  const active = pets.filter((row) => row.status !== "cancelled");
+  if (
+    active.some(
+      (row) => row.decision.unknown || !hasVisitSequence(row.visitSequence),
+    )
+  ) {
+    if (active.some((row) => !hasVisitSequence(row.visitSequence))) {
+      console.error("compactVisitChildStarts skipped: visit_sequence is missing");
+    }
+    return { ok: true };
+  }
 
   const plan = scheduleActivePetsFromVisitArrival(pets);
   if (!plan || plan.slots.length === 0) return { ok: true };

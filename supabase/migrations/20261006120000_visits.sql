@@ -320,8 +320,10 @@ FROM visit_backfill_groups grouped
 JOIN visit_backfill_ids ids ON ids.group_key = grouped.group_key
 WHERE appointment.id = grouped.appointment_id;
 
-ALTER TABLE public.appointments
-  ALTER COLUMN visit_id SET NOT NULL;
+-- visit_id stays nullable in this expand step.
+-- The previous app can still insert an appointment without a visit.
+-- NOT NULL is applied only by 20261008120000_visits_require_ids.sql
+-- after that app is no longer serving traffic.
 
 ALTER TABLE public.appointments
   ADD CONSTRAINT appointments_visit_id_fkey
@@ -372,11 +374,14 @@ CREATE POLICY appointments_insert_own
         AND p.customer_id = (SELECT auth.uid())
         AND p.archived_at IS NULL
     )
-    AND EXISTS (
-      SELECT 1
-      FROM public.visits v
-      WHERE v.id = visit_id
-        AND v.customer_id = (SELECT auth.uid())
+    AND (
+      visit_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM public.visits v
+        WHERE v.id = visit_id
+          AND v.customer_id = (SELECT auth.uid())
+      )
     )
   );
 

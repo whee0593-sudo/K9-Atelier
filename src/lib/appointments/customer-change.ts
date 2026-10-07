@@ -10,9 +10,9 @@ import {
 } from "@/lib/appointments/change-policy";
 import { resolveArrivalForBooking } from "@/lib/appointments/arrival-window";
 import {
+  assertVisitScheduleAllowed,
   assignArrivalWindow,
   getBaseGeoPoint,
-  loadOccupiedStops,
 } from "@/lib/appointments/schedule";
 import {
   fetchCustomerContact,
@@ -37,11 +37,13 @@ import {
   estimateServiceDurationMinutes,
   getServicePriceEstimate,
 } from "@/lib/services";
+import { resolveAppointmentDuration } from "@/lib/visits/duration";
 import {
+  hasVisitSequence,
+  nextVisitSequence,
   scheduleVisitPetChain,
   servicePriceFromEstimatedTotal,
   snapshotServicePrice,
-  visitArrivalFits,
 } from "@/lib/visits/visit";
 import { compactVisitChildStarts } from "@/lib/visits/compact";
 import { replaceVisitSchedule } from "@/lib/visits/persist";
@@ -83,8 +85,10 @@ const CHANGE_SELECT = `
   created_at,
   payment_method_id,
   visit_id,
+  visit_sequence,
   service_price,
   estimated_duration_minutes,
+  service_ended_at,
   pets ( name, breed, weight_lbs )
 `;
 
@@ -154,8 +158,7 @@ async function loadVisitSiblings(
     .eq("customer_id", userId)
     .eq("visit_id", row.visit_id)
     .neq("status", "cancelled")
-    .order("scheduled_start", { ascending: true })
-    .order("created_at", { ascending: true });
+    .order("visit_sequence", { ascending: true });
 
   if (error) {
     console.error("loadVisitSiblings failed:", error.message);
@@ -164,6 +167,35 @@ async function loadVisitSiblings(
 
   const rows = (data ?? []) as unknown as ChangeRow[];
   return { rows: rows.length > 0 ? rows : [row] };
+}
+
+async function visitSequences(
+  visitId: string,
+): Promise<
+  | {
+      sequences: Array<number | null>;
+      starts: number[];
+    }
+  | { error: "server" }
+> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("appointments")
+    .select("visit_sequence, scheduled_start")
+    .eq("visit_id", visitId);
+  if (error) {
+    console.error("visitSequences failed:", error.message);
+    return { error: "server" };
+  }
+  const rows = data ?? [];
+  return {
+    sequences: rows.map((row) =>
+      typeof row.visit_sequence === "number" ? row.visit_sequence : null,
+    ),
+    starts: rows
+      .map((row) => row.scheduled_start)
+      .filter((value): value is number => typeof value === "number"),
+  };
 }
 
 function rowServicePrice(row: ChangeRow) {
@@ -578,19 +610,19 @@ async function sendChangeConfirmationEmail({
   }
 }
 
-function durationMinutesForRow(row: ChangeRow) {
-  if (
-    typeof row.estimated_duration_minutes === "number" &&
-    row.estimated_duration_minutes > 0
-  ) {
-    return row.estimated_duration_minutes;
-  }
+function durationDecisionForRow(row: ChangeRow) {
   const pet = Array.isArray(row.pets) ? row.pets[0] : row.pets;
-  return estimateServiceDurationMinutes(
-    row.service_id,
-    pet?.weight_lbs ?? 20,
-    row.add_on_ids ?? [],
-  );
+  return resolveAppointmentDuration({
+    storedMinutes: row.estimated_duration_minutes,
+    status: row.status,
+    appointmentDate: row.appointment_date,
+    serviceEndedAt: row.service_ended_at,
+    liveEstimateMinutes: estimateServiceDurationMinutes(
+      row.service_id,
+      pet?.weight_lbs ?? 20,
+      row.add_on_ids ?? [],
+    ),
+  });
 }
 
 async function writeVisitSchedule(
@@ -630,17 +662,22 @@ async function rescheduleRows(
   | { error: "server" | "slot_unavailable" }
 > {
   const ordered = [...rows].sort(
-    (left, right) =>
-      (left.scheduled_start ?? 0) - (right.scheduled_start ?? 0) ||
-      left.created_at.localeCompare(right.created_at),
+    (left, right) => (left.visit_sequence ?? 0) - (right.visit_sequence ?? 0),
   );
+  if (ordered.some((row) => !hasVisitSequence(row.visit_sequence))) {
+    return { error: "server" };
+  }
   const first = ordered[0];
   if (!first) return { error: "server" };
   if (first.address_lat == null || first.address_lon == null) {
     return { error: "server" as const };
   }
 
-  const durations = ordered.map(durationMinutesForRow);
+  const decisions = ordered.map(durationDecisionForRow);
+  if (decisions.some((decision) => decision.unknown || decision.minutes == null)) {
+    return { error: "slot_unavailable" };
+  }
+  const durations = decisions.map((decision) => decision.minutes ?? 0);
   const totalDuration = durations.reduce((sum, minutes) => sum + minutes, 0);
   const base = await getBaseGeoPoint();
   const assignment = base
@@ -656,6 +693,17 @@ async function rescheduleRows(
     : { error: "misconfigured" as const };
   const schedule = resolveArrivalForBooking(assignment, slotStartMinutes);
   if ("error" in schedule) return { error: "slot_unavailable" as const };
+  const allowed = await assertVisitScheduleAllowed({
+    date,
+    visitStartMinutes: schedule.scheduledStart,
+    durations,
+    excludeAppointmentIds: ordered.map((entry) => entry.id),
+  });
+  if ("error" in allowed) {
+    return {
+      error: allowed.error === "slot_unavailable" ? "slot_unavailable" : "server",
+    };
+  }
 
   const planned = scheduleVisitPetChain({
     visitStartMinutes: schedule.scheduledStart,
@@ -749,17 +797,18 @@ async function addDogToVisit(
   );
   if (!paymentMethod) return { error: "payment_required" as const };
   if (!visit.visit_id) return { error: "server" as const };
+  const sequences = await visitSequences(visit.visit_id);
+  if ("error" in sequences) return sequences;
 
   const family = await loadVisitSiblings(userId, visit);
   if ("error" in family) return family;
   const ordered = [...family.rows].sort(
-    (left, right) =>
-      (left.scheduled_start ?? 0) - (right.scheduled_start ?? 0) ||
-      left.created_at.localeCompare(right.created_at),
+    (left, right) => (left.visit_sequence ?? 0) - (right.visit_sequence ?? 0),
   );
-  const starts = ordered
-    .map((row) => row.scheduled_start)
-    .filter((value): value is number => typeof value === "number");
+  if (ordered.some((row) => !hasVisitSequence(row.visit_sequence))) {
+    return { error: "conflict" as const };
+  }
+  const starts = sequences.starts;
   if (starts.length === 0) return { error: "slot_unavailable" as const };
   const visitStart = Math.min(...starts);
 
@@ -768,19 +817,24 @@ async function addDogToVisit(
     pet.weightLbs,
     [],
   );
-  const durations = [...ordered.map(durationMinutesForRow), durationMinutes];
-  const occupied = await loadOccupiedStops(visit.appointment_date, {
+  const siblingDecisions = ordered.map(durationDecisionForRow);
+  if (siblingDecisions.some((decision) => decision.unknown || decision.minutes == null)) {
+    return { error: "conflict" as const };
+  }
+  const durations = [
+    ...siblingDecisions.map((decision) => decision.minutes ?? 0),
+    durationMinutes,
+  ];
+  const allowed = await assertVisitScheduleAllowed({
+    date: visit.appointment_date,
+    visitStartMinutes: visitStart,
+    durations,
     excludeAppointmentIds: ordered.map((row) => row.id),
   });
-  if ("error" in occupied) return { error: "server" as const };
-  if (
-    !visitArrivalFits({
-      visitStartMinutes: visitStart,
-      durations,
-      otherStops: occupied.stops,
-    })
-  ) {
-    return { error: "slot_unavailable" as const };
+  if ("error" in allowed) {
+    return {
+      error: allowed.error === "slot_unavailable" ? "slot_unavailable" : "server",
+    };
   }
   const planned = scheduleVisitPetChain({
     visitStartMinutes: visitStart,
@@ -792,6 +846,7 @@ async function addDogToVisit(
   const vaccinationStatus = vaccinationStatusSnapshotForBooking(pet);
   const status = "confirmed";
   const servicePrice = snapshotServicePrice(estimate?.from ?? 0);
+  const visitSequence = nextVisitSequence(sequences.sequences);
 
   const { data, error } = await admin
     .from("appointments")
@@ -811,6 +866,7 @@ async function addDogToVisit(
       travel_fee: 0,
       service_price: servicePrice,
       estimated_duration_minutes: durationMinutes,
+      visit_sequence: visitSequence,
       appointment_date: visit.appointment_date,
       appointment_time: schedule.appointmentTime,
       scheduled_start: schedule.scheduledStart,

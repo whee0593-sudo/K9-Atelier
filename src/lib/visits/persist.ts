@@ -32,6 +32,7 @@ export type StaffVisitAppointmentInsert = {
   travel_fee: number;
   service_price: number;
   estimated_duration_minutes: number;
+  visit_sequence: number;
   appointment_date: string;
   appointment_time: string | null;
   scheduled_start: number;
@@ -131,6 +132,58 @@ export async function replaceVisitSchedule(input: {
       error.code,
       error.message,
     );
+    return mutationResult(error);
+  }
+  return { ok: true };
+}
+
+export async function applyVisitServiceChange(input: {
+  appointmentId: string;
+  visitId: string;
+  service: {
+    serviceId: string;
+    serviceName: string;
+    addOnIds: string[];
+    addOnOptions: Record<string, unknown>;
+    travelFee: number;
+    estimatedTotal: number;
+    durationMinutes: number | null;
+  };
+  schedule: {
+    serviceDate: string;
+    visitStartMinutes: number;
+    timePreference: "morning" | "afternoon" | null;
+    children: VisitScheduleChild[];
+  } | null;
+}): Promise<{ ok: true } | { error: "server" | "slot_unavailable" }> {
+  const admin = createAdminClient();
+  const { error } = await admin.rpc("apply_visit_service_change", {
+    p_appointment_id: input.appointmentId,
+    p_visit_id: input.visitId,
+    p_service: {
+      service_id: input.service.serviceId,
+      service_name: input.service.serviceName,
+      add_on_ids: input.service.addOnIds,
+      add_on_options: input.service.addOnOptions,
+      travel_fee: input.service.travelFee,
+      estimated_total: input.service.estimatedTotal,
+      estimated_duration_minutes: input.service.durationMinutes,
+    },
+    p_service_date: input.schedule?.serviceDate ?? null,
+    p_visit_start: input.schedule?.visitStartMinutes ?? null,
+    p_time_preference: input.schedule?.timePreference ?? null,
+    p_children: input.schedule
+      ? input.schedule.children.map((child) => ({
+          id: child.id,
+          scheduled_start: child.scheduledStart,
+          estimated_duration_minutes: child.durationMinutes,
+          appointment_time: child.appointmentTime,
+          time_preference: child.timePreference,
+        }))
+      : null,
+  });
+  if (error) {
+    console.error("applyVisitServiceChange failed:", error.code, error.message);
     return mutationResult(error);
   }
   return { ok: true };

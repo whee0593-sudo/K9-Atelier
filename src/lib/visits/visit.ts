@@ -1,4 +1,12 @@
-import { formatMinutesLabel } from "@/lib/appointments/closures";
+import {
+  appointmentOverlapsBlocks,
+  type AvailabilityBlock,
+} from "@/lib/appointments/availability-blocks";
+import {
+  formatMinutesLabel,
+  isSlotClosed,
+  type DayClosureRecord,
+} from "@/lib/appointments/closures";
 import {
   chainSameAddressVisits,
   getDayBounds,
@@ -28,6 +36,7 @@ export type VisitPetAppointment = {
   servicePrice: number;
   estimatedDurationMinutes: number;
   scheduledStart: number | null;
+  visitSequence: number | null;
 };
 
 export type ServiceAddressSnapshot = {
@@ -190,10 +199,28 @@ function gapBefore(spanStart: number, spanEnd: number, stop: { scheduledStart: n
   return -1;
 }
 
+export function hasVisitSequence(
+  value: number | null | undefined,
+): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1;
+}
+
+/** Next sequence includes cancelled dogs. Numbers are not compacted. */
+export function nextVisitSequence(sequences: Array<number | null | undefined>) {
+  let max = 0;
+  for (const value of sequences) {
+    if (hasVisitSequence(value) && value > max) max = value;
+  }
+  return max + 1;
+}
+
 /**
- * True when the whole visit block fits beside other visits.
- * Pass only stops that belong to other visits. Dogs on the visit being
- * moved are not conflicts with each other.
+ * Other-visit geometry only.
+ * It checks the full chained span, including the travel buffer, against
+ * stops that belong to other visits. The visit's own dogs are not conflicts.
+ * It does not check business hours, closures, blocked time, zone, or the
+ * daily cap. Those rules live in visitSpanFitsScheduleBounds and
+ * assertVisitScheduleAllowed.
  */
 export function visitArrivalFits(input: {
   visitStartMinutes: number;
@@ -239,12 +266,55 @@ export function listVisitArrivalMinutes(input: {
   return starts;
 }
 
+/**
+ * Hours, closures, and admin blocks for the whole chained span.
+ * The chain must start at or after open and end at or before close.
+ */
+export function visitSpanFitsScheduleBounds(input: {
+  visitStartMinutes: number;
+  durations: number[];
+  closure?: DayClosureRecord | null;
+  blocks?: AvailabilityBlock[];
+}): { ok: true; spanEnd: number } | { ok: false; reason: string } {
+  const chain = scheduleVisitPetChain({
+    visitStartMinutes: input.visitStartMinutes,
+    durations: input.durations,
+  });
+  if (!chain.ok) return { ok: false, reason: "chain" };
+  const first = chain.slots[0];
+  const last = chain.slots[chain.slots.length - 1];
+  if (!first || !last) return { ok: false, reason: "chain" };
+
+  const { hoursStart, hoursEnd } = getDayBounds();
+  const spanEnd = last.scheduledStart + last.durationMinutes;
+  if (first.scheduledStart < hoursStart) return { ok: false, reason: "before_open" };
+  if (spanEnd > hoursEnd) return { ok: false, reason: "after_close" };
+  if (input.closure?.closedAllDay) return { ok: false, reason: "closure" };
+  for (let minute = first.scheduledStart; minute < spanEnd; minute += 1) {
+    if (isSlotClosed(input.closure, minute)) {
+      return { ok: false, reason: "closure" };
+    }
+  }
+  if (
+    input.blocks &&
+    appointmentOverlapsBlocks(
+      input.blocks,
+      first.scheduledStart,
+      spanEnd - first.scheduledStart,
+    )
+  ) {
+    return { ok: false, reason: "blocked" };
+  }
+  return { ok: true, spanEnd };
+}
+
 export function scheduleActivePetsFromVisitArrival<
   T extends {
     id: string;
     status: AppointmentStatus;
     estimatedDurationMinutes: number;
     scheduledStart: number | null;
+    visitSequence: number | null;
   },
 >(appointments: T[]) {
   const starts = appointments
@@ -252,13 +322,12 @@ export function scheduleActivePetsFromVisitArrival<
     .filter((value): value is number => typeof value === "number");
   if (starts.length === 0) return null;
   const visitStartMinutes = Math.min(...starts);
-  const active = appointments
-    .filter((row) => row.status !== "cancelled")
-    .sort(
-      (left, right) =>
-        (left.scheduledStart ?? 0) - (right.scheduledStart ?? 0) ||
-        left.id.localeCompare(right.id),
-    );
+  const active = appointments.filter((row) => row.status !== "cancelled");
+  if (active.some((row) => !hasVisitSequence(row.visitSequence))) return null;
+  active.sort(
+    (left, right) =>
+      (left.visitSequence ?? 0) - (right.visitSequence ?? 0),
+  );
   if (active.length === 0) {
     return {
       visitStartMinutes,
@@ -284,6 +353,7 @@ export type TravelMirrorRow = {
   status: AppointmentStatus;
   travelFee: number;
   scheduledStart: number | null;
+  visitSequence?: number | null;
 };
 
 /**
@@ -300,8 +370,8 @@ export function planTravelFeeMirror(
     .filter((row) => row.status !== "cancelled")
     .sort(
       (left, right) =>
-        (left.scheduledStart ?? 0) - (right.scheduledStart ?? 0) ||
-        left.id.localeCompare(right.id),
+        (left.visitSequence ?? Number.POSITIVE_INFINITY) -
+        (right.visitSequence ?? Number.POSITIVE_INFINITY),
     );
   const carrierId =
     active.find((row) => row.travelFee > 0)?.id ?? active[0]?.id ?? null;

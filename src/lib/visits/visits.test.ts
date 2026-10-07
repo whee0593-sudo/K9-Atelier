@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { planHistoricalVisits } from "@/lib/visits/backfill";
+import { resolveAppointmentDuration } from "@/lib/visits/duration";
 import {
   activePetCount,
   appendPetToVisitChain,
@@ -11,6 +12,7 @@ import {
   checkoutEligiblePets,
   deriveVisitStatus,
   listVisitArrivalMinutes,
+  nextVisitSequence,
   scheduleActivePetsFromVisitArrival,
   scheduleVisitPetChain,
   snapshotServiceAddress,
@@ -19,6 +21,7 @@ import {
   visitArrivalFits,
   visitEstimatedDurationMinutes,
   visitServiceTotal,
+  visitSpanFitsScheduleBounds,
   withServiceFinished,
   type VisitPetAppointment,
 } from "@/lib/visits/visit";
@@ -35,6 +38,7 @@ function pet(
     servicePrice: 100,
     estimatedDurationMinutes: 60,
     scheduledStart: 600,
+    visitSequence: 1,
     ...overrides,
   };
 }
@@ -47,6 +51,7 @@ function sarahDogs(): VisitPetAppointment[] {
       servicePrice: 165,
       estimatedDurationMinutes: 75,
       scheduledStart: 10 * 60,
+      visitSequence: 1,
     }),
     pet({
       id: "milo",
@@ -54,6 +59,7 @@ function sarahDogs(): VisitPetAppointment[] {
       servicePrice: 120,
       estimatedDurationMinutes: 100,
       scheduledStart: 11 * 60 + 15,
+      visitSequence: 2,
     }),
     pet({
       id: "coco",
@@ -61,6 +67,7 @@ function sarahDogs(): VisitPetAppointment[] {
       servicePrice: 180,
       estimatedDurationMinutes: 60,
       scheduledStart: 13 * 60,
+      visitSequence: 3,
     }),
   ];
 }
@@ -207,18 +214,21 @@ describe("Sarah's three-dog visit at 3:30 PM", () => {
         petName: "Daisy",
         estimatedDurationMinutes: 75,
         scheduledStart: chain.slots[0]!.scheduledStart,
+        visitSequence: 1,
       }),
       pet({
         id: "milo",
         petName: "Milo",
         estimatedDurationMinutes: 100,
         scheduledStart: chain.slots[1]!.scheduledStart,
+        visitSequence: 2,
       }),
       pet({
         id: "coco",
         petName: "Coco",
         estimatedDurationMinutes: 60,
         scheduledStart: chain.slots[2]!.scheduledStart,
+        visitSequence: 3,
       }),
     ];
   }
@@ -584,4 +594,194 @@ describe("historical visit backfill", () => {
       confirmTokenHash: overrides.confirmTokenHash ?? null,
     };
   }
+});
+
+describe("visit sequence", () => {
+  it("orders the chain by visit_sequence when scheduled starts are reversed", () => {
+    const next = scheduleActivePetsFromVisitArrival([
+      pet({
+        id: "coco",
+        petName: "Coco",
+        visitSequence: 3,
+        scheduledStart: 10 * 60,
+        estimatedDurationMinutes: 60,
+      }),
+      pet({
+        id: "daisy",
+        petName: "Daisy",
+        visitSequence: 1,
+        scheduledStart: 14 * 60,
+        estimatedDurationMinutes: 75,
+      }),
+      pet({
+        id: "milo",
+        petName: "Milo",
+        visitSequence: 2,
+        status: "cancelled",
+        scheduledStart: 8 * 60,
+        estimatedDurationMinutes: 100,
+      }),
+    ]);
+    assert.ok(next);
+    assert.equal(next?.visitStartMinutes, 8 * 60);
+    assert.deepEqual(
+      next?.slots.map((slot) => slot.id),
+      ["daisy", "coco"],
+    );
+  });
+
+  it("keeps cancelled sequence numbers and gives the next dog max + 1", () => {
+    assert.equal(nextVisitSequence([1, 2, 3]), 4);
+    assert.equal(nextVisitSequence([1, null, 3]), 4);
+  });
+});
+
+describe("duration snapshots", () => {
+  it("keeps a stored duration when the live rule changes", () => {
+    const decision = resolveAppointmentDuration({
+      storedMinutes: 75,
+      status: "confirmed",
+      appointmentDate: "2026-11-23",
+      liveEstimateMinutes: 999,
+      today: "2026-10-07",
+    });
+    assert.equal(decision.unknown, false);
+    if (decision.unknown) return;
+    assert.equal(decision.minutes, 75);
+    assert.equal(decision.persistLiveEstimate, false);
+  });
+
+  it("leaves completed and past rows unknown", () => {
+    const completed = resolveAppointmentDuration({
+      storedMinutes: null,
+      status: "confirmed",
+      appointmentDate: "2026-11-23",
+      serviceEndedAt: "2026-11-23T18:00:00.000Z",
+      liveEstimateMinutes: 80,
+      today: "2026-10-07",
+    });
+    const past = resolveAppointmentDuration({
+      storedMinutes: null,
+      status: "confirmed",
+      appointmentDate: "2026-10-01",
+      liveEstimateMinutes: 80,
+      today: "2026-10-07",
+    });
+    assert.equal(completed.unknown, true);
+    assert.equal(past.unknown, true);
+  });
+
+  it("uses the live estimate for a future active row that has no snapshot", () => {
+    const decision = resolveAppointmentDuration({
+      storedMinutes: null,
+      status: "confirmed",
+      appointmentDate: "2026-11-23",
+      liveEstimateMinutes: 80,
+      today: "2026-10-07",
+    });
+    assert.equal(decision.unknown, false);
+    if (decision.unknown) return;
+    assert.equal(decision.minutes, 80);
+    assert.equal(decision.persistLiveEstimate, true);
+  });
+});
+
+describe("visit schedule bounds", () => {
+  it("checks hours, closures, and blocks without weakening visit-to-visit geometry", () => {
+    const arrival = 15 * 60 + 30;
+    const durations = [75, 100, 60];
+    assert.equal(
+      visitArrivalFits({
+        visitStartMinutes: arrival,
+        durations,
+        otherStops: [],
+      }),
+      true,
+    );
+    assert.equal(
+      visitSpanFitsScheduleBounds({
+        visitStartMinutes: arrival,
+        durations,
+      }).ok,
+      false,
+    );
+    const morning = visitSpanFitsScheduleBounds({
+      visitStartMinutes: 9 * 60,
+      durations: [60],
+      closure: {
+        serviceDate: "2026-11-23",
+        closedAllDay: false,
+        closedHours: [10],
+      },
+    });
+    assert.equal(morning.ok, true);
+    const intoClosedHour = visitSpanFitsScheduleBounds({
+      visitStartMinutes: 9 * 60,
+      durations: [90],
+      closure: {
+        serviceDate: "2026-11-23",
+        closedAllDay: false,
+        closedHours: [10],
+      },
+    });
+    assert.equal(intoClosedHour.ok, false);
+    const blocked = visitSpanFitsScheduleBounds({
+      visitStartMinutes: 9 * 60,
+      durations: [60],
+      blocks: [
+        {
+          id: "block",
+          serviceDate: "2026-11-23",
+          allDay: false,
+          startMinutes: 9 * 60 + 30,
+          endMinutes: 10 * 60,
+          reason: null,
+        },
+      ],
+    });
+    assert.equal(blocked.ok, false);
+  });
+});
+
+describe("phase 1 migration contract", () => {
+  it("backfills sequence without inventing historical durations", () => {
+    const sequence = readFileSync(
+      new URL(
+        "../../../supabase/migrations/20261007180000_visit_sequence.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const contract = readFileSync(
+      new URL(
+        "../../../supabase/migrations/20261008120000_visits_require_ids.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const expand = readFileSync(
+      new URL(
+        "../../../supabase/migrations/20261006120000_visits.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const services = readFileSync(
+      new URL("../appointments/visit-services.ts", import.meta.url),
+      "utf8",
+    );
+    assert.match(sequence, /ORDER BY scheduled_start ASC NULLS LAST, id ASC/);
+    assert.match(sequence, /SET visit_sequence = ranked\.seq/);
+    assert.doesNotMatch(sequence, /SET\s+estimated_duration_minutes/);
+    assert.doesNotMatch(expand, /ALTER COLUMN visit_id SET NOT NULL/);
+    assert.match(contract, /ALTER COLUMN visit_id SET NOT NULL/);
+    assert.match(contract, /ALTER COLUMN visit_sequence SET NOT NULL/);
+    assert.match(services, /assertVisitScheduleAllowed/);
+    assert.match(services, /applyVisitServiceChange/);
+    assert.ok(
+      services.indexOf("assertVisitScheduleAllowed") <
+        services.indexOf("applyVisitServiceChange"),
+    );
+    assert.equal(services.includes(": 60"), false);
+  });
 });

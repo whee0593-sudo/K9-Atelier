@@ -96,6 +96,7 @@ export type AppointmentRow = {
   address_state: string;
   address_zip: string;
   visit_id?: string | null;
+  visit_sequence?: number | null;
   travel_distance_miles: number;
   travel_fee: number;
   service_price?: number | null;

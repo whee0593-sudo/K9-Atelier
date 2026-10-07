@@ -1,16 +1,11 @@
 import { estimateServiceDurationMinutes } from "@/lib/services";
-import {
-  appointmentOverlapsBlocks,
-  groupBlocksByDate,
-} from "@/lib/appointments/availability-blocks";
+import { groupBlocksByDate } from "@/lib/appointments/availability-blocks";
 import { loadAvailabilityBlocks } from "@/lib/appointments/availability-block-store";
-import { isSlotClosed } from "@/lib/appointments/closures";
 import {
-  assignArrivalWindow,
+  assertVisitScheduleAllowed,
   getAvailabilityForAddress,
   getBaseGeoPoint,
   loadDayClosures,
-  loadOccupiedStops,
   loadOccupiedStopsByDate,
 } from "@/lib/appointments/schedule";
 import { mapAppointmentRowToAdminRecord } from "@/lib/appointments/map";
@@ -25,10 +20,12 @@ import {
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
 import { parseStaffRescheduleInput } from "@/lib/appointments/staff-reschedule-input";
 import { replaceVisitSchedule } from "@/lib/visits/persist";
+import { resolveAppointmentDuration } from "@/lib/visits/duration";
 import {
+  hasVisitSequence,
   listVisitArrivalMinutes,
   scheduleVisitPetChain,
-  visitArrivalFits,
+  visitSpanFitsScheduleBounds,
 } from "@/lib/visits/visit";
 import {
   contactFromAdminAppointment,
@@ -69,6 +66,7 @@ const STAFF_RESCHEDULE_SELECT = `
   customer_confirm_token_hash,
   customer_confirm_expires_at,
   visit_id,
+  visit_sequence,
   service_price,
   estimated_duration_minutes,
   created_at,
@@ -146,19 +144,19 @@ function visitPoint(row: LoadedAppointment): { lat: number; lon: number } | null
   return { lat: row.address_lat, lon: row.address_lon };
 }
 
-function visitDurationMinutes(row: LoadedAppointment): number {
-  if (
-    typeof row.estimated_duration_minutes === "number" &&
-    row.estimated_duration_minutes > 0
-  ) {
-    return row.estimated_duration_minutes;
-  }
+function visitDurationDecision(row: LoadedAppointment) {
   const pet = firstRelation(row.pets);
-  return estimateServiceDurationMinutes(
-    row.service_id,
-    pet?.weight_lbs ?? 20,
-    row.add_on_ids ?? [],
-  );
+  return resolveAppointmentDuration({
+    storedMinutes: row.estimated_duration_minutes,
+    status: row.status,
+    appointmentDate: row.appointment_date,
+    serviceEndedAt: row.service_ended_at,
+    liveEstimateMinutes: estimateServiceDurationMinutes(
+      row.service_id,
+      pet?.weight_lbs ?? 20,
+      row.add_on_ids ?? [],
+    ),
+  });
 }
 
 function assertOpenForReschedule(
@@ -217,9 +215,18 @@ export async function listStaffAppointmentAvailability(
       isBookableWeekday(parseDateValue(date)) &&
       all.indexOf(date) === index,
   );
-  const visitRows = await loadActiveVisitRows(loaded.row);
+  const visitRows = [...(await loadActiveVisitRows(loaded.row))].sort(
+    (left, right) => (left.visit_sequence ?? 0) - (right.visit_sequence ?? 0),
+  );
+  if (visitRows.some((row) => !hasVisitSequence(row.visit_sequence))) {
+    return { error: "conflict" };
+  }
   const visitAppointmentIds = visitRows.map((row) => row.id);
-  const durations = visitRows.map(visitDurationMinutes);
+  const decisions = visitRows.map(visitDurationDecision);
+  if (decisions.some((decision) => decision.unknown || decision.minutes == null)) {
+    return { error: "conflict" };
+  }
+  const durations = decisions.map((decision) => decision.minutes ?? 0);
   const totalDuration = durations.reduce((sum, minutes) => sum + minutes, 0);
   const result = await getAvailabilityForAddress({
     point,
@@ -269,8 +276,12 @@ export async function listStaffAppointmentAvailability(
       otherStops: stops,
     }).filter(
       (start) =>
-        !isSlotClosed(closure, start) &&
-        !appointmentOverlapsBlocks(dayBlocks, start, totalDuration),
+        visitSpanFitsScheduleBounds({
+          visitStartMinutes: start,
+          durations,
+          closure,
+          blocks: dayBlocks,
+        }).ok,
     );
     return { date: day.date, available: slots.length > 0, slots };
   });
@@ -283,7 +294,7 @@ export async function listStaffAppointmentAvailability(
       dogs: visitRows.map((row) => ({
         petName: firstRelation(row.pets)?.name ?? "Dog",
         serviceName: row.service_name,
-        durationMinutes: visitDurationMinutes(row),
+        durationMinutes: visitDurationDecision(row).minutes ?? 0,
       })),
     },
   };
@@ -310,72 +321,39 @@ export async function rescheduleStaffAppointment(
   if (blocked) return blocked;
 
   const ordered = [...(await loadActiveVisitRows(loaded.row))].sort(
-    (left, right) =>
-      (left.scheduled_start ?? 0) - (right.scheduled_start ?? 0) ||
-      left.created_at.localeCompare(right.created_at),
+    (left, right) => (left.visit_sequence ?? 0) - (right.visit_sequence ?? 0),
   );
+  if (ordered.some((row) => !hasVisitSequence(row.visit_sequence))) {
+    return { error: "conflict" };
+  }
   const anchor = ordered[0] ?? loaded.row;
   const visitAppointmentIds = ordered.map((row) => row.id);
-  const durations = ordered.map(visitDurationMinutes);
-  const totalDuration = durations.reduce((sum, minutes) => sum + minutes, 0);
+  const decisions = ordered.map(visitDurationDecision);
+  if (decisions.some((decision) => decision.unknown || decision.minutes == null)) {
+    return { error: "conflict" };
+  }
+  const durations = decisions.map((decision) => decision.minutes ?? 0);
   const completed = ordered.some(isCompletedVisit);
   const planned = scheduleVisitPetChain({
     visitStartMinutes: parsed.slotStartMinutes,
     durations,
   });
   if (!planned.ok) return { error: "slot_unavailable" };
-  let slots = planned.slots;
+  const slots = planned.slots;
 
   if (!completed) {
     const point = visitPoint(anchor);
     if (!point) return { error: "conflict" };
-    const base = await getBaseGeoPoint();
-    const assignment = base
-      ? await assignArrivalWindow({
-          date: parsed.date,
-          point,
-          zip: anchor.address_zip,
-          durationMinutes: totalDuration,
-          slotStartMinutes: parsed.slotStartMinutes,
-          base,
-          excludeAppointmentIds: visitAppointmentIds,
-          allowUnbookableDate: true,
-          allowUnfittedStart: true,
-        })
-      : { error: "misconfigured" as const };
-    if ("error" in assignment) {
-      return {
-        error: assignment.error === "slot_unavailable" ? "slot_unavailable" : assignment.error,
-      };
-    }
-
-    const [occupied, blocksResult] = await Promise.all([
-      loadOccupiedStops(parsed.date, {
-        excludeAppointmentIds: visitAppointmentIds,
-      }),
-      loadAvailabilityBlocks(parsed.date, parsed.date),
-    ]);
-    if ("error" in occupied) return occupied;
-    if ("error" in blocksResult) {
-      return {
-        error: blocksResult.error === "misconfigured" ? "misconfigured" : "server",
-      };
-    }
-    if (
-      appointmentOverlapsBlocks(
-        blocksResult.blocks,
-        parsed.slotStartMinutes,
-        totalDuration,
-      ) ||
-      !visitArrivalFits({
-        visitStartMinutes: parsed.slotStartMinutes,
-        durations,
-        otherStops: occupied.stops,
-      })
-    ) {
-      return { error: "slot_unavailable" };
-    }
-    slots = planned.slots;
+    const allowed = await assertVisitScheduleAllowed({
+      date: parsed.date,
+      visitStartMinutes: parsed.slotStartMinutes,
+      durations,
+      excludeAppointmentIds: visitAppointmentIds,
+      enforceZoneAndCapacity: true,
+      point,
+      zip: anchor.address_zip,
+    });
+    if ("error" in allowed) return allowed;
   }
 
   const visitId = ordered[0]?.visit_id;
@@ -448,7 +426,7 @@ async function loadActiveVisitRows(row: LoadedAppointment) {
     .select(STAFF_RESCHEDULE_SELECT)
     .eq("visit_id", row.visit_id)
     .neq("status", "cancelled")
-    .order("scheduled_start", { ascending: true });
+    .order("visit_sequence", { ascending: true });
   if (error || !data?.length) {
     if (error) console.error("loadActiveVisitRows failed:", error.message);
     return [row];
