@@ -268,6 +268,38 @@ export function scheduleActivePetsFromVisitArrival<
   };
 }
 
+export type TravelMirrorRow = {
+  id: string;
+  status: AppointmentStatus;
+  travelFee: number;
+  scheduledStart: number | null;
+};
+
+/**
+ * visits.travel_fee is the only travel charge.
+ * Exactly one active pet appointment mirrors it so current per-appointment
+ * checkout still adds the fee once. Cancelled dogs do not keep the mirror.
+ */
+export function planTravelFeeMirror(
+  appointments: TravelMirrorRow[],
+  visitTravelFee: number,
+) {
+  const fee = Math.round((Number.isFinite(visitTravelFee) ? visitTravelFee : 0) * 100) / 100;
+  const active = appointments
+    .filter((row) => row.status !== "cancelled")
+    .sort(
+      (left, right) =>
+        (left.scheduledStart ?? 0) - (right.scheduledStart ?? 0) ||
+        left.id.localeCompare(right.id),
+    );
+  const carrierId =
+    active.find((row) => row.travelFee > 0)?.id ?? active[0]?.id ?? null;
+  return appointments.map((row) => ({
+    id: row.id,
+    travelFee: row.id === carrierId ? fee : 0,
+  }));
+}
+
 export function appendPetToVisitChain(input: {
   previousStart: number;
   previousDurationMinutes: number;

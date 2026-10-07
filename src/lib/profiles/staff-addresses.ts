@@ -7,6 +7,8 @@ import {
   formatServiceAddress,
   type ServiceAddress,
 } from "@/lib/travel";
+import { planTravelFeeMirror } from "@/lib/visits/visit";
+import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
 
 export type StaffServiceAddress = ServiceAddress;
 
@@ -81,6 +83,136 @@ async function quoteServiceAddress(
     travelDistanceMiles: quote.distanceMiles,
     travelFee: quote.fee,
   };
+}
+
+type AddressAppointmentRow = {
+  id: string;
+  visit_id: string | null;
+  status: "pending_confirmation" | "confirmed" | "cancelled";
+  scheduled_start: number | null;
+  travel_fee: number | null;
+  estimated_total: number | null;
+  service_price: number | null;
+};
+
+function servicePortion(row: AddressAppointmentRow) {
+  if (row.service_price != null && Number.isFinite(Number(row.service_price))) {
+    return Number(row.service_price);
+  }
+  if (row.estimated_total == null) return null;
+  return (
+    Math.round(
+      (Number(row.estimated_total) - Number(row.travel_fee ?? 0)) * 100,
+    ) / 100
+  );
+}
+
+/**
+ * Staff correction of the stored service-address snapshot.
+ * This does not run when a customer edits their profile. The visit row is
+ * updated together with its pet appointments so the snapshot stays one address
+ * and one travel fee.
+ */
+async function rewriteVisitAddressSnapshots(
+  admin: ReturnType<typeof createAdminClient>,
+  matches: AddressAppointmentRow[],
+  to: StaffServiceAddress,
+  quote: Extract<QuoteResult, { ok: true }>,
+): Promise<{ ok: true } | { error: "server" }> {
+  const groups = new Map<string, AddressAppointmentRow[]>();
+  for (const row of matches) {
+    const key = row.visit_id ?? `appointment:${row.id}`;
+    const list = groups.get(key) ?? [];
+    list.push(row);
+    groups.set(key, list);
+  }
+
+  for (const rows of groups.values()) {
+    const visitId = rows[0]?.visit_id ?? null;
+    if (visitId) {
+      const visitUpdate: Record<string, unknown> = {
+        address_street: to.street,
+        address_city: to.city,
+        address_state: to.state,
+        address_zip: to.zip,
+        address_lat: quote.lat,
+        address_lon: quote.lon,
+      };
+      if (quote.travelDistanceMiles != null) {
+        visitUpdate.travel_distance_miles = quote.travelDistanceMiles;
+        visitUpdate.travel_fee = quote.travelFee;
+      }
+      const { error: visitError } = await admin
+        .from("visits")
+        .update(visitUpdate)
+        .eq("id", visitId);
+      if (visitError) {
+        console.error(
+          "rewriteStaffCustomerServiceAddress visit update failed:",
+          visitError.message,
+        );
+        return { error: "server" };
+      }
+    }
+
+    const mirror =
+      quote.travelDistanceMiles == null
+        ? null
+        : new Map(
+            planTravelFeeMirror(
+              rows.map((row) => ({
+                id: row.id,
+                status: row.status,
+                travelFee: Number(row.travel_fee ?? 0),
+                scheduledStart: row.scheduled_start,
+              })),
+              quote.travelFee,
+            ).map((item) => [item.id, item.travelFee]),
+          );
+
+    for (const row of rows) {
+      const travelFee = mirror?.get(row.id);
+      const portion = servicePortion(row);
+      const estimatedTotal =
+        travelFee == null || portion == null
+          ? null
+          : Math.round((portion + travelFee) * 100) / 100;
+      const { error: updateError } = await admin
+        .from("appointments")
+        .update({
+          address_street: to.street,
+          address_city: to.city,
+          address_state: to.state,
+          address_zip: to.zip,
+          address_lat: quote.lat,
+          address_lon: quote.lon,
+          ...(quote.travelDistanceMiles != null
+            ? {
+                travel_distance_miles: quote.travelDistanceMiles,
+                ...(travelFee != null ? { travel_fee: travelFee } : {}),
+                ...(estimatedTotal != null
+                  ? { estimated_total: estimatedTotal }
+                  : {}),
+              }
+            : {}),
+        })
+        .eq("id", row.id);
+      if (updateError) {
+        console.error(
+          "rewriteStaffCustomerServiceAddress update failed:",
+          updateError.message,
+        );
+        return { error: "server" };
+      }
+    }
+
+    if (visitId && quote.travelDistanceMiles != null) {
+      const mirrored = await syncVisitTravelFeeMirror(visitId);
+      if ("error" in mirrored) return mirrored;
+    }
+  }
+
+  return { ok: true };
 }
 
 async function ensureCustomerExists(customerId: string): Promise<
@@ -359,7 +491,9 @@ export async function rewriteStaffCustomerServiceAddress(
 
   const { data: visitRows, error: loadError } = await admin
     .from("appointments")
-    .select("id, travel_fee, estimated_total")
+    .select(
+      "id, visit_id, status, scheduled_start, travel_fee, estimated_total, service_price",
+    )
     .eq("customer_id", customerId)
     .eq("address_street", from.street)
     .eq("address_city", from.city)
@@ -374,48 +508,21 @@ export async function rewriteStaffCustomerServiceAddress(
     return { error: "server" };
   }
 
-  const matches = visitRows ?? [];
+  const matches = (visitRows ?? []) as Array<{
+    id: string;
+    visit_id: string | null;
+    status: "pending_confirmation" | "confirmed" | "cancelled";
+    scheduled_start: number | null;
+    travel_fee: number | null;
+    estimated_total: number | null;
+    service_price: number | null;
+  }>;
   if (!savedFrom && matches.length === 0) {
     return { error: "not_found", message: "No addresses match that entry." };
   }
 
-  for (const row of matches) {
-    const previousFee = Number(row.travel_fee ?? 0);
-    const previousTotal =
-      row.estimated_total == null ? null : Number(row.estimated_total);
-    const nextTotal =
-      previousTotal == null
-        ? null
-        : Math.round((previousTotal - previousFee + quote.travelFee) * 100) / 100;
-
-    const { error: updateError } = await admin
-      .from("appointments")
-      .update({
-        address_street: to.street,
-        address_city: to.city,
-        address_state: to.state,
-        address_zip: to.zip,
-        address_lat: quote.lat,
-        address_lon: quote.lon,
-        ...(quote.travelDistanceMiles != null
-          ? {
-              travel_distance_miles: quote.travelDistanceMiles,
-              travel_fee: quote.travelFee,
-              estimated_total: nextTotal,
-            }
-          : {}),
-      })
-      .eq("id", row.id as string)
-      .eq("customer_id", customerId);
-
-    if (updateError) {
-      console.error(
-        "rewriteStaffCustomerServiceAddress update failed:",
-        updateError.message,
-      );
-      return { error: "server" };
-    }
-  }
+  const rewritten = await rewriteVisitAddressSnapshots(admin, matches, to, quote);
+  if ("error" in rewritten) return rewritten;
 
   let savedId: string | null = savedFrom?.id ?? null;
   if (savedFrom) {

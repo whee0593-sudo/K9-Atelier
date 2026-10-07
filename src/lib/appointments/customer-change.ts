@@ -44,6 +44,7 @@ import {
   visitArrivalFits,
 } from "@/lib/visits/visit";
 import { compactVisitChildStarts } from "@/lib/visits/compact";
+import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
 import { getServiceDisplayName } from "@/lib/service-display";
 import type { TimePreference } from "@/lib/booking-schedule";
 
@@ -513,6 +514,10 @@ export async function applyAppointmentChange(
       : [];
   const cancelled = await cancelRows(targetRows);
   if ("error" in cancelled) return cancelled;
+  if (loaded.row.visit_id) {
+    const mirrored = await syncVisitTravelFeeMirror(loaded.row.visit_id);
+    if ("error" in mirrored) return mirrored;
+  }
   if (input.action === "remove_dog" && loaded.row.visit_id) {
     const compacted = await compactVisitChildStarts(loaded.row.visit_id);
     if ("error" in compacted) return compacted;
@@ -594,6 +599,7 @@ async function writeVisitSchedule(
     scheduledStart: number;
     timePreference: "morning" | "afternoon" | null;
     date: string;
+    durationMinutes: number;
   }>,
 ): Promise<{ ok: true } | { error: "server" | "slot_unavailable" }> {
   const admin = createAdminClient();
@@ -615,6 +621,7 @@ async function writeVisitSchedule(
         appointment_time: row.appointmentTime,
         scheduled_start: row.scheduledStart,
         time_preference: row.timePreference,
+        estimated_duration_minutes: row.durationMinutes,
       })
       .eq("id", row.id);
     if (error) {
@@ -673,6 +680,7 @@ async function rescheduleRows(
     scheduledStart: planned.slots[index]!.scheduledStart,
     timePreference: planned.slots[index]!.usedPreference,
     date,
+    durationMinutes: planned.slots[index]!.durationMinutes,
   }));
 
   const written = await writeVisitSchedule(chained);

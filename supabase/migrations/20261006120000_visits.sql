@@ -200,8 +200,13 @@ BEGIN
     )
     ORDER BY customer_id, appointment_date, address_key, created_at, scheduled_start NULLS LAST, id
   LOOP
-    IF cardinality(cluster_ids) > 0
-      AND prev.customer_id = rec.customer_id
+    -- ELSIF is not evaluated on the first row, so prev is assigned before it is read.
+    -- Same customer + date + address is not enough. The row must also be created
+    -- within 15 seconds of the cluster start and have a later start time.
+    IF cardinality(cluster_ids) = 0 THEN
+      cluster_ids := ARRAY[rec.id];
+      cluster_first := rec.created_at;
+    ELSIF prev.customer_id = rec.customer_id
       AND prev.appointment_date = rec.appointment_date
       AND prev.address_key = rec.address_key
       AND rec.created_at >= cluster_first
@@ -221,9 +226,6 @@ BEGIN
       END IF;
       cluster_ids := ARRAY[rec.id];
       cluster_first := rec.created_at;
-      cluster_customer := rec.customer_id;
-      cluster_date := rec.appointment_date;
-      cluster_address := rec.address_key;
     END IF;
     prev := rec;
   END LOOP;

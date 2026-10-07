@@ -397,6 +397,7 @@ export async function rescheduleStaffAppointment(
         appointment_time: slot.appointmentTime,
         scheduled_start: slot.scheduledStart,
         time_preference: slot.usedPreference,
+        estimated_duration_minutes: slot.durationMinutes,
       })
       .eq("id", row.id);
     if (error) {

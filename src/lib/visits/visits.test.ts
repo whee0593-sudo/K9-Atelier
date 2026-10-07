@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { planHistoricalVisits } from "@/lib/visits/backfill";
 import {
   activePetCount,
   appendPetToVisitChain,
+  planTravelFeeMirror,
   cancelEntireVisit,
   cancelPetOnVisit,
   checkoutEligiblePets,
@@ -328,6 +330,48 @@ describe("Sarah's three-dog visit at 3:30 PM", () => {
   });
 });
 
+describe("visit travel fee mirror", () => {
+  it("keeps one travel fee on an active dog after the middle dog is cancelled", () => {
+    const dogs = [
+      { id: "daisy", status: "confirmed" as const, travelFee: 32.5, scheduledStart: 600 },
+      { id: "milo", status: "cancelled" as const, travelFee: 0, scheduledStart: 675 },
+      { id: "coco", status: "confirmed" as const, travelFee: 0, scheduledStart: 775 },
+    ];
+    assert.deepEqual(planTravelFeeMirror(dogs, 32.5), [
+      { id: "daisy", travelFee: 32.5 },
+      { id: "milo", travelFee: 0 },
+      { id: "coco", travelFee: 0 },
+    ]);
+  });
+
+  it("moves the travel fee when the dog carrying it is cancelled", () => {
+    const dogs = [
+      { id: "daisy", status: "cancelled" as const, travelFee: 32.5, scheduledStart: 600 },
+      { id: "milo", status: "confirmed" as const, travelFee: 0, scheduledStart: 675 },
+      { id: "coco", status: "confirmed" as const, travelFee: 0, scheduledStart: 775 },
+    ];
+    assert.deepEqual(
+      planTravelFeeMirror(dogs, 32.5).map((row) => [row.id, row.travelFee]),
+      [
+        ["daisy", 0],
+        ["milo", 32.5],
+        ["coco", 0],
+      ],
+    );
+  });
+
+  it("clears appointment mirrors when every dog is cancelled", () => {
+    const dogs = [
+      { id: "daisy", status: "cancelled" as const, travelFee: 32.5, scheduledStart: 600 },
+      { id: "milo", status: "cancelled" as const, travelFee: 0, scheduledStart: 675 },
+    ];
+    assert.deepEqual(planTravelFeeMirror(dogs, 32.5), [
+      { id: "daisy", travelFee: 0 },
+      { id: "milo", travelFee: 0 },
+    ]);
+  });
+});
+
 describe("visit snapshots", () => {
   it("keeps the historical service address after the customer profile changes", () => {
     const customer = {
@@ -376,6 +420,24 @@ describe("visit snapshots", () => {
       Math.round((visitServiceTotal(appointments) + travelFee) * 100) / 100,
       465 + 32.5,
     );
+  });
+});
+
+describe("historical visit backfill migration", () => {
+  it("does not reference undeclared cluster variables", () => {
+    const sql = readFileSync(
+      new URL(
+        "../../../supabase/migrations/20261006120000_visits.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    assert.equal(sql.includes("cluster_customer"), false);
+    assert.equal(sql.includes("cluster_date"), false);
+    assert.equal(sql.includes("cluster_address"), false);
+    assert.match(sql, /interval '15 seconds'/);
+    assert.match(sql, /customer_confirm_token_hash/);
+    assert.match(sql, /visits\.travel_fee is the source of truth/i);
   });
 });
 

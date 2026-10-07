@@ -31,6 +31,7 @@ import {
 import { getCustomerPaymentMethod } from "@/lib/payments/service";
 import { estimateServiceDurationMinutes } from "@/lib/services";
 import { servicePriceFromEstimatedTotal } from "@/lib/visits/visit";
+import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
 import {
   assignArrivalWindow,
   claimDayPlan,
@@ -284,6 +285,20 @@ export async function createAppointment(
 
   if (error) {
     console.error("createAppointment insert failed:", error.code, error.message);
+    const { hasSupabaseAdminConfig } = await import("@/lib/supabase/env");
+    if (hasSupabaseAdminConfig()) {
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const { error: visitDeleteError } = await createAdminClient()
+        .from("visits")
+        .delete()
+        .eq("id", visitRow.id);
+      if (visitDeleteError) {
+        console.error(
+          "createAppointment orphan visit cleanup failed:",
+          visitDeleteError.message,
+        );
+      }
+    }
     if (error.code === "23505") return { error: "slot_unavailable" };
     return { error: "server" };
   }
@@ -385,6 +400,7 @@ export async function setAppointmentStatus(
 
   if (status === "cancelled" && appointmentBeforeUpdate?.visitId) {
     try {
+      await syncVisitTravelFeeMirror(appointmentBeforeUpdate.visitId);
       const { compactVisitChildStarts } = await import("@/lib/visits/compact");
       await compactVisitChildStarts(appointmentBeforeUpdate.visitId);
     } catch (compactError) {

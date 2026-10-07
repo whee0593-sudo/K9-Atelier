@@ -86,6 +86,7 @@ export async function compactVisitChildStarts(
         scheduled_start: slot.scheduledStart,
         appointment_time: arrival,
         time_preference: preference,
+        estimated_duration_minutes: slot.durationMinutes,
       })
       .eq("id", slot.id);
     if (updateError) {

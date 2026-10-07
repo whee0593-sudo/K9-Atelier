@@ -17,6 +17,7 @@ import { recordCustomerSms } from "@/lib/sms/inbox";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
 import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
 import { buildVisitServicesUpdatedSms } from "@/lib/sms/visit-update-copy";
+import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
 import type { ChargeLineItem } from "@/lib/charges/types";
 
 export async function updateAppointmentVisitServices(input: {
@@ -111,6 +112,7 @@ export async function updateAppointmentVisitServices(input: {
         visitFeeError.message,
       );
     }
+    await syncVisitTravelFeeMirror(row.visit_id as string);
     await compactVisitChildStarts(row.visit_id as string);
   }
 
