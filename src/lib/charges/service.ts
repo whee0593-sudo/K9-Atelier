@@ -29,7 +29,18 @@ import type {
   CreateChargeInput,
   ReceiptChannel,
 } from "@/lib/charges/types";
-import { isCashTender, readChargeTender } from "@/lib/charges/tender";
+import { isManualTender, readChargeTender } from "@/lib/charges/tender";
+import { formatReceiptPaymentMethod } from "@/lib/charges/receipt-view";
+import {
+  buildVisitBill,
+  chargedVisitSnapshot,
+  decideVisitServiceCharge,
+  visitPaymentStatus,
+  type VisitBillSnapshot,
+  type VisitCheckoutPet,
+} from "@/lib/charges/visit-bill";
+import { getAddOnService, getServicePriceEstimate } from "@/lib/services";
+import { getServiceDisplayName } from "@/lib/service-display";
 import {
   attemptSavedCardCharge,
   customerFacingStripeMessage,
@@ -55,11 +66,12 @@ import {
 } from "@/lib/referrals/service";
 
 const CHARGE_SELECT =
-  "id, appointment_id, kind, status, line_items, subtotal, tip_amount, total, receipt_channel, paid_at, stripe_payment_intent_id, refunded_amount, payment_method_id, tender";
+  "id, appointment_id, visit_id, kind, status, line_items, subtotal, tip_amount, total, receipt_channel, paid_at, stripe_payment_intent_id, refunded_amount, payment_method_id, tender, bill_snapshot";
 
 type ChargeRow = {
   id: string;
   appointment_id: string;
+  visit_id?: string | null;
   kind: ChargeKind;
   status: "pending" | "paid" | "failed";
   line_items: ChargeLineItem[];
@@ -72,12 +84,14 @@ type ChargeRow = {
   refunded_amount?: number | null;
   payment_method_id?: string | null;
   tender?: ChargeTender | null;
+  bill_snapshot?: VisitBillSnapshot | null;
 };
 
 function mapCharge(row: ChargeRow & { refunded_amount?: number | null }): AppointmentChargeRecord {
   return {
     id: row.id,
     appointmentId: row.appointment_id,
+    visitId: row.visit_id ?? null,
     kind: row.kind,
     status: row.status,
     lineItems: row.line_items,
@@ -89,6 +103,7 @@ function mapCharge(row: ChargeRow & { refunded_amount?: number | null }): Appoin
     refundedAmount: Number(row.refunded_amount ?? 0),
     paymentMethodId: (row.payment_method_id as string | null | undefined) ?? null,
     tender: readChargeTender(row.tender),
+    billSnapshot: row.bill_snapshot ?? null,
   };
 }
 
@@ -120,11 +135,20 @@ export async function getCollectContext(
   const methods = await listStaffCustomerPaymentMethods(appointment.customerId);
   if ("error" in methods) return { error: methods.error };
 
-  const { data: charges, error: chargeError } = await admin
-    .from("appointment_charges")
-    .select(CHARGE_SELECT)
-    .eq("appointment_id", appointmentId)
-    .eq("status", "paid");
+  const visitCollect = appointment.visitId
+    ? await loadVisitCollect(admin, appointment.visitId)
+    : null;
+  if (visitCollect && "error" in visitCollect) return { error: visitCollect.error };
+
+  const chargeQuery = admin.from("appointment_charges").select(CHARGE_SELECT);
+  const visitChargeFilter = visitCollect
+    ? visitCollect.appointmentIds.length > 0
+      ? `visit_id.eq.${visitCollect.bill.visitId},appointment_id.in.(${visitCollect.appointmentIds.join(",")})`
+      : `visit_id.eq.${visitCollect.bill.visitId}`
+    : null;
+  const { data: charges, error: chargeError } = visitChargeFilter
+    ? await chargeQuery.or(visitChargeFilter)
+    : await chargeQuery.eq("appointment_id", appointmentId).eq("status", "paid");
 
   if (chargeError) {
     console.error("getCollectContext charges failed:", chargeError.message);
@@ -157,25 +181,56 @@ export async function getCollectContext(
       (timing?.service_ended_at as string | null | undefined) ?? null,
   };
   const catalog = catalogChargeItems(weightLbs);
+  const chargeRows = (charges ?? []) as ChargeRow[];
+  const paidRows = chargeRows.filter((row) => row.status === "paid");
+  const visitCharges = chargeRows
+    .filter((row) => row.kind === "service")
+    .map((row) => ({
+      status: row.status,
+      hasSnapshot: row.bill_snapshot != null,
+      appointmentId: row.appointment_id,
+    }));
+  const visitDecision = decideVisitServiceCharge(visitCharges);
+  const defaultItems = visitCollect
+    ? visitCollect.bill.lineItems
+    : withCatalogListAmount(
+        readStoredVisitLineItems(
+          (timing?.add_on_options as Record<string, unknown> | null) ?? null,
+        ) ?? buildDefaultLineItems(appointment, weightLbs),
+        catalog,
+      );
 
   return {
     context: {
       appointment: appointmentWithTiming,
       petWeightLbs: weightLbs,
-      lineItems: withCatalogListAmount(
-        readStoredVisitLineItems(
-          (timing?.add_on_options as Record<string, unknown> | null) ?? null,
-        ) ?? buildDefaultLineItems(appointment, weightLbs),
-        catalog,
-      ),
+      lineItems: defaultItems,
       catalog,
       catalogGroups: catalogChargeGroups(weightLbs),
       methods: methods.methods,
       selectedPaymentMethodId,
-      paidKinds: (charges ?? []).map((row) => row.kind as ChargeKind),
-      paidCharges: (charges ?? []).map((row) => mapCharge(row as ChargeRow)),
+      paidKinds: paidRows.map((row) => row.kind),
+      paidCharges: paidRows.map((row) => mapCharge(row)),
       stripeConfigured: isStripeConfigured(),
       stripePublishableKey: getStripePublishableKey(),
+      ...(visitCollect
+        ? {
+            visit: {
+              id: visitCollect.bill.visitId,
+              customerName: visitCollect.bill.customerName,
+              serviceDate: visitCollect.bill.serviceDate,
+              arrivalLabel: visitCollect.bill.arrivalLabel,
+              servicedDogCount: visitCollect.bill.servicedDogCount,
+              blockedMessage:
+                visitDecision === "legacy_paid"
+                  ? "This visit already has a payment recorded on one dog. That receipt stays as it is."
+                  : visitDecision === "in_progress"
+                    ? "A payment is already in progress. Please wait a moment and try again."
+                    : visitCollect.bill.blockedMessage,
+              paymentStatus: visitPaymentStatus(visitCharges),
+            },
+          }
+        : {}),
       referral: await getCollectReferralState({
         customerId: appointment.customerId,
         appointmentId,
@@ -188,27 +243,163 @@ export async function getCollectContext(
   };
 }
 
+async function loadVisitCollect(
+  admin: ReturnType<typeof createAdminClient>,
+  visitId: string,
+): Promise<
+  | {
+      bill: ReturnType<typeof buildVisitBill>;
+      appointmentIds: string[];
+    }
+  | { error: "not_found" | "server" }
+> {
+  const { data: visit, error: visitError } = await admin
+    .from("visits")
+    .select(
+      "id, travel_fee, appointment_time, service_date, profiles ( first_name, last_name )",
+    )
+    .eq("id", visitId)
+    .maybeSingle();
+  if (visitError) {
+    console.error("loadVisitCollect visit failed:", visitError.message);
+    return { error: "server" };
+  }
+  if (!visit) return { error: "not_found" };
+
+  const { data: rows, error: rowError } = await admin
+    .from("appointments")
+    .select(
+      "id, status, service_name, service_id, service_price, service_ended_at, visit_sequence, add_on_ids, add_on_options, pets ( name, weight_lbs )",
+    )
+    .eq("visit_id", visitId)
+    .order("visit_sequence", { ascending: true });
+  if (rowError) {
+    console.error("loadVisitCollect appointments failed:", rowError.message);
+    return { error: "server" };
+  }
+
+  const profile = visit.profiles as
+    | { first_name?: string | null; last_name?: string | null }
+    | { first_name?: string | null; last_name?: string | null }[]
+    | null;
+  const profileRow = Array.isArray(profile) ? profile[0] : profile;
+  const customerName = [profileRow?.first_name, profileRow?.last_name]
+    .filter(Boolean)
+    .join(" ");
+
+  const pets: VisitCheckoutPet[] = (rows ?? []).map((row) => {
+    const pet = row.pets as
+      | { name?: string | null; weight_lbs?: number | null }
+      | { name?: string | null; weight_lbs?: number | null }[]
+      | null;
+    const petRow = Array.isArray(pet) ? pet[0] : pet;
+    const weight = Number(petRow?.weight_lbs ?? 0);
+    const addOnIds = (row.add_on_ids as string[] | null) ?? [];
+    const addOnOptions =
+      (row.add_on_options as Record<string, string> | null) ?? {};
+    return {
+      appointmentId: row.id as string,
+      petName: petRow?.name?.trim() || "Dog",
+      serviceName: String(row.service_name ?? "Service"),
+      servicePrice:
+        row.service_price == null ? null : Number(row.service_price),
+      status: String(row.status ?? ""),
+      serviceEndedAt: (row.service_ended_at as string | null) ?? null,
+      addOns: addOnIds.map((addOnId) => {
+        const addOn = getAddOnService(addOnId);
+        const optionName = addOnOptions[addOnId];
+        const estimate = addOn
+          ? getServicePriceEstimate(addOn, weight, optionName)
+          : null;
+        return {
+          label: addOn
+            ? getServiceDisplayName(addOn.id, addOn.name)
+            : addOnId,
+          amount: Number(estimate?.from ?? 0),
+          catalogId: addOnId,
+        };
+      }),
+    };
+  });
+
+  const bill = buildVisitBill({
+    visitId,
+    customerName: customerName || "Guest",
+    serviceDate: String(visit.service_date ?? ""),
+    arrivalLabel: String(visit.appointment_time ?? ""),
+    travelFee: Number(visit.travel_fee ?? 0),
+    pets,
+  });
+  return {
+    bill,
+    appointmentIds: pets.map((pet) => pet.appointmentId),
+  };
+}
+
 export async function listPaidKindsByAppointment(
   appointmentIds: string[],
 ): Promise<Record<string, ChargeKind[]>> {
   if (appointmentIds.length === 0) return {};
   const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("appointment_charges")
-    .select("appointment_id, kind")
-    .in("appointment_id", appointmentIds)
-    .eq("status", "paid");
+  const [{ data, error }, { data: appointments, error: appointmentError }] =
+    await Promise.all([
+      admin
+        .from("appointment_charges")
+        .select("appointment_id, kind")
+        .in("appointment_id", appointmentIds)
+        .eq("status", "paid"),
+      admin.from("appointments").select("id, visit_id").in("id", appointmentIds),
+    ]);
 
   if (error) {
     console.error("listPaidKindsByAppointment failed:", error.message);
     return {};
+  }
+  if (appointmentError) {
+    console.error(
+      "listPaidKindsByAppointment visits failed:",
+      appointmentError.message,
+    );
   }
 
   const map: Record<string, ChargeKind[]> = {};
   for (const row of data ?? []) {
     const id = row.appointment_id as string;
     const kind = row.kind as ChargeKind;
-    map[id] = [...(map[id] ?? []), kind];
+    if (!map[id]?.includes(kind)) map[id] = [...(map[id] ?? []), kind];
+  }
+
+  const visitByAppointment = new Map<string, string>();
+  for (const row of appointments ?? []) {
+    if (row.visit_id) visitByAppointment.set(row.id as string, row.visit_id as string);
+  }
+  const visitIds = [...new Set(visitByAppointment.values())];
+  if (visitIds.length === 0) return map;
+
+  const { data: visitCharges, error: visitError } = await admin
+    .from("appointment_charges")
+    .select("visit_id, kind")
+    .in("visit_id", visitIds)
+    .eq("status", "paid")
+    .not("bill_snapshot", "is", null);
+  if (visitError) {
+    console.error("listPaidKindsByAppointment visit charges failed:", visitError.message);
+    return map;
+  }
+
+  const kindsByVisit = new Map<string, ChargeKind[]>();
+  for (const row of visitCharges ?? []) {
+    const visitId = row.visit_id as string;
+    const kind = row.kind as ChargeKind;
+    const current = kindsByVisit.get(visitId) ?? [];
+    if (!current.includes(kind)) kindsByVisit.set(visitId, [...current, kind]);
+  }
+  for (const [appointmentId, visitId] of visitByAppointment) {
+    for (const kind of kindsByVisit.get(visitId) ?? []) {
+      if (!map[appointmentId]?.includes(kind)) {
+        map[appointmentId] = [...(map[appointmentId] ?? []), kind];
+      }
+    }
   }
   return map;
 }
@@ -288,28 +479,68 @@ export async function createAppointmentCharge(
   }
 
   const admin = createAdminClient();
-  const { data: paid } = await admin
-    .from("appointment_charges")
-    .select("id, kind")
-    .eq("appointment_id", input.appointmentId)
-    .eq("status", "paid")
-    .eq("kind", input.kind)
-    .maybeSingle();
+  const visitCollect =
+    input.kind === "service" && appointment.visitId
+      ? await loadVisitCollect(admin, appointment.visitId)
+      : null;
+  if (visitCollect && "error" in visitCollect) return { error: visitCollect.error };
+  if (visitCollect && !("error" in visitCollect) && visitCollect.bill.blocked) {
+    return {
+      error: "conflict",
+      message: visitCollect.bill.blockedMessage ?? "This visit is not ready to collect.",
+    };
+  }
 
-  if (paid) {
+  const visitId =
+    visitCollect && !("error" in visitCollect) ? visitCollect.bill.visitId : null;
+  const { data: existingCharges } = visitId
+    ? await admin
+        .from("appointment_charges")
+        .select("id, appointment_id, status, kind, bill_snapshot")
+        .eq("visit_id", visitId)
+        .eq("kind", input.kind)
+    : await admin
+        .from("appointment_charges")
+        .select("id, appointment_id, status, kind, bill_snapshot")
+        .eq("appointment_id", input.appointmentId)
+        .eq("kind", input.kind)
+        .eq("status", "paid");
+
+  if (visitId) {
+    const decision = decideVisitServiceCharge(
+      (existingCharges ?? []).map((row) => ({
+        status: row.status as "pending" | "paid" | "failed",
+        hasSnapshot: row.bill_snapshot != null,
+        appointmentId: row.appointment_id as string,
+      })),
+    );
+    if (decision === "already_paid" || decision === "legacy_paid") {
+      return { error: "conflict", message: "This visit is already paid." };
+    }
+    if (decision === "in_progress") {
+      return {
+        error: "conflict",
+        message: "A payment is already in progress. Please wait a moment and try again.",
+      };
+    }
+  } else if ((existingCharges ?? []).some((row) => row.status === "paid")) {
     return { error: "conflict", message: "This appointment is already paid." };
   }
 
-  const useCash = isCashTender(input.tender);
-  const useNewCard = !useCash && Boolean(input.useNewCard);
-  const tender: ChargeTender = useCash ? "cash" : "card";
+  const manualTender = isManualTender(input.tender);
+  const useNewCard = !manualTender && Boolean(input.useNewCard);
+  const tender: ChargeTender = manualTender
+    ? input.tender === "zelle"
+      ? "zelle"
+      : "cash"
+    : "card";
   const stripe = getStripe();
-  if (cents > 0 && !useCash && (!stripe || !isStripeConfigured())) {
+  if (cents > 0 && !manualTender && (!stripe || !isStripeConfigured())) {
     return { error: "misconfigured" };
   }
 
   let stripeCustomerId: string | null = null;
-  if (cents > 0 && !useCash) {
+  if (cents > 0 && !manualTender) {
     stripeCustomerId = await getOrCreateStripeCustomerId(
       appointment.customerId,
       appointment.customerEmail,
@@ -318,7 +549,7 @@ export async function createAppointmentCharge(
   }
 
   let stripePaymentMethodId: string | undefined;
-  if (cents > 0 && !useCash && !useNewCard) {
+  if (cents > 0 && !manualTender && !useNewCard) {
     if (!input.paymentMethodId) {
       return { error: "conflict", message: "Select a saved card." };
     }
@@ -334,7 +565,20 @@ export async function createAppointmentCharge(
     stripePaymentMethodId = method.stripe_payment_method_id;
   }
 
-  if (cents > 0 && !useCash && !useNewCard) {
+  const billSnapshot =
+    visitCollect && !("error" in visitCollect)
+      ? chargedVisitSnapshot({
+          bill: visitCollect.bill,
+          lineItems,
+          discount: newClientDiscount + referralCreditApplied,
+          tip: tipAmount,
+          total,
+          paymentMethodLabel:
+            tender === "cash" ? "Cash" : tender === "zelle" ? "Zelle" : null,
+        })
+      : null;
+
+  if (cents > 0 && !manualTender && !useNewCard) {
     if (!stripe || !stripeCustomerId || !stripePaymentMethodId || !input.paymentMethodId) {
       return { error: "server" };
     }
@@ -343,6 +587,8 @@ export async function createAppointmentCharge(
       userId: session.user.id,
       customerId: appointment.customerId,
       petName: appointment.petName,
+      visitId,
+      billSnapshot,
       appointmentId: input.appointmentId,
       kind: input.kind,
       lineItems,
@@ -363,6 +609,7 @@ export async function createAppointmentCharge(
     .from("appointment_charges")
     .insert({
       appointment_id: input.appointmentId,
+      visit_id: visitId,
       kind: input.kind,
       status: "pending",
       line_items: lineItems,
@@ -372,11 +619,19 @@ export async function createAppointmentCharge(
       new_client_discount: newClientDiscount,
       referral_credit_applied: referralCreditApplied,
       created_by: session.user.id,
-      payment_method_id: useCash || useNewCard ? null : input.paymentMethodId,
+      payment_method_id: manualTender || useNewCard ? null : input.paymentMethodId,
       tender,
+      bill_snapshot: billSnapshot,
     })
     .select(CHARGE_SELECT)
     .single();
+
+  if (insertError?.code === "23505") {
+    return {
+      error: "conflict",
+      message: "A payment is already in progress. Please wait a moment and try again.",
+    };
+  }
 
   if (insertError || !inserted) {
     console.error("createAppointmentCharge insert failed:", insertError?.message);
@@ -403,10 +658,10 @@ export async function createAppointmentCharge(
     }
   }
 
-  if (cents === 0 || useCash) {
+  if (cents === 0 || manualTender) {
     const charge = await markChargePaid(
       inserted.id,
-      useCash || useNewCard ? null : input.paymentMethodId ?? null,
+      manualTender || useNewCard ? null : input.paymentMethodId ?? null,
     );
     return { charge: charge ?? mapCharge(inserted as ChargeRow) };
   }
@@ -428,9 +683,12 @@ export async function createAppointmentCharge(
       description:
         input.kind === "no_show"
           ? `K9 Atelier no-show · ${appointment.petName}`
-          : `K9 Atelier grooming · ${appointment.petName}`,
+          : visitId
+            ? `K9 Atelier visit · ${visitCollect && !("error" in visitCollect) ? visitCollect.bill.customerName : appointment.customerName}`
+            : `K9 Atelier grooming · ${appointment.petName}`,
       metadata: {
         appointment_id: input.appointmentId,
+        ...(visitId ? { visit_id: visitId, customer_id: appointment.customerId } : {}),
         charge_id: inserted.id,
         kind: input.kind,
       },
@@ -544,6 +802,8 @@ async function chargeSavedPaymentMethod(input: {
   userId: string;
   customerId: string;
   petName: string;
+  visitId: string | null;
+  billSnapshot: VisitBillSnapshot | null;
   appointmentId: string;
   kind: ChargeKind;
   lineItems: ChargeLineItem[];
@@ -590,16 +850,31 @@ async function chargeSavedPaymentMethod(input: {
       description:
         input.kind === "no_show"
           ? `K9 Atelier no-show · ${input.petName}`
-          : `K9 Atelier grooming · ${input.petName}`,
+          : input.visitId
+            ? `K9 Atelier visit · ${input.billSnapshot?.customerName || input.petName}`
+            : `K9 Atelier grooming · ${input.petName}`,
+      visitId: input.visitId,
+      customerId: input.customerId,
     },
     {
       findPaid: async () => {
-        const { data, error } = await admin
+        const query = admin
           .from("appointment_charges")
           .select(select)
-          .eq("appointment_id", input.appointmentId)
           .eq("kind", input.kind)
-          .eq("status", "paid")
+          .eq("status", "paid");
+        if (input.visitId) {
+          const { data, error } = await query.eq("visit_id", input.visitId);
+          if (error) {
+            console.error("chargeSavedPaymentMethod paid lookup failed:", error.message);
+            throw error;
+          }
+          const rows = (data ?? []) as Array<ChargeRow & { created_at?: string }>;
+          const row = rows.find((item) => item.bill_snapshot != null) ?? rows[0];
+          return row ? chargeRowToAttempt(row) : null;
+        }
+        const { data, error } = await query
+          .eq("appointment_id", input.appointmentId)
           .maybeSingle();
         if (error) {
           console.error("chargeSavedPaymentMethod paid lookup failed:", error.message);
@@ -610,13 +885,27 @@ async function chargeSavedPaymentMethod(input: {
           : null;
       },
       findLatestPending: async () => {
-        const { data, error } = await admin
+        const query = admin
           .from("appointment_charges")
           .select(select)
-          .eq("appointment_id", input.appointmentId)
           .eq("kind", input.kind)
           .eq("status", "pending")
-          .order("created_at", { ascending: false })
+          .order("created_at", { ascending: false });
+        if (input.visitId) {
+          const { data, error } = await query.eq("visit_id", input.visitId);
+          if (error) {
+            console.error(
+              "chargeSavedPaymentMethod pending lookup failed:",
+              error.message,
+            );
+            throw error;
+          }
+          const rows = (data ?? []) as Array<ChargeRow & { created_at?: string }>;
+          const row = rows.find((item) => item.bill_snapshot != null);
+          return row ? chargeRowToAttempt(row) : null;
+        }
+        const { data, error } = await query
+          .eq("appointment_id", input.appointmentId)
           .limit(1);
         if (error) {
           console.error(
@@ -631,7 +920,11 @@ async function chargeSavedPaymentMethod(input: {
       insertPending: async (row) => {
         const { data, error } = await admin
           .from("appointment_charges")
-          .insert(row)
+          .insert({
+            ...row,
+            visit_id: input.visitId,
+            bill_snapshot: input.billSnapshot,
+          })
           .select(select)
           .single();
         if (error || !data) {
@@ -852,6 +1145,40 @@ async function markChargePaid(
   }
 
   const charge = mapCharge(data as ChargeRow);
+  if (charge.billSnapshot) {
+    let paymentMethodLabel = charge.billSnapshot.paymentMethodLabel ?? null;
+    if (!paymentMethodLabel && paymentMethodId) {
+      const { data: method } = await admin
+        .from("payment_methods")
+        .select("brand, last4")
+        .eq("id", paymentMethodId)
+        .maybeSingle();
+      paymentMethodLabel = formatReceiptPaymentMethod(
+        method?.last4
+          ? {
+              id: paymentMethodId,
+              brand: String(method.brand ?? "card"),
+              last4: String(method.last4),
+              expMonth: 1,
+              expYear: 2099,
+              isDefault: false,
+            }
+          : null,
+      );
+    }
+    await admin
+      .from("appointment_charges")
+      .update({
+        bill_snapshot: {
+          ...charge.billSnapshot,
+          paidAt: charge.paidAt,
+          tip: charge.tipAmount,
+          total: charge.total,
+          paymentMethodLabel,
+        },
+      })
+      .eq("id", chargeId);
+  }
   await confirmReferralDebit(chargeId);
   try {
     const issued = await issueReferralRewardForPaidCharge(chargeId);
@@ -868,7 +1195,10 @@ async function markChargePaid(
   try {
     const appointment = await fetchAppointmentAdminRecord(charge.appointmentId);
     if (appointment) {
-      await sendAfterVisitThankYouSms(appointment);
+      const petCount = charge.billSnapshot?.pets.length ?? 0;
+      await sendAfterVisitThankYouSms(
+        petCount > 1 ? { ...appointment, petName: "your pets" } : appointment,
+      );
     }
   } catch (smsError) {
     console.error("after-visit thank-you SMS failed:", smsError);
@@ -903,7 +1233,11 @@ export async function sendChargeReceipt(
   if (!appointment) return { error: "not_found" };
 
   const charge = mapCharge(row as ChargeRow);
-  const sent = await sendChargeReceiptEmail(appointment, charge);
+  const sent = await sendChargeReceiptEmail(
+    appointment,
+    charge,
+    charge.billSnapshot?.paymentMethodLabel,
+  );
 
   if (!sent) return { error: "server" };
 
@@ -962,8 +1296,8 @@ export async function refundAppointmentCharge(
     return { error: "conflict", message: "This payment cannot be refunded." };
   }
 
-  const cashRefund = isCashTender(readChargeTender(row.tender));
-  if (!cashRefund && !row.stripe_payment_intent_id) {
+  const manualRefund = isManualTender(readChargeTender(row.tender));
+  if (!manualRefund && !row.stripe_payment_intent_id) {
     return { error: "conflict", message: "This payment cannot be refunded." };
   }
 
@@ -976,7 +1310,7 @@ export async function refundAppointmentCharge(
     };
   }
 
-  if (!cashRefund) {
+  if (!manualRefund) {
     const stripe = getStripe();
     if (!stripe) return { error: "misconfigured" };
     try {

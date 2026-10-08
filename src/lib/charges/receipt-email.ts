@@ -6,6 +6,7 @@ import {
   getGoogleProfileUrl,
 } from "@/lib/business";
 import { business } from "@/lib/business";
+import { buildChargeReceiptParagraphs } from "@/lib/charges/receipt-content";
 import { formatLineItemMoney, listedAmountIfChanged } from "@/lib/charges/list-amount";
 import { formatChargeMoney } from "@/lib/charges/money";
 import {
@@ -77,9 +78,18 @@ export function buildChargeReceiptCardHtml(
   charge: AppointmentChargeRecord,
   paymentMethodLabel?: string | null,
 ) {
-  const petName = appointment.petName?.trim() || null;
-  const appointmentDate = formatReceiptDate(appointment.appointmentDate);
-  const appointmentTime = formatReceiptServiceTime(appointment);
+  const snapshot = charge.billSnapshot;
+  const petName = snapshot
+    ? snapshot.pets.length > 1
+      ? null
+      : snapshot.pets[0]?.petName ?? null
+    : appointment.petName?.trim() || null;
+  const appointmentDate = formatReceiptDate(
+    snapshot?.serviceDate ?? appointment.appointmentDate,
+  );
+  const appointmentTime = snapshot?.arrivalLabel
+    ? snapshot.arrivalLabel
+    : formatReceiptServiceTime(appointment);
   const paymentDate = formatReceiptPaymentDate(
     charge.paidAt,
     appointment.timezone,
@@ -92,14 +102,23 @@ export function buildChargeReceiptCardHtml(
   const bookAgain = getBookAgainUrl();
   const concern = siteUrl("/contact?topic=concern");
 
-  const itemRows = charge.lineItems
-    .map((item) =>
-      lineItemMoneyRow(
-        getCatalogItemDisplayLabel(item.catalogId, item.label),
-        item,
-      ),
-    )
-    .join("");
+  const itemRows = snapshot
+    ? [
+        ...snapshot.pets.map((pet) =>
+          moneyRow(`${pet.petName} — ${pet.serviceName}`, pet.amount),
+        ),
+        snapshot.travelFee > 0 ? moneyRow("Travel fee", snapshot.travelFee) : "",
+        snapshot.discount > 0 ? moneyRow("Discount", -snapshot.discount) : "",
+        moneyRow("Subtotal", snapshot.subtotal),
+      ].join("")
+    : charge.lineItems
+        .map((item) =>
+          lineItemMoneyRow(
+            getCatalogItemDisplayLabel(item.catalogId, item.label),
+            item,
+          ),
+        )
+        .join("");
   const tipRow =
     charge.tipAmount > 0 ? moneyRow("Gratuity", charge.tipAmount) : "";
 
@@ -203,6 +222,17 @@ export function buildChargeReceiptCardText(
   appointment: AdminAppointmentRecord,
   charge: AppointmentChargeRecord,
 ) {
+  if (charge.billSnapshot) {
+    return [
+      ...buildChargeReceiptParagraphs(appointment, charge),
+      "",
+      business.brand.phone,
+      getBrandWebsiteUrl(),
+      `Book again: ${getBookAgainUrl()}`,
+    ]
+      .filter((line) => line != null)
+      .join("\n");
+  }
   const petName = appointment.petName?.trim() || null;
   const lines = [
     thankYouLine(petName),

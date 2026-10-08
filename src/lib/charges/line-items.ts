@@ -113,6 +113,12 @@ export function sanitizeLineItems(items: unknown): ChargeLineItem[] | null {
             ? record.referralCategory
             : undefined,
       }),
+      ...(typeof record.appointmentId === "string" && record.appointmentId
+        ? { appointmentId: record.appointmentId }
+        : {}),
+      ...(typeof record.petName === "string" && record.petName.trim()
+        ? { petName: record.petName.trim() }
+        : {}),
     });
   }
   return sanitized;
