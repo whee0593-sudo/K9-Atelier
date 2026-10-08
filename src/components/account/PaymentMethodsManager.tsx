@@ -7,7 +7,7 @@ import {
   useStripe,
 } from "@stripe/react-stripe-js";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createPaymentSetupIntent,
   deleteCustomerPaymentMethod,
@@ -38,6 +38,7 @@ function AddCardForm({
   returnUrl,
   saveSetupIntent = savePaymentSetupIntent,
   allowWallets = false,
+  bookingCardCopy = false,
 }: {
   clientSecret: string;
   onSaved: (method: PaymentMethodRecord) => void;
@@ -45,6 +46,7 @@ function AddCardForm({
   returnUrl?: string;
   saveSetupIntent?: (setupIntentId: string) => Promise<PaymentMethodRecord>;
   allowWallets?: boolean;
+  bookingCardCopy?: boolean;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -106,6 +108,18 @@ function AddCardForm({
 
   return (
     <div className="space-y-4">
+      {bookingCardCopy ? (
+        <div className="space-y-2">
+          <p className="font-body text-sm font-medium text-ink">
+            Payment Preference
+          </p>
+          <p className="font-body text-sm leading-relaxed text-taupe">
+            Thank you for choosing K9 Atelier. Cash or Zelle is always
+            appreciated, while your card will be securely saved as a convenient
+            backup payment method.
+          </p>
+        </div>
+      ) : null}
       {allowWallets ? (
         <p className="text-sm text-text-muted">
           On your phone, Apple Pay or Google Pay can save this card. You will
@@ -122,22 +136,29 @@ function AddCardForm({
           {error}
         </p>
       )}
-      <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={() => void handleSubmit()}
-          disabled={submitting || !stripe}
-          className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-        >
-          {submitting ? "Verifying…" : "Save Card"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-xl border border-lavender px-4 py-2 text-sm text-text-muted"
-        >
-          Cancel
-        </button>
+      <div>
+        {bookingCardCopy ? (
+          <p className="font-body mb-3 text-xs italic leading-relaxed text-taupe">
+            A card on file is required to reserve your appointment.
+          </p>
+        ) : null}
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => void handleSubmit()}
+            disabled={submitting || !stripe}
+            className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+          >
+            {submitting ? "Verifying…" : "Save Card"}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-xl border border-lavender px-4 py-2 text-sm text-text-muted"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );

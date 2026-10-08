@@ -1,4 +1,5 @@
 import { business } from "@/lib/business";
+import { servicePageOrderIndex } from "@/lib/service-page";
 import {
   CREATIVE_ACCENT_COLORING_ID,
   allBookableServices,
@@ -78,7 +79,11 @@ function choiceForService(
 /** One menu row per bookable service. Coloring styles are separate rows. */
 export function listStaffServiceChoices(weightLbs: number | null) {
   const choices: StaffServiceChoice[] = [];
-  for (const service of allBookableServices()) {
+  const services = [...allBookableServices()].sort(
+    (left, right) =>
+      servicePageOrderIndex(left.id) - servicePageOrderIndex(right.id),
+  );
+  for (const service of services) {
     if (weightLbs != null && !staffMenuAllows(service.id, weightLbs)) {
       continue;
     }

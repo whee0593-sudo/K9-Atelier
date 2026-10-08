@@ -28,8 +28,8 @@ import { formatServiceAddress, calculateTravelFee } from "@/lib/travel";
 import { mapValidatedInputToInsertRow } from "@/lib/pets/map";
 import { PET_SELECT } from "@/lib/pets/types";
 import {
+  bookedServiceAmount,
   estimateServiceDurationMinutes,
-  getServicePriceEstimate,
   allBookableServices,
 } from "@/lib/services";
 import { keepPrimaryIfReferralFails } from "@/lib/referrals/allocate-code";
@@ -703,13 +703,14 @@ export async function createStaffCustomerBooking(
             ? parseStaffServiceSelection(`${petService.id}::${optionName}`)
                 ?.label
             : null) || petService.name;
-        const price = getServicePriceEstimate(
+        const price = bookedServiceAmount(
           petService,
           pet.weightLbs,
-          optionName ?? undefined,
+          optionName,
+          pet.servicePrices[visitServiceIndex] ?? null,
         );
         const travelFee = visitIndex === 0 ? quote.fee : 0;
-        const servicePrice = snapshotServicePrice(price?.from ?? 0);
+        const servicePrice = snapshotServicePrice(price ?? 0);
         const estimatedTotal =
           Math.round((servicePrice + travelFee) * 100) / 100;
 

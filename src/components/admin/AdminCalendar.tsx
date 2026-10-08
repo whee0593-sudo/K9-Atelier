@@ -109,12 +109,15 @@ export function AdminCalendar({
   preview = false,
   onAppointmentsChanged,
   reloadToken = 0,
+  between,
 }: {
   preview?: boolean;
   /** Fired after an operational change (for example cancelling a confirmed visit). */
   onAppointmentsChanged?: () => void;
   /** Bump to reload the month grid (for example after closing a day). */
   reloadToken?: number;
+  /** Placed between the month grid and the selected-day appointment list. */
+  between?: React.ReactNode;
 }) {
   const [month, setMonth] = useState(() =>
     preview ? PREVIEW_CALENDAR_MONTH : currentBusinessCalendarMonth(),
@@ -589,6 +592,7 @@ export function AdminCalendar({
   }
 
   return (
+    <>
     <section id="calendar">
       <h3 className="text-lg font-medium text-gold-dark">Calendar</h3>
 
@@ -758,8 +762,10 @@ export function AdminCalendar({
             );
           })()
         : null}
-
-      <div className="mt-6">
+    </section>
+    {between}
+    <section>
+      <div>
         <h4 className="text-base font-medium text-gold-dark">
           {selectedDate ? formatLongDate(selectedDate) : "Select a day"}
         </h4>
@@ -891,5 +897,6 @@ export function AdminCalendar({
         )}
       </div>
     </section>
+    </>
   );
 }

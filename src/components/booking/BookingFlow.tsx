@@ -8,6 +8,8 @@ import {
   getAddOnService,
   getCreativeColoringService,
   getRequiredBaseServicesForCreative,
+  isCustomCreativeDesignOption,
+  isCustomCreativeDesignSelection,
   type BookableService,
 } from "@/lib/services";
 import { getServiceDisplayName } from "@/lib/service-display";
@@ -186,6 +188,7 @@ export function BookingFlow({
   }
 
   function handleServiceSelect(service: BookableService, optionName?: string) {
+    if (isCustomCreativeDesignSelection(service.id, optionName)) return;
     setSelectedService(service);
     setServiceConfirmed(false);
     setCareOptionsConfirmed(false);
@@ -214,6 +217,7 @@ export function BookingFlow({
   }
 
   function handleCreativeComplete(baseServiceId: string, colorOption: string) {
+    if (isCustomCreativeDesignOption(colorOption)) return;
     const base = getRequiredBaseServicesForCreative().find(
       (s) => s.id === baseServiceId,
     );
@@ -246,6 +250,7 @@ export function BookingFlow({
   }
 
   function handleAddOnOptionChange(addOnId: string, optionName: string) {
+    if (isCustomCreativeDesignSelection(addOnId, optionName)) return;
     setAddOnOptions((prev) => ({ ...prev, [addOnId]: optionName }));
     if (!selectedAddOnIds.includes(addOnId)) {
       setSelectedAddOnIds((prev) => [...prev, addOnId]);

@@ -206,6 +206,7 @@ export function BookingPaymentStep({
                 }}
               >
                 <AddCardForm
+                  bookingCardCopy
                   allowWallets
                   clientSecret={cardSetup.clientSecret}
                   returnUrl={

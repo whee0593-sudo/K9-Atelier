@@ -1,3 +1,9 @@
+import {
+  CREATIVE_ACCENT_COLORING_ID,
+  CUSTOM_CREATIVE_DESIGN_GUEST_MESSAGE,
+  isCustomCreativeDesignOption,
+  isCustomCreativeDesignSelection,
+} from "@/lib/services";
 import { calculateTravelFee } from "@/lib/travel";
 import type { AppointmentWriteInput } from "@/lib/appointments/types";
 import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
@@ -170,6 +176,16 @@ export function validateCreateAppointmentInput(
   }
   const travelDistanceMiles = travelQuote.distanceMiles;
   const travelFee = travelQuote.fee;
+  if (
+    isCustomCreativeDesignSelection(serviceId, addOnOptions[serviceId]) ||
+    isCustomCreativeDesignOption(addOnOptions[CREATIVE_ACCENT_COLORING_ID])
+  ) {
+    throw new AppointmentValidationError(
+      CUSTOM_CREATIVE_DESIGN_GUEST_MESSAGE,
+      "serviceId",
+    );
+  }
+
   const submittedTotal = readNumber(record, "estimatedTotal", "Estimated total");
   const estimatedTotal =
     Math.round((submittedTotal - submittedTravelFee + travelFee) * 100) / 100;

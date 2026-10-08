@@ -5,6 +5,7 @@ import {
   AppointmentValidationError,
   validateCreateAppointmentInput,
 } from "@/lib/appointments/validation";
+import { CUSTOM_CREATIVE_DESIGN_GUEST_MESSAGE } from "@/lib/services";
 import { getUpcomingBookableDates } from "@/lib/booking-slots";
 import {
   formatMissingProfileFieldsMessage,
@@ -118,6 +119,24 @@ describe("required customer profile fields", () => {
     const input = validateCreateAppointmentInput(validAppointmentBody());
     assert.equal(input.customerFirstName, "Tia");
     assert.equal(input.customerLastName, "Francavilla");
+  });
+
+  it("keeps custom creative design off the guest booking", () => {
+    assert.throws(
+      () =>
+        validateCreateAppointmentInput(
+          validAppointmentBody({
+            serviceId: "signature-bath-care",
+            addOnIds: ["creative-accent-coloring"],
+            addOnOptions: {
+              "creative-accent-coloring": "Custom Creative Design",
+            },
+          }),
+        ),
+      (error: unknown) =>
+        error instanceof AppointmentValidationError &&
+        error.message === CUSTOM_CREATIVE_DESIGN_GUEST_MESSAGE,
+    );
   });
 
   it("does not require an arrival window or marketing consent to book", () => {

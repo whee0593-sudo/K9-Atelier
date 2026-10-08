@@ -2,7 +2,11 @@ import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
 import { isWithinServiceDay } from "@/lib/booking-schedule";
 import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
-import { allBookableServices } from "@/lib/services";
+import {
+  allBookableServices,
+  isCustomCreativeDesignSelection,
+  parseEnteredServicePrice,
+} from "@/lib/services";
 import {
   parseStaffServiceSelection,
   staffMenuAllows,
@@ -38,6 +42,8 @@ export type StaffBookingPetInput = PetWriteInput & {
   serviceIds: string[];
   /** Parallel to serviceIds. Set when a service has its own styles, such as coloring. */
   serviceOptionNames: (string | null)[];
+  /** Parallel to serviceIds. Set when staff type a price for Custom Creative Design. */
+  servicePrices: (number | null)[];
 };
 
 export type StaffCustomerBookingInput = {
@@ -125,6 +131,36 @@ function readPetServiceIds(record: Record<string, unknown>, index: number) {
     seen.add(serviceId);
   }
   return ids;
+}
+
+function readOptionalMoney(value: unknown, field: string) {
+  if (value == null || value === "") return null;
+  const amount = parseEnteredServicePrice(value);
+  if (amount == null || amount > 100000) {
+    throw new StaffBookingValidationError("Enter a valid price.", field);
+  }
+  return amount;
+}
+
+function readPetServicePrices(
+  record: Record<string, unknown>,
+  count: number,
+  index: number,
+) {
+  const raw = record.servicePrices;
+  if (raw == null) return Array.from({ length: count }, () => null);
+  if (!Array.isArray(raw)) {
+    throw new StaffBookingValidationError(
+      "Prices must be a list.",
+      `pets[${index}].servicePrices`,
+    );
+  }
+  return Array.from({ length: count }, (_, serviceIndex) =>
+    readOptionalMoney(
+      raw[serviceIndex],
+      `pets[${index}].servicePrices[${serviceIndex}]`,
+    ),
+  );
 }
 
 const MAX_STAFF_BOOKING_PETS = 8;
@@ -296,10 +332,16 @@ export function validateStaffCustomerBookingInput(
       const petRecord = assertPlainObject(petBody);
       const id = readOptionalPetId(petRecord, index);
       const requestedServiceIds = readPetServiceIds(petRecord, index);
+      const requestedPrices = readPetServicePrices(
+        petRecord,
+        requestedServiceIds.length,
+        index,
+      );
       const rest = { ...petRecord };
       delete rest.id;
       delete rest.serviceId;
       delete rest.serviceIds;
+      delete rest.servicePrices;
       const pet = validateCreatePetInput(rest);
       const chosenIds =
         requestedServiceIds.length > 0
@@ -329,12 +371,21 @@ export function validateStaffCustomerBookingInput(
         }
         return chosen;
       });
+      const servicePrices = selections.map((selection, serviceIndex) =>
+        isCustomCreativeDesignSelection(
+          selection.serviceId,
+          selection.optionName,
+        )
+          ? (requestedPrices[serviceIndex] ?? null)
+          : null,
+      );
       return {
         ...pet,
         id,
         serviceId: selections[0]?.serviceId ?? null,
         serviceIds: selections.map((selection) => selection.serviceId),
         serviceOptionNames: selections.map((selection) => selection.optionName),
+        servicePrices,
       };
     } catch (error) {
       if (error instanceof StaffBookingValidationError) throw error;
@@ -431,6 +482,27 @@ export function validateStaffCustomerBookingInput(
       slotStartMinutes != null &&
       address,
   );
+
+  if (hasCompleteBooking) {
+    pets.forEach((pet, petIndex) => {
+      pet.serviceIds.forEach((serviceId, serviceIndex) => {
+        if (
+          !isCustomCreativeDesignSelection(
+            serviceId,
+            pet.serviceOptionNames[serviceIndex],
+          )
+        ) {
+          return;
+        }
+        if (pet.servicePrices[serviceIndex] == null) {
+          throw new StaffBookingValidationError(
+            "Enter a price for Custom Creative Design.",
+            `pets[${petIndex}].servicePrices[${serviceIndex}]`,
+          );
+        }
+      });
+    });
+  }
 
   return {
     firstName,

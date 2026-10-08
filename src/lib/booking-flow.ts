@@ -1,8 +1,10 @@
 import {
+  CUSTOM_CREATIVE_DESIGN_GUEST_MESSAGE,
   estimateServiceDurationMinutes,
   getBookableServicesForPet,
   groupServicesByCategory,
   isCreativeColoringCategory,
+  isCustomCreativeDesignOption,
   isSpaService,
   type BookableService,
 } from "@/lib/services";
@@ -106,6 +108,12 @@ export function bookingCareRowsForCategory(
   }
 
   return rows;
+}
+
+export function guestCreativeOptionNotice(optionName?: string | null) {
+  return isCustomCreativeDesignOption(optionName)
+    ? CUSTOM_CREATIVE_DESIGN_GUEST_MESSAGE
+    : null;
 }
 
 export function bookingCareChoicesForService(service: BookableService): BookingCareChoice[] {

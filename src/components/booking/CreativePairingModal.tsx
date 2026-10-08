@@ -7,6 +7,7 @@ import {
   type BookableService,
 } from "@/lib/services";
 import { CreativeOptionDetail } from "@/components/booking/CreativeOptionDetail";
+import { guestCreativeOptionNotice } from "@/lib/booking-flow";
 
 type Props = {
   creativeService: BookableService;
@@ -63,8 +64,11 @@ export function CreativePairingModal({
   const [step, setStep] = useState<Step>(initialColorOption ? "base" : "color");
   const [selectedBaseId, setSelectedBaseId] = useState<string | null>(null);
   const [selectedColorOption, setSelectedColorOption] = useState<string | null>(
-    initialColorOption,
+    initialColorOption && !guestCreativeOptionNotice(initialColorOption)
+      ? initialColorOption
+      : null,
   );
+  const [guestNotice, setGuestNotice] = useState<string | null>(null);
 
   function handleBack() {
     if (step === "base") {
@@ -115,13 +119,25 @@ export function CreativePairingModal({
               {creativeService.options && (
                 <div className="mt-6 space-y-2">
                   {creativeService.options.map((opt) => {
-                    const selected = selectedColorOption === opt.name;
+                    const closedNotice = guestCreativeOptionNotice(opt.name);
+                    const selected =
+                      !closedNotice && selectedColorOption === opt.name;
 
                     return (
                       <button
                         key={opt.name}
                         type="button"
-                        onClick={() => setSelectedColorOption(opt.name)}
+                        onClick={() => {
+                          if (closedNotice) {
+                            setGuestNotice(closedNotice);
+                            if (selectedColorOption === opt.name) {
+                              setSelectedColorOption(null);
+                            }
+                            return;
+                          }
+                          setGuestNotice(null);
+                          setSelectedColorOption(opt.name);
+                        }}
                         className={`w-full rounded-xl px-4 py-4 text-sm transition ${
                           selected
                             ? "bg-gold text-white"
@@ -132,6 +148,11 @@ export function CreativePairingModal({
                       </button>
                     );
                   })}
+                  {guestNotice ? (
+                    <p className="text-center text-sm text-text" role="status">
+                      {guestNotice}
+                    </p>
+                  ) : null}
                 </div>
               )}
             </>

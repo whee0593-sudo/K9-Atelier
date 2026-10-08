@@ -279,6 +279,39 @@ describe("validateStaffCustomerBookingInput", () => {
       getServicePriceEstimate(coloring, 14, "Custom Creative Design"),
       null,
     );
+    const priced = validateStaffCustomerBookingInput(
+      validBody({
+        serviceId: undefined,
+        pet: {
+          name: "Luna",
+          breed: "Poodle",
+          weightLbs: 14,
+          serviceIds: [
+            "signature-bath-care",
+            "creative-accent-coloring::Custom Creative Design",
+          ],
+          servicePrices: [null, 240],
+        },
+      }),
+    );
+    assert.deepEqual(priced.pets[0]?.servicePrices, [null, 240]);
+    assert.throws(
+      () =>
+        validateStaffCustomerBookingInput(
+          validBody({
+            serviceId: undefined,
+            pet: {
+              name: "Luna",
+              breed: "Poodle",
+              weightLbs: 14,
+              serviceIds: ["creative-accent-coloring::Custom Creative Design"],
+            },
+          }),
+        ),
+      (error: unknown) =>
+        error instanceof StaffBookingValidationError &&
+        error.message === "Enter a price for Custom Creative Design.",
+    );
     assert.equal(getServicePriceEstimate(coloring, 14), null);
   });
 
