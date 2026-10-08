@@ -102,7 +102,7 @@ describe("staff reschedule and cancel server gates", () => {
     const schedule = readFileSync(new URL("./schedule.ts", import.meta.url), "utf8");
     assert.match(reschedule, /getStaffSession/);
     assert.match(reschedule, /assignArrivalWindow/);
-    assert.match(reschedule, /excludeAppointmentIds: \[appointmentId\]/);
+    assert.match(reschedule, /excludeAppointmentIds: visitAppointmentIds/);
     assert.equal(
       reschedule.includes("excludeAppointmentIds: rows") ||
         reschedule.includes("excludeAppointmentIds: [loaded"),
@@ -141,7 +141,7 @@ describe("staff reschedule and cancel server gates", () => {
       rescheduleBody.slice(0, availabilityCall),
       /appointment_date\s*===/,
     );
-    assert.match(reschedule, /excludeAppointmentIds: \[appointmentId\]/);
+    assert.match(reschedule, /excludeAppointmentIds: visitAppointmentIds/);
     assert.doesNotMatch(reschedule, /excludeAppointmentIds: blocks/);
   });
 

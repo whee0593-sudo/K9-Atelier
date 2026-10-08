@@ -351,15 +351,14 @@ export function buildSameAddressCompanionInsertion(
   durationMinutes: number,
 ): InsertResult | null {
   const bounds = getDayBounds();
-  const scheduledStart = snapUp(previousStart + previousDurationMinutes);
-  if (scheduledStart < bounds.hoursStart) return null;
-  if (scheduledStart + durationMinutes > bounds.hoursEnd) return null;
-  return {
-    scheduledStart,
+  const next = chainSameAddressVisits(previousStart, [
+    previousDurationMinutes,
     durationMinutes,
-    appointmentTime: formatArrivalWindow(scheduledStart, durationMinutes),
-    usedPreference: preferenceFromStart(scheduledStart),
-  };
+  ])[1];
+  if (!next) return null;
+  if (next.scheduledStart < bounds.hoursStart) return null;
+  if (next.scheduledStart + next.durationMinutes > bounds.hoursEnd) return null;
+  return next;
 }
 
 /** Back-to-back visits at one address, including a chain that runs past closing. */
@@ -372,7 +371,7 @@ export function chainSameAddressVisits(
   let previousDuration = 0;
   durations.forEach((durationMinutes, index) => {
     const scheduledStart =
-      index === 0 ? firstStart : snapUp(previousStart + previousDuration);
+      index === 0 ? firstStart : previousStart + previousDuration;
     visits.push({
       scheduledStart,
       durationMinutes,

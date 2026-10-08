@@ -67,6 +67,7 @@ export function buildPreviewCalendarMonth(month: string): {
     "2026-07-14": 3,
     "2026-07-17": 2,
     "2026-07-23": 4,
+    "2026-07-24": 3,
     "2026-08-22": 2,
     "2026-08-25": 4,
     "2026-08-28": 1,
@@ -285,6 +286,57 @@ export function buildPreviewCalendarAppointments(
         appointmentTime: "14:15",
         estimatedTotal: 165,
         ...completedVisit(date, `${date}T18:20:00.000Z`, `${date}T20:05:00.000Z`),
+      }),
+    ];
+  }
+
+  if (date === "2026-07-24") {
+    const visitId = "preview-visit-sarah";
+    return [
+      previewAppointment({
+        id: "preview-sarah-daisy",
+        visitId,
+        petName: "Daisy",
+        petBreed: "Goldendoodle",
+        customerName: "Sarah Chen",
+        customerFirstName: "Sarah",
+        customerEmail: "sarah@example.com",
+        serviceName: "Full Groom",
+        appointmentTime: "3:30 PM",
+        appointmentDate: date,
+        scheduledStart: 15 * 60 + 30,
+        estimatedDurationMinutes: 75,
+        estimatedTotal: 165,
+      }),
+      previewAppointment({
+        id: "preview-sarah-milo",
+        visitId,
+        petName: "Milo",
+        petBreed: "Cavapoo",
+        customerName: "Sarah Chen",
+        customerFirstName: "Sarah",
+        customerEmail: "sarah@example.com",
+        serviceName: "Full Groom",
+        appointmentTime: "3:30 PM",
+        appointmentDate: date,
+        scheduledStart: 16 * 60 + 45,
+        estimatedDurationMinutes: 100,
+        estimatedTotal: 180,
+      }),
+      previewAppointment({
+        id: "preview-sarah-coco",
+        visitId,
+        petName: "Coco",
+        petBreed: "Poodle",
+        customerName: "Sarah Chen",
+        customerFirstName: "Sarah",
+        customerEmail: "sarah@example.com",
+        serviceName: "Bath",
+        appointmentTime: "3:30 PM",
+        appointmentDate: date,
+        scheduledStart: 18 * 60 + 25,
+        estimatedDurationMinutes: 60,
+        estimatedTotal: 90,
       }),
     ];
   }

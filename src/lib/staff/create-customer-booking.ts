@@ -11,6 +11,11 @@ import {
   buildStaffOverrideCompanionInsertion,
 } from "@/lib/booking-schedule";
 import {
+  createStaffVisit,
+  type StaffVisitAppointmentInsert,
+} from "@/lib/visits/persist";
+import { snapshotServicePrice } from "@/lib/visits/visit";
+import {
   mapAppointmentRowToRecord,
 } from "@/lib/appointments/map";
 import type {
@@ -84,6 +89,9 @@ const APPOINTMENT_SELECT = `
   staff_created,
   customer_confirm_token_hash,
   customer_confirm_expires_at,
+  visit_id,
+  service_price,
+  estimated_duration_minutes,
   created_at,
   pets ( name, breed )
 `;
@@ -619,7 +627,7 @@ export async function createStaffCustomerBooking(
 
     const confirm = createCustomerConfirmToken();
     const confirmExpiresAt = customerConfirmExpiryIso();
-    const appointments: AppointmentRecord[] = [];
+    const pendingAppointments: StaffVisitAppointmentInsert[] = [];
     let previousStart = firstSchedule.scheduledStart;
     let previousDuration = firstDurationMinutes;
     let visitIndex = 0;
@@ -690,7 +698,7 @@ export async function createStaffCustomerBooking(
               };
 
         const optionName = pet.serviceOptionNames[visitServiceIndex] ?? null;
-        const serviceName =
+        const serviceNameForPet =
           (optionName
             ? parseStaffServiceSelection(`${petService.id}::${optionName}`)
                 ?.label
@@ -702,65 +710,89 @@ export async function createStaffCustomerBooking(
           pet.servicePrices[visitServiceIndex] ?? null,
         );
         const travelFee = visitIndex === 0 ? quote.fee : 0;
+        const servicePrice = snapshotServicePrice(price ?? 0);
         const estimatedTotal =
-          Math.round(((price ?? 0) + travelFee) * 100) / 100;
+          Math.round((servicePrice + travelFee) * 100) / 100;
 
-        const { data: appointmentRow, error: appointmentError } = await admin
-          .from("appointments")
-          .insert({
-            customer_id: userId,
-            pet_id: petRow.id,
-            service_id: petService.id,
-            service_name: serviceName,
-            add_on_ids: input.addOnIds,
-            add_on_options: optionName ? { [petService.id]: optionName } : {},
-            address_street: address.street,
-            address_city: address.city,
-            address_state: address.state,
-            address_zip: address.zip,
-            travel_distance_miles: quote.distanceMiles,
-            travel_fee: travelFee,
-            appointment_date: appointmentDate,
-            appointment_time: insertion.appointmentTime,
-            scheduled_start: insertion.scheduledStart,
-            time_preference: insertion.timePreference,
-            address_lat: destination.lat,
-            address_lon: destination.lon,
-            timezone: business.booking.timezone,
-            estimated_total: estimatedTotal,
-            new_client_deposit: 0,
-            payment_method_id: null,
-            vaccination_status_at_booking: "missing",
-            status: "pending_confirmation",
-            confirmed_at: null,
-            staff_created: true,
-            customer_confirm_token_hash: confirm.hash,
-            customer_confirm_expires_at: confirmExpiresAt,
-          })
-          .select(APPOINTMENT_SELECT)
-          .single();
-
-        if (appointmentError || !appointmentRow) {
-          console.error(
-            "createStaffCustomerBooking appointment insert failed:",
-            appointmentError?.code,
-            appointmentError?.message,
-          );
-          if (appointmentError?.code === "23505") {
-            return { error: "slot_unavailable" };
-          }
-          return { error: "server" };
-        }
-
-        const appointment = mapAppointmentRowToRecord(
-          appointmentRow as AppointmentRow,
-        );
-        appointments.push(appointment);
+        pendingAppointments.push({
+          customer_id: userId,
+          pet_id: petRow.id as string,
+          service_id: petService.id,
+          service_name: serviceNameForPet,
+          add_on_ids: input.addOnIds,
+          add_on_options: optionName ? { [petService.id]: optionName } : {},
+          address_street: address.street,
+          address_city: address.city,
+          address_state: address.state,
+          address_zip: address.zip,
+          travel_distance_miles: quote.distanceMiles,
+          travel_fee: travelFee,
+          service_price: servicePrice,
+          estimated_duration_minutes: durationMinutes,
+          visit_sequence: visitIndex + 1,
+          appointment_date: appointmentDate,
+          appointment_time: insertion.appointmentTime,
+          scheduled_start: insertion.scheduledStart,
+          time_preference: insertion.timePreference,
+          address_lat: destination.lat,
+          address_lon: destination.lon,
+          timezone: business.booking.timezone,
+          estimated_total: estimatedTotal,
+          new_client_deposit: 0,
+          payment_method_id: null,
+          vaccination_status_at_booking: "missing",
+          status: "pending_confirmation",
+          confirmed_at: null,
+          staff_created: true,
+          customer_confirm_token_hash: confirm.hash,
+          customer_confirm_expires_at: confirmExpiresAt,
+        });
         previousStart = insertion.scheduledStart;
         previousDuration = durationMinutes;
         visitIndex += 1;
       }
     }
+
+    if (pendingAppointments.length === 0) {
+      return { error: "conflict", message: "Choose a service for each dog." };
+    }
+
+    const created = await createStaffVisit({
+      visit: {
+        customer_id: userId,
+        service_date: appointmentDate,
+        scheduled_start: firstSchedule.scheduledStart,
+        time_preference: firstSchedule.timePreference,
+        timezone: business.booking.timezone,
+        status: "pending_confirmation",
+        address_street: address.street,
+        address_city: address.city,
+        address_state: address.state,
+        address_zip: address.zip,
+        address_lat: destination.lat,
+        address_lon: destination.lon,
+        travel_distance_miles: quote.distanceMiles,
+        travel_fee: quote.fee,
+      },
+      appointments: pendingAppointments,
+    });
+    if ("error" in created) return created;
+
+    const { data: appointmentRows, error: appointmentError } = await admin
+      .from("appointments")
+      .select(APPOINTMENT_SELECT)
+      .eq("visit_id", created.visitId)
+      .order("scheduled_start", { ascending: true });
+    if (appointmentError || !appointmentRows?.length) {
+      console.error(
+        "createStaffCustomerBooking reload failed:",
+        appointmentError?.message,
+      );
+      return { error: "server" };
+    }
+    const appointments = (appointmentRows as AppointmentRow[]).map((row) =>
+      mapAppointmentRowToRecord(row),
+    );
 
     const appointment = appointments[0]!;
     const confirmUrl = siteUrl(customerConfirmPath(confirm.token));

@@ -31,6 +31,11 @@ import {
 import { getCustomerPaymentMethod } from "@/lib/payments/service";
 import { estimateServiceDurationMinutes } from "@/lib/services";
 import {
+  servicePriceFromEstimatedTotal,
+  visitArrivalFields,
+} from "@/lib/visits/visit";
+import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
+import {
   assignArrivalWindow,
   claimDayPlan,
   getBaseGeoPoint,
@@ -53,6 +58,8 @@ const APPOINTMENT_SELECT = `
   appointment_date,
   appointment_time,
   scheduled_start,
+  visit_id,
+  estimated_duration_minutes,
   time_preference,
   address_lat,
   address_lon,
@@ -212,11 +219,44 @@ export async function createAppointment(
   }
 
   const status = "confirmed";
+  const servicePrice = servicePriceFromEstimatedTotal(
+    input.estimatedTotal,
+    input.travelFee,
+  );
+  const arrival = visitArrivalFields(schedule.scheduledStart);
+
+  const { data: visitRow, error: visitError } = await supabase
+    .from("visits")
+    .insert({
+      customer_id: user.id,
+      service_date: input.appointmentDate,
+      scheduled_start: arrival.scheduledStart,
+      appointment_time: arrival.appointmentTime,
+      time_preference: schedule.timePreference,
+      timezone: business.booking.timezone,
+      status,
+      address_street: input.address.street,
+      address_city: input.address.city,
+      address_state: input.address.state,
+      address_zip: input.address.zip,
+      address_lat: input.addressLat,
+      address_lon: input.addressLon,
+      travel_distance_miles: input.travelDistanceMiles,
+      travel_fee: input.travelFee,
+    })
+    .select("id")
+    .single();
+
+  if (visitError || !visitRow) {
+    console.error("createAppointment visit insert failed:", visitError?.message);
+    return { error: "server" };
+  }
 
   const { data, error } = await supabase
     .from("appointments")
     .insert({
       customer_id: user.id,
+      visit_id: visitRow.id,
       pet_id: input.petId,
       service_id: input.serviceId,
       service_name: input.serviceName,
@@ -228,6 +268,9 @@ export async function createAppointment(
       address_zip: input.address.zip,
       travel_distance_miles: input.travelDistanceMiles,
       travel_fee: input.travelFee,
+      service_price: servicePrice,
+      estimated_duration_minutes: durationMinutes,
+      visit_sequence: 1,
       appointment_date: input.appointmentDate,
       appointment_time: schedule.appointmentTime,
       scheduled_start: schedule.scheduledStart,
@@ -247,6 +290,20 @@ export async function createAppointment(
 
   if (error) {
     console.error("createAppointment insert failed:", error.code, error.message);
+    const { hasSupabaseAdminConfig } = await import("@/lib/supabase/env");
+    if (hasSupabaseAdminConfig()) {
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const { error: visitDeleteError } = await createAdminClient()
+        .from("visits")
+        .delete()
+        .eq("id", visitRow.id);
+      if (visitDeleteError) {
+        console.error(
+          "createAppointment orphan visit cleanup failed:",
+          visitDeleteError.message,
+        );
+      }
+    }
     if (error.code === "23505") return { error: "slot_unavailable" };
     return { error: "server" };
   }
@@ -345,6 +402,16 @@ export async function setAppointmentStatus(
   }
 
   if (!data) return { error: "not_found" };
+
+  if (status === "cancelled" && appointmentBeforeUpdate?.visitId) {
+    try {
+      await syncVisitTravelFeeMirror(appointmentBeforeUpdate.visitId);
+      const { compactVisitChildStarts } = await import("@/lib/visits/compact");
+      await compactVisitChildStarts(appointmentBeforeUpdate.visitId);
+    } catch (compactError) {
+      console.error("setAppointmentStatus compact failed:", compactError);
+    }
+  }
 
   if (appointmentBeforeUpdate) {
     const contact = contactFromAdminAppointment(appointmentBeforeUpdate);

@@ -33,6 +33,10 @@ import {
   listStaffOverrideHourStarts,
   retainConflicts,
 } from "@/lib/staff/schedule-conflict";
+import {
+  visitArrivalFits,
+  visitSpanFitsScheduleBounds,
+} from "@/lib/visits/visit";
 
 export type OccupiedAppointment = RouteStop & {
   zip: string | null;
@@ -207,6 +211,7 @@ type OccupiedRow = {
   service_id: string;
   add_on_ids: string[] | null;
   address_zip: string | null;
+  estimated_duration_minutes?: number | null;
   pets: { weight_lbs?: number } | { weight_lbs?: number }[] | null;
 };
 
@@ -220,18 +225,23 @@ function mapOccupiedRow(row: OccupiedRow): OccupiedAppointment | null {
   const scheduledStart =
     typeof row.scheduled_start === "number" ? row.scheduled_start : null;
   if (scheduledStart == null) return null;
+  const stored = row.estimated_duration_minutes;
+  const durationMinutes =
+    typeof stored === "number" && stored > 0
+      ? stored
+      : estimateServiceDurationMinutes(
+          String(row.service_id),
+          weightLbs,
+          Array.isArray(row.add_on_ids)
+            ? row.add_on_ids.filter((id): id is string => typeof id === "string")
+            : [],
+        );
   return {
     lat: typeof row.address_lat === "number" ? row.address_lat : null,
     lon: typeof row.address_lon === "number" ? row.address_lon : null,
     zip: typeof row.address_zip === "string" ? row.address_zip : null,
     scheduledStart,
-    durationMinutes: estimateServiceDurationMinutes(
-      String(row.service_id),
-      weightLbs,
-      Array.isArray(row.add_on_ids)
-        ? row.add_on_ids.filter((id): id is string => typeof id === "string")
-        : [],
-    ),
+    durationMinutes,
   };
 }
 
@@ -244,7 +254,7 @@ export async function loadOccupiedStopsByDate(
   if (!admin) return { byDate: new Map() };
 
   const select =
-    "id, appointment_date, address_lat, address_lon, scheduled_start, service_id, add_on_ids, address_zip";
+    "id, appointment_date, address_lat, address_lon, scheduled_start, service_id, add_on_ids, address_zip, estimated_duration_minutes";
   let data: OccupiedRow[] | null = null;
   const withPets = await admin
     .from("appointments")
@@ -571,6 +581,71 @@ export async function assignArrivalWindow(input: {
   }
 
   return { insertion };
+}
+
+/**
+ * Full visit fit using the same closure, block, hour, and occupied-stop
+ * rules as booking. An existing visit does not re-check the bookable-date
+ * window, zone, or daily cap. A newly chosen staff slot does.
+ */
+export async function assertVisitScheduleAllowed(input: {
+  date: string;
+  visitStartMinutes: number;
+  durations: number[];
+  excludeAppointmentIds?: string[];
+  enforceZoneAndCapacity?: boolean;
+  point?: GeoPoint;
+  zip?: string;
+}): Promise<{ ok: true } | ScheduleError | { error: "slot_unavailable" }> {
+  const [closuresResult, blocksResult, occupied] = await Promise.all([
+    loadDayClosures(input.date, input.date),
+    loadAvailabilityBlocks(input.date, input.date),
+    loadOccupiedStops(input.date, {
+      excludeAppointmentIds: input.excludeAppointmentIds,
+    }),
+  ]);
+  if ("error" in closuresResult) return closuresResult;
+  if ("error" in blocksResult) {
+    return {
+      error: blocksResult.error === "misconfigured" ? "misconfigured" : "server",
+    };
+  }
+  if ("error" in occupied) return occupied;
+
+  const bounds = visitSpanFitsScheduleBounds({
+    visitStartMinutes: input.visitStartMinutes,
+    durations: input.durations,
+    closure: closuresResult.closures.get(input.date) ?? null,
+    blocks: blocksResult.blocks,
+  });
+  if (!bounds.ok) return { error: "slot_unavailable" };
+  if (
+    !visitArrivalFits({
+      visitStartMinutes: input.visitStartMinutes,
+      durations: input.durations,
+      otherStops: occupied.stops,
+    })
+  ) {
+    return { error: "slot_unavailable" };
+  }
+
+  if (input.enforceZoneAndCapacity) {
+    if (!input.point || !input.zip) return { error: "slot_unavailable" };
+    const plansResult = await loadDayPlans(input.date, input.date);
+    if ("error" in plansResult) return plansResult;
+    const plan = resolveEffectivePlan(
+      input.date,
+      plansResult.plans.get(input.date) ?? null,
+    );
+    if (!addressAllowedForPlan(plan, input.zip, input.point)) {
+      return { error: "slot_unavailable" };
+    }
+    if (occupied.bookedCount >= getRoutingConfig().maxAppointmentsPerDay) {
+      return { error: "slot_unavailable" };
+    }
+  }
+
+  return { ok: true };
 }
 
 export type AdminScheduleDay = {

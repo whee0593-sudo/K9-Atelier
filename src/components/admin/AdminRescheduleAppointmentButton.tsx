@@ -2,6 +2,7 @@
 
 import React, { useEffect, useId, useMemo, useState } from "react";
 import { formatMinutesLabel } from "@/lib/appointments/closures";
+import { formatEstimatedDuration } from "@/lib/staff/schedule-conflict";
 import { canStaffRescheduleAppointment } from "@/lib/appointments/staff-actions";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import { listHourlyStartMinutes } from "@/lib/booking-schedule";
@@ -14,6 +15,16 @@ type AvailabilityDay = {
   slots: number[];
 };
 
+type VisitRescheduleSummary = {
+  dogCount: number;
+  estimatedDurationMinutes: number;
+  dogs: Array<{
+    petName: string;
+    serviceName: string;
+    durationMinutes: number;
+  }>;
+};
+
 function formatConfirmDate(iso: string): string {
   const date = new Date(iso.includes("T") ? iso : `${iso}T12:00:00`);
   if (Number.isNaN(date.getTime())) return iso;
@@ -23,6 +34,24 @@ function formatConfirmDate(iso: string): string {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function summaryFromAppointments(
+  rows: AdminAppointmentRecord[] | undefined,
+): VisitRescheduleSummary | null {
+  if (!rows || rows.length === 0) return null;
+  return {
+    dogCount: rows.length,
+    estimatedDurationMinutes: rows.reduce(
+      (sum, row) => sum + (row.estimatedDurationMinutes ?? 0),
+      0,
+    ),
+    dogs: rows.map((row) => ({
+      petName: row.petName,
+      serviceName: row.serviceName,
+      durationMinutes: row.estimatedDurationMinutes ?? 0,
+    })),
+  };
 }
 
 function previewDays(unavailableDates?: readonly string[]): AvailabilityDay[] {
@@ -58,6 +87,7 @@ export function AdminRescheduleAppointmentButton({
   triggerClassName = "rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text transition hover:border-gold/40",
   limitToOpenSlots = false,
   unavailableDates,
+  visitAppointments,
 }: {
   appointment: AdminAppointmentRecord;
   preview?: boolean;
@@ -69,6 +99,7 @@ export function AdminRescheduleAppointmentButton({
   limitToOpenSlots?: boolean;
   /** Preview-only dates that already have an all-day block. Live saves recheck on the server. */
   unavailableDates?: string[];
+  visitAppointments?: AdminAppointmentRecord[];
 }) {
   const titleId = useId();
   const [open, setOpen] = useState(false);
@@ -76,6 +107,9 @@ export function AdminRescheduleAppointmentButton({
   const [loadingDays, setLoadingDays] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState<AvailabilityDay[]>([]);
+  const [visit, setVisit] = useState<VisitRescheduleSummary | null>(() =>
+    summaryFromAppointments(visitAppointments),
+  );
   const [nextDate, setNextDate] = useState(appointment.appointmentDate);
   const [nextSlot, setNextSlot] = useState(
     appointment.scheduledStart != null ? String(appointment.scheduledStart) : "",
@@ -110,7 +144,26 @@ export function AdminRescheduleAppointmentButton({
   useEffect(() => {
     if (!open) return;
     if (preview) {
-      setDays(previewDays(unavailableDates));
+      const listed = previewDays(unavailableDates);
+      if (
+        appointment.appointmentDate &&
+        !listed.some((day) => day.date === appointment.appointmentDate)
+      ) {
+        const slots = listHourlyStartMinutes();
+        if (
+          appointment.scheduledStart != null &&
+          !slots.includes(appointment.scheduledStart)
+        ) {
+          slots.push(appointment.scheduledStart);
+          slots.sort((left, right) => left - right);
+        }
+        listed.unshift({
+          date: appointment.appointmentDate,
+          available: true,
+          slots,
+        });
+      }
+      setDays(listed);
       setLoadingDays(false);
       return;
     }
@@ -126,14 +179,17 @@ export function AdminRescheduleAppointmentButton({
         const body = (await response.json()) as {
           error?: string;
           days?: AvailabilityDay[];
+          visit?: VisitRescheduleSummary;
         };
         if (cancelled) return;
         if (!response.ok) {
           setError(body.error ?? "Could not load available times.");
           setDays([]);
+          setVisit(null);
           return;
         }
         setDays(body.days ?? []);
+        setVisit(body.visit ?? null);
       })
       .catch(() => {
         if (!cancelled) {
@@ -148,7 +204,14 @@ export function AdminRescheduleAppointmentButton({
     return () => {
       cancelled = true;
     };
-  }, [appointment.id, open, preview, unavailableDates]);
+  }, [
+    appointment.appointmentDate,
+    appointment.id,
+    appointment.scheduledStart,
+    open,
+    preview,
+    unavailableDates,
+  ]);
 
   if (!canStaffRescheduleAppointment(appointment)) return null;
 
@@ -255,9 +318,29 @@ export function AdminRescheduleAppointmentButton({
                 <dd>{customerLabel}</dd>
               </div>
               <div>
-                <dt className="text-text-muted">Pet</dt>
-                <dd>{appointment.petName}</dd>
+                <dt className="text-text-muted">
+                  {visit && visit.dogCount > 1 ? "Dogs included" : "Pet"}
+                </dt>
+                <dd>
+                  {visit && visit.dogs.length > 0 ? (
+                    <ul className="mt-1 space-y-1">
+                      {visit.dogs.map((dog) => (
+                        <li key={`${dog.petName}-${dog.serviceName}`}>
+                          {dog.petName} — {dog.serviceName}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    appointment.petName
+                  )}
+                </dd>
               </div>
+              {visit && visit.estimatedDurationMinutes > 0 ? (
+                <div>
+                  <dt className="text-text-muted">Estimated duration</dt>
+                  <dd>{formatEstimatedDuration(visit.estimatedDurationMinutes)}</dd>
+                </div>
+              ) : null}
               <div>
                 <dt className="text-text-muted">Current</dt>
                 <dd>
@@ -293,7 +376,7 @@ export function AdminRescheduleAppointmentButton({
                   className="block text-sm font-medium text-text"
                   htmlFor={`reschedule-slot-${appointment.id}`}
                 >
-                  {limitToOpenSlots ? "Arrival window" : "New start time"}
+                  Arrival
                 </label>
                 <select
                   id={`reschedule-slot-${appointment.id}`}
@@ -321,8 +404,10 @@ export function AdminRescheduleAppointmentButton({
 
             <p className="mt-4 text-sm leading-relaxed text-text-muted">
               {appointment.serviceStartedAt || appointment.serviceEndedAt
-                ? "This only corrects the calendar date and time. Check-in, check-out, and payment stay on the record. The customer will not be emailed."
-                : "The customer will receive an email with the new date and time. No policy fee is charged for a staff change."}
+                ? "This only corrects the calendar date and arrival. Check-in, check-out, and payment stay on the record. The customer will not be emailed."
+                : visit && visit.dogCount > 1
+                  ? "One arrival moves every dog on this visit. Each dog is scheduled back-to-back from that time. The customer receives one email with the new arrival."
+                  : "The customer will receive an email with the new date and time. No policy fee is charged for a staff change."}
             </p>
             {error ? (
               <p className="mt-3 text-sm text-red-700" role="alert">
