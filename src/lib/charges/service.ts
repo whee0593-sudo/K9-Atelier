@@ -35,6 +35,8 @@ import {
   buildVisitBill,
   chargedVisitSnapshot,
   decideVisitServiceCharge,
+  isFullyRefundedPayment,
+  serviceChargeHasVisitBill,
   visitPaymentStatus,
   type VisitBillSnapshot,
   type VisitCheckoutPet,
@@ -182,13 +184,21 @@ export async function getCollectContext(
   };
   const catalog = catalogChargeItems(weightLbs);
   const chargeRows = (charges ?? []) as ChargeRow[];
-  const paidRows = chargeRows.filter((row) => row.status === "paid");
+  const paidRows = chargeRows.filter(
+    (row) =>
+      row.status === "paid" &&
+      !isFullyRefundedPayment(Number(row.total), Number(row.refunded_amount ?? 0)),
+  );
   const visitCharges = chargeRows
     .filter((row) => row.kind === "service")
     .map((row) => ({
       status: row.status,
       hasSnapshot: row.bill_snapshot != null,
       appointmentId: row.appointment_id,
+      fullyRefunded: isFullyRefundedPayment(
+        Number(row.total),
+        Number(row.refunded_amount ?? 0),
+      ),
     }));
   const visitDecision = decideVisitServiceCharge(visitCharges);
   const defaultItems = visitCollect
@@ -345,7 +355,7 @@ export async function listPaidKindsByAppointment(
     await Promise.all([
       admin
         .from("appointment_charges")
-        .select("appointment_id, kind")
+        .select("appointment_id, kind, total, refunded_amount")
         .in("appointment_id", appointmentIds)
         .eq("status", "paid"),
       admin.from("appointments").select("id, visit_id").in("id", appointmentIds),
@@ -364,6 +374,11 @@ export async function listPaidKindsByAppointment(
 
   const map: Record<string, ChargeKind[]> = {};
   for (const row of data ?? []) {
+    if (
+      isFullyRefundedPayment(Number(row.total), Number(row.refunded_amount ?? 0))
+    ) {
+      continue;
+    }
     const id = row.appointment_id as string;
     const kind = row.kind as ChargeKind;
     if (!map[id]?.includes(kind)) map[id] = [...(map[id] ?? []), kind];
@@ -378,8 +393,9 @@ export async function listPaidKindsByAppointment(
 
   const { data: visitCharges, error: visitError } = await admin
     .from("appointment_charges")
-    .select("visit_id, kind")
+    .select("visit_id, kind, total, refunded_amount")
     .in("visit_id", visitIds)
+    .eq("kind", "service")
     .eq("status", "paid")
     .not("bill_snapshot", "is", null);
   if (visitError) {
@@ -389,6 +405,11 @@ export async function listPaidKindsByAppointment(
 
   const kindsByVisit = new Map<string, ChargeKind[]>();
   for (const row of visitCharges ?? []) {
+    if (
+      isFullyRefundedPayment(Number(row.total), Number(row.refunded_amount ?? 0))
+    ) {
+      continue;
+    }
     const visitId = row.visit_id as string;
     const kind = row.kind as ChargeKind;
     const current = kindsByVisit.get(visitId) ?? [];
@@ -496,22 +517,26 @@ export async function createAppointmentCharge(
   const { data: existingCharges } = visitId
     ? await admin
         .from("appointment_charges")
-        .select("id, appointment_id, status, kind, bill_snapshot")
+        .select("id, appointment_id, status, kind, bill_snapshot, total, refunded_amount")
         .eq("visit_id", visitId)
-        .eq("kind", input.kind)
+        .eq("kind", "service")
     : await admin
         .from("appointment_charges")
-        .select("id, appointment_id, status, kind, bill_snapshot")
+        .select("id, appointment_id, status, kind, bill_snapshot, total, refunded_amount")
         .eq("appointment_id", input.appointmentId)
         .eq("kind", input.kind)
         .eq("status", "paid");
 
-  if (visitId) {
+  if (visitId && input.kind === "service") {
     const decision = decideVisitServiceCharge(
       (existingCharges ?? []).map((row) => ({
         status: row.status as "pending" | "paid" | "failed",
         hasSnapshot: row.bill_snapshot != null,
         appointmentId: row.appointment_id as string,
+        fullyRefunded: isFullyRefundedPayment(
+          Number(row.total),
+          Number(row.refunded_amount ?? 0),
+        ),
       })),
     );
     if (decision === "already_paid" || decision === "legacy_paid") {
@@ -523,7 +548,13 @@ export async function createAppointmentCharge(
         message: "A payment is already in progress. Please wait a moment and try again.",
       };
     }
-  } else if ((existingCharges ?? []).some((row) => row.status === "paid")) {
+  } else if (
+    (existingCharges ?? []).some(
+      (row) =>
+        row.status === "paid" &&
+        !isFullyRefundedPayment(Number(row.total), Number(row.refunded_amount ?? 0)),
+    )
+  ) {
     return { error: "conflict", message: "This appointment is already paid." };
   }
 
@@ -577,6 +608,19 @@ export async function createAppointmentCharge(
             tender === "cash" ? "Cash" : tender === "zelle" ? "Zelle" : null,
         })
       : null;
+
+  if (
+    !serviceChargeHasVisitBill({
+      kind: input.kind,
+      visitId,
+      hasSnapshot: billSnapshot != null,
+    })
+  ) {
+    return {
+      error: "conflict",
+      message: "This service payment must belong to the visit bill.",
+    };
+  }
 
   if (cents > 0 && !manualTender && !useNewCard) {
     if (!stripe || !stripeCustomerId || !stripePaymentMethodId || !input.paymentMethodId) {
@@ -870,7 +914,11 @@ async function chargeSavedPaymentMethod(input: {
             throw error;
           }
           const rows = (data ?? []) as Array<ChargeRow & { created_at?: string }>;
-          const row = rows.find((item) => item.bill_snapshot != null) ?? rows[0];
+          const active = rows.filter(
+            (item) =>
+              !isFullyRefundedPayment(Number(item.total), Number(item.refunded_amount ?? 0)),
+          );
+          const row = active.find((item) => item.bill_snapshot != null) ?? active[0];
           return row ? chargeRowToAttempt(row) : null;
         }
         const { data, error } = await query

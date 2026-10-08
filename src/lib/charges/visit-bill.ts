@@ -49,6 +49,8 @@ export type ExistingVisitCharge = {
   status: "pending" | "paid" | "failed";
   hasSnapshot: boolean;
   appointmentId: string;
+  /** A full refund is no longer an active grooming payment. */
+  fullyRefunded?: boolean;
 };
 
 export type VisitChargeDecision = "create" | "already_paid" | "in_progress" | "legacy_paid";
@@ -229,16 +231,37 @@ export function buildVisitBillSnapshot(input: {
   };
 }
 
+/** Money still collected. A full refund leaves the row paid, but it is not an active bill. */
+export function isFullyRefundedPayment(total: number, refundedAmount: number) {
+  const totalCents = Math.round(total * 100);
+  const refundedCents = Math.round(refundedAmount * 100);
+  return totalCents > 0 && refundedCents >= totalCents;
+}
+
+/**
+ * A new normal grooming payment has to name the visit and freeze the bill.
+ * No-show and cancellation charges stay on the appointment alone.
+ */
+export function serviceChargeHasVisitBill(input: {
+  kind: string;
+  visitId: string | null;
+  hasSnapshot: boolean;
+}) {
+  if (input.kind !== "service") return true;
+  return Boolean(input.visitId) && input.hasSnapshot;
+}
+
 export function decideVisitServiceCharge(
   existing: ExistingVisitCharge[],
 ): VisitChargeDecision {
-  if (existing.some((charge) => charge.status === "pending" && charge.hasSnapshot)) {
+  const active = existing.filter((charge) => !charge.fullyRefunded);
+  if (active.some((charge) => charge.status === "pending" && charge.hasSnapshot)) {
     return "in_progress";
   }
-  if (existing.some((charge) => charge.status === "paid" && charge.hasSnapshot)) {
+  if (active.some((charge) => charge.status === "paid" && charge.hasSnapshot)) {
     return "already_paid";
   }
-  if (existing.some((charge) => charge.status === "paid" && !charge.hasSnapshot)) {
+  if (active.some((charge) => charge.status === "paid" && !charge.hasSnapshot)) {
     return "legacy_paid";
   }
   return "create";

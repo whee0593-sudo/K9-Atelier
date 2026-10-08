@@ -25,7 +25,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS appointment_charges_one_visit_service_uidx
   ON public.appointment_charges (visit_id)
   WHERE kind = 'service'
     AND status IN ('pending', 'paid')
-    AND bill_snapshot IS NOT NULL;
+    AND bill_snapshot IS NOT NULL
+    AND NOT (
+      status = 'paid'
+      AND total > 0
+      AND refunded_amount >= total
+    );
 
 ALTER TABLE public.appointment_charges
   DROP CONSTRAINT IF EXISTS appointment_charges_tender_check;

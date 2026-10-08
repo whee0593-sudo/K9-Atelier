@@ -11,6 +11,8 @@ import {
   buildVisitBill,
   chargedVisitSnapshot,
   decideVisitServiceCharge,
+  isFullyRefundedPayment,
+  serviceChargeHasVisitBill,
   visitBillTotal,
   visitPaymentStatus,
   type VisitCheckoutPet,
@@ -227,6 +229,71 @@ describe("visit checkout bill", () => {
         { status: "failed", hasSnapshot: true, appointmentId: "daisy" },
       ]),
       "create",
+    );
+    assert.equal(
+      decideVisitServiceCharge([
+        {
+          status: "paid",
+          hasSnapshot: false,
+          appointmentId: "daisy",
+          fullyRefunded: true,
+        },
+      ]),
+      "create",
+    );
+    assert.equal(
+      decideVisitServiceCharge([
+        {
+          status: "paid",
+          hasSnapshot: true,
+          appointmentId: "daisy",
+          fullyRefunded: true,
+        },
+      ]),
+      "create",
+    );
+    assert.equal(isFullyRefundedPayment(150, 150), true);
+    assert.equal(isFullyRefundedPayment(150, 20), false);
+    assert.equal(isFullyRefundedPayment(0, 0), false);
+    assert.equal(
+      serviceChargeHasVisitBill({
+        kind: "service",
+        visitId: "visit-sarah",
+        hasSnapshot: true,
+      }),
+      true,
+    );
+    assert.equal(
+      serviceChargeHasVisitBill({
+        kind: "service",
+        visitId: null,
+        hasSnapshot: false,
+      }),
+      false,
+    );
+    assert.equal(
+      serviceChargeHasVisitBill({
+        kind: "service",
+        visitId: "visit-sarah",
+        hasSnapshot: false,
+      }),
+      false,
+    );
+    assert.equal(
+      serviceChargeHasVisitBill({
+        kind: "cancellation",
+        visitId: null,
+        hasSnapshot: false,
+      }),
+      true,
+    );
+    assert.equal(
+      serviceChargeHasVisitBill({
+        kind: "no_show",
+        visitId: null,
+        hasSnapshot: false,
+      }),
+      true,
     );
     assert.equal(
       visitPaymentStatus([
