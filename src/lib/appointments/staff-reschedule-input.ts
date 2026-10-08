@@ -1,9 +1,5 @@
-import { isWithinServiceDay } from "@/lib/booking-schedule";
-import {
-  isBookableWeekday,
-  isDateBookable,
-  parseDateValue,
-} from "@/lib/booking-slots";
+import { isStaffClockMinute } from "@/lib/appointments/staff-clock-window";
+import { parseDateValue } from "@/lib/booking-slots";
 import {
   addDaysToIsoDate,
   todayInBusinessTimezone,
@@ -12,13 +8,13 @@ import {
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const PAST_CORRECTION_DAYS = 60;
 
+/** Any civil day from the recent past through the future, including weekends. */
 export function isStaffAssignableDate(date: string): boolean {
   if (!DATE_PATTERN.test(date)) return false;
   const parsed = parseDateValue(date);
-  if (!isBookableWeekday(parsed)) return false;
-  if (isDateBookable(parsed)) return true;
+  if (Number.isNaN(parsed.getTime())) return false;
   const today = todayInBusinessTimezone();
-  if (date > today) return false;
+  if (date >= today) return true;
   return date >= addDaysToIsoDate(today, -PAST_CORRECTION_DAYS);
 }
 
@@ -36,8 +32,7 @@ export function parseStaffRescheduleInput(
   }
   if (
     typeof slotStartMinutes !== "number" ||
-    !Number.isInteger(slotStartMinutes) ||
-    !isWithinServiceDay(slotStartMinutes)
+    !isStaffClockMinute(slotStartMinutes)
   ) {
     return { error: "Choose a valid start time." };
   }

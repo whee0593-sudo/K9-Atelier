@@ -3,10 +3,9 @@
 import React, { useEffect, useId, useMemo, useState } from "react";
 import { formatMinutesLabel } from "@/lib/appointments/closures";
 import { canStaffRescheduleAppointment } from "@/lib/appointments/staff-actions";
+import { listStaffClockHourStarts } from "@/lib/appointments/staff-clock-window";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
-import { listHourlyStartMinutes } from "@/lib/booking-schedule";
-import { getUpcomingBookableDates } from "@/lib/booking-slots";
-import { todayInBusinessTimezone } from "@/lib/sms/schedule";
+import { addDaysToIsoDate, todayInBusinessTimezone } from "@/lib/sms/schedule";
 
 type AvailabilityDay = {
   date: string;
@@ -27,26 +26,32 @@ function formatConfirmDate(iso: string): string {
 
 function previewDays(unavailableDates?: readonly string[]): AvailabilityDay[] {
   const closed = new Set(unavailableDates ?? []);
-  return getUpcomingBookableDates(8).map((day) => {
-    const unavailable = closed.has(day.value);
+  const today = todayInBusinessTimezone();
+  const hours = listStaffClockHourStarts();
+  return Array.from({ length: 21 }, (_, index) => {
+    const date = addDaysToIsoDate(today, index);
+    const unavailable = closed.has(date);
     return {
-      date: day.value,
+      date,
       available: !unavailable,
-      slots: unavailable ? [] : listHourlyStartMinutes(),
+      slots: unavailable ? [] : [...hours],
     };
   });
 }
 
-/** Open windows returned by the staff availability API. Calendar reschedule does not invent extra hours. */
+/**
+ * Hours for the arrival list. An explicit array is the server answer, including
+ * an empty day that is closed or blocked. A date the calendar did not load
+ * still offers every clock hour; saving rechecks blocks.
+ */
 export function staffRescheduleSlotChoices(
   daySlots: number[] | undefined,
   hasDate: boolean,
-  limitToOpenSlots: boolean,
+  _limitToOpenSlots: boolean,
 ) {
-  if (limitToOpenSlots) return daySlots ?? [];
-  if (daySlots && daySlots.length > 0) return daySlots;
-  if (hasDate) return listHourlyStartMinutes();
-  return [];
+  if (!hasDate) return [];
+  if (daySlots) return daySlots;
+  return listStaffClockHourStarts();
 }
 
 export function AdminRescheduleAppointmentButton({
@@ -58,6 +63,7 @@ export function AdminRescheduleAppointmentButton({
   triggerClassName = "rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text transition hover:border-gold/40",
   limitToOpenSlots = false,
   unavailableDates,
+  defaultOpen = false,
 }: {
   appointment: AdminAppointmentRecord;
   preview?: boolean;
@@ -69,9 +75,11 @@ export function AdminRescheduleAppointmentButton({
   limitToOpenSlots?: boolean;
   /** Preview-only dates that already have an all-day block. Live saves recheck on the server. */
   unavailableDates?: string[];
+  /** Test hook so the dialog markup can be rendered without a click. */
+  defaultOpen?: boolean;
 }) {
   const titleId = useId();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [busy, setBusy] = useState(false);
   const [loadingDays, setLoadingDays] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,19 +89,27 @@ export function AdminRescheduleAppointmentButton({
     appointment.scheduledStart != null ? String(appointment.scheduledStart) : "",
   );
 
+  const calendarDays = preview ? previewDays(unavailableDates) : days;
   const selectedDay = useMemo(
-    () => days.find((day) => day.date === nextDate),
-    [days, nextDate],
+    () => calendarDays.find((day) => day.date === nextDate),
+    [calendarDays, nextDate],
   );
-  const slotChoices = useMemo(
-    () =>
-      staffRescheduleSlotChoices(
-        selectedDay?.slots,
-        Boolean(nextDate),
-        limitToOpenSlots,
-      ),
-    [limitToOpenSlots, nextDate, selectedDay],
-  );
+  const dateBlocked = Boolean(nextDate && unavailableDates?.includes(nextDate));
+  const slotChoices = useMemo(() => {
+    if (dateBlocked) return [];
+    return staffRescheduleSlotChoices(
+      selectedDay?.slots,
+      Boolean(nextDate) && !loadingDays && !error,
+      limitToOpenSlots,
+    );
+  }, [
+    dateBlocked,
+    error,
+    limitToOpenSlots,
+    loadingDays,
+    nextDate,
+    selectedDay,
+  ]);
   const minDate = todayInBusinessTimezone();
 
   useEffect(() => {
@@ -215,6 +231,12 @@ export function AdminRescheduleAppointmentButton({
               ? String(appointment.scheduledStart)
               : "",
           );
+          if (preview) {
+            setDays(previewDays(unavailableDates));
+            setLoadingDays(false);
+          } else {
+            setLoadingDays(true);
+          }
           setOpen(true);
         }}
         data-appointment-action="reschedule"

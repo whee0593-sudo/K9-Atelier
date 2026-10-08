@@ -112,6 +112,7 @@ describe("booking schedule", () => {
 
   it("formats mixed AM/PM windows", () => {
     assert.equal(formatArrivalWindow(11 * 60 + 30, 90), "11:30 AM – 1:00 PM");
+    assert.equal(formatArrivalWindow(23 * 60, 120), "11:00 PM – 1:00 AM");
   });
 
   it("keeps afternoon starts after a morning route that ends at 1:23", () => {

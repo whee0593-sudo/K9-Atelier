@@ -34,7 +34,7 @@ export async function POST(request: Request, context: RouteContext) {
     if ("error" in result) {
       if (result.error === "slot_unavailable") {
         return staffJsonError(
-          "That start time is fully booked or no longer available for this address. Please choose another time.",
+          "That date or time is blocked, or another visit already starts at that minute.",
           409,
         );
       }

@@ -1,10 +1,12 @@
 import { estimateServiceDurationMinutes } from "@/lib/services";
-import { resolveArrivalForBooking } from "@/lib/appointments/arrival-window";
+import { groupBlocksByDate } from "@/lib/appointments/availability-blocks";
+import { loadAvailabilityBlocks } from "@/lib/appointments/availability-block-store";
 import {
-  assignArrivalWindow,
-  getAvailabilityForAddress,
-  getBaseGeoPoint,
-} from "@/lib/appointments/schedule";
+  listStaffRescheduleDates,
+  staffClockStartBlocked,
+  staffOpenClockStarts,
+} from "@/lib/appointments/staff-clock-window";
+import { loadDayClosures } from "@/lib/appointments/schedule";
 import { mapAppointmentRowToAdminRecord } from "@/lib/appointments/map";
 import type {
   AdminAppointmentRecord,
@@ -14,10 +16,6 @@ import {
   formatArrivalWindow,
   preferenceFromStart,
 } from "@/lib/booking-schedule";
-import {
-  isBookableWeekday,
-  parseDateValue,
-} from "@/lib/booking-slots";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
 import { parseStaffRescheduleInput } from "@/lib/appointments/staff-reschedule-input";
 import {
@@ -123,16 +121,6 @@ async function loadAppointmentRow(
   return { row: data as unknown as LoadedAppointment };
 }
 
-function visitPoint(row: LoadedAppointment): { lat: number; lon: number } | null {
-  if (
-    typeof row.address_lat !== "number" ||
-    typeof row.address_lon !== "number"
-  ) {
-    return null;
-  }
-  return { lat: row.address_lat, lon: row.address_lon };
-}
-
 function visitDurationMinutes(row: LoadedAppointment): number {
   const pet = firstRelation(row.pets);
   return estimateServiceDurationMinutes(
@@ -184,29 +172,63 @@ export async function listStaffAppointmentAvailability(
   const blocked = assertOpenForReschedule(loaded.row);
   if (blocked) return blocked;
 
-  const point = visitPoint(loaded.row);
-  if (!point) return { error: "conflict" };
-
-  const base = await getBaseGeoPoint();
-  if (!base) return { error: "misconfigured" };
-
   const today = todayInBusinessTimezone();
-  const extraDates = [today, loaded.row.appointment_date].filter(
-    (date, index, all) =>
-      Boolean(date) &&
-      isBookableWeekday(parseDateValue(date)) &&
-      all.indexOf(date) === index,
-  );
-  const result = await getAvailabilityForAddress({
-    point,
-    zip: loaded.row.address_zip,
-    durationMinutes: visitDurationMinutes(loaded.row),
-    base,
-    excludeAppointmentIds: [appointmentId],
-    extraDates,
+  const dates = listStaffRescheduleDates(today, [loaded.row.appointment_date]);
+  if (dates.length === 0) return { days: [] };
+
+  const fromDate = dates[0]!;
+  const toDate = dates[dates.length - 1]!;
+  const [closuresResult, blocksResult] = await Promise.all([
+    loadDayClosures(fromDate, toDate),
+    loadAvailabilityBlocks(fromDate, toDate),
+  ]);
+  if ("error" in closuresResult) return { error: "server" };
+  if ("error" in blocksResult) {
+    return {
+      error: blocksResult.error === "misconfigured" ? "misconfigured" : "server",
+    };
+  }
+
+  const blocksByDate = groupBlocksByDate(blocksResult.blocks);
+  const durationMinutes = visitDurationMinutes(loaded.row);
+  const days = dates.map((date) => {
+    const open = staffOpenClockStarts(
+      closuresResult.closures.get(date) ?? null,
+      blocksByDate.get(date) ?? [],
+      durationMinutes,
+    );
+    return { date, available: open.available, slots: open.slots };
   });
-  if ("error" in result) return result;
-  return { days: result.days };
+  return { days };
+}
+
+/** Closures and availability blocks still reject a start. Route fit does not. */
+async function rejectBlockedClockWindow(
+  date: string,
+  slotStartMinutes: number,
+  durationMinutes: number,
+): Promise<{ error: StaffRescheduleError } | null> {
+  const [closuresResult, blocksResult] = await Promise.all([
+    loadDayClosures(date, date),
+    loadAvailabilityBlocks(date, date),
+  ]);
+  if ("error" in closuresResult) return { error: "server" };
+  if ("error" in blocksResult) {
+    return {
+      error: blocksResult.error === "misconfigured" ? "misconfigured" : "server",
+    };
+  }
+  if (
+    staffClockStartBlocked(
+      closuresResult.closures.get(date) ?? null,
+      blocksResult.blocks,
+      slotStartMinutes,
+      durationMinutes,
+    )
+  ) {
+    return { error: "slot_unavailable" };
+  }
+  return null;
 }
 
 export async function rescheduleStaffAppointment(
@@ -231,35 +253,16 @@ export async function rescheduleStaffAppointment(
 
   const durationMinutes = visitDurationMinutes(loaded.row);
   const completed = isCompletedVisit(loaded.row);
-  let nextSchedule: {
-    appointmentTime: string | null;
-    scheduledStart: number;
-    timePreference: "morning" | "afternoon";
-  } = scheduleFromSlot(parsed.slotStartMinutes, durationMinutes);
-
-  if (!completed) {
-    const point = visitPoint(loaded.row);
-    if (!point) return { error: "conflict" };
-    const base = await getBaseGeoPoint();
-    const assignment = base
-      ? await assignArrivalWindow({
-          date: parsed.date,
-          point,
-          zip: loaded.row.address_zip,
-          durationMinutes,
-          slotStartMinutes: parsed.slotStartMinutes,
-          base,
-          excludeAppointmentIds: [appointmentId],
-          allowUnbookableDate: true,
-        })
-      : { error: "misconfigured" as const };
-    const schedule = resolveArrivalForBooking(
-      assignment,
-      parsed.slotStartMinutes,
-    );
-    if ("error" in schedule) return { error: "slot_unavailable" };
-    nextSchedule = schedule;
-  }
+  const windowBlock = await rejectBlockedClockWindow(
+    parsed.date,
+    parsed.slotStartMinutes,
+    durationMinutes,
+  );
+  if (windowBlock) return windowBlock;
+  const nextSchedule = scheduleFromSlot(
+    parsed.slotStartMinutes,
+    durationMinutes,
+  );
 
   const admin = createAdminClient();
   const { data, error } = await admin

@@ -108,8 +108,10 @@ function snapUp(minutes: number, step = 15) {
 }
 
 function formatClockLabel(totalMinutes: number) {
-  const hour24 = Math.floor(totalMinutes / 60);
-  const minute = totalMinutes % 60;
+  const day = 24 * 60;
+  const wrapped = ((totalMinutes % day) + day) % day;
+  const hour24 = Math.floor(wrapped / 60);
+  const minute = wrapped % 60;
   const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
   const ampm = hour24 < 12 ? "AM" : "PM";
   return {
