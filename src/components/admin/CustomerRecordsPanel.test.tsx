@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, it } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { CreateCustomerProfileForm } from "@/components/admin/CreateCustomerProfileForm";
 import { CustomerAdminNotesEditor } from "@/components/admin/CustomerAdminNotesEditor";
 import {
   CustomerRecordCard,
@@ -597,5 +598,26 @@ describe("Create customer profile section", () => {
     assert.match(route, /export async function POST/);
     assert.match(route, /createStaffCustomer/);
     assert.match(service, /export async function createStaffCustomer/);
+  });
+
+  it("includes an address on the owner profile form", () => {
+    const html = renderToStaticMarkup(
+      <CreateCustomerProfileForm preview onSaved={() => undefined} />,
+    );
+    const owner = html.indexOf("Owner Profile");
+    const street = html.indexOf("Street Address");
+    const emergency = html.indexOf("Emergency Contact");
+    assert.ok(owner >= 0);
+    assert.ok(street > owner);
+    assert.ok(emergency > street);
+    assert.match(html, />Address</);
+    assert.match(html, />City</);
+    assert.match(html, />State</);
+    assert.match(html, />ZIP</);
+    const source = readFileSync(
+      path.join(process.cwd(), "src/components/admin/CreateCustomerProfileForm.tsx"),
+      "utf8",
+    );
+    assert.match(source, /address:/);
   });
 });

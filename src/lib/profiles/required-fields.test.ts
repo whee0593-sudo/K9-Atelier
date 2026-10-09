@@ -196,7 +196,44 @@ describe("required customer profile fields", () => {
     assert.equal(input.lastName, null);
     assert.equal(input.phone, null);
     assert.equal(input.password, null);
+    assert.equal(input.address, null);
     assert.equal(input.pet, null);
+  });
+
+  it("keeps a blank address off the customer file", () => {
+    const input = validateStaffCustomerCreateInput({
+      address: { street: "  ", city: "", state: "", zip: "" },
+    });
+    assert.equal(input.address, null);
+  });
+
+  it("accepts a complete address when staff create a customer file", () => {
+    const input = validateStaffCustomerCreateInput({
+      address: {
+        street: " 100 Olive Ave ",
+        city: "West Palm Beach",
+        state: "FL",
+        zip: "33401",
+      },
+    });
+    assert.deepEqual(input.address, {
+      street: "100 Olive Ave",
+      city: "West Palm Beach",
+      state: "FL",
+      zip: "33401",
+    });
+  });
+
+  it("rejects a partial address when staff create a customer file", () => {
+    assert.throws(
+      () =>
+        validateStaffCustomerCreateInput({
+          address: { street: "100 Olive Ave", city: "", state: "FL", zip: "33401" },
+        }),
+      (error: unknown) =>
+        error instanceof ProfileValidationError &&
+        error.message === "City is required.",
+    );
   });
 
   it("keeps a dog profile when only the pet name is filled in", () => {
@@ -213,6 +250,8 @@ describe("required customer profile fields", () => {
       new URL("../profiles/staff-service.ts", import.meta.url),
       "utf8",
     );
+    assert.match(staffService, /export async function createStaffCustomer/);
+    assert.match(staffService, /addStaffCustomerServiceAddress/);
     assert.match(staffService, /export async function createStaffPet/);
     assert.match(staffService, /export async function archiveStaffPet/);
     assert.match(staffService, /export async function setStaffCustomerPassword/);
