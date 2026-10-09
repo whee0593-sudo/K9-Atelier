@@ -407,6 +407,9 @@ export async function rescheduleStaffAppointment(
               const pet = firstRelation(row.pets);
               return pet?.name ?? "Dog";
             }),
+            appointmentIds: ordered.map((row) => row.id),
+            petIds: ordered.map((row) => row.pet_id),
+            visitId: ordered[0]?.visit_id ?? appointment.visitId ?? null,
           },
         );
       } catch (emailError) {

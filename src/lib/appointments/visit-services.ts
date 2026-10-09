@@ -15,9 +15,14 @@ import {
   appointmentFieldsFromVisitLineItems,
   mergeVisitLineItemsIntoOptions,
 } from "@/lib/charges/visit-line-items";
+import {
+  buildCommunicationContext,
+  communicationFingerprint,
+} from "@/lib/communications/context";
+import { isCommunicationAccepted } from "@/lib/communications/result";
 import { recordCustomerSms } from "@/lib/sms/inbox";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
-import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
+import { sendSms } from "@/lib/sms/twilio";
 import { buildVisitServicesUpdatedSms } from "@/lib/sms/visit-update-copy";
 import type { ChargeLineItem } from "@/lib/charges/types";
 import type { AppointmentStatus } from "@/lib/appointments/types";
@@ -53,7 +58,7 @@ export async function updateAppointmentVisitServices(input: {
   const { data: row, error } = await admin
     .from("appointments")
     .select(
-      "id, customer_id, visit_id, status, service_id, service_name, add_on_options, appointment_date, service_ended_at, pets ( weight_lbs ), profiles ( first_name, last_name, phone )",
+      "id, customer_id, pet_id, visit_id, status, service_id, service_name, add_on_options, appointment_date, service_ended_at, pets ( weight_lbs ), profiles ( first_name, last_name, phone )",
     )
     .eq("id", input.appointmentId)
     .maybeSingle();
@@ -130,6 +135,9 @@ export async function updateAppointmentVisitServices(input: {
 
   const smsSent = await sendVisitServicesUpdatedSms({
     customerId: row.customer_id as string,
+    appointmentId: row.id as string,
+    visitId: (row.visit_id as string | null) ?? null,
+    petId: (row.pet_id as string | null) ?? null,
     profile: firstRelation<{
       first_name: string | null;
       last_name: string | null;
@@ -281,6 +289,9 @@ function firstRelation<T>(value: unknown): T | null {
 
 async function sendVisitServicesUpdatedSms(input: {
   customerId: string;
+  appointmentId: string;
+  visitId: string | null;
+  petId: string | null;
   profile: {
     first_name: string | null;
     last_name: string | null;
@@ -289,16 +300,26 @@ async function sendVisitServicesUpdatedSms(input: {
   lineItems: ChargeLineItem[];
   estimatedTotal: number;
 }) {
-  if (!isSmsConfigured()) return false;
-  const to = normalizePhoneToE164(input.profile?.phone ?? "");
-  if (!to) return false;
+  const to = normalizePhoneToE164(input.profile?.phone ?? "") ?? "";
   const body = buildVisitServicesUpdatedSms({
     services: input.lineItems,
     estimatedTotal: input.estimatedTotal,
   });
   try {
-    const sent = await sendSms({ to, body });
-    if (!sent) return false;
+    const result = await sendSms({
+      to,
+      body,
+      communication: buildCommunicationContext({
+        notificationType: "visit_services_updated",
+        recipient: to || input.profile?.phone || "missing",
+        customerId: input.customerId,
+        visitId: input.visitId,
+        appointmentIds: [input.appointmentId],
+        petIds: input.petId ? [input.petId] : [],
+        fingerprint: communicationFingerprint(body),
+      }),
+    });
+    if (!isCommunicationAccepted(result) || !to) return false;
     const customerName = [input.profile?.first_name, input.profile?.last_name]
       .filter(Boolean)
       .join(" ")

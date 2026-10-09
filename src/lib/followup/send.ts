@@ -2,7 +2,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import { mapAppointmentRowToAdminRecord } from "@/lib/appointments/map";
 import type { AppointmentRow } from "@/lib/appointments/types";
-import { isEmailConfigured, sendEmail } from "@/lib/email/resend";
+import { buildCommunicationContext } from "@/lib/communications/context";
+import { isCommunicationAccepted } from "@/lib/communications/result";
+import { sendEmail } from "@/lib/email/resend";
 import {
   buildNextDayFollowUpEmail,
   buildNextDayFollowUpSms,
@@ -13,7 +15,7 @@ import {
   hourInBusinessTimezone,
   yesterdayInBusinessTimezone,
 } from "@/lib/sms/schedule";
-import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
+import { sendSms } from "@/lib/sms/twilio";
 
 const FOLLOW_UP_SELECT = `
   id,
@@ -61,14 +63,6 @@ export async function sendNextDayFollowUp(
   if (hourInBusinessTimezone(now) !== 10) {
     return { sent: 0, skipped: 0, failed: 0, reason: "outside_10am_window" };
   }
-  if (!isEmailConfigured() && !isSmsConfigured()) {
-    return {
-      sent: 0,
-      skipped: 0,
-      failed: 0,
-      reason: "notifications_not_configured",
-    };
-  }
   if (!hasSupabaseAdminConfig()) {
     return { sent: 0, skipped: 0, failed: 0, reason: "supabase_admin_missing" };
   }
@@ -99,61 +93,76 @@ export async function sendNextDayFollowUp(
       petName: appointment.petName,
     };
     const email = appointment.customerEmail.trim();
-    const phone = normalizePhoneToE164(appointment.customerPhone ?? "");
-    const canEmail = Boolean(email) && isEmailConfigured();
-    const canSms = Boolean(phone) && isSmsConfigured();
-
-    if (!canEmail && !canSms) {
-      skipped += 1;
-      continue;
-    }
+    const phone = normalizePhoneToE164(appointment.customerPhone ?? "") ?? "";
 
     let emailSent = false;
     let smsSent = false;
+    let emailSkipped = false;
+    let smsSkipped = false;
 
-    if (canEmail) {
-      const letter = buildNextDayFollowUpEmail(names);
-      try {
-        emailSent = await sendEmail({
-          to: email,
-          subject: letter.subject,
-          text: letter.text,
-          html: letter.html,
-        });
-      } catch (sendError) {
-        console.error(
-          "sendNextDayFollowUp email failed:",
-          appointment.id,
-          sendError,
-        );
-      }
+    const letter = buildNextDayFollowUpEmail(names);
+    try {
+      const result = await sendEmail({
+        to: email,
+        subject: letter.subject,
+        text: letter.text,
+        html: letter.html,
+        communication: buildCommunicationContext({
+          notificationType: "followup",
+          recipient: email || "missing",
+          customerId: appointment.customerId,
+          visitId: appointment.visitId ?? null,
+          appointmentIds: [appointment.id],
+          petIds: [appointment.petId],
+        }),
+      });
+      emailSent = isCommunicationAccepted(result);
+      emailSkipped = result.status === "skipped";
+    } catch (sendError) {
+      console.error(
+        "sendNextDayFollowUp email failed:",
+        appointment.id,
+        sendError,
+      );
     }
 
-    if (canSms && phone) {
-      const body = buildNextDayFollowUpSms(names);
-      try {
-        smsSent = Boolean(await sendSms({ to: phone, body }));
-        if (smsSent) {
-          await recordCustomerSms({
-            direction: "outbound",
-            phone,
-            body,
-            customerId: appointment.customerId,
-            customerName: appointment.customerName,
-            petNames: [appointment.petName],
-          });
-        }
-      } catch (sendError) {
-        console.error(
-          "sendNextDayFollowUp SMS failed:",
-          appointment.id,
-          sendError,
-        );
+    const body = buildNextDayFollowUpSms(names);
+    try {
+      const result = await sendSms({
+        to: phone,
+        body,
+        communication: buildCommunicationContext({
+          notificationType: "followup",
+          recipient: phone || "missing",
+          customerId: appointment.customerId,
+          visitId: appointment.visitId ?? null,
+          appointmentIds: [appointment.id],
+          petIds: [appointment.petId],
+        }),
+      });
+      smsSent = isCommunicationAccepted(result);
+      smsSkipped = result.status === "skipped";
+      if (smsSent && phone) {
+        await recordCustomerSms({
+          direction: "outbound",
+          phone,
+          body,
+          customerId: appointment.customerId,
+          customerName: appointment.customerName,
+          petNames: [appointment.petName],
+        });
       }
+    } catch (sendError) {
+      console.error(
+        "sendNextDayFollowUp SMS failed:",
+        appointment.id,
+        sendError,
+      );
     }
 
     if (!emailSent && !smsSent) {
-      failed += 1;
+      if (emailSkipped && smsSkipped) skipped += 1;
+      else failed += 1;
       continue;
     }
 

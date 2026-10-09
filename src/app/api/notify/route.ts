@@ -1,22 +1,14 @@
 import { NextResponse } from "next/server";
 import { business } from "@/lib/business";
+import { buildCommunicationContext } from "@/lib/communications/context";
+import { isCommunicationAccepted } from "@/lib/communications/result";
+import { sendEmail } from "@/lib/email/resend";
 import { enforceIpRateLimit } from "@/lib/rate-limit";
 import { isValidEmail, normalizeContact } from "@/lib/support-contact";
 
 export async function POST(request: Request) {
   const limited = enforceIpRateLimit(request, "notify");
   if (limited) return limited;
-
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  if (!apiKey) {
-    return NextResponse.json(
-      {
-        error:
-          "Sign-up is not available yet. Follow us on Instagram for updates.",
-      },
-      { status: 503 },
-    );
-  }
 
   let body: { email?: string };
   try {
@@ -33,9 +25,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const fromEmail =
-    process.env.SUPPORT_FROM_EMAIL?.trim() ||
-    `K9 Atelier <${business.brand.email}>`;
   const subject = `Launch list signup: ${email}`;
   const text = [
     "New launch notification signup from k9atelier.com",
@@ -43,24 +32,31 @@ export async function POST(request: Request) {
     `Email: ${email}`,
   ].join("\n");
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: fromEmail,
-      to: [business.brand.email],
-      reply_to: email,
-      subject,
-      text,
+  const sent = await sendEmail({
+    to: business.brand.email,
+    replyTo: email,
+    subject,
+    text,
+    communication: buildCommunicationContext({
+      notificationType: "launch_signup",
+      audience: "staff",
+      recipient: business.brand.email,
+      fingerprint: email,
     }),
   });
 
-  if (!res.ok) {
-    const resendError = await res.text();
-    console.error("Resend notify signup failed:", res.status, resendError);
+  if (sent.status === "skipped" && sent.skipReason === "missing_config") {
+    return NextResponse.json(
+      {
+        error:
+          "Sign-up is not available yet. Follow us on Instagram for updates.",
+      },
+      { status: 503 },
+    );
+  }
+
+  if (!isCommunicationAccepted(sent)) {
+    console.error("Resend notify signup failed:", sent.errorMessage);
     return NextResponse.json(
       { error: "We could not save your email right now. Please try again." },
       { status: 502 },

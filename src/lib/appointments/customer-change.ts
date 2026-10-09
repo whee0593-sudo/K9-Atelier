@@ -604,6 +604,13 @@ async function sendChangeConfirmationEmail({
       feeStatus: fee > 0 ? "paid" : "none",
       cardBrand,
       cardLast4,
+      appointmentIds: [...appointments, ...remainingAppointments].map(
+        (row) => row.id,
+      ),
+      petIds: [...appointments, ...remainingAppointments].map(
+        (row) => row.petId,
+      ),
+      visitId: appointment.visitId ?? null,
     });
   } catch (emailError) {
     console.error("appointment change email failed:", emailError);
@@ -895,7 +902,11 @@ async function addDogToVisit(
     const contact = await fetchCustomerContact(userId);
     if (contact) {
       await notifyStaffNewAppointment(appointment, contact);
-      await notifyCustomerAppointmentChange("add_dog", appointment, contact);
+      await notifyCustomerAppointmentChange("add_dog", appointment, contact, {
+        appointmentIds: [appointment.id],
+        petIds: [appointment.petId],
+        visitId: appointment.visitId ?? null,
+      });
     }
   } catch (emailError) {
     console.error("addDogToVisit email failed:", emailError);

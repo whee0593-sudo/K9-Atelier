@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isEmailConfigured, sendEmail, siteUrl } from "@/lib/email/resend";
+import { buildCommunicationContext } from "@/lib/communications/context";
+import { sendEmail, siteUrl } from "@/lib/email/resend";
 import { getOwnerSession } from "@/lib/staff/auth";
 import {
   isOwnerEmail,
@@ -448,7 +449,6 @@ export async function getStaffAccessForEmail(email?: string | null): Promise<{
 }
 
 async function sendAdminConfirmedEmail(email: string) {
-  if (!isEmailConfigured()) return;
   const signInUrl = siteUrl("/login?next=/admin");
   await sendEmail({
     to: email,
@@ -460,5 +460,10 @@ async function sendAdminConfirmedEmail(email: string) {
       "",
       "If you did not expect this email, please contact penny@k9atelier.com.",
     ].join("\n"),
+    communication: buildCommunicationContext({
+      notificationType: "staff_access_confirmed",
+      audience: "staff",
+      recipient: email,
+    }),
   });
 }

@@ -1,6 +1,7 @@
 import { business } from "@/lib/business";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 import type { AppointmentChangeAction } from "@/lib/appointments/change-policy";
+import { buildCommunicationContext } from "@/lib/communications/context";
 import {
   bookingDetailsFromAppointment,
   buildCustomerAddDogEmail,
@@ -16,6 +17,28 @@ import {
 import { sendEmail } from "@/lib/email/resend";
 import type { CustomerContact } from "@/lib/email/appointment-context";
 import { resolveStaffStatusNoticeKind } from "@/lib/appointments/staff-status-notice";
+
+function emailContext(input: {
+  notificationType: string;
+  appointment: AppointmentRecord;
+  recipient: string;
+  audience?: "customer" | "staff";
+  appointmentIds?: string[];
+  petIds?: string[];
+  visitId?: string | null;
+  fingerprint?: string;
+}) {
+  return buildCommunicationContext({
+    notificationType: input.notificationType,
+    audience: input.audience,
+    recipient: input.recipient,
+    customerId: input.appointment.customerId,
+    visitId: input.visitId ?? input.appointment.visitId ?? null,
+    appointmentIds: input.appointmentIds ?? [input.appointment.id],
+    petIds: input.petIds ?? [input.appointment.petId],
+    fingerprint: input.fingerprint,
+  });
+}
 import {
   sendAppointmentConfirmedSms,
   sendAppointmentDeclinedSms,
@@ -35,6 +58,12 @@ export async function notifyStaffNewAppointment(
     text: email.text,
     html: email.html,
     replyTo: customer.email,
+    communication: emailContext({
+      notificationType: "staff_new_appointment",
+      appointment,
+      recipient: business.brand.email,
+      audience: "staff",
+    }),
   });
 }
 
@@ -52,6 +81,14 @@ export async function notifyCustomerAppointmentSubmitted(
     subject: email.subject,
     text: email.text,
     html: email.html,
+    communication: emailContext({
+      notificationType:
+        appointment.status === "confirmed"
+          ? "appointment_confirmed"
+          : "appointment_submitted",
+      appointment,
+      recipient: customer.email,
+    }),
   });
   if (appointment.status === "confirmed") {
     await sendAppointmentConfirmedSms(appointment, customer);
@@ -71,6 +108,11 @@ export async function notifyCustomerAppointmentConfirmed(
     subject: email.subject,
     text: email.text,
     html: email.html,
+    communication: emailContext({
+      notificationType: "appointment_confirmed",
+      appointment,
+      recipient: customer.email,
+    }),
   });
   await sendAppointmentConfirmedSms(appointment, customer);
 }
@@ -86,6 +128,11 @@ export async function notifyCustomerAppointmentDeclined(
     subject: email.subject,
     text: email.text,
     html: email.html,
+    communication: emailContext({
+      notificationType: "appointment_declined",
+      appointment,
+      recipient: customer.email,
+    }),
   });
   await sendAppointmentDeclinedSms(appointment, customer);
 }
@@ -104,6 +151,11 @@ export async function notifyCustomerAppointmentStaffCancelled(
     subject: email.subject,
     text: email.text,
     html: email.html,
+    communication: emailContext({
+      notificationType: "appointment_staff_cancelled",
+      appointment,
+      recipient: customer.email,
+    }),
   });
   await sendAppointmentStaffCancelledSms(appointment, customer);
 }
@@ -125,6 +177,9 @@ export async function notifyCustomerAppointmentChange(
     paymentFailureKind?: "declined" | "expired" | "unavailable" | null;
     willAutoRetry?: boolean;
     paymentUpdateUrl?: string | null;
+    appointmentIds?: string[];
+    petIds?: string[];
+    visitId?: string | null;
   },
 ) {
   const email =
@@ -163,11 +218,27 @@ export async function notifyCustomerAppointmentChange(
             })
           : buildCustomerAddDogEmail({ appointment, customer });
 
+  const related = [
+    appointment,
+    ...(options?.remainingAppointments ?? []),
+  ];
   await sendEmail({
     to: customer.email,
     subject: email.subject,
     text: email.text,
     html: email.html,
+    communication: emailContext({
+      notificationType: `appointment_${action}`,
+      appointment,
+      recipient: customer.email,
+      appointmentIds: options?.appointmentIds ?? related.map((row) => row.id),
+      petIds: options?.petIds ?? related.map((row) => row.petId),
+      visitId: options?.visitId,
+      fingerprint:
+        action === "reschedule"
+          ? `${appointment.appointmentDate}|${appointment.appointmentTime}`
+          : undefined,
+    }),
   });
 }
 

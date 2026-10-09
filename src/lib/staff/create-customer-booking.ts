@@ -40,8 +40,13 @@ import { describeStaffScheduleConflict } from "@/lib/staff/schedule-conflict";
 import { parseStaffServiceSelection } from "@/lib/staff/service-choice";
 import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { isFrozenAuthUser } from "@/lib/auth/frozen-account";
-import { isEmailConfigured, sendEmail, siteUrl } from "@/lib/email/resend";
-import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
+import {
+  buildCommunicationContext,
+  communicationHourBucket,
+} from "@/lib/communications/context";
+import { isCommunicationAccepted } from "@/lib/communications/result";
+import { sendEmail, siteUrl } from "@/lib/email/resend";
+import { sendSms } from "@/lib/sms/twilio";
 import { digitsOnly } from "@/lib/sms/phone";
 import type {
   StaffBookingPetInput,
@@ -273,24 +278,39 @@ async function sendInviteMessages(
 ) {
   let emailed = false;
   let texted = false;
-  if (input.notifyEmail && input.email && isEmailConfigured()) {
+  const hour = communicationHourBucket();
+  if (input.notifyEmail && input.email) {
     const email = buildStaffBookingInviteEmail({
       firstName: input.firstName,
       bookUrl,
       createdAccount,
     });
-    emailed = await sendEmail({
-      to: input.email,
-      subject: email.subject,
-      text: email.text,
-      html: email.html,
-    });
+    emailed = isCommunicationAccepted(
+      await sendEmail({
+        to: input.email,
+        subject: email.subject,
+        text: email.text,
+        html: email.html,
+        communication: buildCommunicationContext({
+          notificationType: "staff_booking_invite",
+          recipient: input.email,
+          fingerprint: hour,
+        }),
+      }),
+    );
   }
-  if (input.notifySms && input.phone && isSmsConfigured()) {
-    texted = await sendSms({
-      to: input.phone,
-      body: buildStaffBookingInviteSms(bookUrl),
-    });
+  if (input.notifySms && input.phone) {
+    texted = isCommunicationAccepted(
+      await sendSms({
+        to: input.phone,
+        body: buildStaffBookingInviteSms(bookUrl),
+        communication: buildCommunicationContext({
+          notificationType: "staff_booking_invite",
+          recipient: input.phone,
+          fingerprint: hour,
+        }),
+      }),
+    );
   }
   return { emailed, texted };
 }
@@ -800,24 +820,44 @@ export async function createStaffCustomerBooking(
 
     let emailed = false;
     let texted = false;
-    if (input.notifyEmail && input.email && isEmailConfigured()) {
+    if (input.notifyEmail && input.email) {
       const email = buildStaffCreatedBookingEmail(appointment, {
         firstName: input.firstName,
         confirmUrl,
         createdAccount,
       });
-      emailed = await sendEmail({
-        to: input.email,
-        subject: email.subject,
-        text: email.text,
-        html: email.html,
-      });
+      emailed = isCommunicationAccepted(
+        await sendEmail({
+          to: input.email,
+          subject: email.subject,
+          text: email.text,
+          html: email.html,
+          communication: buildCommunicationContext({
+            notificationType: "staff_booking_reserved",
+            recipient: input.email,
+            customerId: userId,
+            visitId: created.visitId,
+            appointmentIds: appointments.map((entry) => entry.id),
+            petIds: appointments.map((entry) => entry.petId),
+          }),
+        }),
+      );
     }
-    if (input.notifySms && input.phone && isSmsConfigured()) {
-      texted = await sendSms({
-        to: input.phone,
-        body: buildStaffCreatedBookingSms(appointment, confirmUrl, petNames),
-      });
+    if (input.notifySms && input.phone) {
+      texted = isCommunicationAccepted(
+        await sendSms({
+          to: input.phone,
+          body: buildStaffCreatedBookingSms(appointment, confirmUrl, petNames),
+          communication: buildCommunicationContext({
+            notificationType: "staff_booking_reserved",
+            recipient: input.phone,
+            customerId: userId,
+            visitId: created.visitId,
+            appointmentIds: appointments.map((entry) => entry.id),
+            petIds: appointments.map((entry) => entry.petId),
+          }),
+        }),
+      );
     }
 
     return {

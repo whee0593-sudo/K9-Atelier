@@ -518,9 +518,6 @@ export async function sendAppointmentEnRouteNotification(
   const session = await getStaffSession();
   if ("error" in session) return { error: session.error };
 
-  const { isSmsConfigured } = await import("@/lib/sms/twilio");
-  if (!isSmsConfigured()) return { error: "misconfigured" };
-
   const appointment = await fetchAppointmentAdminRecord(appointmentId);
   if (!appointment || !isOperationalAdminAppointment(appointment.status)) {
     return { error: "not_found" };
@@ -553,7 +550,14 @@ export async function sendAppointmentEnRouteNotification(
     "@/lib/sms/appointment-sms"
   );
   const sent = await sendAppointmentEnRouteSms(appointment, contact);
-  if (!sent) return { error: "server" };
+  if (!sent) {
+    const { isSmsConfigured } = await import("@/lib/sms/twilio");
+    const { normalizePhoneToE164 } = await import("@/lib/sms/phone");
+    if (normalizePhoneToE164(contact.phone) && !isSmsConfigured()) {
+      return { error: "misconfigured" };
+    }
+    return { error: "server" };
+  }
 
   const { error: markError } = await admin
     .from("appointments")

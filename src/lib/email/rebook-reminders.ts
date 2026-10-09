@@ -1,5 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
+import { buildCommunicationContext } from "@/lib/communications/context";
+import { isCommunicationAccepted } from "@/lib/communications/result";
+import type { CommunicationContext } from "@/lib/communications/types";
 import {
   buildRebookReminderEmail,
 } from "@/lib/email/rebook-reminder";
@@ -35,6 +38,7 @@ export type RebookReminderCandidate = {
   serviceEndedAt: string | null;
   reminderStatus: string | null;
   petName: string | null;
+  petId?: string | null;
   customerEmail: string | null;
   customerFirstName: string | null;
 };
@@ -52,7 +56,10 @@ type DueRow = {
   status: string;
   service_ended_at: string | null;
   rebook_reminder_status: string | null;
-  pets?: { name: string | null } | { name: string | null }[] | null;
+  pets?:
+    | { id?: string | null; name: string | null }
+    | { id?: string | null; name: string | null }[]
+    | null;
   profiles?:
     | { email: string | null; first_name: string | null }
     | { email: string | null; first_name: string | null }[]
@@ -65,7 +72,7 @@ const DUE_SELECT = `
   status,
   service_ended_at,
   rebook_reminder_status,
-  pets ( name ),
+  pets ( id, name ),
   profiles ( email, first_name )
 `;
 
@@ -152,6 +159,7 @@ export type RebookReminderJobDeps = {
     subject: string;
     text: string;
     html: string;
+    communication?: CommunicationContext;
   }) => Promise<boolean>;
 };
 
@@ -184,6 +192,28 @@ export async function runRebookReminderJob(
     if (!isRebookReminderDue(candidate, today)) continue;
     if (!candidate.customerEmail?.trim()) {
       skipped += 1;
+      const email = buildRebookReminderEmail({
+        firstName: candidate.customerFirstName,
+        petName: candidate.petName,
+      });
+      try {
+        await deps.send({
+          to: "",
+          subject: email.subject,
+          text: email.text,
+          html: email.html,
+          communication: buildCommunicationContext({
+            notificationType: "rebook",
+            recipient: "missing",
+            customerId: candidate.customerId,
+            appointmentIds: [candidate.id],
+            petIds: candidate.petId ? [candidate.petId] : [],
+            fingerprint: "no-email",
+          }),
+        });
+      } catch (error) {
+        console.error("rebook reminder missing-email log failed:", candidate.id, error);
+      }
       continue;
     }
 
@@ -232,6 +262,13 @@ export async function runRebookReminderJob(
         subject: email.subject,
         text: email.text,
         html: email.html,
+        communication: buildCommunicationContext({
+          notificationType: "rebook",
+          recipient: candidate.customerEmail,
+          customerId: candidate.customerId,
+          appointmentIds: [candidate.id],
+          petIds: candidate.petId ? [candidate.petId] : [],
+        }),
       });
     } catch (error) {
       console.error("rebook reminder send threw:", candidate.id, error);
@@ -269,6 +306,7 @@ function mapDueRow(row: DueRow): RebookReminderCandidate {
     serviceEndedAt: row.service_ended_at,
     reminderStatus: row.rebook_reminder_status,
     petName: pet?.name ?? null,
+    petId: pet?.id ?? null,
     customerEmail: profile?.email ?? null,
     customerFirstName: profile?.first_name ?? null,
   };
@@ -407,6 +445,15 @@ export async function sendThreeWeekRebookReminders(
         );
       }
     },
-    send: (message) => sendEmail(message),
+    send: async (message) =>
+      isCommunicationAccepted(
+        await sendEmail({
+          to: message.to,
+          subject: message.subject,
+          text: message.text,
+          html: message.html,
+          communication: message.communication,
+        }),
+      ),
   });
 }

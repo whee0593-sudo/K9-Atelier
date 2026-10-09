@@ -40,6 +40,7 @@ import {
   sendAfterVisitThankYouSms,
   sendChargeReceiptEmail,
 } from "@/lib/charges/receipts";
+import { isCommunicationAccepted } from "@/lib/communications/result";
 import { householdVisitKey } from "@/lib/referrals/address";
 import { centsToDollars } from "@/lib/referrals/eligible";
 import {
@@ -868,7 +869,7 @@ async function markChargePaid(
   try {
     const appointment = await fetchAppointmentAdminRecord(charge.appointmentId);
     if (appointment) {
-      await sendAfterVisitThankYouSms(appointment);
+      await sendAfterVisitThankYouSms(appointment, chargeId);
     }
   } catch (smsError) {
     console.error("after-visit thank-you SMS failed:", smsError);
@@ -905,7 +906,7 @@ export async function sendChargeReceipt(
   const charge = mapCharge(row as ChargeRow);
   const sent = await sendChargeReceiptEmail(appointment, charge);
 
-  if (!sent) return { error: "server" };
+  if (!isCommunicationAccepted(sent)) return { error: "server" };
 
   await admin
     .from("appointment_charges")

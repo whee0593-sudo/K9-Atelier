@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { business } from "@/lib/business";
+import {
+  buildCommunicationContext,
+  communicationFingerprint,
+} from "@/lib/communications/context";
+import { isCommunicationAccepted } from "@/lib/communications/result";
+import { sendEmail } from "@/lib/email/resend";
 import { enforceIpRateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -163,17 +169,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  if (!apiKey) {
-    return NextResponse.json(
-      {
-        error:
-          "Support email is not configured yet. Please try again later.",
-      },
-      { status: 503 },
-    );
-  }
-
   let customerAccountId: string | null = null;
   try {
     const supabase = await createClient();
@@ -185,9 +180,6 @@ export async function POST(request: Request) {
     customerAccountId = null;
   }
 
-  const fromEmail =
-    process.env.SUPPORT_FROM_EMAIL?.trim() ||
-    `K9 Atelier <${business.brand.email}>`;
   const toEmail = business.brand.email;
   const contactLabel = isValidEmail(contact) ? "Email" : "Phone";
   const subject = isConcern
@@ -218,37 +210,38 @@ export async function POST(request: Request) {
     .filter((line, index, lines) => line !== "" || lines[index - 1] !== "")
     .join("\n");
 
-  const payload: Record<string, unknown> = {
-    from: fromEmail,
-    to: [toEmail],
+  const sent = await sendEmail({
+    to: toEmail,
     subject,
     text,
-  };
-
-  if (isValidEmail(contact)) {
-    payload.reply_to = contact;
-  }
-
-  if (parsed.photos.length > 0) {
-    payload.attachments = parsed.photos.map((photo) => ({
+    replyTo: isValidEmail(contact) ? contact : undefined,
+    attachments: parsed.photos.map((photo) => ({
       filename: photo.filename,
       content: photo.content,
-      content_type: photo.contentType,
-    }));
-  }
-
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
+      contentType: photo.contentType,
+    })),
+    communication: buildCommunicationContext({
+      notificationType: "support_message",
+      audience: "staff",
+      recipient: toEmail,
+      customerId: customerAccountId,
+      fingerprint: communicationFingerprint(
+        `${contact}|${subject}|${message}|${appointmentId ?? ""}|${chargeId ?? ""}`,
+      ),
+    }),
   });
 
-  if (!res.ok) {
-    const resendError = await res.text();
-    console.error("Resend support email failed:", res.status, resendError);
+  if (sent.status === "skipped" && sent.skipReason === "missing_config") {
+    return NextResponse.json(
+      {
+        error: "Support email is not configured yet. Please try again later.",
+      },
+      { status: 503 },
+    );
+  }
+
+  if (!isCommunicationAccepted(sent)) {
+    console.error("Resend support email failed:", sent.errorMessage);
     return NextResponse.json(
       {
         error:

@@ -65,6 +65,7 @@ export async function POST(request: Request) {
     to: params.To ?? "",
     body,
     mediaUrls: inboundMediaUrls(params),
+    messageSid: params.MessageSid ?? "",
   });
   if (result.handled === "unmatched") {
     return twiml(

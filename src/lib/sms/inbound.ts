@@ -5,6 +5,7 @@ import type { AppointmentRow } from "@/lib/appointments/types";
 import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
 import { contactFromAdminAppointment } from "@/lib/email/appointment-context";
 import { business } from "@/lib/business";
+import { buildCommunicationContext } from "@/lib/communications/context";
 import { sendEmail } from "@/lib/email/resend";
 import { phonesMatch } from "@/lib/sms/phone";
 import { sendSms } from "@/lib/sms/twilio";
@@ -87,6 +88,7 @@ export async function handleInboundCustomerSms(input: {
   to?: string;
   body: string;
   mediaUrls?: string[];
+  messageSid?: string;
 }): Promise<InboundSmsResult> {
   const mediaUrls = (input.mediaUrls ?? []).filter(Boolean).slice(0, 10);
   if (isIgnoredInboundReply(input.body)) {
@@ -121,6 +123,7 @@ export async function handleInboundCustomerSms(input: {
     body: input.body,
     customer,
     mediaUrls,
+    messageSid: input.messageSid,
   });
 
   if (!isCustomerYesReply(input.body)) {
@@ -181,7 +184,19 @@ export async function handleInboundCustomerSms(input: {
     petName: appointment.petName,
     dateLabel,
   });
-  await sendSms({ to: input.from, body: reply });
+  await sendSms({
+    to: input.from,
+    body: reply,
+    communication: buildCommunicationContext({
+      notificationType: "customer_yes_reply",
+      recipient: input.from,
+      customerId: appointment.customerId,
+      visitId: appointment.visitId ?? null,
+      appointmentIds: [appointment.id],
+      petIds: [appointment.petId],
+      fingerprint: input.messageSid ?? `${input.body.trim()}|${dateLabel}`,
+    }),
+  });
 
   if (!already) {
     await sendEmail({
@@ -196,6 +211,15 @@ export async function handleInboundCustomerSms(input: {
         "",
         "This is the customer SMS confirmation. It does not change staff/vaccination booking status.",
       ].join("\n"),
+      communication: buildCommunicationContext({
+        notificationType: "customer_yes_staff_notice",
+        audience: "staff",
+        recipient: business.brand.email,
+        customerId: appointment.customerId,
+        visitId: appointment.visitId ?? null,
+        appointmentIds: [appointment.id],
+        petIds: [appointment.petId],
+      }),
     });
   }
 
