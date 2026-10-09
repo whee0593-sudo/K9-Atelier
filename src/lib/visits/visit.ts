@@ -18,8 +18,8 @@ import type { AppointmentStatus } from "@/lib/appointments/types";
 /**
  * A Visit is one on-site stop for a customer.
  * Pet profiles stay on the customer. Each dog on this stop stays its own appointment.
- * Notification and checkout grouping will move here in later phases; this module
- * is the data-layer contract they should use.
+ * Customer logistics notices are one successful send per visit event.
+ * See src/lib/visits/notification-scope.ts. Pet records stay on the dog.
  */
 export type VisitStatus =
   | "pending_confirmation"

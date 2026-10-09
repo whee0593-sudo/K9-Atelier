@@ -14,6 +14,11 @@ import {
   yesterdayInBusinessTimezone,
 } from "@/lib/sms/schedule";
 import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
+import {
+  recordVisitNotificationSent,
+  runVisitNotification,
+} from "@/lib/visits/notification-ledger";
+import { groupByVisit } from "@/lib/visits/notification-scope";
 
 const FOLLOW_UP_SELECT = `
   id,
@@ -39,6 +44,7 @@ const FOLLOW_UP_SELECT = `
   confirmed_at,
   customer_confirmed_at,
   created_at,
+  visit_id,
   reminder_sms_sent_at,
   en_route_sms_sent_at,
   service_started_at,
@@ -92,11 +98,17 @@ export async function sendNextDayFollowUp(
   let skipped = 0;
   let failed = 0;
 
-  for (const row of (data ?? []) as unknown as AppointmentRow[]) {
-    const appointment = mapAppointmentRowToAdminRecord(row);
+  const appointments = ((data ?? []) as unknown as AppointmentRow[]).map(
+    mapAppointmentRowToAdminRecord,
+  );
+
+  for (const group of groupByVisit(appointments)) {
+    const appointment = group[0]!;
+    const petNames = group.map((row) => row.petName);
     const names = {
       firstName: appointment.customerFirstName,
-      petName: appointment.petName,
+      petName: petNames[0],
+      petNames,
     };
     const email = appointment.customerEmail.trim();
     const phone = normalizePhoneToE164(appointment.customerPhone ?? "");
@@ -108,59 +120,79 @@ export async function sendNextDayFollowUp(
       continue;
     }
 
-    let emailSent = false;
-    let smsSent = false;
+    const outcome = await runVisitNotification({
+      visitId: appointment.visitId,
+      event: "next_day_followup",
+      send: async () => {
+        let emailSent = false;
+        let smsSent = false;
 
-    if (canEmail) {
-      const letter = buildNextDayFollowUpEmail(names);
-      try {
-        emailSent = await sendEmail({
-          to: email,
-          subject: letter.subject,
-          text: letter.text,
-          html: letter.html,
-        });
-      } catch (sendError) {
-        console.error(
-          "sendNextDayFollowUp email failed:",
-          appointment.id,
-          sendError,
-        );
-      }
-    }
-
-    if (canSms && phone) {
-      const body = buildNextDayFollowUpSms(names);
-      try {
-        smsSent = Boolean(await sendSms({ to: phone, body }));
-        if (smsSent) {
-          await recordCustomerSms({
-            direction: "outbound",
-            phone,
-            body,
-            customerId: appointment.customerId,
-            customerName: appointment.customerName,
-            petNames: [appointment.petName],
-          });
+        if (canEmail) {
+          const letter = buildNextDayFollowUpEmail(names);
+          try {
+            emailSent = await sendEmail({
+              to: email,
+              subject: letter.subject,
+              text: letter.text,
+              html: letter.html,
+            });
+          } catch (sendError) {
+            console.error(
+              "sendNextDayFollowUp email failed:",
+              appointment.id,
+              sendError,
+            );
+          }
         }
-      } catch (sendError) {
-        console.error(
-          "sendNextDayFollowUp SMS failed:",
-          appointment.id,
-          sendError,
-        );
-      }
-    }
 
-    if (!emailSent && !smsSent) {
+        if (canSms && phone) {
+          const body = buildNextDayFollowUpSms(names);
+          try {
+            smsSent = Boolean(await sendSms({ to: phone, body }));
+            if (smsSent) {
+              await recordCustomerSms({
+                direction: "outbound",
+                phone,
+                body,
+                customerId: appointment.customerId,
+                customerName: appointment.customerName,
+                petNames,
+              });
+            }
+          } catch (sendError) {
+            console.error(
+              "sendNextDayFollowUp SMS failed:",
+              appointment.id,
+              sendError,
+            );
+          }
+        }
+
+        return emailSent || smsSent;
+      },
+    });
+
+    if (outcome === "skipped") {
+      skipped += 1;
+      continue;
+    }
+    if (outcome !== "sent") {
       failed += 1;
       continue;
     }
 
+    await recordVisitNotificationSent(
+      appointment.visitId,
+      "google_review_request",
+    );
+
     const { error: markError } = await admin
       .from("appointments")
       .update({ followup_sent_at: new Date().toISOString() })
-      .eq("id", appointment.id);
+      .in(
+        "id",
+        group.map((row) => row.id),
+      );
 
     if (markError) {
       console.error(
@@ -168,8 +200,6 @@ export async function sendNextDayFollowUp(
         appointment.id,
         markError.message,
       );
-      failed += 1;
-      continue;
     }
 
     sent += 1;

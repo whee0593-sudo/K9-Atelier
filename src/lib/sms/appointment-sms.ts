@@ -26,11 +26,13 @@ function smsCustomerName(customer: CustomerContact) {
 function detailsForSms(
   appointment: AppointmentRecord,
   customer: CustomerContact,
+  petNames?: string[],
 ): BookingConfirmationDetails {
   return {
     ...bookingDetailsFromAppointment(appointment, customer),
     customerName: smsCustomerName(customer),
     streetName: streetNameForSms(appointment.addressStreet),
+    petNames,
   };
 }
 
@@ -67,10 +69,11 @@ export async function sendAppointmentSubmittedSms(
 export async function sendAppointmentConfirmedSms(
   appointment: AppointmentRecord,
   customer: CustomerContact,
+  petNames?: string[],
 ) {
   return sendCustomerSms(
     customer.phone,
-    buildBookingConfirmationSms(detailsForSms(appointment, customer)),
+    buildBookingConfirmationSms(detailsForSms(appointment, customer, petNames)),
   );
 }
 
@@ -97,29 +100,34 @@ export async function sendAppointmentStaffCancelledSms(
 export async function sendAppointmentReminderSms(
   appointment: AppointmentRecord,
   customer: CustomerContact,
+  petNames?: string[],
 ) {
   return sendCustomerSms(
     customer.phone,
-    buildAppointmentReminderSms(detailsForSms(appointment, customer)),
+    buildAppointmentReminderSms(detailsForSms(appointment, customer, petNames)),
   );
 }
 
 export async function sendAppointmentConfirmRequestSms(
   appointment: AppointmentRecord,
   customer: CustomerContact,
+  petNames?: string[],
 ) {
   return sendCustomerSms(
     customer.phone,
-    buildAppointmentConfirmRequestSms(detailsForSms(appointment, customer)),
+    buildAppointmentConfirmRequestSms(
+      detailsForSms(appointment, customer, petNames),
+    ),
   );
 }
 
 export async function sendAppointmentEnRouteSms(
   appointment: AppointmentRecord,
   customer: CustomerContact,
+  petNames?: string[],
 ) {
   return sendCustomerSms(
     customer.phone,
-    buildAppointmentEnRouteSms(detailsForSms(appointment, customer)),
+    buildAppointmentEnRouteSms(detailsForSms(appointment, customer, petNames)),
   );
 }

@@ -314,6 +314,32 @@ describe("rebook reminder job", () => {
     );
   });
 
+  it("sends one reminder for every dog on the same visit", async () => {
+    const { deps, sent } = harness({
+      due: [
+        candidate({ visitId: "visit-1", petName: "Daisy" }),
+        candidate({
+          id: "apt-2",
+          visitId: "visit-1",
+          petName: "Milo",
+          serviceEndedAt: "2026-09-02T18:00:00.000Z",
+        }),
+        candidate({
+          id: "apt-3",
+          visitId: "visit-1",
+          petName: "Coco",
+          serviceEndedAt: "2026-09-02T19:00:00.000Z",
+        }),
+      ],
+      futureChecks: [[], []],
+    });
+    const result = await runRebookReminderJob(deps);
+
+    assert.equal(result.sent, 1);
+    assert.equal(sent.length, 1);
+    assert.match(sent[0]?.subject ?? "", /Daisy, Milo and Coco/);
+  });
+
   it("stays quiet outside the 10am window and when email is not configured", async () => {
     const early = harness({ now: new Date("2026-09-23T13:00:00.000Z") });
     assert.equal(

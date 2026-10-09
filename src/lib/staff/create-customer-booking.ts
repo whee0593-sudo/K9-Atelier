@@ -41,6 +41,7 @@ import { parseStaffServiceSelection } from "@/lib/staff/service-choice";
 import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { isFrozenAuthUser } from "@/lib/auth/frozen-account";
 import { isEmailConfigured, sendEmail, siteUrl } from "@/lib/email/resend";
+import { runVisitNotification } from "@/lib/visits/notification-ledger";
 import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
 import { digitsOnly } from "@/lib/sms/phone";
 import type {
@@ -800,23 +801,41 @@ export async function createStaffCustomerBooking(
 
     let emailed = false;
     let texted = false;
-    if (input.notifyEmail && input.email && isEmailConfigured()) {
-      const email = buildStaffCreatedBookingEmail(appointment, {
-        firstName: input.firstName,
-        confirmUrl,
-        createdAccount,
-      });
-      emailed = await sendEmail({
-        to: input.email,
-        subject: email.subject,
-        text: email.text,
-        html: email.html,
-      });
-    }
-    if (input.notifySms && input.phone && isSmsConfigured()) {
-      texted = await sendSms({
-        to: input.phone,
-        body: buildStaffCreatedBookingSms(appointment, confirmUrl, petNames),
+    const willEmail = Boolean(
+      input.notifyEmail && input.email && isEmailConfigured(),
+    );
+    const willSms = Boolean(input.notifySms && input.phone && isSmsConfigured());
+    if (willEmail || willSms) {
+      await runVisitNotification({
+        visitId: created.visitId,
+        event: "booking_confirmation",
+        send: async () => {
+          if (willEmail && input.email) {
+            const email = buildStaffCreatedBookingEmail(appointment, {
+              firstName: input.firstName,
+              confirmUrl,
+              createdAccount,
+              petNames,
+            });
+            emailed = await sendEmail({
+              to: input.email,
+              subject: email.subject,
+              text: email.text,
+              html: email.html,
+            });
+          }
+          if (willSms && input.phone) {
+            texted = await sendSms({
+              to: input.phone,
+              body: buildStaffCreatedBookingSms(
+                appointment,
+                confirmUrl,
+                petNames,
+              ),
+            });
+          }
+          return emailed || texted;
+        },
       });
     }
 

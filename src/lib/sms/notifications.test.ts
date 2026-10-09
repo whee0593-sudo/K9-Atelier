@@ -116,6 +116,17 @@ describe("appointment SMS copy", () => {
     );
   });
 
+  it("names every dog on the visit in one confirmation", () => {
+    const body = buildBookingConfirmationSms({
+      ...details,
+      petName: "Daisy",
+      petNames: ["Daisy", "Milo", "Coco"],
+      streetName: "Palm Avenue",
+    });
+    assert.match(body, /Daisy, Milo and Coco's appointment on/);
+    assert.equal(body.includes("Milo's appointment"), false);
+  });
+
   it("formats arrival windows like 9am to 11am", () => {
     assert.equal(formatSmsTimeWindow("9:00–11:00 AM"), "9am to 11am");
     assert.equal(formatSmsTimeWindow("11:30 AM – 1:00 PM"), "11:30am to 1pm");

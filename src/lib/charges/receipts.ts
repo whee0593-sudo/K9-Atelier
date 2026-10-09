@@ -11,6 +11,8 @@ import {
 } from "@/lib/charges/receipt-email";
 import type { AppointmentChargeRecord } from "@/lib/charges/types";
 import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
+import { runVisitNotification } from "@/lib/visits/notification-ledger";
+import { formatVisitPetNames } from "@/lib/visits/pet-names";
 
 export function buildChargeReceiptEmail(
   appointment: AdminAppointmentRecord,
@@ -65,8 +67,14 @@ export async function sendChargeReceiptSms(
   return sendSms({ to, body: buildChargeReceiptSmsText(appointment, charge) });
 }
 
-export function buildAfterVisitThankYouSms(appointment: AdminAppointmentRecord) {
-  const petName = appointment.petName?.trim() || "your pet";
+export function buildAfterVisitThankYouSms(
+  appointment: AdminAppointmentRecord,
+  petNames?: Array<string | null | undefined>,
+) {
+  const petName =
+    petNames && petNames.length > 1
+      ? formatVisitPetNames(petNames, "your pet")
+      : appointment.petName?.trim() || petNames?.[0]?.trim() || "your pet";
   const google = getGoogleWriteReviewUrl() ?? "";
   return [
     `K9 ATELIER: Thank you for entrusting ${petName}’s care to us. We truly appreciate your business.`,
@@ -86,9 +94,16 @@ export function buildAfterVisitThankYouSms(appointment: AdminAppointmentRecord) 
 
 export async function sendAfterVisitThankYouSms(
   appointment: AdminAppointmentRecord,
+  petNames?: Array<string | null | undefined>,
 ) {
   if (!appointment.customerPhone || !isSmsConfigured()) return false;
   const to = normalizePhoneToE164(appointment.customerPhone);
   if (!to) return false;
-  return sendSms({ to, body: buildAfterVisitThankYouSms(appointment) });
+  const body = buildAfterVisitThankYouSms(appointment, petNames);
+  const outcome = await runVisitNotification({
+    visitId: appointment.visitId,
+    event: "payment_thank_you",
+    send: () => sendSms({ to, body }),
+  });
+  return outcome === "sent" || outcome === "skipped";
 }
