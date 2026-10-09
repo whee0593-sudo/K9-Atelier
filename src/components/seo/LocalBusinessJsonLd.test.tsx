@@ -96,7 +96,14 @@ describe("LocalBusiness entity fields", () => {
     const areas = entity.areaServed as JsonLdNode[];
     assert.deepEqual(
       areas.map((area) => area.name),
-      ["Jupiter", "Palm Beach Gardens", "West Palm Beach"],
+      [
+        "Palm Beach",
+        "Palm Beach Gardens",
+        "Jupiter",
+        "Jupiter Island",
+        "Tequesta",
+        "West Palm Beach",
+      ],
     );
     for (const area of areas) {
       assert.equal(area["@type"], "City");
@@ -104,5 +111,33 @@ describe("LocalBusiness entity fields", () => {
       assert.equal(state["@type"], "State");
       assert.equal(state.name, "Florida");
     }
+
+    assert.equal(entity["@type"], "LocalBusiness");
+    assert.equal(entity.serviceType, undefined);
+    assert.equal(
+      entity.description,
+      "K9 Atelier is a private mobile dog grooming spa serving Palm Beach, Palm Beach Gardens, Jupiter, Jupiter Island, Tequesta and West Palm Beach. Led by multiple award-winning show groomer Penny, K9 Atelier provides personalized one-on-one grooming for dogs up to 45 lbs, including full grooming, hand stripping, show-level long-coat care and extra-gentle senior care.",
+    );
+    assert.deepEqual(entity.founder, {
+      "@id": "https://k9atelier.com/about#penny",
+    });
+
+    const offers = entity.makesOffer as JsonLdNode[];
+    assert.deepEqual(
+      offers.map((offer) => {
+        const item = offer.itemOffered as JsonLdNode;
+        return [offer["@type"], item["@type"], item.name, item.serviceType, item.url];
+      }),
+      [
+        ["Offer", "Service", "Full Grooming", "Mobile Dog Grooming", "https://k9atelier.com/services/full-groom"],
+        ["Offer", "Service", "Hand Stripping", "Mobile Hand Stripping", "https://k9atelier.com/services/hand-stripping"],
+        ["Offer", "Service", "Show-Level Long-Coat Care", "Long-Coat Dog Grooming", undefined],
+        ["Offer", "Service", "Extra-Gentle Senior Care", "Senior Dog Grooming", undefined],
+      ],
+    );
+
+    const address = entity.address as JsonLdNode;
+    assert.equal(address.streetAddress, undefined);
+    assert.equal(address.postalCode, undefined);
   });
 });
