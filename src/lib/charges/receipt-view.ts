@@ -3,6 +3,15 @@ import { formatAppointmentTimeRange } from "@/lib/appointments/time-label";
 import type { AppointmentChargeRecord } from "@/lib/charges/types";
 import type { PaymentMethodRecord } from "@/lib/payments/types";
 
+export function formatVisitBillDate(date: string) {
+  const parsed = new Date(date.includes("T") ? date : `${date}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return date;
+  return parsed.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export function formatReceiptDate(date: string | null | undefined) {
   if (!date) return null;
   const parsed = new Date(date.includes("T") ? date : `${date}T12:00:00`);

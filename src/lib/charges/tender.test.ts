@@ -45,10 +45,16 @@ describe("collect checkout payment choice", () => {
       useNewCard: false,
       paymentMethodId: undefined,
     });
+    assert.deepEqual(buildCollectChargePaymentFields({ tender: "zelle" }), {
+      tender: "zelle",
+      useNewCard: false,
+      paymentMethodId: undefined,
+    });
   });
 
   it("labels cash receipts as Cash and card receipts by last4", () => {
     assert.equal(collectReceiptPaymentLabel({ tender: "cash" }), "Cash");
+    assert.equal(collectReceiptPaymentLabel({ tender: "zelle" }), "Zelle");
     assert.equal(
       collectReceiptPaymentLabel({
         tender: "card",
@@ -65,6 +71,7 @@ describe("collect checkout payment choice", () => {
     );
     assert.equal(isCashTender("cash"), true);
     assert.equal(readChargeTender("cash"), "cash");
+    assert.equal(readChargeTender("zelle"), "zelle");
     assert.equal(readChargeTender("card"), "card");
     assert.equal(readChargeTender(undefined), "card");
   });

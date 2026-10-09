@@ -30,15 +30,23 @@ export function buildChargeReceiptSmsText(
 ) {
   const kindLabel = chargeKindLabel(charge.kind);
   const dateLabel = formatAppointmentDateLabel(appointment.appointmentDate);
-  return `K9 Atelier receipt: ${kindLabel} for ${appointment.petName} on ${dateLabel}. Total paid ${formatChargeMoney(charge.total)}. Book again: ${getBookAgainUrl()}`;
+  const who = charge.billSnapshot
+    ? charge.billSnapshot.pets.map((pet) => pet.petName).join(", ")
+    : appointment.petName;
+  return `K9 Atelier receipt: ${kindLabel} for ${who} on ${dateLabel}. Total paid ${formatChargeMoney(charge.total)}. Book again: ${getBookAgainUrl()}`;
 }
 
 export async function sendChargeReceiptEmail(
   appointment: AdminAppointmentRecord,
   charge: AppointmentChargeRecord,
+  paymentMethodLabel?: string | null,
 ) {
   if (!appointment.customerEmail || !isEmailConfigured()) return false;
-  const letter = buildChargeReceiptEmail(appointment, charge);
+  const letter = buildChargeReceiptEmail(
+    appointment,
+    charge,
+    paymentMethodLabel ?? charge.billSnapshot?.paymentMethodLabel,
+  );
   return sendEmail({
     to: appointment.customerEmail,
     subject: letter.subject,

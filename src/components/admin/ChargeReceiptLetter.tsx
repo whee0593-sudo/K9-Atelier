@@ -30,9 +30,18 @@ export function ChargeReceiptLetter({
   instagramUrl?: string | null;
   googleReviewUrl?: string | null;
 }) {
-  const petName = appointment.petName?.trim() || null;
-  const appointmentDate = formatReceiptDate(appointment.appointmentDate);
-  const appointmentTime = formatReceiptServiceTime(appointment);
+  const snapshot = charge.billSnapshot;
+  const petName = snapshot
+    ? snapshot.pets.length === 1
+      ? snapshot.pets[0]?.petName ?? null
+      : null
+    : appointment.petName?.trim() || null;
+  const appointmentDate = formatReceiptDate(
+    snapshot?.serviceDate ?? appointment.appointmentDate,
+  );
+  const appointmentTime = snapshot?.arrivalLabel
+    ? snapshot.arrivalLabel
+    : formatReceiptServiceTime(appointment);
   const paymentDate = formatReceiptPaymentDate(
     charge.paidAt,
     appointment.timezone,
@@ -85,10 +94,31 @@ export function ChargeReceiptLetter({
             <section>
               <SectionLabel>Service summary</SectionLabel>
               <ul className="mt-3 space-y-2">
-                {charge.lineItems.map((item) => (
+                {(snapshot
+                  ? [
+                      ...snapshot.pets.map((pet) => ({
+                        id: pet.appointmentId,
+                        label: `${pet.petName} — ${pet.serviceName}`,
+                        amount: pet.amount,
+                      })),
+                      ...(snapshot.travelFee > 0
+                        ? [{ id: "travel", label: "Travel fee", amount: snapshot.travelFee }]
+                        : []),
+                      ...(snapshot.discount > 0
+                        ? [{ id: "discount", label: "Discount", amount: -snapshot.discount }]
+                        : []),
+                      { id: "subtotal", label: "Subtotal", amount: snapshot.subtotal },
+                    ]
+                  : charge.lineItems.map((item) => ({
+                      id: item.id,
+                      label: getCatalogItemDisplayLabel(item.catalogId, item.label),
+                      amount: item.amount,
+                      listAmount: item.listAmount,
+                    }))
+                ).map((item) => (
                   <MoneyRow
                     key={item.id}
-                    label={getCatalogItemDisplayLabel(item.catalogId, item.label)}
+                    label={item.label}
                     item={item}
                   />
                 ))}
