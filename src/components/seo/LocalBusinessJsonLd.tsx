@@ -3,12 +3,51 @@ import {
   business,
   getBrandSchemaTelephone,
   getBrandSearchName,
-  getCommunitiesServed,
 } from "@/lib/business";
+
+const BUSINESS_DESCRIPTION =
+  "A private mobile pet spa for small breeds, providing gentle, personalized one-on-one dog grooming throughout Palm Beach, Palm Beach Gardens, Jupiter, Jupiter Island, Tequesta and West Palm Beach.";
+
+/** Cities named on the business entity. Not the shorter public communities label. */
+const CITIES_SERVED = [
+  "Palm Beach",
+  "Palm Beach Gardens",
+  "Jupiter",
+  "Jupiter Island",
+  "Tequesta",
+  "West Palm Beach",
+] as const;
+
+/**
+ * Expertise topics on the business entity. Text values avoid a second Service
+ * node for offerings that already have their own Service markup.
+ */
+const EXPERTISE = [
+  "Mobile Dog Grooming",
+  "Full Grooming",
+  "Hand Stripping",
+  "Show-Level Long-Coat Care",
+  "Extra-Gentle Senior Grooming",
+] as const;
+
+function cityServed(name: string) {
+  return {
+    "@type": "City",
+    name,
+    containedInPlace: {
+      "@type": "State",
+      name: "Florida",
+      containedInPlace: {
+        "@type": "Country",
+        name: "United States",
+        alternateName: "US",
+      },
+    },
+  };
+}
 
 export function LocalBusinessJsonLd() {
   const { brand, booking, serviceArea } = business;
-  const communities = getCommunitiesServed();
   const sameAs = [
     brand.social.facebookUrl,
     business.site.underConstruction?.instagramUrl,
@@ -27,7 +66,7 @@ export function LocalBusinessJsonLd() {
     name: searchName,
     alternateName: brand.name,
     slogan: brand.tagline,
-    description: brand.intro,
+    description: BUSINESS_DESCRIPTION,
     url: brand.website,
     image: `${brand.website}${brand.logo}`,
     email: brand.email,
@@ -39,14 +78,8 @@ export function LocalBusinessJsonLd() {
       addressRegion: serviceArea.publicRegion,
       addressCountry: "US",
     },
-    areaServed: communities.map((name) => ({
-      "@type": "City",
-      name,
-      containedInPlace: {
-        "@type": "State",
-        name: "Florida",
-      },
-    })),
+    areaServed: CITIES_SERVED.map((name) => cityServed(name)),
+    knowsAbout: [...EXPERTISE],
     openingHoursSpecification: [
       {
         "@type": "OpeningHoursSpecification",
