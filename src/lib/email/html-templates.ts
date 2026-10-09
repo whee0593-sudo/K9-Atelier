@@ -21,6 +21,8 @@ import {
 } from "@/lib/email/layout";
 import {
   buildBookingConfirmationEmail,
+  confirmationPetLabel,
+  confirmationServiceLabel,
   type BookingConfirmationDetails,
 } from "@/lib/notifications";
 import { siteUrl } from "@/lib/email/resend";
@@ -310,11 +312,14 @@ export function buildCustomerAppointmentSubmittedEmail(
 export function buildCustomerAppointmentDeclinedEmail(
   _appointment: AppointmentRecord,
   customer: CustomerContact,
+  petName?: string,
 ) {
   const subject = "Regarding Your Appointment";
   const greetingName = customer.name ?? "Client";
-  const openingParagraph =
-    "Unfortunately, we’re unable to confirm your selected appointment.";
+  const namedPet = petName?.trim();
+  const openingParagraph = namedPet
+    ? `Unfortunately, we’re unable to confirm ${namedPet}’s selected appointment.`
+    : "Unfortunately, we’re unable to confirm your selected appointment.";
   const guidanceParagraph =
     "You may select another available date through our booking page, or contact us if you would like assistance.";
 
@@ -345,13 +350,24 @@ export function buildCustomerAppointmentDeclinedEmail(
 export function buildCustomerAppointmentStaffCancelledEmail(
   appointment: AppointmentRecord,
   customer: CustomerContact,
+  petNames?: string[],
 ) {
   const subject = "An Update Regarding Your Appointment";
   const greetingName = customer.name ?? "Client";
   const dateLabel = formatAppointmentDateLabel(appointment.appointmentDate);
+  const pets =
+    petNames && petNames.length > 0
+      ? confirmationPetLabel({
+          petName: appointment.petName,
+          petNames,
+          serviceName: appointment.serviceName,
+          dateLabel,
+          timeLabel: appointment.appointmentTime,
+        })
+      : appointment.petName;
   const openingParagraph =
     "We’re sorry, but we’re unable to accommodate your appointment as scheduled.";
-  const cancelledParagraph = `Your confirmed appointment for ${appointment.petName} on ${dateLabel} at ${appointment.appointmentTime} has been cancelled.`;
+  const cancelledParagraph = `Your confirmed appointment for ${pets} on ${dateLabel} at ${appointment.appointmentTime} has been cancelled.`;
   const guidanceParagraph =
     "You may book another available date at your convenience. If you would prefer assistance, please contact us.";
   const closingParagraph = "Thank you for your understanding.";
@@ -392,19 +408,31 @@ export function buildCustomerAppointmentStaffCancelledEmail(
 export function buildCustomerAppointmentConfirmedEmail(
   appointment: AppointmentRecord,
   customer: CustomerContact,
+  copy?: { petNames?: string[]; serviceNames?: string[] },
 ) {
-  const details = bookingDetailsFromAppointment(appointment, customer);
+  const details: BookingConfirmationDetails = {
+    ...bookingDetailsFromAppointment(appointment, customer),
+    petNames: copy?.petNames,
+    serviceNames: copy?.serviceNames,
+  };
   const { subject, body: text } = buildBookingConfirmationEmail(details);
   const greetingName = customer.name ?? "Client";
+  const petLabel = confirmationPetLabel(details);
   const estimateDisclaimer =
     "This estimate is based on your dog's typical size and coat. Final pricing may vary depending on coat condition, matting, and temperament, and will always be confirmed with you before we begin.";
+  const detailRows = confirmedAppointmentDetailRows(appointment).map((row) => {
+    if (row.label === "Service" && copy?.serviceNames && copy.serviceNames.length > 1) {
+      return { ...row, value: confirmationServiceLabel(details) };
+    }
+    return row;
+  });
 
   return buildCustomerConfirmedEmail(
     {
       subject,
       greetingName,
-      petName: appointment.petName,
-      detailRows: confirmedAppointmentDetailRows(appointment),
+      petName: petLabel,
+      detailRows,
       estimateNote: estimateDisclaimer,
       paymentNote:
         "You are not charged when you book. Payment is settled after your appointment. Late cancellations and no-shows may be charged to the card you selected, according to our cancellation policy.",

@@ -1,5 +1,6 @@
 import { business } from "@/lib/business";
 import { streetNameForSms } from "@/lib/sms/street-name";
+import { formatVisitPetNames } from "@/lib/visits/pet-names";
 
 /** Disclaimer shown under the estimated total in booking confirmations. */
 export const estimateNote =
@@ -8,7 +9,11 @@ export const estimateNote =
 export type BookingConfirmationDetails = {
   customerName?: string;
   petName: string;
+  /** Every dog on this visit. One name keeps the original sentence. */
+  petNames?: string[];
   serviceName: string;
+  /** One label per dog when a visit has more than one service. */
+  serviceNames?: string[];
   /** Appointment date, already formatted for display. */
   dateLabel: string;
   /** Arrival window, e.g. "10–11 AM". */
@@ -58,6 +63,24 @@ function smsGreetingName(details: BookingConfirmationDetails) {
   return details.customerName?.trim() || "there";
 }
 
+export function confirmationPetLabel(details: BookingConfirmationDetails) {
+  if (details.petNames && details.petNames.length > 1) {
+    return formatVisitPetNames(details.petNames, details.petName);
+  }
+  return details.petName;
+}
+
+export function confirmationServiceLabel(details: BookingConfirmationDetails) {
+  if (details.serviceNames && details.serviceNames.length > 1) {
+    return details.serviceNames.join("; ");
+  }
+  return details.serviceName;
+}
+
+function confirmationPetHas(details: BookingConfirmationDetails) {
+  return details.petNames && details.petNames.length > 1 ? "have" : "has";
+}
+
 function confirmationSmsWhen(details: BookingConfirmationDetails) {
   const window = formatSmsTimeWindow(details.timeLabel);
   const street = streetNameForSms(details.streetName);
@@ -74,7 +97,7 @@ export function buildCustomerAppointmentConfirmSms(
   details: BookingConfirmationDetails,
 ): string {
   return [
-    `${details.petName}'s appointment on ${confirmationSmsWhen(details)}. Reply C to confirm.`,
+    `${confirmationPetLabel(details)}'s appointment on ${confirmationSmsWhen(details)}. Reply C to confirm.`,
     "",
     SMS_OPT_OUT,
   ].join("\n");
@@ -94,22 +117,30 @@ export function buildAppointmentSubmittedSms(
 
 export function buildAppointmentDeclinedSms(
   details: BookingConfirmationDetails,
+  petName?: string,
 ): string {
   const name = smsGreetingName(details);
-  return `Hi ${name}, we’re unable to confirm your selected K9 Atelier appointment. You may select another available date through our booking page, or contact us for assistance. ${SMS_OPT_OUT}`;
+  const selected = petName?.trim()
+    ? `${petName.trim()}’s selected K9 Atelier appointment`
+    : "your selected K9 Atelier appointment";
+  return `Hi ${name}, we’re unable to confirm ${selected}. You may select another available date through our booking page, or contact us for assistance. ${SMS_OPT_OUT}`;
 }
 
 export function buildAppointmentStaffCancelledSms(
   details: BookingConfirmationDetails,
+  petName?: string,
 ): string {
-  return `K9 Atelier: We’re sorry, but we’re unable to accommodate your appointment on ${details.dateLabel} between ${details.timeLabel}. You may book another available date, or contact us for assistance. ${SMS_OPT_OUT}`;
+  const subject = petName?.trim()
+    ? `${petName.trim()}’s appointment`
+    : "your appointment";
+  return `K9 Atelier: We’re sorry, but we’re unable to accommodate ${subject} on ${details.dateLabel} between ${details.timeLabel}. You may book another available date, or contact us for assistance. ${SMS_OPT_OUT}`;
 }
 
 export function buildAppointmentReminderSms(
   details: BookingConfirmationDetails,
 ): string {
   const name = smsGreetingName(details);
-  return `Hi ${name}! Reminder: ${details.petName}'s K9 Atelier appointment is today between ${details.timeLabel}. We'll text when we're on the way. ${SMS_OPT_OUT}`;
+  return `Hi ${name}! Reminder: ${confirmationPetLabel(details)}'s K9 Atelier appointment is today between ${details.timeLabel}. We'll text when we're on the way. ${SMS_OPT_OUT}`;
 }
 
 /** "9:00–11:00 AM" / "11:30 AM – 1:00 PM" → "9am to 11am" / "11:30am to 1pm". */
@@ -152,7 +183,7 @@ export function buildAppointmentEnRouteSms(
   details: BookingConfirmationDetails,
 ): string {
   const name = smsGreetingName(details);
-  return `Hi ${name}! We're on the way for ${details.petName}'s K9 Atelier appointment. See you soon, between ${details.timeLabel}. ${SMS_OPT_OUT}`;
+  return `Hi ${name}! We're on the way for ${confirmationPetLabel(details)}'s K9 Atelier appointment. See you soon, between ${details.timeLabel}. ${SMS_OPT_OUT}`;
 }
 
 /**
@@ -169,9 +200,9 @@ export function buildBookingConfirmationEmail(
     const lines = [
       `Hi ${greetingName},`,
       "",
-      `Your appointment for ${details.petName} is confirmed for ${details.dateLabel} between ${details.timeLabel}.`,
+      `Your appointment for ${confirmationPetLabel(details)} is confirmed for ${details.dateLabel} between ${details.timeLabel}.`,
       "",
-      `Service: ${details.serviceName}`,
+      `Service: ${confirmationServiceLabel(details)}`,
       details.addressLabel ? `Location: ${details.addressLabel}` : null,
       details.durationLabel
         ? `Estimated Duration: ${details.durationLabel}`
@@ -194,13 +225,13 @@ export function buildBookingConfirmationEmail(
   const lines = [
     `Hi ${greetingName},`,
     "",
-    `Welcome to K9 Atelier. Your appointment for ${details.petName} is confirmed for ${details.dateLabel} between ${details.timeLabel}.`,
+    `Welcome to K9 Atelier. Your appointment for ${confirmationPetLabel(details)} is confirmed for ${details.dateLabel} between ${details.timeLabel}.`,
     "",
     "Here are your appointment details:",
     "",
     `Date: ${details.dateLabel}`,
     `Time: ${details.timeLabel}`,
-    `Service: ${details.serviceName}`,
+    `Service: ${confirmationServiceLabel(details)}`,
     `Location: ${details.addressLabel ?? ""}`,
     `Estimated Duration: ${details.durationLabel ?? ""}`,
     `Estimated Total: ${details.priceLabel ?? ""}`,
@@ -214,9 +245,9 @@ export function buildBookingConfirmationEmail(
     "We do our best to arrive at your scheduled time, and every confirmed appointment will be completed. Because this is a mobile service, arrival time may vary due to weather, traffic, and the appointment before yours. We will text you when we are on the way. A quick health and coat check will take place before we begin.",
     "",
     "How to Prepare",
-    `- Please ensure ${details.petName} has had a bathroom break shortly before our arrival`,
+    `- Please ensure ${confirmationPetLabel(details)} ${confirmationPetHas(details)} had a bathroom break shortly before our arrival`,
     "- A parking spot near your home for our grooming van is greatly appreciated",
-    `- Please let us know in advance about any allergies, sensitivities, medical conditions, or behavioral notes for ${details.petName}`,
+    `- Please let us know in advance about any allergies, sensitivities, medical conditions, or behavioral notes for ${confirmationPetLabel(details)}`,
     "",
     "Need to Reschedule?",
     `We kindly ask for at least 48 hours' notice for any changes. You can reply directly to this email or contact us at ${contactMethod()}.`,

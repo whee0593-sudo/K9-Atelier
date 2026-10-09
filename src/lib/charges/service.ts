@@ -1241,12 +1241,12 @@ async function markChargePaid(
     console.error("issueReferralRewardForPaidCharge failed:", issueError);
   }
   try {
-    const appointment = await fetchAppointmentAdminRecord(charge.appointmentId);
-    if (appointment) {
-      const petCount = charge.billSnapshot?.pets.length ?? 0;
-      await sendAfterVisitThankYouSms(
-        petCount > 1 ? { ...appointment, petName: "your pets" } : appointment,
-      );
+    if (charge.kind === "service") {
+      const appointment = await fetchAppointmentAdminRecord(charge.appointmentId);
+      if (appointment) {
+        const petNames = charge.billSnapshot?.pets.map((pet) => pet.petName);
+        await sendAfterVisitThankYouSms(appointment, petNames);
+      }
     }
   } catch (smsError) {
     console.error("after-visit thank-you SMS failed:", smsError);

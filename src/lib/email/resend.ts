@@ -1,4 +1,8 @@
 import { business } from "@/lib/business";
+import {
+  classifyProviderHttpStatus,
+  type ProviderDelivery,
+} from "@/lib/visits/provider-delivery";
 
 export type SendEmailInput = {
   to: string | string[];
@@ -19,11 +23,13 @@ export function isEmailConfigured() {
   return Boolean(process.env.RESEND_API_KEY?.trim());
 }
 
-export async function sendEmail(input: SendEmailInput): Promise<boolean> {
+async function postResendEmail(
+  input: SendEmailInput,
+): Promise<ProviderDelivery> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) {
     console.warn("sendEmail skipped: RESEND_API_KEY is not configured");
-    return false;
+    return "rejected";
   }
 
   const recipients = Array.isArray(input.to) ? input.to : [input.to];
@@ -52,12 +58,28 @@ export async function sendEmail(input: SendEmailInput): Promise<boolean> {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
+    const errorText = await response.text().catch(() => "");
     console.error("Resend email failed:", response.status, errorText);
-    return false;
+    return classifyProviderHttpStatus(response.status);
   }
 
-  return true;
+  return "delivered";
+}
+
+export async function sendEmail(input: SendEmailInput): Promise<boolean> {
+  return (await postResendEmail(input)) === "delivered";
+}
+
+/** Visit notices use this so a timeout is not treated as a clean rejection. */
+export async function sendEmailDelivery(
+  input: SendEmailInput,
+): Promise<ProviderDelivery> {
+  try {
+    return await postResendEmail(input);
+  } catch (error) {
+    console.error("Resend email outcome uncertain:", error);
+    return "uncertain";
+  }
 }
 
 export function siteUrl(path: string) {

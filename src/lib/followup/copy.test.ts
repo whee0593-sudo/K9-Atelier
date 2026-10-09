@@ -67,4 +67,13 @@ describe("next-day follow-up copy", () => {
     assert.match(email.html, /Warmly,<br\/>Penny<br\/>K9 Atelier/);
     assert.match(email.html, /https:\/\/k9atelier\.com\/email-logo\.png/);
   });
+
+  it("checks on every dog from the visit in one note", () => {
+    const sms = buildNextDayFollowUpSms({
+      firstName: "Maya",
+      petNames: ["Daisy", "Milo", "Coco"],
+    });
+    assert.match(sms, /how Daisy, Milo and Coco are doing/);
+    assert.equal(sms.includes("Milo is doing"), false);
+  });
 });

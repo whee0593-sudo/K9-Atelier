@@ -23,6 +23,15 @@ describe("checkout ready SMS", () => {
     );
   });
 
+  it("names every finished dog once", () => {
+    assert.match(
+      buildCheckoutReadySms({
+        petNames: ["Daisy", "Milo", "Coco"],
+      }),
+      /Daisy, Milo and Coco are ready to come home/,
+    );
+  });
+
   it("uses them when sex is missing", () => {
     assert.equal(petHomePronoun(""), "them");
     assert.match(

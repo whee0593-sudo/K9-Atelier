@@ -57,6 +57,7 @@ const APPOINTMENT_SELECT = `
   customer_confirm_token_hash,
   customer_confirm_expires_at,
   created_at,
+  visit_id,
   pets ( name, breed )
 `;
 
@@ -261,7 +262,10 @@ export async function confirmStaffCreatedBooking(input: {
     return { error: "not_found" };
   }
 
-  const appointment = mapAppointmentRowToRecord(data[0] as AppointmentRow);
+  const appointments = (data as AppointmentRow[]).map((row) =>
+    mapAppointmentRowToRecord(row),
+  );
+  const appointment = appointments[0]!;
   try {
     const contact =
       (await fetchCustomerContact(result.user.id)) ??
@@ -269,7 +273,12 @@ export async function confirmStaffCreatedBooking(input: {
         ? { email: result.email, name: result.firstName || null }
         : null);
     if (contact) {
-      await notifyCustomerAppointmentConfirmed(appointment, contact);
+      await notifyCustomerAppointmentConfirmed(appointment, contact, {
+        petNames: appointments.map((row) => row.petName),
+        serviceNames: appointments.map(
+          (row) => `${row.petName} · ${row.serviceName}`,
+        ),
+      });
     }
   } catch (emailError) {
     console.error("confirmStaffCreatedBooking email failed:", emailError);

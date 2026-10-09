@@ -397,6 +397,8 @@ export async function rescheduleStaffAppointment(
       contactFromAdminAppointment(appointment);
     if (contact) {
       try {
+        const previous =
+          ordered.find((row) => row.id === appointmentId) ?? ordered[0];
         await notifyCustomerAppointmentChange(
           "reschedule",
           appointment,
@@ -407,6 +409,8 @@ export async function rescheduleStaffAppointment(
               const pet = firstRelation(row.pets);
               return pet?.name ?? "Dog";
             }),
+            previousDate: previous?.appointment_date,
+            previousTime: previous?.appointment_time,
           },
         );
       } catch (emailError) {

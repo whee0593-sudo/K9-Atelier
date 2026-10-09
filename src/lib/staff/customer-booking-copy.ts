@@ -6,11 +6,13 @@ import {
 } from "@/lib/email/html-templates";
 import { buildCustomerLetterEmail } from "@/lib/email/layout";
 import { estimateNote } from "@/lib/notifications";
+import { formatVisitPetNames } from "@/lib/visits/pet-names";
 
 export type StaffCreatedBookingNotice = {
   firstName: string;
   confirmUrl: string;
   createdAccount: boolean;
+  petNames?: string[];
 };
 
 export function buildStaffCreatedBookingEmail(
@@ -25,14 +27,19 @@ export function buildStaffCreatedBookingEmail(
   const closingParagraph =
     "A card on file is required to secure this appointment. Add one on the review and confirm page if you do not already have one. You are not charged when you confirm. Rabies vaccination details are optional and can be added later.";
 
+  const detailRows = appointmentDetailRows(appointment).map(([label, value]) => {
+    if (label === "Pet" && notice.petNames && notice.petNames.length > 1) {
+      return [label, formatPetNameList(notice.petNames)] as [string, string];
+    }
+    return [label, value] as [string, string];
+  });
+
   const text = [
     `Dear ${greetingName},`,
     "",
     introParagraph,
     "",
-    ...appointmentDetailRows(appointment).map(
-      ([label, value]) => `${label}: ${value}`,
-    ),
+    ...detailRows.map(([label, value]) => `${label}: ${value}`),
     "",
     estimateNote,
     "",
@@ -46,7 +53,7 @@ export function buildStaffCreatedBookingEmail(
       subject,
       greetingName,
       introParagraph,
-      detailRows: appointmentDetailRows(appointment).map(([label, value]) => ({
+      detailRows: detailRows.map(([label, value]) => ({
         label,
         value,
       })),
@@ -62,11 +69,7 @@ export function buildStaffCreatedBookingEmail(
 }
 
 function formatPetNameList(names: string[]) {
-  const cleaned = names.map((name) => name.trim()).filter(Boolean);
-  if (cleaned.length === 0) return "your dog";
-  if (cleaned.length === 1) return cleaned[0]!;
-  if (cleaned.length === 2) return `${cleaned[0]} and ${cleaned[1]}`;
-  return `${cleaned.slice(0, -1).join(", ")}, and ${cleaned[cleaned.length - 1]}`;
+  return formatVisitPetNames(names, "your dog");
 }
 
 export function buildStaffCreatedBookingSms(

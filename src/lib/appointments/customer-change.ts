@@ -526,6 +526,9 @@ export async function applyAppointmentChange(
       (input.timePreference === "afternoon" ? 12 * 60 : 9 * 60);
     const moved = await rescheduleRows(targetRows, input.date, slotStartMinutes);
     if ("error" in moved) return moved;
+    const notifiedId = moved.appointments[0]?.id;
+    const previous =
+      targetRows.find((row) => row.id === notifiedId) ?? targetRows[0];
     await sendChangeConfirmationEmail({
       action: "reschedule",
       appointments: moved.appointments,
@@ -533,6 +536,8 @@ export async function applyAppointmentChange(
       fee: quote.fee,
       cardBrand: charged.cardBrand,
       cardLast4: charged.cardLast4,
+      previousDate: previous?.appointment_date,
+      previousTime: previous?.appointment_time,
     });
     return { ok: true, quote };
   }
@@ -581,6 +586,8 @@ async function sendChangeConfirmationEmail({
   fee,
   cardBrand,
   cardLast4,
+  previousDate,
+  previousTime,
 }: {
   action: AppointmentChangeAction;
   appointments: AppointmentRecord[];
@@ -589,6 +596,8 @@ async function sendChangeConfirmationEmail({
   fee: number;
   cardBrand?: string;
   cardLast4?: string;
+  previousDate?: string | null;
+  previousTime?: string | null;
 }) {
   const appointment = appointments[0];
   if (!appointment || !contact) return;
@@ -604,6 +613,8 @@ async function sendChangeConfirmationEmail({
       feeStatus: fee > 0 ? "paid" : "none",
       cardBrand,
       cardLast4,
+      previousDate,
+      previousTime,
     });
   } catch (emailError) {
     console.error("appointment change email failed:", emailError);

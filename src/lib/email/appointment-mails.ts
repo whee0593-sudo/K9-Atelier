@@ -13,7 +13,7 @@ import {
   buildCustomerRescheduleEmail,
   buildStaffNewAppointmentEmail,
 } from "@/lib/email/html-templates";
-import { sendEmail } from "@/lib/email/resend";
+import { sendEmail, sendEmailDelivery } from "@/lib/email/resend";
 import type { CustomerContact } from "@/lib/email/appointment-context";
 import { resolveStaffStatusNoticeKind } from "@/lib/appointments/staff-status-notice";
 import {
@@ -22,6 +22,47 @@ import {
   sendAppointmentStaffCancelledSms,
   sendAppointmentSubmittedSms,
 } from "@/lib/sms/appointment-sms";
+import { runVisitNotification } from "@/lib/visits/notification-ledger";
+import { combineProviderDeliveries } from "@/lib/visits/provider-delivery";
+import type { ProviderDelivery } from "@/lib/visits/provider-delivery";
+import {
+  customerChangeNoticePlan,
+  planStaffStatusNotice,
+  type VisitNoticePet,
+} from "@/lib/visits/notification-scope";
+
+export type VisitCustomerCopy = {
+  petNames?: string[];
+  serviceNames?: string[];
+};
+
+function copyFromPets(pets: VisitNoticePet[]): VisitCustomerCopy {
+  return {
+    petNames: pets.map((pet) => pet.petName),
+    serviceNames: pets.map((pet) => `${pet.petName} · ${pet.serviceName}`),
+  };
+}
+
+async function deliverEmailAndSms(
+  email: { subject: string; text: string; html: string },
+  customer: CustomerContact,
+  sendText: () => Promise<ProviderDelivery>,
+): Promise<ProviderDelivery> {
+  const emailed = await sendEmailDelivery({
+    to: customer.email,
+    subject: email.subject,
+    text: email.text,
+    html: email.html,
+  });
+  let texted: ProviderDelivery = "rejected";
+  try {
+    texted = await sendText();
+  } catch (error) {
+    console.error("visit customer SMS failed:", error);
+    texted = "uncertain";
+  }
+  return combineProviderDeliveries([emailed, texted]);
+}
 
 export async function notifyStaffNewAppointment(
   appointment: AppointmentRecord,
@@ -41,71 +82,85 @@ export async function notifyStaffNewAppointment(
 export async function notifyCustomerAppointmentSubmitted(
   appointment: AppointmentRecord,
   customer: CustomerContact,
+  copy?: VisitCustomerCopy,
 ) {
   const email =
     appointment.status === "confirmed"
-      ? buildCustomerAppointmentConfirmedEmail(appointment, customer)
+      ? buildCustomerAppointmentConfirmedEmail(appointment, customer, copy)
       : buildCustomerAppointmentSubmittedEmail(appointment, customer);
 
-  await sendEmail({
-    to: customer.email,
-    subject: email.subject,
-    text: email.text,
-    html: email.html,
+  await runVisitNotification({
+    visitId: appointment.visitId,
+    event: "booking_confirmation",
+    send: () =>
+      deliverEmailAndSms(email, customer, () =>
+        appointment.status === "confirmed"
+          ? sendAppointmentConfirmedSms(appointment, customer, copy?.petNames)
+          : sendAppointmentSubmittedSms(appointment, customer),
+      ),
   });
-  if (appointment.status === "confirmed") {
-    await sendAppointmentConfirmedSms(appointment, customer);
-  } else {
-    await sendAppointmentSubmittedSms(appointment, customer);
-  }
 }
 
 export async function notifyCustomerAppointmentConfirmed(
   appointment: AppointmentRecord,
   customer: CustomerContact,
+  copy?: VisitCustomerCopy,
 ) {
-  const email = buildCustomerAppointmentConfirmedEmail(appointment, customer);
+  const email = buildCustomerAppointmentConfirmedEmail(appointment, customer, copy);
 
-  await sendEmail({
-    to: customer.email,
-    subject: email.subject,
-    text: email.text,
-    html: email.html,
+  await runVisitNotification({
+    visitId: appointment.visitId,
+    event: "staff_confirmed",
+    send: () =>
+      deliverEmailAndSms(email, customer, () =>
+        sendAppointmentConfirmedSms(appointment, customer, copy?.petNames),
+      ),
   });
-  await sendAppointmentConfirmedSms(appointment, customer);
 }
 
 export async function notifyCustomerAppointmentDeclined(
   appointment: AppointmentRecord,
   customer: CustomerContact,
+  eventKey = "staff_declined",
+  petName?: string,
 ) {
-  const email = buildCustomerAppointmentDeclinedEmail(appointment, customer);
+  const email = buildCustomerAppointmentDeclinedEmail(
+    appointment,
+    customer,
+    petName,
+  );
 
-  await sendEmail({
-    to: customer.email,
-    subject: email.subject,
-    text: email.text,
-    html: email.html,
+  await runVisitNotification({
+    visitId: appointment.visitId,
+    event: eventKey,
+    send: () =>
+      deliverEmailAndSms(email, customer, () =>
+        sendAppointmentDeclinedSms(appointment, customer, petName),
+      ),
   });
-  await sendAppointmentDeclinedSms(appointment, customer);
 }
 
 export async function notifyCustomerAppointmentStaffCancelled(
   appointment: AppointmentRecord,
   customer: CustomerContact,
+  copy?: VisitCustomerCopy,
+  eventKey = "staff_cancelled",
+  petName?: string,
 ) {
   const email = buildCustomerAppointmentStaffCancelledEmail(
     appointment,
     customer,
+    copy?.petNames,
   );
 
-  await sendEmail({
-    to: customer.email,
-    subject: email.subject,
-    text: email.text,
-    html: email.html,
+  await runVisitNotification({
+    visitId: appointment.visitId,
+    event: eventKey,
+    send: () =>
+      deliverEmailAndSms(email, customer, () =>
+        sendAppointmentStaffCancelledSms(appointment, customer, petName),
+      ),
   });
-  await sendAppointmentStaffCancelledSms(appointment, customer);
 }
 
 export async function notifyCustomerAppointmentChange(
@@ -125,6 +180,8 @@ export async function notifyCustomerAppointmentChange(
     paymentFailureKind?: "declined" | "expired" | "unavailable" | null;
     willAutoRetry?: boolean;
     paymentUpdateUrl?: string | null;
+    previousDate?: string | null;
+    previousTime?: string | null;
   },
 ) {
   const email =
@@ -163,12 +220,31 @@ export async function notifyCustomerAppointmentChange(
             })
           : buildCustomerAddDogEmail({ appointment, customer });
 
-  await sendEmail({
-    to: customer.email,
-    subject: email.subject,
-    text: email.text,
-    html: email.html,
+  const send = () =>
+    sendEmailDelivery({
+      to: customer.email,
+      subject: email.subject,
+      text: email.text,
+      html: email.html,
+    });
+
+  const plan = customerChangeNoticePlan({
+    action,
+    date: appointment.appointmentDate,
+    timeLabel: appointment.appointmentTime,
+    previousDate: options?.previousDate,
+    previousTime: options?.previousTime,
   });
+  if (plan.claim) {
+    await runVisitNotification({
+      visitId: appointment.visitId,
+      event: plan.event,
+      send,
+    });
+    return;
+  }
+
+  await send();
 }
 
 export async function sendAppointmentCreatedEmails(
@@ -184,20 +260,42 @@ export async function sendAppointmentStatusEmails(
   customer: CustomerContact,
   status: "confirmed" | "cancelled",
   previousStatus?: AppointmentRecord["status"],
+  siblings?: VisitNoticePet[] | null,
 ) {
   const kind = resolveStaffStatusNoticeKind(status, previousStatus);
+  const plan = planStaffStatusNotice({
+    kind,
+    appointmentId: appointment.id,
+    petName: appointment.petName,
+    serviceName: appointment.serviceName,
+    siblings,
+  });
+  if (!plan.send) return;
+  const copy = copyFromPets(plan.pets);
 
-  if (kind === "confirmed") {
-    await notifyCustomerAppointmentConfirmed(appointment, customer);
+  if (plan.event === "staff_confirmed") {
+    await notifyCustomerAppointmentConfirmed(appointment, customer, copy);
     return;
   }
 
-  if (kind === "staff_cancelled") {
-    await notifyCustomerAppointmentStaffCancelled(appointment, customer);
+  const petName = plan.scope === "pet" ? plan.pets[0]?.petName : undefined;
+  if (plan.event === "staff_cancelled") {
+    await notifyCustomerAppointmentStaffCancelled(
+      appointment,
+      customer,
+      copy,
+      plan.eventKey,
+      petName,
+    );
     return;
   }
 
-  await notifyCustomerAppointmentDeclined(appointment, customer);
+  await notifyCustomerAppointmentDeclined(
+    appointment,
+    customer,
+    plan.eventKey,
+    petName,
+  );
 }
 
 export { bookingDetailsFromAppointment };

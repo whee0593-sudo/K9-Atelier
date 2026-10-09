@@ -3,12 +3,14 @@ import {
   getGoogleWriteReviewUrl,
 } from "@/lib/business";
 import { buildCustomerFollowUpEmail } from "@/lib/email/layout";
+import { formatVisitPetNames } from "@/lib/visits/pet-names";
 
 const SMS_OPT_OUT = "Reply STOP to opt out.";
 
 export type FollowUpNames = {
   firstName?: string | null;
   petName?: string | null;
+  petNames?: Array<string | null | undefined>;
 };
 
 export function followUpGreetingName(firstName?: string | null) {
@@ -21,6 +23,17 @@ export function followUpPetName(petName?: string | null) {
   return petName?.trim() || "your dog";
 }
 
+export function followUpPetLabel(input: FollowUpNames) {
+  if (input.petNames && input.petNames.length > 1) {
+    return formatVisitPetNames(input.petNames, "your dog");
+  }
+  return followUpPetName(input.petName);
+}
+
+function followUpSeveral(input: FollowUpNames) {
+  return Boolean(input.petNames && input.petNames.length > 1);
+}
+
 export function followUpReviewUrl() {
   return (
     getGoogleWriteReviewUrl() ||
@@ -31,9 +44,10 @@ export function followUpReviewUrl() {
 
 export function buildNextDayFollowUpSms(input: FollowUpNames) {
   const firstName = followUpGreetingName(input.firstName);
-  const petName = followUpPetName(input.petName);
+  const petName = followUpPetLabel(input);
+  const doing = followUpSeveral(input) ? "are" : "is";
   return [
-    `Hi ${firstName}! This is Penny from K9 Atelier. Just checking in to see how ${petName} is doing after yesterday's groom. 💜`,
+    `Hi ${firstName}! This is Penny from K9 Atelier. Just checking in to see how ${petName} ${doing} doing after yesterday's groom. 💜`,
     "",
     `If you have any questions or feedback, please feel free to text me anytime. And if you loved ${petName}'s experience, I'd really appreciate a quick Google review:`,
     "",
@@ -47,14 +61,19 @@ export function buildNextDayFollowUpSms(input: FollowUpNames) {
 
 export function buildNextDayFollowUpEmail(input: FollowUpNames) {
   const firstName = followUpGreetingName(input.firstName);
-  const petName = followUpPetName(input.petName);
+  const petName = followUpPetLabel(input);
+  const several = followUpSeveral(input);
   const reviewUrl = followUpReviewUrl();
   const introParagraphs = [
-    `I just wanted to check in and see how ${petName} is doing after yesterday's grooming appointment. I hope you're both enjoying the fresh new look!`,
+    several
+      ? `I just wanted to check in and see how ${petName} are doing after yesterday's grooming appointment. I hope you're enjoying the fresh new looks!`
+      : `I just wanted to check in and see how ${petName} is doing after yesterday's grooming appointment. I hope you're both enjoying the fresh new look!`,
     `Your experience—and ${petName}'s comfort—are very important to me. If you have any questions or feedback about the groom, coat, or at-home care, please feel free to reach out anytime.`,
     `If you were happy with your experience, I'd truly appreciate it if you would take a moment to share a Google review. Your feedback means a lot to us and helps other local pet parents feel confident choosing K9 Atelier.`,
   ];
-  const closingParagraph = `Thank you again for trusting me with ${petName}. I look forward to seeing you both again.`;
+  const closingParagraph = several
+    ? `Thank you again for trusting me with ${petName}. I look forward to seeing you again.`
+    : `Thank you again for trusting me with ${petName}. I look forward to seeing you both again.`;
   const signoffLines = [
     "K9 Atelier",
     "Private Mobile Pet Spa",

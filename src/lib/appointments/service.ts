@@ -34,6 +34,7 @@ import {
   servicePriceFromEstimatedTotal,
   visitArrivalFields,
 } from "@/lib/visits/visit";
+import { loadVisitNoticePets } from "@/lib/visits/notification-context";
 import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
 import {
   assignArrivalWindow,
@@ -417,11 +418,15 @@ export async function setAppointmentStatus(
     const contact = contactFromAdminAppointment(appointmentBeforeUpdate);
     if (contact) {
       try {
+        const siblings = appointmentBeforeUpdate.visitId
+          ? await loadVisitNoticePets(appointmentBeforeUpdate.visitId)
+          : undefined;
         await sendAppointmentStatusEmails(
           { ...appointmentBeforeUpdate, status },
           contact,
           status,
           appointmentBeforeUpdate.status,
+          siblings,
         );
       } catch (emailError) {
         console.error("setAppointmentStatus email failed:", emailError);
@@ -552,13 +557,44 @@ export async function sendAppointmentEnRouteNotification(
   const { sendAppointmentEnRouteSms } = await import(
     "@/lib/sms/appointment-sms"
   );
-  const sent = await sendAppointmentEnRouteSms(appointment, contact);
-  if (!sent) return { error: "server" };
+  const { runVisitNotification } = await import(
+    "@/lib/visits/notification-ledger"
+  );
+  const { activeVisitPets } = await import("@/lib/visits/notification-scope");
+  const siblings = appointment.visitId
+    ? await loadVisitNoticePets(appointment.visitId)
+    : null;
+  if (siblings?.some((pet) => pet.id !== appointmentId)) {
+    const { data: sentRows, error: sentLookupError } = await admin
+      .from("appointments")
+      .select("id, en_route_sms_sent_at")
+      .eq("visit_id", appointment.visitId);
+    if (sentLookupError) {
+      console.error(
+        "sendAppointmentEnRouteNotification visit lookup failed:",
+        sentLookupError.message,
+      );
+      return { error: "server" };
+    }
+    if (sentRows?.some((row) => row.en_route_sms_sent_at)) {
+      return { error: "conflict" };
+    }
+  }
+  const pets = siblings ? activeVisitPets(siblings) : null;
+  const petNames = pets?.map((pet) => pet.petName);
+  const sent = await runVisitNotification({
+    visitId: appointment.visitId,
+    event: "en_route",
+    send: () => sendAppointmentEnRouteSms(appointment, contact, petNames),
+  });
+  if (sent === "skipped") return { error: "conflict" };
+  if (sent !== "sent") return { error: "server" };
 
+  const markIds = pets?.map((pet) => pet.id) ?? [appointmentId];
   const { error: markError } = await admin
     .from("appointments")
     .update({ en_route_sms_sent_at: new Date().toISOString() })
-    .eq("id", appointmentId);
+    .in("id", markIds);
 
   if (markError) {
     console.error(

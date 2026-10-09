@@ -5,9 +5,9 @@ import type { AppointmentRow } from "@/lib/appointments/types";
 import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
 import { contactFromAdminAppointment } from "@/lib/email/appointment-context";
 import { business } from "@/lib/business";
-import { sendEmail } from "@/lib/email/resend";
+import { sendEmailDelivery } from "@/lib/email/resend";
 import { phonesMatch } from "@/lib/sms/phone";
-import { sendSms } from "@/lib/sms/twilio";
+import { sendSmsDelivery } from "@/lib/sms/twilio";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
 import { lookupCustomerByPhone } from "@/lib/sms/customer-by-phone";
 import { inboundReplyTextForStaff } from "@/lib/sms/inbox-copy";
@@ -17,6 +17,11 @@ import {
   recordCustomerSms,
 } from "@/lib/sms/inbox";
 import { handleStaffPhoneReply } from "@/lib/sms/staff-reply";
+import { loadVisitNoticePets } from "@/lib/visits/notification-context";
+import { runVisitNotification } from "@/lib/visits/notification-ledger";
+import { activeVisitPets } from "@/lib/visits/notification-scope";
+import { combineProviderDeliveries } from "@/lib/visits/provider-delivery";
+import { formatVisitPetNames } from "@/lib/visits/pet-names";
 
 const INBOUND_SELECT = `
   id,
@@ -42,6 +47,7 @@ const INBOUND_SELECT = `
   confirmed_at,
   customer_confirmed_at,
   created_at,
+  visit_id,
   reminder_sms_sent_at,
   pets ( name, breed ),
   profiles ( email, first_name, last_name, phone )
@@ -70,9 +76,14 @@ function firstName(name: string | null | undefined) {
 export function buildCustomerYesReceivedSms(input: {
   customerName?: string | null;
   petName: string;
+  petNames?: string[];
   dateLabel: string;
 }) {
-  return `K9 ATELIER: Thanks ${firstName(input.customerName)} — we received your confirmation for ${input.petName} on ${input.dateLabel}.\n\nReply STOP to opt out.`;
+  const pet =
+    input.petNames && input.petNames.length > 1
+      ? formatVisitPetNames(input.petNames, input.petName)
+      : input.petName;
+  return `K9 ATELIER: Thanks ${firstName(input.customerName)} — we received your confirmation for ${pet} on ${input.dateLabel}.\n\nReply STOP to opt out.`;
 }
 
 export type InboundSmsResult =
@@ -159,45 +170,58 @@ export async function handleInboundCustomerSms(input: {
   const contact = contactFromAdminAppointment(appointment);
   const dateLabel = formatAppointmentDateLabel(appointment.appointmentDate);
   const already = Boolean(appointment.customerConfirmedAt);
+  const siblings = appointment.visitId
+    ? await loadVisitNoticePets(appointment.visitId)
+    : null;
+  const pets = siblings ? (activeVisitPets(siblings) ?? siblings) : null;
+  const petNames = pets?.map((pet) => pet.petName) ?? [appointment.petName];
+  const petLabel = formatVisitPetNames(petNames, appointment.petName);
 
-  if (!already) {
-    const { error: markError } = await admin
-      .from("appointments")
-      .update({ customer_confirmed_at: new Date().toISOString() })
-      .eq("id", appointment.id)
-      .is("customer_confirmed_at", null);
+  const markedAt = new Date().toISOString();
+  const mark = admin
+    .from("appointments")
+    .update({ customer_confirmed_at: markedAt })
+    .in("status", ["confirmed", "pending_confirmation"])
+    .is("customer_confirmed_at", null);
+  const { error: markError } = appointment.visitId
+    ? await mark.eq("visit_id", appointment.visitId)
+    : await mark.eq("id", appointment.id);
 
-    if (markError) {
-      console.error(
-        "handleInboundCustomerSms mark failed:",
-        appointment.id,
-        markError.message,
-      );
-    }
+  if (markError) {
+    console.error(
+      "handleInboundCustomerSms mark failed:",
+      appointment.id,
+      markError.message,
+    );
   }
 
-  const reply = buildCustomerYesReceivedSms({
-    customerName: contact?.firstName ?? contact?.name,
-    petName: appointment.petName,
-    dateLabel,
+  await runVisitNotification({
+    visitId: appointment.visitId,
+    event: "customer_reply_c",
+    send: async () => {
+      const reply = buildCustomerYesReceivedSms({
+        customerName: contact?.firstName ?? contact?.name,
+        petName: appointment.petName,
+        petNames,
+        dateLabel,
+      });
+      const texted = await sendSmsDelivery({ to: input.from, body: reply });
+      const mailed = await sendEmailDelivery({
+        to: business.brand.email,
+        subject: `[K9 Atelier] Customer confirmed — ${petLabel}`,
+        text: [
+          `${contact?.name ?? contact?.email ?? "A customer"} replied ${input.body.trim()} to confirm.`,
+          "",
+          `Pets: ${petLabel}`,
+          `Service: ${appointment.serviceName}`,
+          `Date: ${dateLabel} · ${appointment.appointmentTime}`,
+          "",
+          "This is the customer SMS confirmation. It does not change staff/vaccination booking status.",
+        ].join("\n"),
+      });
+      return combineProviderDeliveries([texted, mailed]);
+    },
   });
-  await sendSms({ to: input.from, body: reply });
-
-  if (!already) {
-    await sendEmail({
-      to: business.brand.email,
-      subject: `[K9 Atelier] Customer confirmed — ${appointment.petName}`,
-      text: [
-        `${contact?.name ?? contact?.email ?? "A customer"} replied ${input.body.trim()} to confirm.`,
-        "",
-        `Pet: ${appointment.petName}`,
-        `Service: ${appointment.serviceName}`,
-        `Date: ${dateLabel} · ${appointment.appointmentTime}`,
-        "",
-        "This is the customer SMS confirmation. It does not change staff/vaccination booking status.",
-      ].join("\n"),
-    });
-  }
 
   return { handled: "yes", already, appointmentId: appointment.id };
 }
