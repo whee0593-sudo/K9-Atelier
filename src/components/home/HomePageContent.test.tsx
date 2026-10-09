@@ -250,6 +250,12 @@ describe("homepage SEO", () => {
     );
     assert.equal(component.includes("priority"), false);
     assert.equal(component.includes("preload"), false);
+    assert.match(component, /grid-cols-2 items-center gap-x-4 gap-y-8/);
+    assert.match(
+      component,
+      /md:grid-cols-\[minmax\(0,2fr\)_minmax\(0,2fr\)_minmax\(0,2fr\)_minmax\(0,3fr\)\] md:gap-x-8 md:gap-y-0 md:px-6 lg:gap-x-12 lg:px-12/,
+    );
+    assert.equal(component.includes("md:grid-cols-4"), false);
   });
 
   it("shows the public phone and Palm Beach service-area sentence in the footer", () => {
