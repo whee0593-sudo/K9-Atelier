@@ -49,6 +49,7 @@ function harness(options: {
   futureChecks?: FutureAppointmentSnapshot[][];
   claim?: boolean;
   send?: boolean;
+  delivery?: "uncertain" | "throw";
 }) {
   const calls: string[] = [];
   const sent: Array<{ to: string; subject: string; html: string }> = [];
@@ -85,8 +86,11 @@ function harness(options: {
     },
     send: async (message) => {
       calls.push("send");
+      if (options.delivery === "throw") throw new Error("timeout");
+      if (options.delivery === "uncertain") return "uncertain";
+      if (options.send === false) return false;
       sent.push(message);
-      return options.send ?? true;
+      return true;
     },
   };
   return { deps, calls, sent };
@@ -288,6 +292,30 @@ describe("rebook reminder job", () => {
       "send",
       "release",
     ]);
+  });
+
+  it("keeps the claim when provider acceptance is uncertain", async () => {
+    const { deps, calls, sent } = harness({
+      futureChecks: [[], []],
+      delivery: "uncertain",
+    });
+    const result = await runRebookReminderJob(deps);
+
+    assert.deepEqual(result, { sent: 0, skipped: 0, failed: 1 });
+    assert.equal(calls.includes("release"), false);
+    assert.equal(sent.length, 0);
+  });
+
+  it("keeps the claim when the email send times out", async () => {
+    const { deps, calls, sent } = harness({
+      futureChecks: [[], []],
+      delivery: "throw",
+    });
+    const result = await runRebookReminderJob(deps);
+
+    assert.deepEqual(result, { sent: 0, skipped: 0, failed: 1 });
+    assert.equal(calls.includes("release"), false);
+    assert.equal(sent.length, 0);
   });
 
   it("sends one reminder per completed appointment", async () => {

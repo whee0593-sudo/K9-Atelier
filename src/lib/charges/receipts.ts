@@ -1,7 +1,7 @@
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import { getBookAgainUrl, getGoogleWriteReviewUrl } from "@/lib/business";
 import { isEmailConfigured, sendEmail, siteUrl } from "@/lib/email/resend";
-import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
+import { isSmsConfigured, sendSms, sendSmsDelivery } from "@/lib/sms/twilio";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
 import { formatChargeMoney } from "@/lib/charges/money";
 import { chargeKindLabel } from "@/lib/charges/receipt-content";
@@ -103,7 +103,7 @@ export async function sendAfterVisitThankYouSms(
   const outcome = await runVisitNotification({
     visitId: appointment.visitId,
     event: "payment_thank_you",
-    send: () => sendSms({ to, body }),
+    send: () => sendSmsDelivery({ to, body }),
   });
   return outcome === "sent" || outcome === "skipped";
 }

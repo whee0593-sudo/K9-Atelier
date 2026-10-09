@@ -3,10 +3,14 @@ import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import {
   buildRebookReminderEmail,
 } from "@/lib/email/rebook-reminder";
-import { isEmailConfigured, sendEmail } from "@/lib/email/resend";
+import { isEmailConfigured, sendEmailDelivery } from "@/lib/email/resend";
 import { groupByVisit } from "@/lib/visits/notification-scope";
 import { formatVisitPetNames } from "@/lib/visits/pet-names";
 import { recordVisitNotificationSent } from "@/lib/visits/notification-ledger";
+import {
+  normalizeVisitSendResult,
+  type ProviderDelivery,
+} from "@/lib/visits/provider-delivery";
 import {
   addDaysToIsoDate,
   businessDayUtcRange,
@@ -158,7 +162,7 @@ export type RebookReminderJobDeps = {
     subject: string;
     text: string;
     html: string;
-  }) => Promise<boolean>;
+  }) => Promise<boolean | ProviderDelivery>;
   onSent?: (candidate: RebookReminderCandidate) => Promise<void>;
   alreadySent?: (candidate: RebookReminderCandidate) => Promise<boolean>;
 };
@@ -254,21 +258,25 @@ export async function runRebookReminderJob(
         "your dog",
       ),
     });
-    let delivered = false;
+    let outcome: ProviderDelivery = "rejected";
     try {
-      delivered = await deps.send({
-        to: candidate.customerEmail,
-        subject: email.subject,
-        text: email.text,
-        html: email.html,
-      });
+      outcome = normalizeVisitSendResult(
+        await deps.send({
+          to: candidate.customerEmail,
+          subject: email.subject,
+          text: email.text,
+          html: email.html,
+        }),
+      );
     } catch (error) {
       console.error("rebook reminder send threw:", candidate.id, error);
-      delivered = false;
+      outcome = "uncertain";
     }
 
-    if (!delivered) {
-      for (const member of claimed) await deps.release(member.id);
+    if (outcome !== "delivered") {
+      if (outcome === "rejected") {
+        for (const member of claimed) await deps.release(member.id);
+      }
       failed += 1;
       continue;
     }
@@ -446,7 +454,7 @@ export async function sendThreeWeekRebookReminders(
         );
       }
     },
-    send: (message) => sendEmail(message),
+    send: (message) => sendEmailDelivery(message),
     onSent: async (candidate) => {
       await recordVisitNotificationSent(
         candidate.visitId,
@@ -469,7 +477,7 @@ export async function sendThreeWeekRebookReminders(
         );
         return false;
       }
-      return data?.status === "sent";
+      return data?.status === "sent" || data?.status === "uncertain";
     },
   });
 }

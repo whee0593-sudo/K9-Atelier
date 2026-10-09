@@ -64,8 +64,41 @@ export function groupByVisit<T extends { id: string; visitId?: string | null }>(
   return [...groups.values()];
 }
 
-export function rescheduleNotificationEvent(date: string, timeLabel: string) {
+export function rescheduleNotificationEvent(
+  date: string,
+  timeLabel: string,
+  previous?: { date?: string | null; timeLabel?: string | null } | null,
+) {
+  const fromDate = previous?.date?.trim();
+  const fromTime = previous?.timeLabel?.trim();
+  if (fromDate && fromTime) {
+    return `reschedule_confirmation:${fromDate}:${fromTime}:${date}:${timeLabel}`;
+  }
   return `reschedule_confirmation:${date}:${timeLabel}`;
+}
+
+/**
+ * Adding, cancelling, or removing a dog is its own message.
+ * It must not reuse the original booking confirmation.
+ * A reschedule is deduped by the previous slot and the new slot.
+ */
+export function customerChangeNoticePlan(input: {
+  action: string;
+  date?: string | null;
+  timeLabel?: string | null;
+  previousDate?: string | null;
+  previousTime?: string | null;
+}): { claim: false } | { claim: true; event: string } {
+  if (input.action !== "reschedule" || !input.date || !input.timeLabel) {
+    return { claim: false };
+  }
+  return {
+    claim: true,
+    event: rescheduleNotificationEvent(input.date, input.timeLabel, {
+      date: input.previousDate,
+      timeLabel: input.previousTime,
+    }),
+  };
 }
 
 export type StaffStatusNoticePlan =
@@ -88,7 +121,8 @@ export function planStaffStatusNotice(input: {
   appointmentId: string;
   petName: string;
   serviceName?: string;
-  siblings?: VisitNoticePet[];
+  /** null means the other dogs on this visit could not be loaded. */
+  siblings?: VisitNoticePet[] | null;
 }): StaffStatusNoticePlan {
   const fallback: VisitNoticePet = {
     id: input.appointmentId,
@@ -98,6 +132,20 @@ export function planStaffStatusNotice(input: {
     serviceEndedAt: null,
     sex: null,
   };
+  if (input.siblings === null) {
+    if (input.kind === "confirmed") {
+      return { send: false, reason: "waiting_for_siblings" };
+    }
+    const event =
+      input.kind === "staff_cancelled" ? "staff_cancelled" : "staff_declined";
+    return {
+      send: true,
+      event,
+      scope: "pet",
+      eventKey: `${event}:${input.appointmentId}`,
+      pets: [fallback],
+    };
+  }
   const rows =
     input.siblings && input.siblings.some((pet) => pet.id === input.appointmentId)
       ? input.siblings

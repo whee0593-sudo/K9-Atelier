@@ -1,3 +1,8 @@
+import {
+  classifyProviderHttpStatus,
+  type ProviderDelivery,
+} from "@/lib/visits/provider-delivery";
+
 export type SendSmsInput = {
   to: string;
   body: string;
@@ -24,7 +29,7 @@ async function postTwilioMessage(input: {
   mediaUrls?: string[];
   from?: string;
   messagingServiceSid?: string;
-}): Promise<boolean> {
+}): Promise<ProviderDelivery> {
   const params = new URLSearchParams();
   params.set("To", input.to);
   params.set("Body", input.body);
@@ -50,57 +55,97 @@ async function postTwilioMessage(input: {
   );
 
   if (!response.ok) {
-    const errorText = await response.text();
+    const errorText = await response.text().catch(() => "");
     console.error("Twilio SMS failed:", response.status, errorText);
-    return false;
+    return classifyProviderHttpStatus(response.status);
   }
 
-  return true;
+  return "delivered";
 }
 
-export async function sendSms(input: SendSmsInput): Promise<boolean> {
+function twilioRequest(input: SendSmsInput) {
   const accountSid = envValue("TWILIO_ACCOUNT_SID");
   const authToken = envValue("TWILIO_AUTH_TOKEN");
   const fromNumber = envValue("TWILIO_FROM_NUMBER");
   const messagingServiceSid = envValue("TWILIO_MESSAGING_SERVICE_SID");
-
   if (!accountSid || !authToken || (!fromNumber && !messagingServiceSid)) {
+    return null;
+  }
+  const mediaUrls = (input.mediaUrls ?? []).map((url) => url.trim()).filter(Boolean);
+  return {
+    accountSid,
+    authToken,
+    fromNumber,
+    messagingServiceSid,
+    mediaUrls,
+    shared: {
+      accountSid,
+      authToken,
+      to: input.to,
+      body: input.body || (mediaUrls.length ? "Photo" : ""),
+    },
+  };
+}
+
+function textMessage(
+  request: NonNullable<ReturnType<typeof twilioRequest>>,
+) {
+  return postTwilioMessage({
+    ...request.shared,
+    from: request.messagingServiceSid ? undefined : request.fromNumber || undefined,
+    messagingServiceSid: request.messagingServiceSid || undefined,
+  });
+}
+
+async function mediaMessage(
+  request: NonNullable<ReturnType<typeof twilioRequest>>,
+) {
+  return request.fromNumber
+    ? postTwilioMessage({
+        ...request.shared,
+        from: request.fromNumber,
+        mediaUrls: request.mediaUrls,
+      })
+    : postTwilioMessage({
+        ...request.shared,
+        messagingServiceSid: request.messagingServiceSid,
+        mediaUrls: request.mediaUrls,
+      });
+}
+
+export async function sendSms(input: SendSmsInput): Promise<boolean> {
+  const request = twilioRequest(input);
+  if (!request) {
     console.warn("sendSms skipped: Twilio is not configured");
     return false;
   }
-
-  const mediaUrls = (input.mediaUrls ?? []).map((url) => url.trim()).filter(Boolean);
-  const shared = {
-    accountSid,
-    authToken,
-    to: input.to,
-    body: input.body || (mediaUrls.length ? "Photo" : ""),
-  };
-
-  if (mediaUrls.length > 0) {
-    const sentMms = fromNumber
-      ? await postTwilioMessage({
-          ...shared,
-          from: fromNumber,
-          mediaUrls,
-        })
-      : await postTwilioMessage({
-          ...shared,
-          messagingServiceSid,
-          mediaUrls,
-        });
-    if (sentMms) return true;
+  if (request.mediaUrls.length > 0) {
+    const sentMms = await mediaMessage(request);
+    if (sentMms === "delivered") return true;
     console.warn("Twilio MMS failed; sending text without the image");
-    return postTwilioMessage({
-      ...shared,
-      from: fromNumber || undefined,
-      messagingServiceSid: fromNumber ? undefined : messagingServiceSid,
-    });
+    return (await textMessage(request)) === "delivered";
   }
+  return (await textMessage(request)) === "delivered";
+}
 
-  return postTwilioMessage({
-    ...shared,
-    from: messagingServiceSid ? undefined : fromNumber || undefined,
-    messagingServiceSid: messagingServiceSid || undefined,
-  });
+/** Visit notices use this so a timeout is not treated as a clean rejection. */
+export async function sendSmsDelivery(
+  input: SendSmsInput,
+): Promise<ProviderDelivery> {
+  const request = twilioRequest(input);
+  if (!request) {
+    console.warn("sendSms skipped: Twilio is not configured");
+    return "rejected";
+  }
+  try {
+    if (request.mediaUrls.length > 0) {
+      const sentMms = await mediaMessage(request);
+      if (sentMms !== "rejected") return sentMms;
+      console.warn("Twilio MMS failed; sending text without the image");
+    }
+    return await textMessage(request);
+  } catch (error) {
+    console.error("Twilio SMS outcome uncertain:", error);
+    return "uncertain";
+  }
 }

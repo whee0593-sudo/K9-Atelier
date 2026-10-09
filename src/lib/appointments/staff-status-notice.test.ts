@@ -2,8 +2,14 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { resolveStaffStatusNoticeKind } from "@/lib/appointments/staff-status-notice";
 import type { AppointmentRecord } from "@/lib/appointments/types";
-import { buildCustomerAppointmentStaffCancelledEmail } from "@/lib/email/html-templates";
-import { buildAppointmentStaffCancelledSms } from "@/lib/notifications";
+import {
+  buildCustomerAppointmentDeclinedEmail,
+  buildCustomerAppointmentStaffCancelledEmail,
+} from "@/lib/email/html-templates";
+import {
+  buildAppointmentDeclinedSms,
+  buildAppointmentStaffCancelledSms,
+} from "@/lib/notifications";
 
 const appointment = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -91,5 +97,31 @@ describe("staff cancelled customer notices", () => {
     assert.match(body, /book another available date/);
     assert.equal(body.toLowerCase().includes("declined"), false);
     assert.equal(body.toLowerCase().includes("vaccination"), false);
+  });
+
+  it("names only the cancelled dog when one pet is removed from a visit", () => {
+    const details = {
+      customerName: "Jane",
+      petName: "Bella",
+      serviceName: "Signature Bath & Care",
+      dateLabel: "Tuesday, August 18, 2026",
+      timeLabel: "10:00 AM",
+    };
+    const sms = buildAppointmentStaffCancelledSms(details, "Daisy");
+    assert.match(sms, /unable to accommodate Daisy’s appointment on Tuesday, August 18, 2026 between 10:00 AM/);
+    assert.equal(sms.includes("Milo"), false);
+
+    const declined = buildAppointmentDeclinedSms(details, "Daisy");
+    assert.match(declined, /unable to confirm Daisy’s selected K9 Atelier appointment/);
+    const fullDecline = buildAppointmentDeclinedSms(details);
+    assert.match(fullDecline, /unable to confirm your selected K9 Atelier appointment/);
+
+    const email = buildCustomerAppointmentDeclinedEmail(
+      appointment,
+      { email: "client@example.com", name: "Jane Client" },
+      "Daisy",
+    );
+    assert.match(email.text, /unable to confirm Daisy’s selected appointment/);
+    assert.equal(email.text.includes("Milo"), false);
   });
 });

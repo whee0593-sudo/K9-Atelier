@@ -312,11 +312,14 @@ export function buildCustomerAppointmentSubmittedEmail(
 export function buildCustomerAppointmentDeclinedEmail(
   _appointment: AppointmentRecord,
   customer: CustomerContact,
+  petName?: string,
 ) {
   const subject = "Regarding Your Appointment";
   const greetingName = customer.name ?? "Client";
-  const openingParagraph =
-    "Unfortunately, we’re unable to confirm your selected appointment.";
+  const namedPet = petName?.trim();
+  const openingParagraph = namedPet
+    ? `Unfortunately, we’re unable to confirm ${namedPet}’s selected appointment.`
+    : "Unfortunately, we’re unable to confirm your selected appointment.";
   const guidanceParagraph =
     "You may select another available date through our booking page, or contact us if you would like assistance.";
 

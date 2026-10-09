@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordCustomerSms } from "@/lib/sms/inbox";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
-import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
+import { isSmsConfigured, sendSmsDelivery } from "@/lib/sms/twilio";
 import { buildCheckoutReadySms } from "@/lib/sms/checkout-copy";
 import { loadVisitNoticePets } from "@/lib/visits/notification-context";
 import { runVisitNotification } from "@/lib/visits/notification-ledger";
@@ -45,7 +45,7 @@ export async function sendCheckoutReadySms(appointmentId: string) {
   const visitId = (data.visit_id as string | null) ?? null;
   const siblings = visitId ? await loadVisitNoticePets(visitId) : null;
   const ready = siblings ? petsReadyForCheckout(siblings) : null;
-  if (siblings && !ready) return false;
+  if (visitId && !ready) return false;
   const petNames = ready?.map((row) => row.petName);
   const petName = petNames?.[0] || pet?.name?.trim() || "your pet";
   const body = buildCheckoutReadySms({
@@ -58,7 +58,7 @@ export async function sendCheckoutReadySms(appointmentId: string) {
     const outcome = await runVisitNotification({
       visitId,
       event: "checkout_ready",
-      send: () => sendSms({ to, body }),
+      send: () => sendSmsDelivery({ to, body }),
     });
     if (outcome !== "sent") return outcome === "skipped";
     const customerName = [profile?.first_name, profile?.last_name]

@@ -117,15 +117,23 @@ export function buildAppointmentSubmittedSms(
 
 export function buildAppointmentDeclinedSms(
   details: BookingConfirmationDetails,
+  petName?: string,
 ): string {
   const name = smsGreetingName(details);
-  return `Hi ${name}, we’re unable to confirm your selected K9 Atelier appointment. You may select another available date through our booking page, or contact us for assistance. ${SMS_OPT_OUT}`;
+  const selected = petName?.trim()
+    ? `${petName.trim()}’s selected K9 Atelier appointment`
+    : "your selected K9 Atelier appointment";
+  return `Hi ${name}, we’re unable to confirm ${selected}. You may select another available date through our booking page, or contact us for assistance. ${SMS_OPT_OUT}`;
 }
 
 export function buildAppointmentStaffCancelledSms(
   details: BookingConfirmationDetails,
+  petName?: string,
 ): string {
-  return `K9 Atelier: We’re sorry, but we’re unable to accommodate your appointment on ${details.dateLabel} between ${details.timeLabel}. You may book another available date, or contact us for assistance. ${SMS_OPT_OUT}`;
+  const subject = petName?.trim()
+    ? `${petName.trim()}’s appointment`
+    : "your appointment";
+  return `K9 Atelier: We’re sorry, but we’re unable to accommodate ${subject} on ${details.dateLabel} between ${details.timeLabel}. You may book another available date, or contact us for assistance. ${SMS_OPT_OUT}`;
 }
 
 export function buildAppointmentReminderSms(

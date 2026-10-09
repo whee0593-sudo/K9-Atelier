@@ -8,13 +8,20 @@ import {
 } from "@/lib/visits/notification-ledger";
 import {
   activeVisitPets,
+  customerChangeNoticePlan,
   groupByVisit,
   isPetRecordNotice,
   isVisitLogisticsEvent,
   petsReadyForCheckout,
   planStaffStatusNotice,
+  rescheduleNotificationEvent,
   type VisitNoticePet,
 } from "@/lib/visits/notification-scope";
+import {
+  classifyProviderHttpStatus,
+  combineProviderDeliveries,
+} from "@/lib/visits/provider-delivery";
+import { decideExistingVisitClaim } from "@/lib/visits/notification-ledger";
 
 function pet(patch: Partial<VisitNoticePet> & Pick<VisitNoticePet, "id" | "petName">): VisitNoticePet {
   return {
@@ -205,5 +212,383 @@ describe("visit notification ledger", () => {
     });
     assert.equal(result, "skipped");
     assert.equal(sends, 0);
+  });
+
+  it("retries a definite rejection and holds an uncertain delivery", async () => {
+    const store = memoryVisitNotificationStore();
+    let sends = 0;
+    const rejected = await runVisitNotification({
+      visitId: "visit-1",
+      event: "en_route",
+      store,
+      send: async () => {
+        sends += 1;
+        return "rejected";
+      },
+    });
+    const delivered = await runVisitNotification({
+      visitId: "visit-1",
+      event: "en_route",
+      store,
+      send: async () => {
+        sends += 1;
+        return "delivered";
+      },
+    });
+    assert.equal(rejected, "failed");
+    assert.equal(delivered, "sent");
+
+    const uncertain = await runVisitNotification({
+      visitId: "visit-1",
+      event: "checkout_ready",
+      store,
+      send: async () => {
+        sends += 1;
+        return "uncertain";
+      },
+    });
+    const retry = await runVisitNotification({
+      visitId: "visit-1",
+      event: "checkout_ready",
+      store,
+      send: async () => {
+        sends += 1;
+        return true;
+      },
+    });
+    assert.equal(uncertain, "failed");
+    assert.equal(retry, "skipped");
+    assert.equal(sends, 3);
+  });
+
+  it("does not retry when the provider call throws", async () => {
+    const store = memoryVisitNotificationStore();
+    let sends = 0;
+    const first = await runVisitNotification({
+      visitId: "visit-1",
+      event: "payment_thank_you",
+      store,
+      send: async () => {
+        sends += 1;
+        throw new Error("timeout");
+      },
+    });
+    const second = await runVisitNotification({
+      visitId: "visit-1",
+      event: "payment_thank_you",
+      store,
+      send: async () => {
+        sends += 1;
+        return true;
+      },
+    });
+    assert.equal(first, "failed");
+    assert.equal(second, "skipped");
+    assert.equal(sends, 1);
+  });
+
+  it("does not send again when the sent mark fails after delivery", async () => {
+    const base = memoryVisitNotificationStore();
+    let failComplete = true;
+    const store = {
+      ...base,
+      complete: async (visitId: string, event: string) => {
+        if (failComplete) {
+          failComplete = false;
+          return false;
+        }
+        return base.complete(visitId, event);
+      },
+    };
+    let sends = 0;
+    const first = await runVisitNotification({
+      visitId: "visit-1",
+      event: "booking_confirmation",
+      store,
+      send: async () => {
+        sends += 1;
+        return true;
+      },
+    });
+    const second = await runVisitNotification({
+      visitId: "visit-1",
+      event: "booking_confirmation",
+      store,
+      send: async () => {
+        sends += 1;
+        return true;
+      },
+    });
+    assert.equal(first, "sent");
+    assert.equal(second, "skipped");
+    assert.equal(sends, 1);
+  });
+
+  it("skips a second caller while the first send is still in flight", async () => {
+    const store = memoryVisitNotificationStore();
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let started: () => void = () => {};
+    const startedPromise = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let sends = 0;
+    const first = runVisitNotification({
+      visitId: "visit-1",
+      event: "staff_confirmed",
+      store,
+      send: async () => {
+        sends += 1;
+        started();
+        await gate;
+        return true;
+      },
+    });
+    await startedPromise;
+    const second = await runVisitNotification({
+      visitId: "visit-1",
+      event: "staff_confirmed",
+      store,
+      send: async () => {
+        sends += 1;
+        return true;
+      },
+    });
+    release();
+    assert.equal(await first, "sent");
+    assert.equal(second, "skipped");
+    assert.equal(sends, 1);
+  });
+
+  it("reclaims only a claim that never contacted the provider", async () => {
+    let clock = Date.parse("2026-10-09T12:00:00.000Z");
+    const store = memoryVisitNotificationStore({ now: () => clock });
+    assert.equal(await store.claim("visit-1", "en_route"), "claimed");
+    clock += 15 * 60 * 1000;
+    assert.equal(await store.claim("visit-1", "en_route"), "claimed");
+
+    assert.equal(await store.markAttempted("visit-1", "en_route"), true);
+    clock += 15 * 60 * 1000;
+    assert.equal(await store.claim("visit-1", "en_route"), "sending");
+    await store.hold("visit-1", "en_route");
+    clock += 15 * 60 * 1000;
+    assert.equal(await store.claim("visit-1", "en_route"), "uncertain");
+  });
+});
+
+describe("provider delivery outcomes", () => {
+  it("treats timeout and server errors as uncertain and client errors as rejected", () => {
+    assert.equal(classifyProviderHttpStatus(202), "delivered");
+    assert.equal(classifyProviderHttpStatus(400), "rejected");
+    assert.equal(classifyProviderHttpStatus(401), "rejected");
+    assert.equal(classifyProviderHttpStatus(422), "rejected");
+    assert.equal(classifyProviderHttpStatus(408), "uncertain");
+    assert.equal(classifyProviderHttpStatus(409), "uncertain");
+    assert.equal(classifyProviderHttpStatus(500), "uncertain");
+    assert.equal(classifyProviderHttpStatus(503), "uncertain");
+    assert.equal(
+      combineProviderDeliveries(["rejected", "uncertain"]),
+      "uncertain",
+    );
+    assert.equal(
+      combineProviderDeliveries(["uncertain", "delivered"]),
+      "delivered",
+    );
+    assert.equal(combineProviderDeliveries(["rejected", "rejected"]), "rejected");
+  });
+
+  it("does not resend a row that already attempted delivery", () => {
+    const now = Date.parse("2026-10-09T13:00:00.000Z");
+    const createdAt = new Date(now - 20 * 60 * 1000).toISOString();
+    assert.equal(
+      decideExistingVisitClaim(
+        { status: "sending", createdAt, attemptedAt: null },
+        now,
+      ),
+      "reclaim",
+    );
+    assert.equal(
+      decideExistingVisitClaim(
+        { status: "sending", createdAt, attemptedAt: createdAt },
+        now,
+      ),
+      "sending",
+    );
+    assert.equal(
+      decideExistingVisitClaim(
+        { status: "uncertain", createdAt, attemptedAt: createdAt },
+        now,
+      ),
+      "uncertain",
+    );
+    assert.equal(
+      decideExistingVisitClaim({ status: "sent", createdAt, attemptedAt: createdAt }, now),
+      "sent",
+    );
+  });
+});
+
+describe("multi-pet visit notice identity", () => {
+  it("does not let a later add-dog notice reuse the booking confirmation", async () => {
+    const store = memoryVisitNotificationStore();
+    await recordVisitNotificationSent("visit-1", "booking_confirmation", store);
+    const added = customerChangeNoticePlan({
+      action: "add_dog",
+      date: "2026-10-10",
+      timeLabel: "10:00 AM",
+    });
+    assert.equal(added.claim, false);
+    const again = await runVisitNotification({
+      visitId: "visit-1",
+      event: "booking_confirmation",
+      store,
+      send: async () => true,
+    });
+    assert.equal(again, "skipped");
+  });
+
+  it("notifies each cancelled pet on its own key and leaves the other pets alone", async () => {
+    const store = memoryVisitNotificationStore();
+    const daisy = planStaffStatusNotice({
+      kind: "staff_cancelled",
+      appointmentId: "a",
+      petName: "Daisy",
+      siblings: [
+        pet({ id: "a", petName: "Daisy", status: "cancelled" }),
+        pet({ id: "b", petName: "Milo", status: "confirmed" }),
+      ],
+    });
+    const milo = planStaffStatusNotice({
+      kind: "staff_cancelled",
+      appointmentId: "b",
+      petName: "Milo",
+      siblings: [
+        pet({ id: "a", petName: "Daisy", status: "cancelled" }),
+        pet({ id: "b", petName: "Milo", status: "cancelled" }),
+      ],
+    });
+    assert.equal(daisy.send && daisy.eventKey, "staff_cancelled:a");
+    assert.equal(milo.send && milo.scope, "visit");
+    assert.deepEqual(
+      daisy.send ? daisy.pets.map((row) => row.petName) : [],
+      ["Daisy"],
+    );
+
+    assert.equal(
+      await runVisitNotification({
+        visitId: "visit-1",
+        event: daisy.send ? daisy.eventKey : "missing",
+        store,
+        send: async () => true,
+      }),
+      "sent",
+    );
+    assert.equal(
+      await runVisitNotification({
+        visitId: "visit-1",
+        event: "staff_confirmed",
+        store,
+        send: async () => true,
+      }),
+      "sent",
+    );
+    assert.equal(
+      await runVisitNotification({
+        visitId: "visit-1",
+        event: "staff_cancelled:b",
+        store,
+        send: async () => true,
+      }),
+      "sent",
+    );
+    assert.equal(
+      await runVisitNotification({
+        visitId: "visit-1",
+        event: "staff_cancelled:a",
+        store,
+        send: async () => true,
+      }),
+      "skipped",
+    );
+  });
+
+  it("waits to confirm when the other pets cannot be loaded", () => {
+    const waiting = planStaffStatusNotice({
+      kind: "confirmed",
+      appointmentId: "a",
+      petName: "Daisy",
+      siblings: null,
+    });
+    assert.deepEqual(waiting, { send: false, reason: "waiting_for_siblings" });
+
+    const partial = planStaffStatusNotice({
+      kind: "staff_cancelled",
+      appointmentId: "a",
+      petName: "Daisy",
+      siblings: null,
+    });
+    assert.equal(partial.send, true);
+    if (!partial.send) return;
+    assert.equal(partial.scope, "pet");
+    assert.equal(partial.eventKey, "staff_cancelled:a");
+    assert.deepEqual(partial.pets.map((row) => row.petName), ["Daisy"]);
+  });
+
+  it("sends a second reschedule when the visit moves again, including back", async () => {
+    const first = rescheduleNotificationEvent("2026-10-11", "11:00 AM", {
+      date: "2026-10-10",
+      timeLabel: "10:00 AM",
+    });
+    const same = rescheduleNotificationEvent("2026-10-11", "11:00 AM", {
+      date: "2026-10-10",
+      timeLabel: "10:00 AM",
+    });
+    const back = rescheduleNotificationEvent("2026-10-10", "10:00 AM", {
+      date: "2026-10-11",
+      timeLabel: "11:00 AM",
+    });
+    const plan = customerChangeNoticePlan({
+      action: "reschedule",
+      date: "2026-10-11",
+      timeLabel: "11:00 AM",
+      previousDate: "2026-10-10",
+      previousTime: "10:00 AM",
+    });
+    assert.equal(first, same);
+    assert.notEqual(first, back);
+    assert.equal(plan.claim, true);
+    if (!plan.claim) return;
+    assert.equal(plan.event, first);
+
+    const store = memoryVisitNotificationStore();
+    assert.equal(
+      await runVisitNotification({
+        visitId: "visit-1",
+        event: first,
+        store,
+        send: async () => true,
+      }),
+      "sent",
+    );
+    assert.equal(
+      await runVisitNotification({
+        visitId: "visit-1",
+        event: same,
+        store,
+        send: async () => true,
+      }),
+      "skipped",
+    );
+    assert.equal(
+      await runVisitNotification({
+        visitId: "visit-1",
+        event: back,
+        store,
+        send: async () => true,
+      }),
+      "sent",
+    );
   });
 });

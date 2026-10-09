@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import { mapAppointmentRowToAdminRecord } from "@/lib/appointments/map";
 import type { AppointmentRow } from "@/lib/appointments/types";
-import { isEmailConfigured, sendEmail } from "@/lib/email/resend";
+import { isEmailConfigured, sendEmailDelivery } from "@/lib/email/resend";
 import {
   buildNextDayFollowUpEmail,
   buildNextDayFollowUpSms,
@@ -13,12 +13,16 @@ import {
   hourInBusinessTimezone,
   yesterdayInBusinessTimezone,
 } from "@/lib/sms/schedule";
-import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
+import { isSmsConfigured, sendSmsDelivery } from "@/lib/sms/twilio";
 import {
   recordVisitNotificationSent,
   runVisitNotification,
 } from "@/lib/visits/notification-ledger";
 import { groupByVisit } from "@/lib/visits/notification-scope";
+import {
+  combineProviderDeliveries,
+  type ProviderDelivery,
+} from "@/lib/visits/provider-delivery";
 
 const FOLLOW_UP_SELECT = `
   id,
@@ -124,51 +128,37 @@ export async function sendNextDayFollowUp(
       visitId: appointment.visitId,
       event: "next_day_followup",
       send: async () => {
-        let emailSent = false;
-        let smsSent = false;
+        const outcomes: ProviderDelivery[] = [];
 
         if (canEmail) {
           const letter = buildNextDayFollowUpEmail(names);
-          try {
-            emailSent = await sendEmail({
+          outcomes.push(
+            await sendEmailDelivery({
               to: email,
               subject: letter.subject,
               text: letter.text,
               html: letter.html,
-            });
-          } catch (sendError) {
-            console.error(
-              "sendNextDayFollowUp email failed:",
-              appointment.id,
-              sendError,
-            );
-          }
+            }),
+          );
         }
 
         if (canSms && phone) {
           const body = buildNextDayFollowUpSms(names);
-          try {
-            smsSent = Boolean(await sendSms({ to: phone, body }));
-            if (smsSent) {
-              await recordCustomerSms({
-                direction: "outbound",
-                phone,
-                body,
-                customerId: appointment.customerId,
-                customerName: appointment.customerName,
-                petNames,
-              });
-            }
-          } catch (sendError) {
-            console.error(
-              "sendNextDayFollowUp SMS failed:",
-              appointment.id,
-              sendError,
-            );
+          const smsOutcome = await sendSmsDelivery({ to: phone, body });
+          outcomes.push(smsOutcome);
+          if (smsOutcome === "delivered") {
+            await recordCustomerSms({
+              direction: "outbound",
+              phone,
+              body,
+              customerId: appointment.customerId,
+              customerName: appointment.customerName,
+              petNames,
+            });
           }
         }
 
-        return emailSent || smsSent;
+        return combineProviderDeliveries(outcomes);
       },
     });
 

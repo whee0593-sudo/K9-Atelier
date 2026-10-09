@@ -40,9 +40,13 @@ import { describeStaffScheduleConflict } from "@/lib/staff/schedule-conflict";
 import { parseStaffServiceSelection } from "@/lib/staff/service-choice";
 import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { isFrozenAuthUser } from "@/lib/auth/frozen-account";
-import { isEmailConfigured, sendEmail, siteUrl } from "@/lib/email/resend";
+import { isEmailConfigured, sendEmail, sendEmailDelivery, siteUrl } from "@/lib/email/resend";
 import { runVisitNotification } from "@/lib/visits/notification-ledger";
-import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
+import {
+  combineProviderDeliveries,
+  type ProviderDelivery,
+} from "@/lib/visits/provider-delivery";
+import { isSmsConfigured, sendSms, sendSmsDelivery } from "@/lib/sms/twilio";
 import { digitsOnly } from "@/lib/sms/phone";
 import type {
   StaffBookingPetInput,
@@ -810,6 +814,7 @@ export async function createStaffCustomerBooking(
         visitId: created.visitId,
         event: "booking_confirmation",
         send: async () => {
+          const outcomes: ProviderDelivery[] = [];
           if (willEmail && input.email) {
             const email = buildStaffCreatedBookingEmail(appointment, {
               firstName: input.firstName,
@@ -817,15 +822,17 @@ export async function createStaffCustomerBooking(
               createdAccount,
               petNames,
             });
-            emailed = await sendEmail({
+            const emailOutcome = await sendEmailDelivery({
               to: input.email,
               subject: email.subject,
               text: email.text,
               html: email.html,
             });
+            emailed = emailOutcome === "delivered";
+            outcomes.push(emailOutcome);
           }
           if (willSms && input.phone) {
-            texted = await sendSms({
+            const smsOutcome = await sendSmsDelivery({
               to: input.phone,
               body: buildStaffCreatedBookingSms(
                 appointment,
@@ -833,8 +840,10 @@ export async function createStaffCustomerBooking(
                 petNames,
               ),
             });
+            texted = smsOutcome === "delivered";
+            outcomes.push(smsOutcome);
           }
-          return emailed || texted;
+          return combineProviderDeliveries(outcomes);
         },
       });
     }

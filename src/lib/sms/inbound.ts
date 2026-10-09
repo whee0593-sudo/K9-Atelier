@@ -5,9 +5,9 @@ import type { AppointmentRow } from "@/lib/appointments/types";
 import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
 import { contactFromAdminAppointment } from "@/lib/email/appointment-context";
 import { business } from "@/lib/business";
-import { sendEmail } from "@/lib/email/resend";
+import { sendEmailDelivery } from "@/lib/email/resend";
 import { phonesMatch } from "@/lib/sms/phone";
-import { sendSms } from "@/lib/sms/twilio";
+import { sendSmsDelivery } from "@/lib/sms/twilio";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
 import { lookupCustomerByPhone } from "@/lib/sms/customer-by-phone";
 import { inboundReplyTextForStaff } from "@/lib/sms/inbox-copy";
@@ -20,6 +20,7 @@ import { handleStaffPhoneReply } from "@/lib/sms/staff-reply";
 import { loadVisitNoticePets } from "@/lib/visits/notification-context";
 import { runVisitNotification } from "@/lib/visits/notification-ledger";
 import { activeVisitPets } from "@/lib/visits/notification-scope";
+import { combineProviderDeliveries } from "@/lib/visits/provider-delivery";
 import { formatVisitPetNames } from "@/lib/visits/pet-names";
 
 const INBOUND_SELECT = `
@@ -204,8 +205,8 @@ export async function handleInboundCustomerSms(input: {
         petNames,
         dateLabel,
       });
-      const texted = await sendSms({ to: input.from, body: reply });
-      const mailed = await sendEmail({
+      const texted = await sendSmsDelivery({ to: input.from, body: reply });
+      const mailed = await sendEmailDelivery({
         to: business.brand.email,
         subject: `[K9 Atelier] Customer confirmed — ${petLabel}`,
         text: [
@@ -218,7 +219,7 @@ export async function handleInboundCustomerSms(input: {
           "This is the customer SMS confirmation. It does not change staff/vaccination booking status.",
         ].join("\n"),
       });
-      return Boolean(texted) || mailed;
+      return combineProviderDeliveries([texted, mailed]);
     },
   });
 

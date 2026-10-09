@@ -13,7 +13,8 @@ import {
 } from "@/lib/notifications";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
 import { streetNameForSms } from "@/lib/sms/street-name";
-import { sendSms } from "@/lib/sms/twilio";
+import { sendSmsDelivery } from "@/lib/sms/twilio";
+import type { ProviderDelivery } from "@/lib/visits/provider-delivery";
 
 function smsCustomerName(customer: CustomerContact) {
   const first = customer.firstName?.trim();
@@ -39,19 +40,13 @@ function detailsForSms(
 async function sendCustomerSms(
   phone: string | null | undefined,
   body: string,
-): Promise<boolean> {
+): Promise<ProviderDelivery> {
   const to = phone ? normalizePhoneToE164(phone) : null;
   if (!to) {
     console.warn("SMS skipped: missing or invalid customer phone");
-    return false;
+    return "rejected";
   }
-
-  try {
-    return await sendSms({ to, body });
-  } catch (error) {
-    console.error("SMS send failed:", error);
-    return false;
-  }
+  return sendSmsDelivery({ to, body });
 }
 
 export async function sendAppointmentSubmittedSms(
@@ -80,20 +75,25 @@ export async function sendAppointmentConfirmedSms(
 export async function sendAppointmentDeclinedSms(
   appointment: AppointmentRecord,
   customer: CustomerContact,
+  petName?: string,
 ) {
   return sendCustomerSms(
     customer.phone,
-    buildAppointmentDeclinedSms(detailsForSms(appointment, customer)),
+    buildAppointmentDeclinedSms(detailsForSms(appointment, customer), petName),
   );
 }
 
 export async function sendAppointmentStaffCancelledSms(
   appointment: AppointmentRecord,
   customer: CustomerContact,
+  petName?: string,
 ) {
   return sendCustomerSms(
     customer.phone,
-    buildAppointmentStaffCancelledSms(detailsForSms(appointment, customer)),
+    buildAppointmentStaffCancelledSms(
+      detailsForSms(appointment, customer),
+      petName,
+    ),
   );
 }
 

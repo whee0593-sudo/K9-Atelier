@@ -420,13 +420,13 @@ export async function setAppointmentStatus(
       try {
         const siblings = appointmentBeforeUpdate.visitId
           ? await loadVisitNoticePets(appointmentBeforeUpdate.visitId)
-          : null;
+          : undefined;
         await sendAppointmentStatusEmails(
           { ...appointmentBeforeUpdate, status },
           contact,
           status,
           appointmentBeforeUpdate.status,
-          siblings ?? undefined,
+          siblings,
         );
       } catch (emailError) {
         console.error("setAppointmentStatus email failed:", emailError);
