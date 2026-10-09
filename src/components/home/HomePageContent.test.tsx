@@ -174,6 +174,10 @@ describe("homepage SEO", () => {
 
     assert.equal(byHref("/services/long-coat-care")?.text, "show-level coat care");
     assert.equal(
+      anchors.find((anchor) => anchor.text === "tailored styling")?.href,
+      "/services/full-groom",
+    );
+    assert.equal(
       anchors.find((anchor) => anchor.text === "extra-gentle senior care")?.href,
       "/services/specialty-care",
     );
@@ -187,15 +191,22 @@ describe("homepage SEO", () => {
     );
     assert.deepEqual(
       leadAnchors.map((anchor) => anchor.text),
-      ["show-level coat care", "extra-gentle senior care"],
+      ["tailored styling", "show-level coat care", "extra-gentle senior care"],
     );
     const className = (attrs: string) => attrs.match(/class="([^"]*)"/)?.[1] ?? "";
     assert.equal(className(leadAnchors[0]?.attrs ?? ""), className(leadAnchors[1]?.attrs ?? ""));
-    assert.match(leadAnchors[1]?.attrs ?? "", /href="\/services\/specialty-care"/);
-    assert.match(className(leadAnchors[1]?.attrs ?? ""), /underline decoration-champagne\/80/);
-    assert.doesNotMatch(className(leadAnchors[1]?.attrs ?? ""), /inline-flex|bg-deep-lavender/);
+    assert.equal(className(leadAnchors[1]?.attrs ?? ""), className(leadAnchors[2]?.attrs ?? ""));
+    assert.match(leadAnchors[0]?.attrs ?? "", /href="\/services\/full-groom"/);
+    assert.match(leadAnchors[2]?.attrs ?? "", /href="\/services\/specialty-care"/);
+    assert.match(className(leadAnchors[0]?.attrs ?? ""), /underline decoration-champagne\/80/);
+    assert.doesNotMatch(className(leadAnchors[0]?.attrs ?? ""), /inline-flex|bg-deep-lavender/);
+    assert.equal(leadAnchors.some((anchor) => anchor.text === "hand stripping"), false);
     assert.equal(/<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<a\b/.test(leadHtml), false);
-    assert.match(byHref("/services/full-groom")?.text ?? "", /^Full Grooming\b/);
+    const fullGroomCard = anchors.find(
+      (anchor) =>
+        anchor.href === "/services/full-groom" && anchor.text.startsWith("Full Grooming"),
+    );
+    assert.match(fullGroomCard?.text ?? "", /^Full Grooming\b/);
     assert.match(byHref("/services/bath-coat-care")?.text ?? "", /^Bath & Coat Care\b/);
     assert.match(byHref("/services/hand-stripping")?.text ?? "", /^Hand Stripping\b/);
     assert.match(byHref("/services/spa")?.text ?? "", /^Spa Rituals\b/);

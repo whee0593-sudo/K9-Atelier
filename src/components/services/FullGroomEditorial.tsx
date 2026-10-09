@@ -3,7 +3,11 @@ import Link from "next/link";
 import { Container } from "@/components/luxury/Container";
 import {
   BATH_COAT_PATH,
+  FULL_GROOM_AREA_SENTENCE,
   FULL_GROOM_FAQS,
+  FULL_GROOM_GROOMER_AFTER,
+  FULL_GROOM_GROOMER_BEFORE,
+  FULL_GROOM_GROOMER_NAME,
   FULL_GROOM_INCLUDED_BODY,
   FULL_GROOM_INCLUDED_HEADING,
   FULL_GROOM_STYLING_BODY,
@@ -13,6 +17,9 @@ import {
 
 const textLinkClass =
   "font-body inline-flex min-h-[48px] items-center justify-center text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne";
+
+const inlineLinkClass =
+  "text-deep-lavender underline decoration-champagne/70 underline-offset-4 transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne";
 
 function TextLink({ href, children }: { href: string; children: string }) {
   return (
@@ -49,6 +56,13 @@ export function FullGroomEditorial() {
             <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
               {FULL_GROOM_STYLING_BODY}
             </p>
+            <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
+              {FULL_GROOM_GROOMER_BEFORE}
+              <Link href="/about" className={inlineLinkClass}>
+                {FULL_GROOM_GROOMER_NAME}
+              </Link>
+              {FULL_GROOM_GROOMER_AFTER}
+            </p>
             <p className="mt-6">
               <TextLink href="/about">Meet Your Groomer</TextLink>
             </p>
@@ -82,7 +96,10 @@ export function FullGroomEditorial() {
                 </details>
               ))}
             </div>
-            <p className="mt-10 text-center">
+            <p className="font-body mx-auto mt-10 max-w-2xl text-center text-pretty text-sm leading-relaxed text-taupe">
+              {FULL_GROOM_AREA_SENTENCE}
+            </p>
+            <p className="mt-6 text-center">
               <TextLink href={SERVICES_PATH}>Explore All Services</TextLink>
             </p>
           </div>

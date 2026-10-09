@@ -1,8 +1,10 @@
 import React from "react";
-import { getBrandSearchName, getBrandWebsiteUrl, getCommunitiesServed } from "@/lib/business";
+import { getBrandSearchName, getBrandWebsiteUrl } from "@/lib/business";
 import {
+  FULL_GROOM_AREA_SERVED,
   FULL_GROOM_PAGE_DESCRIPTION,
   FULL_GROOM_PATH,
+  FULL_GROOM_SERVICE_TYPE,
   SERVICES_PAGE_CANONICAL,
   absoluteSiteUrl,
 } from "@/lib/service-page";
@@ -12,7 +14,7 @@ function businessEntityId() {
 }
 
 function areaServed() {
-  return getCommunitiesServed().map((name) => ({
+  return FULL_GROOM_AREA_SERVED.map((name) => ({
     "@type": "City",
     name,
     containedInPlace: {
@@ -56,6 +58,7 @@ export function FullGroomJsonLd() {
         "@type": "Service",
         "@id": `${url}#service`,
         name: "Full Grooming",
+        serviceType: FULL_GROOM_SERVICE_TYPE,
         url,
         description: FULL_GROOM_PAGE_DESCRIPTION,
         provider: {

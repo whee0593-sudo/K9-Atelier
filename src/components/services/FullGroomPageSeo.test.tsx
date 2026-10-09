@@ -14,11 +14,14 @@ import { ServiceCard } from "@/components/services/ServiceCard";
 import { ServicesSection } from "@/components/services/ServicesSection";
 import { business, getBrandSearchName, getCommunitiesServed } from "@/lib/business";
 import {
+  FULL_GROOM_AREA_SENTENCE,
+  FULL_GROOM_AREA_SERVED,
   FULL_GROOM_FAQS,
   FULL_GROOM_PAGE_DESCRIPTION,
   FULL_GROOM_PAGE_H1,
   FULL_GROOM_PAGE_INTRO,
   FULL_GROOM_PAGE_TITLE,
+  FULL_GROOM_SERVICE_TYPE,
   FULL_GROOM_STYLING_HEADING,
   getServiceById,
   getServiceCategory,
@@ -113,8 +116,9 @@ describe("full groom page metadata", () => {
     assert.equal(category?.pageIntro, FULL_GROOM_PAGE_INTRO);
     assert.equal(
       category?.pageIntro,
-      "Private mobile full grooming in Palm Beach, with custom haircuts and styling for coats that need more than a bath.",
+      "Private, one-on-one mobile full grooming in Palm Beach, with custom haircuts and styling for coats that need more than a bath.",
     );
+    assert.equal(category?.pageH1, "A Complete Style, Done With Patience.");
   });
 });
 
@@ -148,7 +152,7 @@ describe("full groom page content", () => {
     assert.match(html, /A Complete Style, Done With Patience\./);
     assert.match(
       html,
-      /Private mobile full grooming in Palm Beach, with custom haircuts and styling for coats that need more than a bath\./,
+      /Private, one-on-one mobile full grooming in Palm Beach, with custom haircuts and styling for coats that need more than a bath\./,
     );
     assert.match(html, /What\u2019s Included in a Full Groom/);
     assert.match(html, /complete bath and coat care/);
@@ -165,17 +169,28 @@ describe("full groom page content", () => {
     assert.equal(html.includes("FAQPage"), false);
 
     const bath = links.find((link) => link.href === "/services/bath-coat-care");
-    const groomer = links.find((link) => link.href === "/about");
+    const penny = links.find((link) => link.href === "/about" && link.text === "Penny");
+    const groomer = links.find(
+      (link) => link.href === "/about" && link.text.startsWith("Meet Your Groomer"),
+    );
     const services = links.find((link) => link.href === "/services");
     assert.ok(bath);
     assert.match(bath.text, /^Bath & Coat Care/);
     assert.match(bath.text, /→/);
+    assert.ok(penny);
+    assert.equal(penny.text, "Penny");
+    assert.match(
+      html,
+      /Full grooming at K9 Atelier is provided by <a[^>]*href="\/about"[^>]*>Penny<\/a>, a multiple award-winning show groomer with experience in breed-appropriate styling and individualized one-on-one care\./,
+    );
     assert.ok(groomer);
     assert.match(groomer.text, /^Meet Your Groomer/);
     assert.match(groomer.text, /→/);
     assert.ok(services);
     assert.match(services.text, /^Explore All Services/);
     assert.match(services.text, /→/);
+    assert.equal(html.includes(FULL_GROOM_AREA_SENTENCE), true);
+    assert.equal((html.match(/Jupiter Island/g) ?? []).length, 1);
     assert.equal((html.match(/<img\b/g) ?? []).length, 0);
   });
 
@@ -240,23 +255,35 @@ describe("full groom structured data", () => {
     const services = nodes.filter((node) => typesOf(node).includes("Service"));
     assert.equal(services.length, 1);
     const service = services[0];
+    assert.equal(service["@id"], "https://k9atelier.com/services/full-groom#service");
     assert.equal(service.name, "Full Grooming");
+    assert.equal(service.serviceType, FULL_GROOM_SERVICE_TYPE);
+    assert.equal(service.serviceType, "Mobile Full Dog Grooming");
     assert.equal(service.url, "https://k9atelier.com/services/full-groom");
     assert.equal(service.description, FULL_GROOM_PAGE_DESCRIPTION);
+    assert.equal(service.offers, undefined);
     const provider = service.provider as JsonLdNode;
     assert.equal(provider["@id"], businesses[0]["@id"]);
     assert.equal(provider.name, "K9 Atelier Mobile Pet Spa");
     assert.equal(provider["@type"], undefined);
 
+    const businessAreas = businesses[0].areaServed as JsonLdNode[];
+    assert.deepEqual(
+      businessAreas.map((area) => area.name),
+      getCommunitiesServed(),
+    );
+
     const areas = service.areaServed as JsonLdNode[];
     assert.deepEqual(
       areas.map((area) => area.name),
-      getCommunitiesServed(),
+      [...FULL_GROOM_AREA_SERVED],
     );
     assert.deepEqual(areas.map((area) => area.name), [
-      "Palm Beach",
+      "Jupiter Island",
       "Jupiter",
+      "Tequesta",
       "Palm Beach Gardens",
+      "Palm Beach",
       "West Palm Beach",
     ]);
     for (const area of areas) {

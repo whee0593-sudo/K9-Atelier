@@ -7,7 +7,7 @@ import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { business } from "@/lib/business";
 import { photoFor } from "@/lib/gallery";
 import { LONG_COAT_CARE_PATH } from "@/lib/long-coat-care-page";
-import { SPECIALTY_CARE_PATH } from "@/lib/service-page";
+import { FULL_GROOM_PATH, SPECIALTY_CARE_PATH } from "@/lib/service-page";
 
 const heroCtaClass =
   "inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-deep-lavender px-8 text-[13px] font-medium uppercase tracking-[0.14em] text-ivory transition duration-500 hover:bg-ink sm:w-auto md:text-[12px] md:tracking-[0.16em]";
@@ -24,6 +24,7 @@ const HERO_IMAGE_CLASS =
   "aspect-[4/5] !h-auto !w-full max-md:!max-w-[min(calc(100vw-2rem),calc(46vh*0.8))] max-h-[46vh] md:!w-[353px] md:!max-w-[353px] md:max-h-[80vh]";
 
 const HERO_LEAD_LINKS = [
+  { phrase: "tailored styling", href: FULL_GROOM_PATH },
   { phrase: "show-level coat care", href: LONG_COAT_CARE_PATH },
   { phrase: "extra-gentle senior care", href: SPECIALTY_CARE_PATH },
 ] as const;
