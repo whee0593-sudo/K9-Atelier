@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
+import { safeAlertMessage } from "@/lib/communications/alerts";
 import { decideClaim } from "@/lib/communications/claim";
 import { buildCommunicationContext } from "@/lib/communications/context";
 import { dispatchCommunication } from "@/lib/communications/dispatch";
@@ -11,7 +12,9 @@ import type { CommunicationLogStore } from "@/lib/communications/store";
 import {
   COMMUNICATION_LOG_STATUS_UPDATE_FAILED,
   COMMUNICATION_LOG_WRITE_FAILED,
+  COMMUNICATION_PENDING_EXPIRED,
   COMMUNICATION_PROVIDER_ID_MISSING,
+  COMMUNICATION_SEND_HELD,
   type CommunicationSnapshot,
   type StoredCommunicationLog,
 } from "@/lib/communications/types";
@@ -155,6 +158,11 @@ describe("communication dispatch", () => {
 
     const result = await dispatchCommunication(
       input(store, {
+        context: buildCommunicationContext({
+          notificationType: "appointment_submitted",
+          recipient: "owner@example.com",
+          allowSendWithoutSnapshot: true,
+        }),
         send: async () => {
           providerCalls += 1;
           return { outcome: "accepted", providerMessageId: "SM999" };
@@ -585,3 +593,226 @@ describe("communication snapshot helpers", () => {
     );
   });
 });
+
+describe("snapshot failure and hold alerts", () => {
+  const originalError = console.error;
+
+  afterEach(() => {
+    console.error = originalError;
+  });
+
+  it("sends the first booking confirmation when the snapshot cannot be saved", async () => {
+    let calls = 0;
+    const result = await dispatchCommunication(
+      input(failingClaimStore(), {
+        context: buildCommunicationContext({
+          notificationType: "appointment_submitted",
+          recipient: "owner@example.com",
+          allowSendWithoutSnapshot: true,
+        }),
+        bodyText: "We received Bella. https://k9atelier.com/confirm-account?token=secret",
+        send: async () => {
+          calls += 1;
+          return { outcome: "accepted", providerMessageId: "EM1" };
+        },
+      }),
+    );
+    assert.equal(calls, 1);
+    assert.equal(result.status, "accepted");
+    assert.match(result.logError ?? "", /connection refused/);
+  });
+
+  it("does not call the provider for retriggerable notices when the snapshot cannot be saved", async () => {
+    const errors: string[] = [];
+    console.error = (...args: unknown[]) => {
+      errors.push(args.map(String).join(" "));
+    };
+    for (const notificationType of [
+      "receipt",
+      "en_route",
+      "reminder_3day",
+      "rebook",
+      "appointment_reschedule",
+      "thank_you",
+    ]) {
+      let calls = 0;
+      const result = await dispatchCommunication(
+        input(failingClaimStore(), {
+          context: buildCommunicationContext({
+            notificationType,
+            recipient: "owner@example.com",
+            fingerprint: notificationType,
+          }),
+          bodyText: `Secret body for ${notificationType}`,
+          bodyHtml: `<a href="https://k9atelier.com/confirm-account?token=secret">pay 4242</a>`,
+          send: async () => {
+            calls += 1;
+            return { outcome: "accepted", providerMessageId: "SM1" };
+          },
+        }),
+      );
+      assert.equal(calls, 0, notificationType);
+      assert.equal(result.status, "failed");
+      assert.equal(isCommunicationAccepted(result), false);
+      assert.match(result.logError ?? "", /connection refused/);
+    }
+    const logged = errors.join("\n");
+    assert.match(logged, /COMMUNICATION_LOG_WRITE_FAILED/);
+    assert.equal(logged.includes("owner@example.com"), false);
+    assert.equal(logged.includes("Secret body"), false);
+    assert.equal(logged.includes("token=secret"), false);
+    assert.equal(logged.includes("4242"), false);
+  });
+
+  it("logs a held send again without a second provider call or a second alert row", async () => {
+    const store = createMemoryCommunicationLogStore();
+    const errors: string[] = [];
+    console.error = (...args: unknown[]) => {
+      errors.push(args.map(String).join(" "));
+    };
+    let calls = 0;
+    const send = async () => {
+      calls += 1;
+      return {
+        outcome: "uncertain" as const,
+        errorMessage: "408 timeout for owner@example.com https://k9atelier.com/confirm-account?token=secret",
+      };
+    };
+    const first = await dispatchCommunication(input(store, { send }));
+    const second = await dispatchCommunication(
+      input(store, {
+        now: new Date(NOW.getTime() + 10 * 60 * 1000),
+        send,
+      }),
+    );
+    assert.equal(first.status, "uncertain");
+    assert.equal(second.status, "uncertain");
+    assert.equal(calls, 1);
+    assert.equal(
+      store.alerts().filter((alert) => alert.code === COMMUNICATION_SEND_HELD).length,
+      1,
+    );
+    assert.equal(store.rows()[0]?.snapshot.idempotencyKey.includes("+15615550100"), true);
+    const logged = errors.join("\n");
+    assert.match(logged, /COMMUNICATION_SEND_HELD/);
+    assert.equal(logged.includes("owner@example.com"), false);
+    assert.equal(logged.includes("token=secret"), false);
+    assert.equal(logged.includes("+15615550100"), false);
+    assert.equal(
+      store.alerts().some((alert) => alert.message.includes("token=secret")),
+      false,
+    );
+  });
+
+  it("alerts when a pending claim expires and keeps the idempotency key", async () => {
+    const store = createMemoryCommunicationLogStore();
+    const errors: string[] = [];
+    console.error = (...args: unknown[]) => {
+      errors.push(args.map(String).join(" "));
+    };
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let calls = 0;
+    const pending = dispatchCommunication(
+      input(store, {
+        send: async () => {
+          calls += 1;
+          await gate;
+          return { outcome: "accepted", providerMessageId: "SM1" };
+        },
+      }),
+    );
+    for (let attempt = 0; attempt < 20 && store.rows().length === 0; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    const savedKey = store.rows()[0]?.snapshot.idempotencyKey;
+    assert.equal(typeof savedKey, "string");
+    store.rows()[0]!.claimedAt = new Date(NOW.getTime() - 3 * 60 * 1000).toISOString();
+    const held = await dispatchCommunication(
+      input(store, {
+        now: new Date(NOW.getTime() + 3 * 60 * 1000),
+        send: async () => {
+          calls += 1;
+          return { outcome: "accepted", providerMessageId: "SM2" };
+        },
+      }),
+    );
+    const again = await dispatchCommunication(
+      input(store, {
+        now: new Date(NOW.getTime() + 4 * 60 * 1000),
+        send: async () => {
+          calls += 1;
+          return { outcome: "accepted", providerMessageId: "SM3" };
+        },
+      }),
+    );
+    assert.equal(held.status, "uncertain");
+    assert.equal(again.status, "uncertain");
+    assert.equal(calls, 1);
+    assert.equal(store.rows()[0]?.snapshot.idempotencyKey, savedKey);
+    assert.equal(
+      store.alerts().filter((alert) => alert.code === COMMUNICATION_PENDING_EXPIRED).length,
+      1,
+    );
+    const logged = errors.join("\n");
+    assert.match(logged, /COMMUNICATION_PENDING_EXPIRED/);
+    assert.equal(logged.includes("+15615550100"), false);
+    release();
+    await pending;
+  });
+
+  it("keeps investigation logs when the alert row cannot be written", async () => {
+    const errors: string[] = [];
+    console.error = (...args: unknown[]) => {
+      errors.push(args.map(String).join(" "));
+    };
+    const result = await dispatchCommunication(
+      input(failingClaimStore(), {
+        context: buildCommunicationContext({
+          notificationType: "receipt",
+          recipient: "owner@example.com",
+          fingerprint: "charge-1",
+        }),
+      }),
+    );
+    assert.equal(result.status, "failed");
+    assert.equal(isCommunicationAccepted(result), false);
+    const logged = errors.join("\n");
+    assert.match(logged, /COMMUNICATION_LOG_WRITE_FAILED/);
+    assert.match(logged, /COMMUNICATION_ALERT_WRITE_FAILED/);
+  });
+
+  it("strips links and contact details from alert text", () => {
+    const text = safeAlertMessage(
+      "owner@example.com https://k9atelier.com/confirm-account?token=secret +15615550100",
+    );
+    assert.equal(text.includes("owner@example.com"), false);
+    assert.equal(text.includes("token=secret"), false);
+    assert.equal(text.includes("+15615550100"), false);
+  });
+});
+
+function failingClaimStore(): CommunicationLogStore {
+  return {
+    async claim() {
+      return { action: "log_failed", error: "connection refused" };
+    },
+    async markAccepted() {
+      return { ok: true };
+    },
+    async markFailed() {
+      return { ok: true };
+    },
+    async markUncertain() {
+      return { ok: true };
+    },
+    async recordAlert() {
+      throw new Error("database unavailable");
+    },
+    async read() {
+      return null;
+    },
+  };
+}

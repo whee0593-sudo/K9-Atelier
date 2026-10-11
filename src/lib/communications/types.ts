@@ -29,6 +29,11 @@ export type CommunicationContext = {
    * message after the first was accepted.
    */
   idempotencyKey: string;
+  /**
+   * First booking confirmation may still reach the provider when the snapshot
+   * cannot be saved. Every other notification requires a stored idempotency row.
+   */
+  allowSendWithoutSnapshot?: boolean;
 };
 
 export type CommunicationSnapshot = {
@@ -66,6 +71,8 @@ export const COMMUNICATION_PROVIDER_ID_MISSING =
   "COMMUNICATION_PROVIDER_ID_MISSING";
 export const COMMUNICATION_ALERT_WRITE_FAILED =
   "COMMUNICATION_ALERT_WRITE_FAILED";
+export const COMMUNICATION_SEND_HELD = "COMMUNICATION_SEND_HELD";
+export const COMMUNICATION_PENDING_EXPIRED = "COMMUNICATION_PENDING_EXPIRED";
 
-/** A pending claim older than this may be taken over by one retry worker. */
+/** A pending claim older than this is held and must not be sent again. */
 export const COMMUNICATION_CLAIM_STALE_MS = 2 * 60 * 1000;

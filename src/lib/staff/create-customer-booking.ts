@@ -840,6 +840,7 @@ export async function createStaffCustomerBooking(
             appointmentIds: appointments.map((entry) => entry.id),
             petIds: appointments.map((entry) => entry.petId),
             dedupe: "visit",
+            allowSendWithoutSnapshot: true,
           }),
         }),
       );
@@ -857,6 +858,7 @@ export async function createStaffCustomerBooking(
             appointmentIds: appointments.map((entry) => entry.id),
             petIds: appointments.map((entry) => entry.petId),
             dedupe: "visit",
+            allowSendWithoutSnapshot: true,
           }),
         }),
       );

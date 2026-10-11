@@ -270,12 +270,23 @@ export function createSupabaseCommunicationLogStore(): CommunicationLogStore {
 
     async recordAlert(input) {
       const admin = createAdminClient();
+      if (input.idempotencyKey) {
+        const { data: existing, error: readError } = await admin
+          .from("communication_log_alerts")
+          .select("id")
+          .eq("code", input.code)
+          .eq("idempotency_key", input.idempotencyKey)
+          .limit(1);
+        if (readError) return { ok: false, error: readError.message };
+        if (existing && existing.length > 0) return { ok: true };
+      }
       const { error } = await admin.from("communication_log_alerts").insert({
         code: input.code,
         message: input.message,
         log_id: input.logId,
         idempotency_key: input.idempotencyKey,
       });
+      if (error?.code === "23505") return { ok: true };
       if (error) return { ok: false, error: error.message };
       return { ok: true };
     },

@@ -27,6 +27,7 @@ export function buildCommunicationContext(input: {
    * callers pass different dog ids. Appointment scope keeps one send per dog.
    */
   dedupe?: "visit" | "appointment";
+  allowSendWithoutSnapshot?: boolean;
 }): CommunicationContext {
   const audience = input.audience ?? "customer";
   const appointmentIds = unique(input.appointmentIds ?? []);
@@ -52,5 +53,6 @@ export function buildCommunicationContext(input: {
       recipient || "-",
       fingerprint,
     ].join("|"),
+    allowSendWithoutSnapshot: input.allowSendWithoutSnapshot === true,
   };
 }

@@ -17,6 +17,7 @@ export function createMemoryCommunicationLogStore(): CommunicationLogStore & {
   const byKey = new Map<string, string>();
   const alerts: Array<{ code: string; message: string; logId: string | null }> =
     [];
+  const alertKeys = new Set<string>();
   const tails = new Map<string, Promise<unknown>>();
 
   function lock<T>(key: string, fn: () => Promise<T>): Promise<T> {
@@ -179,6 +180,11 @@ export function createMemoryCommunicationLogStore(): CommunicationLogStore & {
       return { ok: true };
     },
     async recordAlert(input) {
+      if (input.idempotencyKey) {
+        const dedupeKey = `${input.code}\0${input.idempotencyKey}`;
+        if (alertKeys.has(dedupeKey)) return { ok: true };
+        alertKeys.add(dedupeKey);
+      }
       alerts.push({
         code: input.code,
         message: input.message,

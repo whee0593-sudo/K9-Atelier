@@ -40,6 +40,7 @@ function smsContext(
   notificationType: string,
   appointment: AppointmentRecord,
   phone: string,
+  allowSendWithoutSnapshot = false,
 ) {
   return buildCommunicationContext({
     notificationType,
@@ -48,6 +49,7 @@ function smsContext(
     visitId: appointment.visitId ?? null,
     appointmentIds: [appointment.id],
     petIds: [appointment.petId],
+    allowSendWithoutSnapshot,
   });
 }
 
@@ -56,12 +58,18 @@ async function sendCustomerSms(
   appointment: AppointmentRecord,
   phone: string | null | undefined,
   body: string,
+  allowSendWithoutSnapshot = false,
 ): Promise<boolean> {
   try {
     const result = await sendSms({
       to: phone ?? "",
       body,
-      communication: smsContext(notificationType, appointment, phone ?? ""),
+      communication: smsContext(
+        notificationType,
+        appointment,
+        phone ?? "",
+        allowSendWithoutSnapshot,
+      ),
     });
     return isCommunicationAccepted(result);
   } catch (error) {
@@ -86,18 +94,21 @@ export async function sendAppointmentSubmittedSms(
     appointment,
     customer.phone,
     body,
+    true,
   );
 }
 
 export async function sendAppointmentConfirmedSms(
   appointment: AppointmentRecord,
   customer: CustomerContact,
+  options?: { allowSendWithoutSnapshot?: boolean },
 ) {
   return sendCustomerSms(
     "appointment_confirmed",
     appointment,
     customer.phone,
     buildBookingConfirmationSms(detailsForSms(appointment, customer)),
+    options?.allowSendWithoutSnapshot === true,
   );
 }
 

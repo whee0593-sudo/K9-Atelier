@@ -1,4 +1,8 @@
 import { randomUUID } from "node:crypto";
+import {
+  communicationAlertKey,
+  safeAlertMessage,
+} from "@/lib/communications/alerts";
 import { redactCommunicationSecrets, redactOptional } from "@/lib/communications/redact";
 import {
   emptyCommunicationResult,
@@ -16,7 +20,9 @@ import {
   COMMUNICATION_ALERT_WRITE_FAILED,
   COMMUNICATION_LOG_STATUS_UPDATE_FAILED,
   COMMUNICATION_LOG_WRITE_FAILED,
+  COMMUNICATION_PENDING_EXPIRED,
   COMMUNICATION_PROVIDER_ID_MISSING,
+  COMMUNICATION_SEND_HELD,
 } from "@/lib/communications/types";
 import type { ProviderAttemptResult } from "@/lib/communications/provider-outcome";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
@@ -54,17 +60,26 @@ function activeStore(explicit?: CommunicationLogStore) {
   return createSupabaseCommunicationLogStore();
 }
 
-function logEvent(
-  code: string,
-  message: string,
-  details: { logId?: string | null; idempotencyKey?: string | null },
-) {
+type AlertDetails = {
+  logId?: string | null;
+  idempotencyKey?: string | null;
+  notificationType?: string | null;
+  channel?: string | null;
+  hold?: string | null;
+};
+
+function logEvent(code: string, message: string, details: AlertDetails) {
   console.error(
     JSON.stringify({
       event: code,
-      message,
+      message: safeAlertMessage(message),
       logId: details.logId ?? null,
-      idempotencyKey: details.idempotencyKey ?? null,
+      alertKey: details.idempotencyKey
+        ? communicationAlertKey(details.idempotencyKey)
+        : null,
+      notificationType: details.notificationType ?? null,
+      channel: details.channel ?? null,
+      hold: details.hold ?? null,
     }),
   );
 }
@@ -73,9 +88,13 @@ async function raiseAlert(
   store: CommunicationLogStore | null,
   code: string,
   message: string,
-  details: { logId?: string | null; idempotencyKey?: string | null },
+  details: AlertDetails,
 ) {
-  logEvent(code, message, details);
+  const safeMessage = safeAlertMessage(message);
+  logEvent(code, safeMessage, details);
+  const alertKey = details.idempotencyKey
+    ? communicationAlertKey(details.idempotencyKey)
+    : null;
   if (!store) {
     logEvent(
       COMMUNICATION_ALERT_WRITE_FAILED,
@@ -87,9 +106,9 @@ async function raiseAlert(
   try {
     const recorded = await store.recordAlert({
       code,
-      message,
+      message: safeMessage,
       logId: details.logId ?? null,
-      idempotencyKey: details.idempotencyKey ?? null,
+      idempotencyKey: alertKey,
     });
     if (!recorded.ok) {
       logEvent(
@@ -105,6 +124,22 @@ async function raiseAlert(
       details,
     );
   }
+}
+
+function maySendWithoutSnapshot(input: DispatchCommunicationInput) {
+  return input.context?.allowSendWithoutSnapshot === true;
+}
+
+function blockedLogResult(
+  input: DispatchCommunicationInput,
+  logError: string,
+): CommunicationSendResult {
+  return emptyCommunicationResult({
+    status: "failed",
+    provider: input.provider,
+    errorMessage: "communication log was not saved",
+    logError,
+  });
 }
 
 function buildSnapshot(input: DispatchCommunicationInput): CommunicationSnapshot {
@@ -127,6 +162,32 @@ function buildSnapshot(input: DispatchCommunicationInput): CommunicationSnapshot
     replyTo: redactOptional(input.replyTo),
     idempotencyKey,
   };
+}
+
+async function noteHold(
+  store: CommunicationLogStore | null,
+  snapshot: CommunicationSnapshot,
+  logId: string | null,
+  hold: "uncertain" | "stale_pending",
+) {
+  const message =
+    hold === "stale_pending"
+      ? `${snapshot.channel} ${snapshot.notificationType} stayed pending for more than 2 minutes. Automatic resend is blocked.`
+      : `${snapshot.channel} ${snapshot.notificationType} is held because the provider result is uncertain. Automatic resend is blocked.`;
+  await raiseAlert(
+    store,
+    hold === "stale_pending"
+      ? COMMUNICATION_PENDING_EXPIRED
+      : COMMUNICATION_SEND_HELD,
+    message,
+    {
+      logId,
+      idempotencyKey: snapshot.idempotencyKey,
+      notificationType: snapshot.notificationType,
+      channel: snapshot.channel,
+      hold,
+    },
+  );
 }
 
 function skippedResult(
@@ -154,7 +215,11 @@ export async function dispatchCommunication(
   const now = input.now ?? new Date();
   const snapshot = buildSnapshot(input);
   const store = activeStore(input.store);
-  const alertDetails = { idempotencyKey: snapshot.idempotencyKey };
+  const alertDetails = {
+    idempotencyKey: snapshot.idempotencyKey,
+    notificationType: snapshot.notificationType,
+    channel: snapshot.channel,
+  };
   let providerAttempted = false;
 
   try {
@@ -200,11 +265,15 @@ export async function dispatchCommunication(
         });
       }
       if (claimed.action === "hold") {
+        await noteHold(store, snapshot, claimed.logId, claimed.hold);
         return emptyCommunicationResult({
           status: "uncertain",
           provider: input.provider,
           logId: claimed.logId,
-          errorMessage: "provider result is uncertain",
+          errorMessage:
+            claimed.hold === "stale_pending"
+              ? "pending send was not confirmed"
+              : "provider result is uncertain",
         });
       }
       return skippedResult(
@@ -227,9 +296,14 @@ export async function dispatchCommunication(
       await raiseAlert(
         null,
         COMMUNICATION_LOG_WRITE_FAILED,
-        "Send continued without a snapshot because the log database is not configured.",
+        maySendWithoutSnapshot(input)
+          ? "First booking confirmation continued without a saved snapshot."
+          : "Send stopped because the communication log could not be saved.",
         alertDetails,
       );
+      if (!maySendWithoutSnapshot(input)) {
+        return blockedLogResult(input, logError);
+      }
     } else {
       const claimed = await store.claim({
         snapshot,
@@ -241,6 +315,9 @@ export async function dispatchCommunication(
       if (claimed.action === "log_failed") {
         logError = claimed.error;
         await raiseAlert(store, COMMUNICATION_LOG_WRITE_FAILED, claimed.error, alertDetails);
+        if (!maySendWithoutSnapshot(input)) {
+          return blockedLogResult(input, logError);
+        }
       } else if (claimed.action === "duplicate_accepted") {
         return emptyCommunicationResult({
           status: "duplicate",
@@ -264,6 +341,7 @@ export async function dispatchCommunication(
           null,
         );
       } else if (claimed.action === "hold") {
+        await noteHold(store, snapshot, claimed.logId, claimed.hold);
         return emptyCommunicationResult({
           status: "uncertain",
           provider: input.provider,
@@ -366,6 +444,7 @@ export async function dispatchCommunication(
     }
 
     if (providerResult.outcome === "uncertain") {
+      await noteHold(store, outbound, logId, "uncertain");
       return emptyCommunicationResult({
         status: "uncertain",
         provider: input.provider,
@@ -396,6 +475,7 @@ export async function dispatchCommunication(
     const message = error instanceof Error ? error.message : "dispatch failed";
     await raiseAlert(store, COMMUNICATION_LOG_WRITE_FAILED, message, alertDetails);
     if (providerAttempted) {
+      await noteHold(store, snapshot, null, "uncertain");
       return emptyCommunicationResult({
         status: "uncertain",
         provider: input.provider,
@@ -403,13 +483,17 @@ export async function dispatchCommunication(
         logError: message,
       });
     }
+    if (!maySendWithoutSnapshot(input)) {
+      return blockedLogResult(input, message);
+    }
     try {
       const providerResult = await input.send(snapshot);
       if (providerResult.outcome === "uncertain") {
+        await noteHold(store, snapshot, null, "uncertain");
         return emptyCommunicationResult({
           status: "uncertain",
           provider: input.provider,
-          errorMessage: redactCommunicationSecrets(providerResult.errorMessage).slice(0, 500),
+          errorMessage: safeAlertMessage(providerResult.errorMessage),
           logError: message,
         });
       }

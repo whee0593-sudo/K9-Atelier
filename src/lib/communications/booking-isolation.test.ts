@@ -69,8 +69,10 @@ describe("booking and payment isolation", () => {
         console.error("after-visit thank-you SMS failed:", error);
       }
       assert.equal(charge.status, "paid");
-      assert.equal(providerCalls, 1);
+      assert.equal(providerCalls, 0);
       assert.match(errors.join("\n"), /COMMUNICATION_LOG_WRITE_FAILED/);
+      assert.equal(errors.join("\n").includes("+15615550100"), false);
+      assert.equal(errors.join("\n").includes("Thank you"), false);
     } finally {
       console.error = original;
     }
@@ -90,6 +92,7 @@ describe("booking and payment isolation", () => {
       context: buildCommunicationContext({
         notificationType: "appointment_submitted",
         recipient: "owner@example.com",
+        allowSendWithoutSnapshot: true,
       }),
       send: async () => {
         throw new Error("resend down");

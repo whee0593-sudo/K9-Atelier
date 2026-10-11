@@ -28,6 +28,7 @@ function emailContext(input: {
   visitId?: string | null;
   fingerprint?: string;
   dedupe?: "visit" | "appointment";
+  allowSendWithoutSnapshot?: boolean;
 }) {
   return buildCommunicationContext({
     notificationType: input.notificationType,
@@ -39,6 +40,7 @@ function emailContext(input: {
     petIds: input.petIds ?? [input.appointment.petId],
     fingerprint: input.fingerprint,
     dedupe: input.dedupe,
+    allowSendWithoutSnapshot: input.allowSendWithoutSnapshot,
   });
 }
 import {
@@ -90,10 +92,13 @@ export async function notifyCustomerAppointmentSubmitted(
           : "appointment_submitted",
       appointment,
       recipient: customer.email,
+      allowSendWithoutSnapshot: true,
     }),
   });
   if (appointment.status === "confirmed") {
-    await sendAppointmentConfirmedSms(appointment, customer);
+    await sendAppointmentConfirmedSms(appointment, customer, {
+      allowSendWithoutSnapshot: true,
+    });
   } else {
     await sendAppointmentSubmittedSms(appointment, customer);
   }

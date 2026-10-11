@@ -86,10 +86,20 @@ CREATE TABLE IF NOT EXISTS public.communication_log_alerts (
 );
 
 COMMENT ON TABLE public.communication_log_alerts IS
-  'Staff-visible signal when a communication snapshot or status update cannot be saved. If the database itself is down, this row cannot be written either.';
+  'Staff-visible signal when a communication snapshot, hold, or status update needs investigation. If the database itself is down, this row cannot be written either.';
+
+COMMENT ON COLUMN public.communication_log_alerts.idempotency_key IS
+  'SHA-256 prefix of the send key. Do not store the raw recipient, message body, confirm link, or payment data.';
+
+COMMENT ON COLUMN public.communication_log_alerts.message IS
+  'Short investigation text. Do not store the message body, confirm link, payment data, or customer contact details.';
 
 CREATE INDEX IF NOT EXISTS communication_log_alerts_created_idx
   ON public.communication_log_alerts (created_at DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS communication_log_alerts_code_key_uidx
+  ON public.communication_log_alerts (code, idempotency_key)
+  WHERE idempotency_key IS NOT NULL;
 
 CREATE OR REPLACE FUNCTION private.communication_logs_protect_snapshot()
 RETURNS trigger
