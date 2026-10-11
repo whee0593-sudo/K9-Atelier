@@ -21,6 +21,9 @@ function failingStore(): CommunicationLogStore {
     async markFailed() {
       throw new Error("database unavailable");
     },
+    async markUncertain() {
+      throw new Error("database unavailable");
+    },
     async recordAlert() {
       throw new Error("database unavailable");
     },
@@ -59,7 +62,7 @@ describe("booking and payment isolation", () => {
           }),
           send: async () => {
             providerCalls += 1;
-            return { ok: true, providerMessageId: "SM1" };
+            return { outcome: "accepted", providerMessageId: "SM1" };
           },
         });
       } catch (error) {
@@ -92,7 +95,7 @@ describe("booking and payment isolation", () => {
         throw new Error("resend down");
       },
     });
-    assert.equal(result.status, "failed");
+    assert.equal(result.status, "uncertain");
     assert.match(result.errorMessage ?? "", /resend down/);
     assert.match(result.logError ?? "", /database unavailable/);
   });

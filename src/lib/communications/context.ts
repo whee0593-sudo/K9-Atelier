@@ -22,23 +22,33 @@ export function buildCommunicationContext(input: {
   appointmentIds?: string[];
   petIds?: string[];
   fingerprint?: string;
+  /**
+   * Visit scope collapses one visit notification into one send even when
+   * callers pass different dog ids. Appointment scope keeps one send per dog.
+   */
+  dedupe?: "visit" | "appointment";
 }): CommunicationContext {
   const audience = input.audience ?? "customer";
   const appointmentIds = unique(input.appointmentIds ?? []);
   const petIds = unique(input.petIds ?? []);
+  const visitId = input.visitId?.trim() || null;
   const recipient = input.recipient.trim().toLowerCase();
   const fingerprint = input.fingerprint?.trim() || "-";
+  const scope =
+    input.dedupe === "visit" && visitId
+      ? `visit:${visitId}`
+      : appointmentIds.slice().sort().join(",") || "-";
   return {
     notificationType: input.notificationType,
     audience,
     customerId: input.customerId ?? null,
-    visitId: input.visitId ?? null,
+    visitId,
     appointmentIds,
     petIds,
     idempotencyKey: [
       input.notificationType,
       audience,
-      appointmentIds.slice().sort().join(",") || "-",
+      scope,
       recipient || "-",
       fingerprint,
     ].join("|"),

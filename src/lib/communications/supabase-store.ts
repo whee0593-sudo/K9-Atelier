@@ -164,6 +164,9 @@ export function createSupabaseCommunicationLogStore(): CommunicationLogStore {
       if (decision.type === "in_flight") {
         return { action: "in_flight", logId: decision.log.id };
       }
+      if (decision.type === "hold") {
+        return { action: "hold", logId: decision.log.id, hold: decision.hold };
+      }
       if (decision.type === "terminal_skip") {
         return {
           action: "terminal_skip",
@@ -241,6 +244,24 @@ export function createSupabaseCommunicationLogStore(): CommunicationLogStore {
         })
         .eq("id", input.logId)
         .eq("claim_token", input.claimToken)
+        .select("id");
+      if (error) return { ok: false, error: error.message };
+      if (!data?.length) return { ok: false, error: "claim lost" };
+      return { ok: true };
+    },
+
+    async markUncertain(input) {
+      const admin = createAdminClient();
+      const { data, error } = await admin
+        .from("communication_logs")
+        .update({
+          status: "uncertain",
+          error_message: input.errorMessage,
+          failed_at: null,
+        })
+        .eq("id", input.logId)
+        .eq("claim_token", input.claimToken)
+        .is("provider_message_id", null)
         .select("id");
       if (error) return { ok: false, error: error.message };
       if (!data?.length) return { ok: false, error: "claim lost" };

@@ -21,6 +21,11 @@ export type ClaimResult =
     }
   | { action: "in_flight"; logId: string }
   | {
+      action: "hold";
+      logId: string;
+      hold: "uncertain" | "stale_pending";
+    }
+  | {
       action: "terminal_skip";
       logId: string;
       skipReason: CommunicationSkipReason | null;
@@ -42,6 +47,12 @@ export type CommunicationLogStore = {
     now: Date;
   }): Promise<{ ok: true } | { ok: false; error: string }>;
   markFailed(input: {
+    logId: string;
+    claimToken: string;
+    errorMessage: string;
+    now: Date;
+  }): Promise<{ ok: true } | { ok: false; error: string }>;
+  markUncertain(input: {
     logId: string;
     claimToken: string;
     errorMessage: string;

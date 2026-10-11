@@ -118,6 +118,21 @@ describe("communication_logs migration", () => {
     );
     assert.equal(saved.rows[0]?.status, "accepted");
     assert.equal(saved.rows[0]?.provider_message_id, "re_123");
+
+    await db.query(
+      `
+        UPDATE public.communication_logs
+        SET status = 'uncertain',
+            error_message = '408 timeout'
+        WHERE id = $1
+      `,
+      [id],
+    );
+    const uncertain = await db.query<{ status: string }>(
+      `SELECT status FROM public.communication_logs WHERE id = $1`,
+      [id],
+    );
+    assert.equal(uncertain.rows[0]?.status, "uncertain");
     assert.equal(saved.rows[0]?.body_text, "Total $80");
 
     await assert.rejects(

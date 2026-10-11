@@ -59,6 +59,13 @@ export function createMemoryCommunicationLogStore(): CommunicationLogStore & {
         if (decision.type === "in_flight") {
           return { action: "in_flight", logId: decision.log.id };
         }
+        if (decision.type === "hold") {
+          return {
+            action: "hold",
+            logId: decision.log.id,
+            hold: decision.hold,
+          };
+        }
         if (decision.type === "terminal_skip") {
           return {
             action: "terminal_skip",
@@ -155,6 +162,18 @@ export function createMemoryCommunicationLogStore(): CommunicationLogStore & {
       rows.set(row.id, {
         ...row,
         status: "failed",
+        errorMessage: input.errorMessage,
+      });
+      return { ok: true };
+    },
+    async markUncertain(input) {
+      const row = rowFrom(input.logId);
+      if (!row || row.claimToken !== input.claimToken) {
+        return { ok: false, error: "claim lost" };
+      }
+      rows.set(row.id, {
+        ...row,
+        status: "uncertain",
         errorMessage: input.errorMessage,
       });
       return { ok: true };

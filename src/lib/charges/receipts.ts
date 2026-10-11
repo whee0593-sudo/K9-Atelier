@@ -53,6 +53,7 @@ export async function sendChargeReceiptEmail(
       appointmentIds: [appointment.id],
       petIds: [appointment.petId],
       fingerprint: charge.id,
+      dedupe: "visit",
     }),
   });
 }
@@ -73,6 +74,7 @@ export async function sendChargeReceiptSms(
       appointmentIds: [appointment.id],
       petIds: [appointment.petId],
       fingerprint: charge.id,
+      dedupe: "visit",
     }),
   });
   return isCommunicationAccepted(result);
@@ -113,6 +115,7 @@ export async function sendAfterVisitThankYouSms(
       appointmentIds: [appointment.id],
       petIds: [appointment.petId],
       fingerprint: chargeId ?? appointment.id,
+      dedupe: "visit",
     }),
   });
   return isCommunicationAccepted(result);

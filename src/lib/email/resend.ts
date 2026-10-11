@@ -1,5 +1,9 @@
 import { business } from "@/lib/business";
 import { dispatchCommunication } from "@/lib/communications/dispatch";
+import {
+  providerHttpResult,
+  uncertainProviderError,
+} from "@/lib/communications/provider-outcome";
 import type { CommunicationSendResult } from "@/lib/communications/result";
 import type { CommunicationContext } from "@/lib/communications/types";
 import { isValidEmail } from "@/lib/support-contact";
@@ -39,12 +43,11 @@ async function postResend(input: {
   replyTo: string | null;
   attachments?: SendEmailAttachment[];
 }): Promise<
-  | { ok: true; providerMessageId: string | null }
-  | { ok: false; errorMessage: string }
+  ReturnType<typeof providerHttpResult> | ReturnType<typeof uncertainProviderError>
 > {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) {
-    return { ok: false, errorMessage: "RESEND_API_KEY is not configured" };
+    return { outcome: "rejected", errorMessage: "RESEND_API_KEY is not configured" };
   }
 
   const payload: Record<string, unknown> = {
@@ -63,24 +66,32 @@ async function postResend(input: {
     }));
   }
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-  const raw = await response.text();
-  if (!response.ok) {
-    return { ok: false, errorMessage: `${response.status} ${raw}` };
-  }
   try {
-    const parsed = JSON.parse(raw) as { id?: unknown };
-    const id = typeof parsed.id === "string" ? parsed.id : null;
-    return { ok: true, providerMessageId: id };
-  } catch {
-    return { ok: true, providerMessageId: null };
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    const raw = await response.text();
+    let providerMessageId: string | null = null;
+    if (response.ok) {
+      try {
+        const parsed = JSON.parse(raw) as { id?: unknown };
+        providerMessageId = typeof parsed.id === "string" ? parsed.id : null;
+      } catch {
+        providerMessageId = null;
+      }
+    }
+    return providerHttpResult({
+      status: response.status,
+      raw,
+      providerMessageId,
+    });
+  } catch (error) {
+    return uncertainProviderError(error);
   }
 }
 

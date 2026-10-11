@@ -7,7 +7,8 @@ export type CommunicationSendStatus =
   | "accepted"
   | "failed"
   | "skipped"
-  | "duplicate";
+  | "duplicate"
+  | "uncertain";
 
 export type CommunicationDuplicateReason = "already_accepted" | "in_flight";
 

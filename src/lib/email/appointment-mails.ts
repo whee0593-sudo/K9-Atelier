@@ -27,6 +27,7 @@ function emailContext(input: {
   petIds?: string[];
   visitId?: string | null;
   fingerprint?: string;
+  dedupe?: "visit" | "appointment";
 }) {
   return buildCommunicationContext({
     notificationType: input.notificationType,
@@ -37,6 +38,7 @@ function emailContext(input: {
     appointmentIds: input.appointmentIds ?? [input.appointment.id],
     petIds: input.petIds ?? [input.appointment.petId],
     fingerprint: input.fingerprint,
+    dedupe: input.dedupe,
   });
 }
 import {
@@ -180,6 +182,7 @@ export async function notifyCustomerAppointmentChange(
     appointmentIds?: string[];
     petIds?: string[];
     visitId?: string | null;
+    eventKey?: string;
   },
 ) {
   const email =
@@ -234,10 +237,12 @@ export async function notifyCustomerAppointmentChange(
       appointmentIds: options?.appointmentIds ?? related.map((row) => row.id),
       petIds: options?.petIds ?? related.map((row) => row.petId),
       visitId: options?.visitId,
+      dedupe: "visit",
       fingerprint:
-        action === "reschedule"
+        options?.eventKey ??
+        (action === "reschedule"
           ? `${appointment.appointmentDate}|${appointment.appointmentTime}`
-          : undefined,
+          : undefined),
     }),
   });
 }

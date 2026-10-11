@@ -12,6 +12,11 @@ export type ClaimDecision =
       log: StoredCommunicationLog;
     }
   | { type: "in_flight"; log: StoredCommunicationLog }
+  | {
+      type: "hold";
+      log: StoredCommunicationLog;
+      hold: "uncertain" | "stale_pending";
+    }
   | { type: "terminal_skip"; log: StoredCommunicationLog };
 
 function isFreshPending(log: StoredCommunicationLog, now: number, staleMs: number) {
@@ -22,9 +27,10 @@ function isFreshPending(log: StoredCommunicationLog, now: number, staleMs: numbe
 
 /**
  * Decide whether this worker may send.
- * Accepted rows and fresh pending rows block a second send.
- * Failed rows and stale pending rows may be claimed again without
- * changing the stored snapshot.
+ * Accepted rows, uncertain rows, and pending rows block another send.
+ * A pending row is not proof that the provider was never called, so it is
+ * not claimed again after it goes stale. A definite rejection may be retried
+ * with the stored snapshot.
  */
 export function decideClaim(
   existing: StoredCommunicationLog | null,
@@ -43,11 +49,15 @@ export function decideClaim(
     return { type: "duplicate_accepted", log: existing };
   }
 
+  if (existing.status === "uncertain") {
+    return { type: "hold", hold: "uncertain", log: existing };
+  }
+
   if (existing.status === "pending") {
     if (isFreshPending(existing, now, staleMs)) {
       return { type: "in_flight", log: existing };
     }
-    return { type: "send_existing", log: existing };
+    return { type: "hold", hold: "stale_pending", log: existing };
   }
 
   if (existing.status === "failed") {

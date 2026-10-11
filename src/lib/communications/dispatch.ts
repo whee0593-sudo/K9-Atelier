@@ -18,11 +18,10 @@ import {
   COMMUNICATION_LOG_WRITE_FAILED,
   COMMUNICATION_PROVIDER_ID_MISSING,
 } from "@/lib/communications/types";
+import type { ProviderAttemptResult } from "@/lib/communications/provider-outcome";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 
-export type ProviderSendResult =
-  | { ok: true; providerMessageId: string | null }
-  | { ok: false; errorMessage: string };
+export type ProviderSendResult = ProviderAttemptResult;
 
 export type DispatchCommunicationInput = {
   channel: CommunicationChannel;
@@ -156,6 +155,7 @@ export async function dispatchCommunication(
   const snapshot = buildSnapshot(input);
   const store = activeStore(input.store);
   const alertDetails = { idempotencyKey: snapshot.idempotencyKey };
+  let providerAttempted = false;
 
   try {
     if (!input.recipientValid || !input.configured) {
@@ -197,6 +197,14 @@ export async function dispatchCommunication(
           duplicateReason: "in_flight",
           provider: input.provider,
           logId: claimed.logId,
+        });
+      }
+      if (claimed.action === "hold") {
+        return emptyCommunicationResult({
+          status: "uncertain",
+          provider: input.provider,
+          logId: claimed.logId,
+          errorMessage: "provider result is uncertain",
         });
       }
       return skippedResult(
@@ -255,6 +263,16 @@ export async function dispatchCommunication(
           claimed.skipReason ?? "invalid_recipient",
           null,
         );
+      } else if (claimed.action === "hold") {
+        return emptyCommunicationResult({
+          status: "uncertain",
+          provider: input.provider,
+          logId: claimed.logId,
+          errorMessage:
+            claimed.hold === "stale_pending"
+              ? "pending send was not confirmed"
+              : "provider result is uncertain",
+        });
       } else {
         outbound = claimed.snapshot;
         logId = claimed.logId;
@@ -264,62 +282,100 @@ export async function dispatchCommunication(
 
     let providerResult: ProviderSendResult;
     try {
+      providerAttempted = true;
       providerResult = await input.send(outbound);
     } catch (error) {
       providerResult = {
-        ok: false,
+        outcome: "uncertain",
         errorMessage: error instanceof Error ? error.message : "provider threw",
       };
     }
 
     const safeError = redactCommunicationSecrets(
-      providerResult.ok ? "" : providerResult.errorMessage,
+      providerResult.outcome === "accepted" ? "" : providerResult.errorMessage,
     ).slice(0, 500);
 
     if (store && logId && claimToken) {
-      if (providerResult.ok) {
-        const marked = await store.markAccepted({
-          logId,
-          claimToken,
-          providerMessageId: providerResult.providerMessageId,
-          now,
-        });
-        if (!marked.ok) {
-          logError = marked.error;
-          await raiseAlert(
-            store,
-            COMMUNICATION_LOG_STATUS_UPDATE_FAILED,
-            marked.error,
-            { ...alertDetails, logId },
-          );
-        } else if (!providerResult.providerMessageId) {
-          await raiseAlert(
-            store,
-            COMMUNICATION_PROVIDER_ID_MISSING,
-            `${input.provider} accepted the message without a message id.`,
-            { ...alertDetails, logId },
-          );
+      try {
+        if (providerResult.outcome === "accepted") {
+          const marked = await store.markAccepted({
+            logId,
+            claimToken,
+            providerMessageId: providerResult.providerMessageId,
+            now,
+          });
+          if (!marked.ok) {
+            logError = marked.error;
+            await raiseAlert(
+              store,
+              COMMUNICATION_LOG_STATUS_UPDATE_FAILED,
+              marked.error,
+              { ...alertDetails, logId },
+            );
+          } else if (!providerResult.providerMessageId) {
+            await raiseAlert(
+              store,
+              COMMUNICATION_PROVIDER_ID_MISSING,
+              `${input.provider} accepted the message without a message id.`,
+              { ...alertDetails, logId },
+            );
+          }
+        } else if (providerResult.outcome === "uncertain") {
+          const marked = await store.markUncertain({
+            logId,
+            claimToken,
+            errorMessage: safeError || "provider result is unknown",
+            now,
+          });
+          if (!marked.ok) {
+            logError = marked.error;
+            await raiseAlert(
+              store,
+              COMMUNICATION_LOG_STATUS_UPDATE_FAILED,
+              marked.error,
+              { ...alertDetails, logId },
+            );
+          }
+        } else {
+          const marked = await store.markFailed({
+            logId,
+            claimToken,
+            errorMessage: safeError || "provider rejected the message",
+            now,
+          });
+          if (!marked.ok) {
+            logError = marked.error;
+            await raiseAlert(
+              store,
+              COMMUNICATION_LOG_STATUS_UPDATE_FAILED,
+              marked.error,
+              { ...alertDetails, logId },
+            );
+          }
         }
-      } else {
-        const marked = await store.markFailed({
-          logId,
-          claimToken,
-          errorMessage: safeError || "provider rejected the message",
-          now,
-        });
-        if (!marked.ok) {
-          logError = marked.error;
-          await raiseAlert(
-            store,
-            COMMUNICATION_LOG_STATUS_UPDATE_FAILED,
-            marked.error,
-            { ...alertDetails, logId },
-          );
-        }
+      } catch (markError) {
+        logError =
+          markError instanceof Error ? markError.message : "status update threw";
+        await raiseAlert(
+          store,
+          COMMUNICATION_LOG_STATUS_UPDATE_FAILED,
+          logError,
+          { ...alertDetails, logId },
+        );
       }
     }
 
-    if (!providerResult.ok) {
+    if (providerResult.outcome === "uncertain") {
+      return emptyCommunicationResult({
+        status: "uncertain",
+        provider: input.provider,
+        logId,
+        errorMessage: safeError || "provider result is unknown",
+        logError,
+      });
+    }
+
+    if (providerResult.outcome === "rejected") {
       return emptyCommunicationResult({
         status: "failed",
         provider: input.provider,
@@ -339,9 +395,25 @@ export async function dispatchCommunication(
   } catch (error) {
     const message = error instanceof Error ? error.message : "dispatch failed";
     await raiseAlert(store, COMMUNICATION_LOG_WRITE_FAILED, message, alertDetails);
+    if (providerAttempted) {
+      return emptyCommunicationResult({
+        status: "uncertain",
+        provider: input.provider,
+        errorMessage: "provider result was not recorded",
+        logError: message,
+      });
+    }
     try {
       const providerResult = await input.send(snapshot);
-      if (!providerResult.ok) {
+      if (providerResult.outcome === "uncertain") {
+        return emptyCommunicationResult({
+          status: "uncertain",
+          provider: input.provider,
+          errorMessage: redactCommunicationSecrets(providerResult.errorMessage).slice(0, 500),
+          logError: message,
+        });
+      }
+      if (providerResult.outcome === "rejected") {
         return emptyCommunicationResult({
           status: "failed",
           provider: input.provider,
@@ -357,7 +429,7 @@ export async function dispatchCommunication(
       });
     } catch (sendError) {
       return emptyCommunicationResult({
-        status: "failed",
+        status: "uncertain",
         provider: input.provider,
         errorMessage:
           sendError instanceof Error ? sendError.message : "provider threw",

@@ -1,4 +1,8 @@
 import { dispatchCommunication } from "@/lib/communications/dispatch";
+import {
+  providerHttpResult,
+  uncertainProviderError,
+} from "@/lib/communications/provider-outcome";
 import type { CommunicationSendResult } from "@/lib/communications/result";
 import type { CommunicationContext } from "@/lib/communications/types";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
@@ -31,8 +35,7 @@ async function postTwilioMessage(input: {
   from?: string;
   messagingServiceSid?: string;
 }): Promise<
-  | { ok: true; providerMessageId: string | null }
-  | { ok: false; errorMessage: string }
+  ReturnType<typeof providerHttpResult> | ReturnType<typeof uncertainProviderError>
 > {
   const params = new URLSearchParams();
   params.set("To", input.to);
@@ -46,27 +49,35 @@ async function postTwilioMessage(input: {
     params.set("MessagingServiceSid", input.messagingServiceSid);
   }
 
-  const response = await fetch(
-    `https://api.twilio.com/2010-04-01/Accounts/${input.accountSid}/Messages.json`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${Buffer.from(`${input.accountSid}:${input.authToken}`).toString("base64")}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: params.toString(),
-    },
-  );
-  const raw = await response.text();
-  if (!response.ok) {
-    return { ok: false, errorMessage: `${response.status} ${raw}` };
-  }
   try {
-    const parsed = JSON.parse(raw) as { sid?: unknown };
-    const sid = typeof parsed.sid === "string" ? parsed.sid : null;
-    return { ok: true, providerMessageId: sid };
-  } catch {
-    return { ok: true, providerMessageId: null };
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${input.accountSid}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${input.accountSid}:${input.authToken}`).toString("base64")}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: params.toString(),
+      },
+    );
+    const raw = await response.text();
+    let providerMessageId: string | null = null;
+    if (response.ok) {
+      try {
+        const parsed = JSON.parse(raw) as { sid?: unknown };
+        providerMessageId = typeof parsed.sid === "string" ? parsed.sid : null;
+      } catch {
+        providerMessageId = null;
+      }
+    }
+    return providerHttpResult({
+      status: response.status,
+      raw,
+      providerMessageId,
+    });
+  } catch (error) {
+    return uncertainProviderError(error);
   }
 }
 
@@ -108,7 +119,7 @@ export async function sendSms(
               messagingServiceSid,
               mediaUrls,
             });
-        if (sentMms.ok) return sentMms;
+        if (sentMms.outcome !== "rejected") return sentMms;
         console.warn("Twilio MMS failed; sending text without the image");
         return postTwilioMessage({
           ...shared,

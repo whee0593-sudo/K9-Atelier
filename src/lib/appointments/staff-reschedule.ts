@@ -327,6 +327,8 @@ export async function rescheduleStaffAppointment(
     return { error: "conflict" };
   }
   const anchor = ordered[0] ?? loaded.row;
+  const previousDate = String(anchor.appointment_date ?? "-");
+  const previousTime = String(anchor.appointment_time ?? "-");
   const visitAppointmentIds = ordered.map((row) => row.id);
   const decisions = ordered.map(visitDurationDecision);
   if (decisions.some((decision) => decision.unknown || decision.minutes == null)) {
@@ -410,6 +412,7 @@ export async function rescheduleStaffAppointment(
             appointmentIds: ordered.map((row) => row.id),
             petIds: ordered.map((row) => row.pet_id),
             visitId: ordered[0]?.visit_id ?? appointment.visitId ?? null,
+            eventKey: `${previousDate}|${previousTime}>${parsed.date}|${slots[0]?.appointmentTime ?? "-"}`,
           },
         );
       } catch (emailError) {

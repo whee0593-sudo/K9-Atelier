@@ -46,7 +46,7 @@ function input(
     context: context(),
     now: NOW,
     store,
-    send: async () => ({ ok: true as const, providerMessageId: "SM123" }),
+    send: async () => ({ outcome: "accepted" as const, providerMessageId: "SM123" }),
     ...patch,
   };
 }
@@ -70,7 +70,7 @@ describe("communication dispatch", () => {
           seenStatus = row?.status ?? "";
           assert.equal(row?.snapshot.bodyText, snapshot.bodyText);
           assert.equal(snapshot.bodyText, "K9 ATELIER: Penny is on the way.");
-          return { ok: true, providerMessageId: "SM123" };
+          return { outcome: "accepted", providerMessageId: "SM123" };
         },
       }),
     );
@@ -90,7 +90,7 @@ describe("communication dispatch", () => {
     const store = createMemoryCommunicationLogStore();
     const failed = await dispatchCommunication(
       input(store, {
-        send: async () => ({ ok: false, errorMessage: "Twilio 400" }),
+        send: async () => ({ outcome: "rejected", errorMessage: "Twilio 400" }),
       }),
     );
     assert.equal(failed.status, "failed");
@@ -141,6 +141,9 @@ describe("communication dispatch", () => {
       async markFailed() {
         return { ok: true };
       },
+      async markUncertain() {
+        return { ok: true };
+      },
       async recordAlert(alert) {
         alerts.push(alert.code);
         return { ok: true };
@@ -154,7 +157,7 @@ describe("communication dispatch", () => {
       input(store, {
         send: async () => {
           providerCalls += 1;
-          return { ok: true, providerMessageId: "SM999" };
+          return { outcome: "accepted", providerMessageId: "SM999" };
         },
       }),
     );
@@ -172,7 +175,7 @@ describe("communication dispatch", () => {
     let providerCalls = 0;
     const send = async () => {
       providerCalls += 1;
-      return { ok: true as const, providerMessageId: "SM123" };
+      return { outcome: "accepted" as const, providerMessageId: "SM123" };
     };
     const first = await dispatchCommunication(input(store, { send }));
     const second = await dispatchCommunication(
@@ -198,7 +201,7 @@ describe("communication dispatch", () => {
       input(store, {
         send: async (snapshot) => {
           bodies.push(snapshot.bodyText);
-          return { ok: false, errorMessage: "timeout" };
+          return { outcome: "rejected", errorMessage: "400 invalid number" };
         },
       }),
     );
@@ -208,7 +211,7 @@ describe("communication dispatch", () => {
         bodyText: "Updated price: $180",
         send: async (snapshot) => {
           bodies.push(snapshot.bodyText);
-          return { ok: true, providerMessageId: "SM124" };
+          return { outcome: "accepted", providerMessageId: "SM124" };
         },
       }),
     );
@@ -239,6 +242,7 @@ describe("communication dispatch", () => {
       },
       markAccepted: (value) => memory.markAccepted(value),
       markFailed: (value) => memory.markFailed(value),
+      markUncertain: (value) => memory.markUncertain(value),
       recordAlert: (value) => memory.recordAlert(value),
       read: (logId) => memory.read(logId),
     };
@@ -250,7 +254,7 @@ describe("communication dispatch", () => {
     const send = async () => {
       entered += 1;
       if (entered === 1) await gate;
-      return { ok: true as const, providerMessageId: "SM1" };
+      return { outcome: "accepted" as const, providerMessageId: "SM1" };
     };
     const first = dispatchCommunication(input(store, { send }));
     const second = dispatchCommunication(input(store, { send }));
@@ -284,7 +288,7 @@ describe("communication dispatch", () => {
         bodyHtml: `<p>${secretBody}</p>`,
         send: async (snapshot) => {
           handedToProvider = `${snapshot.subject}\n${snapshot.bodyText}\n${snapshot.bodyHtml}`;
-          return { ok: true, providerMessageId: "re_email_1" };
+          return { outcome: "accepted", providerMessageId: "re_email_1" };
         },
       }),
     );
@@ -306,7 +310,7 @@ describe("communication dispatch", () => {
     const store = createMemoryCommunicationLogStore();
     const result = await dispatchCommunication(
       input(store, {
-        send: async () => ({ ok: true, providerMessageId: null }),
+        send: async () => ({ outcome: "accepted", providerMessageId: null }),
       }),
     );
     assert.equal(result.status, "accepted");
@@ -329,12 +333,204 @@ describe("communication dispatch", () => {
       async markFailed() {
         return { ok: false, error: "status update failed" };
       },
+      async markUncertain() {
+        return { ok: true };
+      },
     };
     const result = await dispatchCommunication(input(store));
     assert.equal(result.status, "accepted");
     assert.match(result.logError ?? "", /status update failed/);
     assert.equal(memory.alerts()[0]?.code, COMMUNICATION_LOG_STATUS_UPDATE_FAILED);
     assert.match(errors.join("\n"), /COMMUNICATION_LOG_STATUS_UPDATE_FAILED/);
+  });
+});
+
+describe("uncertain provider results and visit identity", () => {
+  it("does not resend after a timeout, 408, 409, or 5xx", async () => {
+    const store = createMemoryCommunicationLogStore();
+    let calls = 0;
+    const send = async () => {
+      calls += 1;
+      return { outcome: "uncertain" as const, errorMessage: "500 upstream" };
+    };
+    const first = await dispatchCommunication(input(store, { send }));
+    const second = await dispatchCommunication(
+      input(store, {
+        now: new Date(NOW.getTime() + 10 * 60 * 1000),
+        bodyText: "A later retry must not call the provider again.",
+        send,
+      }),
+    );
+    assert.equal(first.status, "uncertain");
+    assert.equal(second.status, "uncertain");
+    assert.equal(calls, 1);
+    assert.equal(store.rows()[0]?.status, "uncertain");
+    assert.equal(
+      store.rows()[0]?.snapshot.bodyText,
+      "K9 ATELIER: Penny is on the way.",
+    );
+  });
+
+  it("does not resend when the provider accepted but the status write failed", async () => {
+    const memory = createMemoryCommunicationLogStore();
+    const store: CommunicationLogStore = {
+      claim: (value) => memory.claim(value),
+      read: (logId) => memory.read(logId),
+      recordAlert: (alert) => memory.recordAlert(alert),
+      async markAccepted() {
+        return { ok: false, error: "status update failed" };
+      },
+      markFailed: (value) => memory.markFailed(value),
+      markUncertain: (value) => memory.markUncertain(value),
+    };
+    let calls = 0;
+    const send = async () => {
+      calls += 1;
+      return { outcome: "accepted" as const, providerMessageId: "SM555" };
+    };
+    const first = await dispatchCommunication(input(store, { send }));
+    const second = await dispatchCommunication(
+      input(store, {
+        now: new Date(NOW.getTime() + 10 * 60 * 1000),
+        send,
+      }),
+    );
+    assert.equal(first.status, "accepted");
+    assert.equal(first.providerMessageId, "SM555");
+    assert.equal(second.status, "uncertain");
+    assert.equal(calls, 1);
+  });
+
+  it("retries a definite rejection with the stored snapshot", async () => {
+    const store = createMemoryCommunicationLogStore();
+    const bodies: string[] = [];
+    await dispatchCommunication(
+      input(store, {
+        context: context("rejected-once"),
+        send: async (snapshot) => {
+          bodies.push(snapshot.bodyText);
+          return { outcome: "rejected", errorMessage: "400 invalid number" };
+        },
+      }),
+    );
+    await dispatchCommunication(
+      input(store, {
+        context: context("rejected-once"),
+        now: new Date(NOW.getTime() + 60_000),
+        bodyText: "Updated copy must not replace the snapshot.",
+        send: async (snapshot) => {
+          bodies.push(snapshot.bodyText);
+          return { outcome: "accepted", providerMessageId: "SM777" };
+        },
+      }),
+    );
+    assert.deepEqual(bodies, [
+      "K9 ATELIER: Penny is on the way.",
+      "K9 ATELIER: Penny is on the way.",
+    ]);
+  });
+
+  it("keeps one visit notification when dog ids differ", async () => {
+    const store = createMemoryCommunicationLogStore();
+    let calls = 0;
+    const send = async () => {
+      calls += 1;
+      return { outcome: "accepted" as const, providerMessageId: "re_visit" };
+    };
+    const visit = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    const firstKey = buildCommunicationContext({
+      notificationType: "appointment_reschedule",
+      recipient: "owner@example.com",
+      visitId: visit,
+      appointmentIds: ["cccccccc-cccc-4ccc-8ccc-cccccccccccc"],
+      fingerprint: "mon|9am>tue|9am",
+      dedupe: "visit",
+    });
+    const secondKey = buildCommunicationContext({
+      notificationType: "appointment_reschedule",
+      recipient: "owner@example.com",
+      visitId: visit,
+      appointmentIds: [
+        "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      ],
+      fingerprint: "mon|9am>tue|9am",
+      dedupe: "visit",
+    });
+    assert.equal(firstKey.idempotencyKey, secondKey.idempotencyKey);
+    await dispatchCommunication(
+      input(store, {
+        channel: "email",
+        provider: "resend",
+        recipient: "owner@example.com",
+        subject: "Updated visit",
+        context: firstKey,
+        send,
+      }),
+    );
+    const again = await dispatchCommunication(
+      input(store, {
+        channel: "email",
+        provider: "resend",
+        recipient: "owner@example.com",
+        subject: "Updated visit",
+        context: secondKey,
+        send,
+      }),
+    );
+    assert.equal(calls, 1);
+    assert.equal(again.status, "duplicate");
+    assert.equal(again.duplicateReason, "already_accepted");
+  });
+
+  it("keeps A to B to A reschedules as different events", () => {
+    const visit = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    const toB = buildCommunicationContext({
+      notificationType: "appointment_reschedule",
+      recipient: "owner@example.com",
+      visitId: visit,
+      fingerprint: "mon|9am>tue|11am",
+      dedupe: "visit",
+    });
+    const backToA = buildCommunicationContext({
+      notificationType: "appointment_reschedule",
+      recipient: "owner@example.com",
+      visitId: visit,
+      fingerprint: "tue|11am>mon|9am",
+      dedupe: "visit",
+    });
+    assert.notEqual(toB.idempotencyKey, backToA.idempotencyKey);
+  });
+
+  it("still sends one appointment-scoped message per dog", () => {
+    const visit = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    const daisy = buildCommunicationContext({
+      notificationType: "followup",
+      recipient: "+15615550100",
+      visitId: visit,
+      appointmentIds: ["cccccccc-cccc-4ccc-8ccc-cccccccccccc"],
+    });
+    const milo = buildCommunicationContext({
+      notificationType: "followup",
+      recipient: "+15615550100",
+      visitId: visit,
+      appointmentIds: ["dddddddd-dddd-4ddd-8ddd-dddddddddddd"],
+    });
+    assert.notEqual(daisy.idempotencyKey, milo.idempotencyKey);
+  });
+});
+
+describe("provider http classification", () => {
+  it("treats timeout, 408, 409, and 5xx as uncertain", async () => {
+    const { classifyProviderHttpStatus } = await import(
+      "@/lib/communications/provider-outcome"
+    );
+    assert.equal(classifyProviderHttpStatus(200), "accepted");
+    assert.equal(classifyProviderHttpStatus(400), "rejected");
+    assert.equal(classifyProviderHttpStatus(408), "uncertain");
+    assert.equal(classifyProviderHttpStatus(409), "uncertain");
+    assert.equal(classifyProviderHttpStatus(500), "uncertain");
+    assert.equal(classifyProviderHttpStatus(0), "uncertain");
   });
 });
 
@@ -385,7 +581,7 @@ describe("communication snapshot helpers", () => {
     assert.equal(decideClaim(log, NOW.getTime()).type, "in_flight");
     assert.equal(
       decideClaim(log, NOW.getTime() + 3 * 60 * 1000).type,
-      "send_existing",
+      "hold",
     );
   });
 });

@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS public.communication_logs (
       'skipped',
       'accepted',
       'failed',
+      'uncertain',
       'delivered',
       'undelivered',
       'bounced'

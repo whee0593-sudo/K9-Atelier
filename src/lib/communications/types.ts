@@ -9,6 +9,7 @@ export type CommunicationLogStatus =
   | "skipped"
   | "accepted"
   | "failed"
+  | "uncertain"
   | "delivered"
   | "undelivered"
   | "bounced";
