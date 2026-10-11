@@ -31,6 +31,8 @@ const EXPECTED_TABLES = [
   "customer_admin_notes",
   "customer_service_addresses",
   "pet_vaccination_records",
+  "communication_logs",
+  "communication_log_alerts",
 ] as const;
 
 const EXPECTED_POLICIES = [
@@ -45,6 +47,8 @@ const EXPECTED_POLICIES = [
   "customer_service_addresses_select_own_or_staff",
   "pet_vaccination_records_select_own_or_staff",
   "vaccinations_select_own_or_staff",
+  "communication_logs_select_staff",
+  "communication_log_alerts_select_staff",
 ] as const;
 
 const EXPECTED_POLICY_COUNT = EXPECTED_POLICIES.length;

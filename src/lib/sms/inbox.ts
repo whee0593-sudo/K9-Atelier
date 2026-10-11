@@ -11,7 +11,12 @@ import {
 } from "@/lib/sms/inbox-copy";
 import { normalizePhoneToE164, phonesMatch } from "@/lib/sms/phone";
 import { rememberStaffReplyTarget } from "@/lib/sms/staff-reply-target";
-import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
+import {
+  buildCommunicationContext,
+  communicationFingerprint,
+} from "@/lib/communications/context";
+import { isCommunicationAccepted } from "@/lib/communications/result";
+import { sendSms } from "@/lib/sms/twilio";
 import { getStaffVoicePhone } from "@/lib/voice/config";
 
 export type { StaffSmsInboxItem };
@@ -64,9 +69,10 @@ export async function forwardInboundSmsToStaff(input: {
   body: string;
   customer?: CustomerByPhone | null;
   mediaUrls?: string[];
+  messageSid?: string;
 }) {
   const staffPhone = getStaffVoicePhone();
-  if (!staffPhone || !isSmsConfigured()) return false;
+  if (!staffPhone) return false;
   if (isStaffPhone(input.from)) return false;
 
   const mediaUrls = normalizeMediaUrls(input.mediaUrls);
@@ -74,25 +80,35 @@ export async function forwardInboundSmsToStaff(input: {
 
   const customer = input.customer ?? (await lookupCustomerByPhone(input.from));
   const customerPhone = normalizePhoneToE164(input.from) ?? input.from;
+  const body = buildStaffInboundForwardSms({
+    ownerName: customer?.name ?? "Unknown",
+    petNames: customer?.petNames ?? [],
+    body: input.body,
+    phone: customerPhone,
+    mediaCount: mediaUrls.length,
+  });
   const sent = await sendSms({
     to: staffPhone,
-    body: buildStaffInboundForwardSms({
-      ownerName: customer?.name ?? "Unknown",
-      petNames: customer?.petNames ?? [],
-      body: input.body,
-      phone: customerPhone,
-      mediaCount: mediaUrls.length,
-    }),
+    body,
     mediaUrls,
+    communication: buildCommunicationContext({
+      notificationType: "staff_inbound_forward",
+      audience: "staff",
+      recipient: staffPhone,
+      customerId: customer?.customerId ?? null,
+      fingerprint:
+        input.messageSid ??
+        communicationFingerprint(`${customerPhone}|${input.body}|${mediaUrls.length}`),
+    }),
   });
-  if (sent) {
+  if (isCommunicationAccepted(sent)) {
     await rememberStaffReplyTarget({
       customerPhone,
       customerName: customer?.name ?? null,
       petNames: customer?.petNames ?? [],
     });
   }
-  return sent;
+  return isCommunicationAccepted(sent);
 }
 
 export async function listStaffSmsInbox(): Promise<

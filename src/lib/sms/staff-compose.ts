@@ -10,7 +10,13 @@ import {
 } from "@/lib/sms/staff-compose-copy";
 import { lookupCustomerByPhone } from "@/lib/sms/customer-by-phone";
 import { recordCustomerSms } from "@/lib/sms/inbox";
-import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
+import {
+  buildCommunicationContext,
+  communicationFingerprint,
+  communicationHourBucket,
+} from "@/lib/communications/context";
+import { isCommunicationAccepted } from "@/lib/communications/result";
+import { sendSms } from "@/lib/sms/twilio";
 
 export { STAFF_SMS_MAX_CHARS, buildStaffCustomerSms };
 export type { StaffSmsRecipient };
@@ -119,8 +125,6 @@ export async function sendStaffCustomerSms(input: {
     return { error: "invalid" };
   }
 
-  if (!isSmsConfigured()) return { error: "misconfigured" };
-
   const admin = createAdminClient();
   let data: StaffSmsProfile | null = null;
 
@@ -151,11 +155,25 @@ export async function sendStaffCustomerSms(input: {
   if (!to) return { error: "no_phone" };
 
   try {
+    const body = buildStaffCustomerSms(message);
     const sent = await sendSms({
       to,
-      body: buildStaffCustomerSms(message),
+      body,
+      communication: buildCommunicationContext({
+        notificationType: "staff_compose",
+        audience: "customer",
+        recipient: to,
+        customerId: data?.id ?? null,
+        petIds: [],
+        fingerprint: `${communicationHourBucket()}|${communicationFingerprint(body)}`,
+      }),
     });
-    if (!sent) return { error: "server" };
+    if (!isCommunicationAccepted(sent)) {
+      if (sent.status === "skipped" && sent.skipReason === "missing_config") {
+        return { error: "misconfigured" };
+      }
+      return { error: "server" };
+    }
     const customer = await lookupCustomerByPhone(to);
     await recordCustomerSms({
       direction: "outbound",

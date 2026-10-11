@@ -9,8 +9,6 @@ import {
   hourInBusinessTimezone,
   todayInBusinessTimezone,
 } from "@/lib/sms/schedule";
-import { isSmsConfigured } from "@/lib/sms/twilio";
-
 const REMINDER_SELECT = `
   id,
   customer_id,
@@ -54,9 +52,6 @@ export async function sendThreeDayConfirmRequestSms(): Promise<ReminderRunResult
   if (hourInBusinessTimezone() !== 10) {
     return { sent: 0, skipped: 0, failed: 0, reason: "outside_10am_window" };
   }
-  if (!isSmsConfigured()) {
-    return { sent: 0, skipped: 0, failed: 0, reason: "sms_not_configured" };
-  }
   if (!hasSupabaseAdminConfig()) {
     return { sent: 0, skipped: 0, failed: 0, reason: "supabase_admin_missing" };
   }
@@ -84,15 +79,16 @@ export async function sendThreeDayConfirmRequestSms(): Promise<ReminderRunResult
 
   for (const row of (data ?? []) as unknown as AppointmentRow[]) {
     const appointment = mapAppointmentRowToAdminRecord(row);
-    const contact = contactFromAdminAppointment(appointment);
-    if (!contact?.phone) {
-      skipped += 1;
-      continue;
-    }
-
+    const contact = contactFromAdminAppointment(appointment) ?? {
+      email: appointment.customerEmail,
+      name: appointment.customerName,
+      firstName: appointment.customerFirstName,
+      phone: appointment.customerPhone,
+    };
     const ok = await sendAppointmentConfirmRequestSms(appointment, contact);
     if (!ok) {
-      failed += 1;
+      if (!contact.phone) skipped += 1;
+      else failed += 1;
       continue;
     }
 

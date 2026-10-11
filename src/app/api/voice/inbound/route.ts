@@ -3,6 +3,7 @@ import { siteUrl } from "@/lib/email/resend";
 import { lookupCustomerByPhone } from "@/lib/sms/customer-by-phone";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
 import { isValidTwilioSignature } from "@/lib/sms/twilio-signature";
+import { buildCommunicationContext } from "@/lib/communications/context";
 import { sendSms } from "@/lib/sms/twilio";
 import {
   buildForwardCallTwiml,
@@ -95,6 +96,13 @@ export async function POST(request: Request) {
       await sendSms({
         to: staffPhone,
         body: buildIncomingCallSms(caller),
+        communication: buildCommunicationContext({
+          notificationType: "incoming_call_staff",
+          audience: "staff",
+          recipient: staffPhone,
+          customerId: customer?.customerId ?? null,
+          fingerprint: params.CallSid || phone,
+        }),
       });
     } catch (error) {
       console.error("incoming call SMS failed:", error);

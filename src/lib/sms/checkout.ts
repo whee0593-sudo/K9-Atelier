@@ -1,7 +1,9 @@
+import { buildCommunicationContext } from "@/lib/communications/context";
+import { isCommunicationAccepted } from "@/lib/communications/result";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordCustomerSms } from "@/lib/sms/inbox";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
-import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
+import { sendSms } from "@/lib/sms/twilio";
 import { buildCheckoutReadySms } from "@/lib/sms/checkout-copy";
 
 function firstRelation<T>(value: unknown): T | null {
@@ -11,13 +13,11 @@ function firstRelation<T>(value: unknown): T | null {
 }
 
 export async function sendCheckoutReadySms(appointmentId: string) {
-  if (!isSmsConfigured()) return false;
-
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("appointments")
     .select(
-      "id, customer_id, pets ( name, sex ), profiles ( first_name, last_name, phone )",
+      "id, customer_id, pet_id, visit_id, pets ( name, sex ), profiles ( first_name, last_name, phone )",
     )
     .eq("id", appointmentId)
     .maybeSingle();
@@ -36,9 +36,7 @@ export async function sendCheckoutReadySms(appointmentId: string) {
     last_name: string | null;
     phone: string | null;
   }>(data.profiles);
-  const to = normalizePhoneToE164(profile?.phone ?? "");
-  if (!to) return false;
-
+  const to = normalizePhoneToE164(profile?.phone ?? "") ?? "";
   const petName = pet?.name?.trim() || "your pet";
   const body = buildCheckoutReadySms({
     petName,
@@ -46,8 +44,20 @@ export async function sendCheckoutReadySms(appointmentId: string) {
   });
 
   try {
-    const sent = await sendSms({ to, body });
-    if (!sent) return false;
+    const result = await sendSms({
+      to,
+      body,
+      communication: buildCommunicationContext({
+        notificationType: "checkout_ready",
+        recipient: to || profile?.phone || "missing",
+        customerId: (data.customer_id as string | null) ?? null,
+        visitId: (data.visit_id as string | null) ?? null,
+        appointmentIds: [appointmentId],
+        petIds: data.pet_id ? [data.pet_id as string] : [],
+      }),
+    });
+    if (!isCommunicationAccepted(result)) return false;
+    if (!to) return false;
     const customerName = [profile?.first_name, profile?.last_name]
       .filter(Boolean)
       .join(" ")

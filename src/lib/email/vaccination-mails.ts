@@ -1,3 +1,4 @@
+import { buildCommunicationContext } from "@/lib/communications/context";
 import {
   buildVaccinationRejectedEmail,
   buildVaccinationVerifiedEmail,
@@ -9,6 +10,9 @@ type VaccinationMailContext = {
   customerEmail: string;
   customerName?: string | null;
   expirationDate?: string | null;
+  customerId?: string | null;
+  petId?: string | null;
+  recordId?: string | null;
 };
 
 export async function notifyCustomerVaccinationVerified(
@@ -21,6 +25,13 @@ export async function notifyCustomerVaccinationVerified(
     subject: email.subject,
     text: email.text,
     html: email.html,
+    communication: buildCommunicationContext({
+      notificationType: "vaccination_verified",
+      recipient: context.customerEmail,
+      customerId: context.customerId,
+      petIds: context.petId ? [context.petId] : [],
+      fingerprint: context.recordId ?? undefined,
+    }),
   });
 }
 
@@ -34,6 +45,13 @@ export async function notifyCustomerVaccinationRejected(
     subject: email.subject,
     text: email.text,
     html: email.html,
+    communication: buildCommunicationContext({
+      notificationType: "vaccination_rejected",
+      recipient: context.customerEmail,
+      customerId: context.customerId,
+      petIds: context.petId ? [context.petId] : [],
+      fingerprint: context.recordId ?? undefined,
+    }),
   });
 }
 

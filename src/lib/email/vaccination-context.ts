@@ -5,9 +5,15 @@ type VaccinationNotificationContext = {
   customerEmail: string;
   customerName: string | null;
   expirationDate: string | null;
+  customerId: string | null;
+  petId: string | null;
+  recordId: string;
 };
 
 type VaccinationRow = {
+  id: string;
+  customer_id: string;
+  pet_id: string;
   expiration_date: string | null;
   pets: { name: string } | { name: string }[] | null;
   profiles: {
@@ -34,6 +40,9 @@ export async function fetchVaccinationNotificationContext(
     .from("pet_vaccination_records")
     .select(
       `
+      id,
+      customer_id,
+      pet_id,
       expiration_date,
       pets ( name ),
       profiles ( email, first_name, last_name )
@@ -61,5 +70,8 @@ export async function fetchVaccinationNotificationContext(
     customerEmail: profile.email,
     customerName: nameParts.length > 0 ? nameParts.join(" ") : null,
     expirationDate: row.expiration_date,
+    customerId: row.customer_id,
+    petId: row.pet_id,
+    recordId: row.id,
   };
 }

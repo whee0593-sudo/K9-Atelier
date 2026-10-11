@@ -524,8 +524,12 @@ export async function applyAppointmentChange(
     const slotStartMinutes =
       input.slotStartMinutes ??
       (input.timePreference === "afternoon" ? 12 * 60 : 9 * 60);
+    const previousAnchor = [...targetRows].sort(
+      (left, right) => (left.visit_sequence ?? 0) - (right.visit_sequence ?? 0),
+    )[0];
     const moved = await rescheduleRows(targetRows, input.date, slotStartMinutes);
     if ("error" in moved) return moved;
+    const nextAnchor = moved.appointments[0];
     await sendChangeConfirmationEmail({
       action: "reschedule",
       appointments: moved.appointments,
@@ -533,6 +537,7 @@ export async function applyAppointmentChange(
       fee: quote.fee,
       cardBrand: charged.cardBrand,
       cardLast4: charged.cardLast4,
+      eventKey: `${previousAnchor?.appointment_date ?? "-"}|${previousAnchor?.appointment_time ?? "-"}>${nextAnchor?.appointmentDate ?? "-"}|${nextAnchor?.appointmentTime ?? "-"}`,
     });
     return { ok: true, quote };
   }
@@ -563,6 +568,10 @@ export async function applyAppointmentChange(
     fee: quote.fee,
     cardBrand: charged.cardBrand,
     cardLast4: charged.cardLast4,
+    eventKey: recordsFromRows(targetRows)
+      .map((row) => row.id)
+      .sort()
+      .join(","),
   });
   return { ok: true, quote };
 }
@@ -581,6 +590,7 @@ async function sendChangeConfirmationEmail({
   fee,
   cardBrand,
   cardLast4,
+  eventKey,
 }: {
   action: AppointmentChangeAction;
   appointments: AppointmentRecord[];
@@ -589,6 +599,7 @@ async function sendChangeConfirmationEmail({
   fee: number;
   cardBrand?: string;
   cardLast4?: string;
+  eventKey?: string;
 }) {
   const appointment = appointments[0];
   if (!appointment || !contact) return;
@@ -604,6 +615,14 @@ async function sendChangeConfirmationEmail({
       feeStatus: fee > 0 ? "paid" : "none",
       cardBrand,
       cardLast4,
+      appointmentIds: [...appointments, ...remainingAppointments].map(
+        (row) => row.id,
+      ),
+      petIds: [...appointments, ...remainingAppointments].map(
+        (row) => row.petId,
+      ),
+      visitId: appointment.visitId ?? null,
+      eventKey,
     });
   } catch (emailError) {
     console.error("appointment change email failed:", emailError);
@@ -895,7 +914,12 @@ async function addDogToVisit(
     const contact = await fetchCustomerContact(userId);
     if (contact) {
       await notifyStaffNewAppointment(appointment, contact);
-      await notifyCustomerAppointmentChange("add_dog", appointment, contact);
+      await notifyCustomerAppointmentChange("add_dog", appointment, contact, {
+        appointmentIds: [appointment.id],
+        petIds: [appointment.petId],
+        visitId: appointment.visitId ?? null,
+        eventKey: appointment.id,
+      });
     }
   } catch (emailError) {
     console.error("addDogToVisit email failed:", emailError);

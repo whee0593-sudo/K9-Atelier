@@ -1,4 +1,6 @@
 import type { AppointmentRecord } from "@/lib/appointments/types";
+import { buildCommunicationContext } from "@/lib/communications/context";
+import { isCommunicationAccepted } from "@/lib/communications/result";
 import type { CustomerContact } from "@/lib/email/appointment-context";
 import { bookingDetailsFromAppointment } from "@/lib/email/html-templates";
 import {
@@ -34,18 +36,42 @@ function detailsForSms(
   };
 }
 
+function smsContext(
+  notificationType: string,
+  appointment: AppointmentRecord,
+  phone: string,
+  allowSendWithoutSnapshot = false,
+) {
+  return buildCommunicationContext({
+    notificationType,
+    recipient: normalizePhoneToE164(phone) ?? phone,
+    customerId: appointment.customerId,
+    visitId: appointment.visitId ?? null,
+    appointmentIds: [appointment.id],
+    petIds: [appointment.petId],
+    allowSendWithoutSnapshot,
+  });
+}
+
 async function sendCustomerSms(
+  notificationType: string,
+  appointment: AppointmentRecord,
   phone: string | null | undefined,
   body: string,
+  allowSendWithoutSnapshot = false,
 ): Promise<boolean> {
-  const to = phone ? normalizePhoneToE164(phone) : null;
-  if (!to) {
-    console.warn("SMS skipped: missing or invalid customer phone");
-    return false;
-  }
-
   try {
-    return await sendSms({ to, body });
+    const result = await sendSms({
+      to: phone ?? "",
+      body,
+      communication: smsContext(
+        notificationType,
+        appointment,
+        phone ?? "",
+        allowSendWithoutSnapshot,
+      ),
+    });
+    return isCommunicationAccepted(result);
   } catch (error) {
     console.error("SMS send failed:", error);
     return false;
@@ -61,16 +87,28 @@ export async function sendAppointmentSubmittedSms(
     appointment.status === "confirmed"
       ? buildBookingConfirmationSms(details)
       : buildAppointmentSubmittedSms(details);
-  return sendCustomerSms(customer.phone, body);
+  return sendCustomerSms(
+    appointment.status === "confirmed"
+      ? "appointment_confirmed"
+      : "appointment_submitted",
+    appointment,
+    customer.phone,
+    body,
+    true,
+  );
 }
 
 export async function sendAppointmentConfirmedSms(
   appointment: AppointmentRecord,
   customer: CustomerContact,
+  options?: { allowSendWithoutSnapshot?: boolean },
 ) {
   return sendCustomerSms(
+    "appointment_confirmed",
+    appointment,
     customer.phone,
     buildBookingConfirmationSms(detailsForSms(appointment, customer)),
+    options?.allowSendWithoutSnapshot === true,
   );
 }
 
@@ -79,6 +117,8 @@ export async function sendAppointmentDeclinedSms(
   customer: CustomerContact,
 ) {
   return sendCustomerSms(
+    "appointment_declined",
+    appointment,
     customer.phone,
     buildAppointmentDeclinedSms(detailsForSms(appointment, customer)),
   );
@@ -89,6 +129,8 @@ export async function sendAppointmentStaffCancelledSms(
   customer: CustomerContact,
 ) {
   return sendCustomerSms(
+    "appointment_staff_cancelled",
+    appointment,
     customer.phone,
     buildAppointmentStaffCancelledSms(detailsForSms(appointment, customer)),
   );
@@ -99,6 +141,8 @@ export async function sendAppointmentReminderSms(
   customer: CustomerContact,
 ) {
   return sendCustomerSms(
+    "appointment_reminder",
+    appointment,
     customer.phone,
     buildAppointmentReminderSms(detailsForSms(appointment, customer)),
   );
@@ -109,6 +153,8 @@ export async function sendAppointmentConfirmRequestSms(
   customer: CustomerContact,
 ) {
   return sendCustomerSms(
+    "reminder_3day",
+    appointment,
     customer.phone,
     buildAppointmentConfirmRequestSms(detailsForSms(appointment, customer)),
   );
@@ -119,6 +165,8 @@ export async function sendAppointmentEnRouteSms(
   customer: CustomerContact,
 ) {
   return sendCustomerSms(
+    "en_route",
+    appointment,
     customer.phone,
     buildAppointmentEnRouteSms(detailsForSms(appointment, customer)),
   );

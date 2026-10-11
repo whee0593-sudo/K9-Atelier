@@ -1246,6 +1246,7 @@ async function markChargePaid(
       const petCount = charge.billSnapshot?.pets.length ?? 0;
       await sendAfterVisitThankYouSms(
         petCount > 1 ? { ...appointment, petName: "your pets" } : appointment,
+        charge.id,
       );
     }
   } catch (smsError) {

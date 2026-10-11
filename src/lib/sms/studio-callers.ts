@@ -12,7 +12,12 @@ import {
   buildStudioCallerSms,
   type StudioUnknownCaller,
 } from "@/lib/sms/staff-compose-copy";
-import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
+import {
+  buildCommunicationContext,
+  communicationHourBucket,
+} from "@/lib/communications/context";
+import { isCommunicationAccepted } from "@/lib/communications/result";
+import { sendSms } from "@/lib/sms/twilio";
 
 export type { StudioUnknownCaller };
 
@@ -147,7 +152,6 @@ export async function deliverStudioCallerSms(input: {
 > {
   const to = normalizePhoneToE164(input.phone);
   if (!to) return { error: "invalid" };
-  if (!isSmsConfigured()) return { error: "misconfigured" };
 
   if (!input.force && (await hasRecentStudioCallerSms(to))) {
     return { ok: true, phone: to, skipped: true };
@@ -160,8 +164,22 @@ export async function deliverStudioCallerSms(input: {
   const body = buildStudioCallerSms(customer);
 
   try {
-    const sent = await sendSms({ to, body });
-    if (!sent) return { error: "server" };
+    const result = await sendSms({
+      to,
+      body,
+      communication: buildCommunicationContext({
+        notificationType: "studio_caller",
+        recipient: to,
+        customerId: customer?.customerId ?? null,
+        fingerprint: communicationHourBucket(),
+      }),
+    });
+    if (!isCommunicationAccepted(result)) {
+      if (result.status === "skipped" && result.skipReason === "missing_config") {
+        return { error: "misconfigured" };
+      }
+      return { error: "server" };
+    }
   } catch (error) {
     console.error("deliverStudioCallerSms failed:", error);
     return { error: "server" };

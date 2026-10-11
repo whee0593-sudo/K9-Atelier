@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { buildCommunicationContext } from "@/lib/communications/context";
 import { buildPreviewCollectContext } from "@/lib/charges/preview";
 import { buildChargeReceiptParagraphs } from "@/lib/charges/receipt-content";
 import { buildChargeReceiptCardText } from "@/lib/charges/receipt-email";
+import {
+  buildAfterVisitThankYouSms,
+  buildChargeReceiptSmsText,
+} from "@/lib/charges/receipts";
 import { formatVisitBillDate } from "@/lib/charges/receipt-view";
 import type { AppointmentChargeRecord } from "@/lib/charges/types";
 import { quoteReferralApplication } from "@/lib/referrals/eligible";
@@ -429,5 +434,53 @@ describe("visit checkout bill", () => {
     const emailText = buildChargeReceiptCardText(appointment, charge);
     assert.match(emailText, /\$505\.00/);
     assert.equal(emailText.includes("999"), false);
+  });
+
+  it("keeps one visit receipt for every dog on the same charge", () => {
+    const appointment = {
+      ...buildPreviewCollectContext().appointment,
+      id: "appt-daisy",
+      petId: "pet-daisy",
+      petName: "Daisy",
+      customerId: "cust-1",
+      customerEmail: "owner@example.com",
+      visitId: "visit-1",
+      appointmentDate: "2026-12-01",
+    };
+    const charge = {
+      id: "chg-1",
+      kind: "service",
+      total: 200,
+      billSnapshot: {
+        pets: [{ petName: "Daisy" }, { petName: "Milo" }],
+      },
+    } as AppointmentChargeRecord;
+    assert.match(buildChargeReceiptSmsText(appointment, charge), /Daisy, Milo/);
+    assert.match(
+      buildAfterVisitThankYouSms({ ...appointment, petName: "your pets" }),
+      /your pets/,
+    );
+    const emailKey = buildCommunicationContext({
+      notificationType: "receipt",
+      recipient: appointment.customerEmail,
+      customerId: appointment.customerId,
+      visitId: appointment.visitId,
+      appointmentIds: [appointment.id],
+      petIds: [appointment.petId],
+      fingerprint: charge.id,
+      dedupe: "visit",
+    }).idempotencyKey;
+    const otherDog = buildCommunicationContext({
+      notificationType: "receipt",
+      recipient: appointment.customerEmail,
+      visitId: appointment.visitId,
+      appointmentIds: ["appt-milo"],
+      petIds: ["pet-milo"],
+      fingerprint: charge.id,
+      dedupe: "visit",
+    }).idempotencyKey;
+    assert.equal(emailKey, otherDog);
+    assert.match(emailKey, /visit:visit-1/);
+    assert.match(emailKey, /chg-1/);
   });
 });
