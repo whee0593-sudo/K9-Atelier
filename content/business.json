@@ -274,7 +274,7 @@
       "type": "travel",
       "rate": 6.5,
       "unit": "per_one_way_mile_beyond_free_radius",
-      "description": "Travel surcharge for clients located outside of our standard mobile grooming coverage area. Calculated at $6.50 per one-way mile based on GPS driving distance from our base location to your address via Google Maps. This single rate covers specialized grooming van fuel, vehicle wear and depreciation, and full round-trip travel time."
+      "description": "One-way GPS driving distance from our service base. Complimentary within 10 miles. Above 10 through 20 miles: $6.50 per mile beyond 10. Above 20 through 25 miles: $65 plus $10 per mile beyond 20. Beyond 25 miles, please contact the studio. The fee is rounded to the nearest dollar and covers the grooming van's fuel, wear, and round-trip travel time."
     }
   ],
   "serviceCategories": [

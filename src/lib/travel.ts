@@ -39,37 +39,37 @@ function roundTravelFee(amount: number) {
   return Math.round(amount);
 }
 
-/** First chargeable band ends here: miles above 10 through 15 at $10. */
-const FIRST_CHARGE_END_MILES = 15;
-const FIRST_CHARGE_PER_MILE = 10;
-/** Miles above 15 through 20 at $15. Matches the existing standard-zone display. */
-const SECOND_CHARGE_PER_MILE = 15;
-/** Miles above 20 through the standard service limit at $20. */
-const EXTENDED_CHARGE_PER_MILE = 20;
-
 /**
- * Progressive one-way travel fee. Each mile is charged at the rate for its
- * own band. The highest rate is never applied to the whole distance.
- * 0–10: $0
- * above 10 through 15: (distance − 10) × $10
- * above 15 through 20: $50 + (distance − 15) × $15
- * above 20 through the service limit: $125 + (distance − 20) × $20
- * Beyond the service limit: no automatic fee.
+ * One-way travel fee from the service base.
+ * 0–10 miles: $0
+ * above 10 through 20: (distance − 10) × $6.50
+ * above 20 through 25: $65 + (distance − 20) × $10
+ * Beyond 25: no automatic fee
+ * The dollar amount is rounded to the nearest whole dollar.
  */
-function progressiveTravelFee(roundedMiles: number, freeRadiusMiles: number) {
-  const firstBandMiles = roundToTenth(
-    Math.max(0, Math.min(roundedMiles, FIRST_CHARGE_END_MILES) - freeRadiusMiles),
-  );
-  const secondBandMiles = roundToTenth(
-    Math.max(0, Math.min(roundedMiles, business.serviceArea.maxDistanceMiles) - FIRST_CHARGE_END_MILES),
-  );
-  const extendedBandMiles = roundToTenth(
-    Math.max(0, roundedMiles - business.serviceArea.maxDistanceMiles),
-  );
+function travelFeeAmount(roundedMiles: number) {
+  const {
+    freeRadiusMiles,
+    travelFeePerMile,
+    maxDistanceMiles,
+    extendedTravelFeePerMile,
+    standardServiceMiles,
+  } = business.serviceArea;
+
+  if (roundedMiles <= freeRadiusMiles || roundedMiles > standardServiceMiles) {
+    return 0;
+  }
+
+  if (roundedMiles <= maxDistanceMiles) {
+    const billableMiles = roundToTenth(roundedMiles - freeRadiusMiles);
+    return roundTravelFee(billableMiles * travelFeePerMile);
+  }
+
+  const throughStandardMiles =
+    (maxDistanceMiles - freeRadiusMiles) * travelFeePerMile;
+  const extendedMiles = roundToTenth(roundedMiles - maxDistanceMiles);
   return roundTravelFee(
-    firstBandMiles * FIRST_CHARGE_PER_MILE +
-      secondBandMiles * SECOND_CHARGE_PER_MILE +
-      extendedBandMiles * EXTENDED_CHARGE_PER_MILE,
+    throughStandardMiles + extendedMiles * extendedTravelFeePerMile,
   );
 }
 
@@ -94,7 +94,7 @@ export function calculateTravelFee(distanceMiles: number): TravelQuote {
   } else if (withinServiceArea) {
     zone = withinStandardRate ? "standard" : "extended";
     billableMiles = roundToTenth(rounded - freeRadiusMiles);
-    fee = progressiveTravelFee(rounded, freeRadiusMiles);
+    fee = travelFeeAmount(rounded);
   }
 
   let summary: string;

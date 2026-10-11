@@ -360,22 +360,32 @@ export function BookingPoliciesModal({
           >
             <div className="space-y-4">
               <p>
-                K9 Atelier serves Palm Beach Gardens and surrounding Palm Beach
-                communities, including select appointments in West Palm Beach
-                and Jupiter.
+                K9 Atelier serves Jupiter Island, Jupiter, Tequesta, Palm Beach
+                Gardens, Palm Beach, and West Palm Beach.
               </p>
               <p>
-                Complimentary travel is provided within our primary 10-mile
-                service area.
+                Complimentary travel is included within{" "}
+                {business.serviceArea.freeRadiusMiles} driving miles.
               </p>
               <p>
-                Extended appointments up to approximately 20 miles may be
-                accommodated at $6.50 per one-way mile, calculated using GPS
-                driving distance.
+                Above {business.serviceArea.freeRadiusMiles} through{" "}
+                {business.serviceArea.maxDistanceMiles} miles, the fee is{" "}
+                {formatPrice(business.serviceArea.travelFeePerMile)} per one-way
+                mile beyond {business.serviceArea.freeRadiusMiles}. Above{" "}
+                {business.serviceArea.maxDistanceMiles} through{" "}
+                {business.serviceArea.standardServiceMiles} miles, the fee is{" "}
+                {formatPrice(
+                  (business.serviceArea.maxDistanceMiles -
+                    business.serviceArea.freeRadiusMiles) *
+                    business.serviceArea.travelFeePerMile,
+                )}{" "}
+                plus {formatPrice(business.serviceArea.extendedTravelFeePerMile)}{" "}
+                per mile beyond {business.serviceArea.maxDistanceMiles}. The
+                amount is rounded to the nearest dollar.
               </p>
               <p>
-                Your applicable travel fee, if any, will be calculated before
-                you confirm your appointment.
+                Beyond {business.serviceArea.standardServiceMiles} miles, please
+                contact us. Your travel fee, if any, is shown before you confirm.
               </p>
             </div>
           </AccordionPanel>

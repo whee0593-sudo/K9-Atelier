@@ -9,8 +9,14 @@ export function FeesPoliciesSection() {
   const behavior = business.fees.find((fee) => fee.id === "behavior-fee");
   const dematting = getServiceById("dematting-brush-out");
   const senior = getServiceById("senior-comfort-care");
-  const { freeRadiusMiles, maxDistanceMiles, travelFeePerMile } =
-    business.serviceArea;
+  const {
+    freeRadiusMiles,
+    maxDistanceMiles,
+    travelFeePerMile,
+    extendedTravelFeePerMile,
+    standardServiceMiles,
+  } = business.serviceArea;
+  const standardTravelPortion = (maxDistanceMiles - freeRadiusMiles) * travelFeePerMile;
   const fleaItems =
     flea && "lineItems" in flea
       ? (flea.lineItems as Array<{ name: string; rate: number; note?: string }>)
@@ -58,17 +64,25 @@ export function FeesPoliciesSection() {
       {travel && "rate" in travel && typeof travel.rate === "number" && (
         <PolicyAccordion
           title="Travel Fee"
-          summary={`Complimentary within ${freeRadiusMiles} miles, then ${formatPrice(travelFeePerMile)} per one-way mile.`}
+          summary={`Complimentary within ${freeRadiusMiles} miles, then ${formatPrice(travelFeePerMile)} per mile through ${maxDistanceMiles}, and ${formatPrice(extendedTravelFeePerMile)} per mile through ${standardServiceMiles}.`}
         >
           <ul className="font-body space-y-2 text-sm text-ink">
             <li>Complimentary within {freeRadiusMiles} miles</li>
             <li>
-              {freeRadiusMiles}–{maxDistanceMiles} miles:{" "}
-              {formatPrice(travelFeePerMile)} per one-way mile
+              Above {freeRadiusMiles} through {maxDistanceMiles} miles:{" "}
+              {formatPrice(travelFeePerMile)} per one-way mile beyond{" "}
+              {freeRadiusMiles}
             </li>
-            <li>Calculated by GPS driving distance</li>
             <li>
-              Beyond {maxDistanceMiles} miles considered case by case
+              Above {maxDistanceMiles} through {standardServiceMiles} miles:{" "}
+              {formatPrice(standardTravelPortion)} plus{" "}
+              {formatPrice(extendedTravelFeePerMile)} per mile beyond{" "}
+              {maxDistanceMiles}
+            </li>
+            <li>One-way GPS driving distance, rounded to the nearest dollar</li>
+            <li>
+              Beyond {standardServiceMiles} miles, please contact us. Online
+              booking is not available.
             </li>
           </ul>
           <p className="font-body mt-3 text-sm leading-relaxed text-taupe">

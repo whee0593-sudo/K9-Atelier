@@ -29,8 +29,13 @@ export function AddressStep({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { freeRadiusMiles, maxDistanceMiles, travelFeePerMile } =
-    business.serviceArea;
+  const {
+    freeRadiusMiles,
+    maxDistanceMiles,
+    travelFeePerMile,
+    extendedTravelFeePerMile,
+    standardServiceMiles,
+  } = business.serviceArea;
 
   async function handleCalculate(e: React.FormEvent) {
     e.preventDefault();
@@ -84,9 +89,13 @@ export function AddressStep({
         Service Address
       </h2>
       <p className="mt-2 text-sm text-text-muted">
-        Enter the address where we should come. Travel is free within{" "}
-        {freeRadiusMiles} miles; then {formatPrice(travelFeePerMile)}/mile
-        one-way (max {maxDistanceMiles} miles).
+        Enter the address where we should come. Travel is complimentary within{" "}
+        {freeRadiusMiles} miles. Above that through {maxDistanceMiles} miles,{" "}
+        {formatPrice(travelFeePerMile)} per one-way mile beyond {freeRadiusMiles}.
+        Above {maxDistanceMiles} through {standardServiceMiles} miles,{" "}
+        {formatPrice(extendedTravelFeePerMile)} per mile beyond {maxDistanceMiles},
+        added to the fee through {maxDistanceMiles} miles. Beyond{" "}
+        {standardServiceMiles} miles, please contact us.
       </p>
 
       <form onSubmit={handleCalculate} className="mt-6 space-y-4">

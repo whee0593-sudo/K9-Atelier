@@ -181,13 +181,13 @@ Therapeutic bathing session tailored for dogs with sensitive skin, flaky dander,
 | 项目 | 规则 |
 |------|------|
 | 免费服务圈 | **10 英里**内不加路费 |
-| 超出部分 | **$6.50 / 单程英里**（超出 10 英里以外的 GPS 单程里程） |
-| 最远接单 | **20 英里** |
+| 10–20 英里 | 超出 10 英里的部分 **$6.50 / 单程英里** |
+| 20–25 英里 | 先计 **$65**，超出 20 英里的部分 **$10 / 单程英里** |
+| 超过 25 英里 | 不自动报价，请联系工作室 |
 
-**Amelia Description:**
-Travel surcharge for clients located outside of our standard mobile grooming coverage area. Calculated at $6.50 per one-way mile (for miles beyond the 10-mile free radius) based on GPS driving distance from our base location to your address. This fee covers specialized grooming van fuel, vehicle wear & depreciation, and full round-trip travel transit time.
+路费按单程 GPS driving distance 计算，并四舍五入到整数美元。
 
-**举例：** 客户距离 14 英里 → 超出 4 英里 → 路费 = 4 × $6.50 = **$26.00**
+**举例：** 14 英里 → (14 − 10) × $6.50 = $26，四舍五入后为 **$26**。22 英里 → $65 + (22 − 20) × $10 = **$85**。
 
 ---
 

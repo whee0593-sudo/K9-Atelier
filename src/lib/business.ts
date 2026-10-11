@@ -122,12 +122,18 @@ function getCommunitiesServedProse() {
 }
 
 export function getServiceAreaFaqParagraphs() {
-  const { freeRadiusMiles, maxDistanceMiles, travelFeePerMile } =
-    business.serviceArea;
+  const {
+    freeRadiusMiles,
+    maxDistanceMiles,
+    travelFeePerMile,
+    extendedTravelFeePerMile,
+    standardServiceMiles,
+  } = business.serviceArea;
+  const standardPortion = (maxDistanceMiles - freeRadiusMiles) * travelFeePerMile;
 
   return [
     `K9 Atelier serves ${getCommunitiesServedProse()}.`,
-    `Travel is complimentary within ${freeRadiusMiles} miles of our base location. Between ${freeRadiusMiles}–${maxDistanceMiles} miles, a travel fee of $${travelFeePerMile} per one-way mile applies, calculated by GPS driving distance. Appointments beyond ${maxDistanceMiles} miles may be considered on a case-by-case basis — please reach out and we're happy to discuss.`,
+    `Travel is complimentary within ${freeRadiusMiles} driving miles. Above ${freeRadiusMiles} through ${maxDistanceMiles} miles, the fee is $${travelFeePerMile} per one-way mile beyond ${freeRadiusMiles}. Above ${maxDistanceMiles} through ${standardServiceMiles} miles, the fee is $${standardPortion} plus $${extendedTravelFeePerMile} per mile beyond ${maxDistanceMiles}. The amount is rounded to the nearest dollar and shown before you confirm. Beyond ${standardServiceMiles} miles, please contact us.`,
   ] as const;
 }
 

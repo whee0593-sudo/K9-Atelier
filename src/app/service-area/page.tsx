@@ -1,5 +1,5 @@
 import { formatHourLabel } from "@/lib/appointments/closures";
-import { business } from "@/lib/business";
+import { business, formatPrice } from "@/lib/business";
 
 export default function ServiceAreaPage() {
   const { serviceArea, booking } = business;
@@ -28,24 +28,42 @@ export default function ServiceAreaPage() {
         </div>
         <div className="rounded-2xl border border-lavender/30 bg-lavender-light/40 p-6">
           <p className="text-3xl font-semibold text-gold-dark">
-            ${serviceArea.travelFeePerMile}
+            {formatPrice(serviceArea.travelFeePerMile)}
           </p>
-          <p className="mt-2 text-sm text-text-muted">Per one-way mile beyond free zone</p>
+          <p className="mt-2 text-sm text-text-muted">
+            Per mile from {serviceArea.freeRadiusMiles} to {serviceArea.maxDistanceMiles}{" "}
+            miles
+          </p>
         </div>
         <div className="rounded-2xl border border-lavender/30 bg-lavender-light/40 p-6">
           <p className="text-3xl font-semibold text-gold-dark">
-            {serviceArea.maxDistanceMiles} mi
+            {formatPrice(serviceArea.extendedTravelFeePerMile)}
           </p>
-          <p className="mt-2 text-sm text-text-muted">Maximum service distance</p>
+          <p className="mt-2 text-sm text-text-muted">
+            Per mile from {serviceArea.maxDistanceMiles} to {serviceArea.standardServiceMiles}{" "}
+            miles
+          </p>
         </div>
       </div>
 
       <div className="mt-10 rounded-2xl border border-lavender/30 bg-cream p-6">
-        <h2 className="text-lg font-medium text-text">Example</h2>
+        <h2 className="text-lg font-medium text-text">Examples</h2>
         <p className="mt-3 text-sm text-text-muted">
-          If your address is 14 miles away: 4 miles beyond the free zone × $
-          {serviceArea.travelFeePerMile} = <strong>$26.00</strong> travel fee
-          added to your service.
+          14 miles: 4 miles beyond the free zone ×{" "}
+          {formatPrice(serviceArea.travelFeePerMile)} = <strong>$26</strong>.
+        </p>
+        <p className="mt-3 text-sm text-text-muted">
+          22 miles: {formatPrice(
+            (serviceArea.maxDistanceMiles - serviceArea.freeRadiusMiles) *
+              serviceArea.travelFeePerMile,
+          )}{" "}
+          through {serviceArea.maxDistanceMiles} miles, plus 2 ×{" "}
+          {formatPrice(serviceArea.extendedTravelFeePerMile)} = <strong>$85</strong>.
+        </p>
+        <p className="mt-3 text-sm text-text-muted">
+          Fees are rounded to the nearest dollar. Beyond{" "}
+          {serviceArea.standardServiceMiles} miles, please contact us. Online
+          booking is not available.
         </p>
       </div>
 
