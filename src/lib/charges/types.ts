@@ -1,9 +1,10 @@
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
+import type { VisitBillSnapshot, VisitPaymentStatus } from "@/lib/charges/visit-bill";
 import type { PaymentMethodRecord } from "@/lib/payments/types";
 
 export type ChargeKind = "service" | "no_show" | "cancellation";
 export type ChargeStatus = "pending" | "paid" | "failed";
-export type ChargeTender = "card" | "cash";
+export type ChargeTender = "card" | "cash" | "zelle";
 export type ReceiptChannel = "sms" | "email";
 
 export type ReferralChargeCategory =
@@ -21,6 +22,9 @@ export type ChargeLineItem = {
   listAmount?: number;
   catalogId?: string;
   referralCategory?: ReferralChargeCategory;
+  /** Dog this service line belongs to. Absent on visit-level lines such as travel. */
+  appointmentId?: string;
+  petName?: string;
 };
 
 export type CatalogChargeItem = {
@@ -38,6 +42,7 @@ export type CatalogChargeGroup = {
 export type AppointmentChargeRecord = {
   id: string;
   appointmentId: string;
+  visitId?: string | null;
   kind: ChargeKind;
   status: ChargeStatus;
   lineItems: ChargeLineItem[];
@@ -49,6 +54,7 @@ export type AppointmentChargeRecord = {
   refundedAmount: number;
   paymentMethodId?: string | null;
   tender?: ChargeTender;
+  billSnapshot?: VisitBillSnapshot | null;
 };
 
 export type CollectContext = {
@@ -63,6 +69,15 @@ export type CollectContext = {
   paidCharges: AppointmentChargeRecord[];
   stripeConfigured: boolean;
   stripePublishableKey: string;
+  visit?: {
+    id: string;
+    customerName: string;
+    serviceDate: string;
+    arrivalLabel: string;
+    servicedDogCount: number;
+    blockedMessage: string | null;
+    paymentStatus: VisitPaymentStatus;
+  };
   referral?: {
     availableCreditCents: number;
     applyNewClientDiscount: boolean;

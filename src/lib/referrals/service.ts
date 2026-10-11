@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import { dollarsToCents } from "@/lib/charges/money";
 import type { ChargeLineItem } from "@/lib/charges/types";
+import { appointmentIdsCoveredByServiceCharges } from "@/lib/charges/visit-bill";
 import { householdVisitKey } from "@/lib/referrals/address";
 import {
   reduceHouseholdEligibility,
@@ -351,7 +352,7 @@ async function listVisitAppointments(input: {
   const { data } = await admin
     .from("appointments")
     .select(
-      "id, customer_id, appointment_date, address_street, address_zip, service_ended_at, status",
+      "id, visit_id, customer_id, appointment_date, address_street, address_zip, service_ended_at, status",
     )
     .eq("customer_id", input.customerId)
     .eq("appointment_date", input.appointmentDate);
@@ -375,6 +376,7 @@ async function listVisitAppointments(input: {
     appointment_date: string;
     address_street: string;
     address_zip: string;
+    visit_id: string | null;
     service_ended_at: string | null;
     status: string;
   }>;
@@ -911,16 +913,61 @@ export async function issueReferralRewardForPaidCharge(
   }
 
   const activeIds = active.map((row) => row.id);
-  const { data: paidCharges } = await admin
+  const visitIds = [
+    ...new Set(
+      active
+        .map((row) => row.visit_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const { data: paidByDog } = await admin
     .from("appointment_charges")
-    .select("id, appointment_id, kind, status, new_client_discount, line_items")
+    .select(
+      "id, appointment_id, visit_id, kind, status, new_client_discount, line_items, bill_snapshot",
+    )
     .in("appointment_id", activeIds)
     .eq("kind", "service")
     .eq("status", "paid");
+  const { data: paidByVisit } =
+    visitIds.length > 0
+      ? await admin
+          .from("appointment_charges")
+          .select(
+            "id, appointment_id, visit_id, kind, status, new_client_discount, line_items, bill_snapshot",
+          )
+          .in("visit_id", visitIds)
+          .eq("kind", "service")
+          .eq("status", "paid")
+      : { data: [] };
+  const paidCharges = [
+    ...new Map(
+      [...(paidByDog ?? []), ...(paidByVisit ?? [])].map((row) => [
+        row.id as string,
+        row,
+      ]),
+    ).values(),
+  ];
 
-  const paidByAppointment = new Set(
-    (paidCharges ?? []).map((row) => row.appointment_id as string),
-  );
+  const appointmentIdsByVisitId: Record<string, string[]> = {};
+  for (const row of active) {
+    if (!row.visit_id) continue;
+    appointmentIdsByVisitId[row.visit_id] = [
+      ...(appointmentIdsByVisitId[row.visit_id] ?? []),
+      row.id,
+    ];
+  }
+  // A visit bill (bill_snapshot) covers every dog once. A backfilled
+  // historical charge still covers only the dog it was collected for.
+  const paidByAppointment = appointmentIdsCoveredByServiceCharges({
+    appointmentIdsByVisitId,
+    charges: paidCharges.map((paid) => ({
+      appointmentId: paid.appointment_id as string,
+      visitId: paid.bill_snapshot ? (paid.visit_id as string | null) : null,
+      lineItems: Array.isArray(paid.line_items)
+        ? (paid.line_items as Array<{ appointmentId?: string }>)
+        : [],
+    })),
+  });
   if (active.some((row) => !paidByAppointment.has(row.id))) {
     return { status: "skipped", reason: "visit_not_paid" };
   }

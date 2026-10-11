@@ -33,6 +33,12 @@ export async function POST(request: Request) {
     const input = validateStaffCustomerCreateInput(body);
     const result = await createStaffCustomer(input);
     if ("error" in result) {
+      if (result.error === "outside_area") {
+        return staffJsonError(
+          result.message ?? "That address is outside the service area.",
+          400,
+        );
+      }
       if (result.message) {
         return staffJsonError(
           result.message,

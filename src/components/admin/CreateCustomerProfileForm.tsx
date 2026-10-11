@@ -30,6 +30,38 @@ type Draft = {
   emergencyContactRelationship: string;
 };
 
+type AddressDraft = {
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+};
+
+const EMPTY_ADDRESS: AddressDraft = {
+  street: "",
+  city: "",
+  state: "",
+  zip: "",
+};
+
+function addressHasContent(address: AddressDraft) {
+  return Boolean(
+    address.street.trim() ||
+      address.city.trim() ||
+      address.state.trim() ||
+      address.zip.trim(),
+  );
+}
+
+function validateAddress(address: AddressDraft) {
+  if (!addressHasContent(address)) return null;
+  if (!address.street.trim()) return "Street is required.";
+  if (!address.city.trim()) return "City is required.";
+  if (!address.state.trim()) return "State is required.";
+  if (!address.zip.trim()) return "ZIP code is required.";
+  return null;
+}
+
 const EMPTY_DRAFT: Draft = {
   email: "",
   firstName: "",
@@ -128,6 +160,8 @@ export function CreateCustomerProfileForm({
   onCreated?: () => void;
 }) {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
+  const [address, setAddress] = useState<AddressDraft>(EMPTY_ADDRESS);
+  const [addressSaved, setAddressSaved] = useState(false);
   const [pet, setPet] = useState<PetProfile>(emptyPet);
   const [adminNotes, setAdminNotes] = useState("");
   const [password, setPassword] = useState("");
@@ -141,6 +175,12 @@ export function CreateCustomerProfileForm({
 
   function update<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
+    setSaved(false);
+  }
+
+  function updateAddress<K extends keyof AddressDraft>(key: K, value: AddressDraft[K]) {
+    setAddress((current) => ({ ...current, [key]: value }));
+    setAddressSaved(false);
     setSaved(false);
   }
 
@@ -162,6 +202,8 @@ export function CreateCustomerProfileForm({
     if (draft.phone.trim() && !normalizePhoneToE164(draft.phone)) {
       return "Please enter a valid US mobile number.";
     }
+    const addressProblem = validateAddress(address);
+    if (addressProblem) return addressProblem;
     if (password || confirmPassword) {
       if (password.length < MIN_CUSTOMER_PASSWORD_LENGTH) {
         return `Use at least ${MIN_CUSTOMER_PASSWORD_LENGTH} characters.`;
@@ -216,11 +258,21 @@ export function CreateCustomerProfileForm({
 
     const includePet = options.includePet && !petSaved && petHasContent(pet, adminNotes);
     const includePassword = options.includePassword && password.length > 0;
+    const includeAddress = !addressSaved && addressHasContent(address);
+    const addressBody = includeAddress
+      ? {
+          street: address.street.trim(),
+          city: address.city.trim(),
+          state: address.state.trim(),
+          zip: address.zip.trim(),
+        }
+      : null;
 
     if (preview) {
       const next = previewRecord(record, includePet);
       setRecord(next.record);
       if (next.addedPet) setPetSaved(true);
+      if (includeAddress) setAddressSaved(true);
       onSaved(next.record);
       return next.record;
     }
@@ -240,6 +292,7 @@ export function CreateCustomerProfileForm({
         emergencyContactPhone: draft.emergencyContactPhone.trim(),
         emergencyContactRelationship: draft.emergencyContactRelationship,
         password: includePassword ? password : "",
+        address: addressBody,
         pet: includePet ? petRequestBody(pet, adminNotes) : null,
       }),
     });
@@ -262,6 +315,7 @@ export function CreateCustomerProfileForm({
     };
     setRecord(next);
     if (includePet) setPetSaved(true);
+    if (includeAddress) setAddressSaved(true);
     onSaved(next);
     return next;
   }
@@ -273,6 +327,8 @@ export function CreateCustomerProfileForm({
       const next = await persist({ includePet: true, includePassword: true });
       if (!next) return;
       setDraft(EMPTY_DRAFT);
+      setAddress(EMPTY_ADDRESS);
+      setAddressSaved(false);
       setPet(emptyPet());
       setAdminNotes("");
       setPassword("");
@@ -365,6 +421,47 @@ export function CreateCustomerProfileForm({
             className={inputClassName()}
           />
         </label>
+        <div className="space-y-5">
+          <p className="text-sm font-medium text-text">Address</p>
+          <label className="block text-sm font-medium text-text">
+            Street Address
+            <input
+              autoComplete="street-address"
+              value={address.street}
+              onChange={(event) => updateAddress("street", event.target.value)}
+              className={inputClassName()}
+            />
+          </label>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <label className="block text-sm font-medium text-text">
+              City
+              <input
+                autoComplete="address-level2"
+                value={address.city}
+                onChange={(event) => updateAddress("city", event.target.value)}
+                className={inputClassName()}
+              />
+            </label>
+            <label className="block text-sm font-medium text-text">
+              State
+              <input
+                autoComplete="address-level1"
+                value={address.state}
+                onChange={(event) => updateAddress("state", event.target.value)}
+                className={inputClassName()}
+              />
+            </label>
+          </div>
+          <label className="block text-sm font-medium text-text">
+            ZIP
+            <input
+              autoComplete="postal-code"
+              value={address.zip}
+              onChange={(event) => updateAddress("zip", event.target.value)}
+              className={inputClassName()}
+            />
+          </label>
+        </div>
         <label className="block text-sm font-medium text-text">
           Preferred Contact Method
           <select

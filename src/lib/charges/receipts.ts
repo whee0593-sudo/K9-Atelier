@@ -32,15 +32,23 @@ export function buildChargeReceiptSmsText(
 ) {
   const kindLabel = chargeKindLabel(charge.kind);
   const dateLabel = formatAppointmentDateLabel(appointment.appointmentDate);
-  return `K9 Atelier receipt: ${kindLabel} for ${appointment.petName} on ${dateLabel}. Total paid ${formatChargeMoney(charge.total)}. Book again: ${getBookAgainUrl()}`;
+  const who = charge.billSnapshot
+    ? charge.billSnapshot.pets.map((pet) => pet.petName).join(", ")
+    : appointment.petName;
+  return `K9 Atelier receipt: ${kindLabel} for ${who} on ${dateLabel}. Total paid ${formatChargeMoney(charge.total)}. Book again: ${getBookAgainUrl()}`;
 }
 
 export async function sendChargeReceiptEmail(
   appointment: AdminAppointmentRecord,
   charge: AppointmentChargeRecord,
+  paymentMethodLabel?: string | null,
 ) {
-  const letter = buildChargeReceiptEmail(appointment, charge);
-  return sendEmail({
+  const letter = buildChargeReceiptEmail(
+    appointment,
+    charge,
+    paymentMethodLabel ?? charge.billSnapshot?.paymentMethodLabel,
+  );
+  const result = await sendEmail({
     to: appointment.customerEmail,
     subject: letter.subject,
     text: letter.text,
@@ -56,6 +64,7 @@ export async function sendChargeReceiptEmail(
       dedupe: "visit",
     }),
   });
+  return isCommunicationAccepted(result);
 }
 
 export async function sendChargeReceiptSms(

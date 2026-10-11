@@ -1,4 +1,4 @@
-import type { ChargeKind, ChargeLineItem } from "@/lib/charges/types";
+import type { ChargeKind, ChargeLineItem, ChargeTender } from "@/lib/charges/types";
 
 /** Shown when Stripe returns an API or configuration error, never the raw Stripe text. */
 export const SAVED_CARD_FRIENDLY_ERROR =
@@ -46,6 +46,8 @@ export type SavedCardPaymentIntentParams = {
     appointment_id: string;
     charge_id: string;
     kind: string;
+    visit_id?: string;
+    customer_id?: string;
   };
   /**
    * Dashboard payment methods are on by default for this Stripe API version.
@@ -75,6 +77,8 @@ export type SavedCardAttemptInput = {
   stripePaymentMethodId: string;
   offSession: boolean;
   description: string;
+  visitId?: string | null;
+  customerId?: string | null;
   now?: number;
 };
 
@@ -101,7 +105,7 @@ export type AttemptCharge = {
   receiptChannel: "sms" | "email" | null;
   paidAt: string | null;
   refundedAmount: number;
-  tender: "card" | "cash";
+  tender: ChargeTender;
 };
 
 export type SavedCardAttemptResult<TCharge extends AttemptCharge> =
@@ -127,6 +131,8 @@ export function savedCardPaymentIntentParams(input: {
   appointmentId: string;
   chargeId: string;
   kind: string;
+  visitId?: string | null;
+  customerId?: string | null;
 }): SavedCardPaymentIntentParams {
   return {
     amount: input.amountCents,
@@ -140,6 +146,8 @@ export function savedCardPaymentIntentParams(input: {
       appointment_id: input.appointmentId,
       charge_id: input.chargeId,
       kind: input.kind,
+      ...(input.visitId ? { visit_id: input.visitId } : {}),
+      ...(input.customerId ? { customer_id: input.customerId } : {}),
     },
     automatic_payment_methods: {
       enabled: true,
@@ -358,7 +366,18 @@ async function runSavedCardAttempt<TCharge extends AttemptCharge>(
   if (!charge) {
     try {
       charge = await deps.insertPending(savedCardChargeInsert(input));
-    } catch {
+    } catch (error) {
+      const code =
+        error && typeof error === "object" && "code" in error
+          ? String((error as { code?: string }).code)
+          : "";
+      if (code === "23505") {
+        return {
+          ok: false,
+          error: "conflict",
+          message: SAVED_CARD_IN_PROGRESS_MESSAGE,
+        };
+      }
       return { ok: false, error: "server", message: SAVED_CARD_FRIENDLY_ERROR };
     }
     if (input.creditCents > 0) {
@@ -382,6 +401,8 @@ async function runSavedCardAttempt<TCharge extends AttemptCharge>(
         appointmentId: input.appointmentId,
         chargeId: charge.id,
         kind: input.kind,
+        visitId: input.visitId,
+        customerId: input.customerId,
       }),
       { idempotencyKey: savedCardIdempotencyKey(charge.id) },
     );

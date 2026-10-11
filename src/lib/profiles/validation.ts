@@ -239,6 +239,12 @@ export type StaffCustomerCreateInput = {
   emergencyContactPhone: string | null;
   emergencyContactRelationship: string | null;
   password: string | null;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+  } | null;
   pet: OptionalStaffPetInput | null;
 };
 
@@ -297,6 +303,20 @@ function readOptionalCustomerId(value: unknown): string | null {
   return validateCustomerId(value);
 }
 
+function readOptionalServiceAddress(value: unknown): StaffCustomerCreateInput["address"] {
+  if (value == null) return null;
+  if (typeof value !== "object" || Array.isArray(value)) {
+    throw new ProfileValidationError("Address is required.", "address");
+  }
+  const record = value as Record<string, unknown>;
+  const parts = ["street", "city", "state", "zip"].map((key) => {
+    const part = record[key];
+    return typeof part === "string" ? part.trim() : "";
+  });
+  if (parts.every((part) => !part)) return null;
+  return parseServiceAddressInput(record, "address");
+}
+
 /** Staff can open a customer file before any column is filled in. */
 export function validateStaffCustomerCreateInput(body: unknown): StaffCustomerCreateInput {
   const record = assertPlainObject(body);
@@ -340,6 +360,7 @@ export function validateStaffCustomerCreateInput(body: unknown): StaffCustomerCr
     emergencyContactPhone: readOptionalText(record, "emergencyContactPhone", 32),
     emergencyContactRelationship,
     password: readOptionalPassword(record.password),
+    address: readOptionalServiceAddress(record.address),
     pet: record.pet === undefined ? null : validateOptionalStaffPetInput(record.pet),
   };
 }

@@ -27,7 +27,7 @@ import { HourlyVisitTimer } from "@/components/admin/HourlyVisitTimer";
 import { ChargeReceiptActions } from "@/components/admin/ChargeReceiptActions";
 import { ChargeReceiptLetter } from "@/components/admin/ChargeReceiptLetter";
 import { ChargeRefundForm } from "@/components/admin/ChargeRefundForm";
-import { collectBillHeading } from "@/lib/charges/receipt-view";
+import { collectBillHeading, formatVisitBillDate } from "@/lib/charges/receipt-view";
 import { manualCardWallets } from "@/lib/payments/card-wallets";
 import {
   acquirePaymentSubmission,
@@ -101,6 +101,14 @@ function newLineId() {
   return crypto.randomUUID();
 }
 
+function paidChargeForKind(
+  charges: AppointmentChargeRecord[],
+  chargeKind: ChargeKind,
+) {
+  const matches = charges.filter((charge) => charge.kind === chargeKind);
+  return matches.find((charge) => charge.billSnapshot) ?? matches[0] ?? null;
+}
+
 type Step = "review" | "pay" | "receipt" | "refund";
 
 export function CollectCheckout({
@@ -128,6 +136,7 @@ export function CollectCheckout({
   const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null);
   const [useNewCard, setUseNewCard] = useState(false);
   const [useCash, setUseCash] = useState(false);
+  const [useZelle, setUseZelle] = useState(false);
   const [chargedTender, setChargedTender] = useState<ChargeTender>("card");
   const [tipMode, setTipMode] = useState<"15" | "18" | "20" | "custom">("18");
   const [customTip, setCustomTip] = useState("0");
@@ -181,8 +190,7 @@ export function CollectCheckout({
       setSelectedMethodId(body.selectedPaymentMethodId);
       setServiceStartedAt(body.appointment.serviceStartedAt);
       setServiceEndedAt(body.appointment.serviceEndedAt);
-      const previewPaid =
-        body.paidCharges.find((charge) => charge.kind === kind) ?? null;
+      const previewPaid = paidChargeForKind(body.paidCharges, kind);
       setPaidCharge(previewPaid);
       if (previewPaid) setChargeId(previewPaid.id);
       if (previewPaid) {
@@ -225,8 +233,7 @@ export function CollectCheckout({
       setSelectedMethodId(body.selectedPaymentMethodId);
       setServiceStartedAt(body.appointment.serviceStartedAt);
       setServiceEndedAt(body.appointment.serviceEndedAt);
-      const loadedPaid =
-        (body.paidCharges ?? []).find((charge) => charge.kind === kind) ?? null;
+      const loadedPaid = paidChargeForKind(body.paidCharges ?? [], kind);
       setPaidCharge(loadedPaid);
       if (loadedPaid) {
         setChargeId(loadedPaid.id);
@@ -312,8 +319,8 @@ export function CollectCheckout({
           receiptChannel: null,
           paidAt: new Date().toISOString(),
           refundedAmount: 0,
-          paymentMethodId: useCash ? null : selectedMethodId,
-          tender: useCash ? "cash" : "card",
+          paymentMethodId: useCash || useZelle ? null : selectedMethodId,
+          tender: useZelle ? "zelle" : useCash ? "cash" : "card",
         }
       : null);
 
@@ -429,6 +436,10 @@ export function CollectCheckout({
 
   async function startPayment() {
     if (!context) return;
+    if (context.visit?.blockedMessage) {
+      setError(context.visit.blockedMessage);
+      return null;
+    }
     if (!acquirePaymentSubmission(paymentLock)) return null;
     if (preview) {
       try {
@@ -444,12 +455,15 @@ export function CollectCheckout({
           receiptChannel: null,
           paidAt: new Date().toISOString(),
           refundedAmount: 0,
-          paymentMethodId: useCash ? null : selectedMethodId,
-          tender: useCash ? "cash" : "card",
+          paymentMethodId: useCash || useZelle ? null : selectedMethodId,
+          tender: useZelle ? "zelle" : useCash ? "cash" : "card",
         };
         setChargeId(nextCharge.id);
         setPaidCharge(nextCharge);
-        if (useCash) {
+        if (useZelle) {
+          setChargedTender("zelle");
+          setChargedMethodId(null);
+        } else if (useCash) {
           setChargedTender("cash");
           setChargedMethodId(null);
         } else {
@@ -466,15 +480,17 @@ export function CollectCheckout({
     setError(null);
     try {
       const paymentFields = buildCollectChargePaymentFields(
-        useCash
-          ? { tender: "cash" }
-          : useNewCard
-            ? { tender: "card", useNewCard: true }
-            : {
-                tender: "card",
-                useNewCard: false,
-                paymentMethodId: selectedMethodId ?? "",
-              },
+        useZelle
+          ? { tender: "zelle" }
+          : useCash
+            ? { tender: "cash" }
+            : useNewCard
+              ? { tender: "card", useNewCard: true }
+              : {
+                  tender: "card",
+                  useNewCard: false,
+                  paymentMethodId: selectedMethodId ?? "",
+                },
       );
       const response = await fetch("/api/admin/charges", {
         method: "POST",
@@ -511,7 +527,10 @@ export function CollectCheckout({
         return;
       }
       if (body.charge?.id) setChargeId(body.charge.id);
-      if (useCash) {
+      if (useZelle) {
+        setChargedTender("zelle");
+        setChargedMethodId(null);
+      } else if (useCash) {
         setChargedTender("cash");
         setChargedMethodId(null);
       } else {
@@ -684,9 +703,21 @@ export function CollectCheckout({
             {kind === "no_show" ? "Charge no-show" : "Confirm today’s bill"}
           </h1>
           <p className="font-body mt-3 text-sm text-taupe">
-            {appointment.petName}
-            {appointment.customerName ? ` · ${appointment.customerName}` : ""}
+            {context.visit
+              ? `${context.visit.customerName} · ${formatVisitBillDate(context.visit.serviceDate)} · ${context.visit.arrivalLabel}`
+              : `${appointment.petName}${appointment.customerName ? ` · ${appointment.customerName}` : ""}`}
           </p>
+          {context.visit ? (
+            <p className="font-body mt-1 text-sm text-taupe">
+              {context.visit.servicedDogCount}{" "}
+              {context.visit.servicedDogCount === 1 ? "dog" : "dogs"}
+            </p>
+          ) : null}
+          {context.visit?.blockedMessage ? (
+            <p className="font-body mt-3 text-sm text-red-800">
+              {context.visit.blockedMessage}
+            </p>
+          ) : null}
 
           <ul className="mt-8 space-y-4">
             {lineItems.map((item, index) => (
@@ -860,6 +891,7 @@ export function CollectCheckout({
             disabled={
               busy ||
               lineItems.length === 0 ||
+              Boolean(context.visit?.blockedMessage) ||
               (kind === "no_show" && !selectedMethodId)
             }
             onClick={() => {
@@ -895,6 +927,7 @@ export function CollectCheckout({
           selectedMethodId={selectedMethodId}
           useNewCard={useNewCard}
           useCash={useCash}
+          useZelle={useZelle}
           busy={busy}
           clientSecret={clientSecret}
           chargeId={chargeId}
@@ -912,14 +945,23 @@ export function CollectCheckout({
             setSelectedMethodId(id);
             setUseNewCard(false);
             setUseCash(false);
+            setUseZelle(false);
           }}
           onUseNewCard={() => {
             setUseNewCard(true);
             setUseCash(false);
+            setUseZelle(false);
             setSelectedMethodId(null);
           }}
           onUseCash={() => {
             setUseCash(true);
+            setUseZelle(false);
+            setUseNewCard(false);
+            setSelectedMethodId(null);
+          }}
+          onUseZelle={() => {
+            setUseZelle(true);
+            setUseCash(false);
             setUseNewCard(false);
             setSelectedMethodId(null);
           }}
@@ -933,6 +975,11 @@ export function CollectCheckout({
 
       {step === "receipt" && receiptCharge ? (
         <section>
+          {context.visit?.blockedMessage && !receiptCharge.billSnapshot ? (
+            <p className="font-body mb-4 text-sm text-red-800">
+              {context.visit.blockedMessage}
+            </p>
+          ) : null}
           <ChargeReceiptLetter
             appointment={appointment}
             charge={receiptCharge}
@@ -983,6 +1030,7 @@ function PayStep({
   selectedMethodId,
   useNewCard,
   useCash,
+  useZelle,
   busy,
   clientSecret,
   chargeId,
@@ -995,6 +1043,7 @@ function PayStep({
   onSelectMethod,
   onUseNewCard,
   onUseCash,
+  onUseZelle,
   onBack,
   onPay,
   onPaid,
@@ -1018,6 +1067,7 @@ function PayStep({
   selectedMethodId: string | null;
   useNewCard: boolean;
   useCash: boolean;
+  useZelle: boolean;
   busy: boolean;
   clientSecret: string | null;
   chargeId: string | null;
@@ -1030,6 +1080,7 @@ function PayStep({
   onSelectMethod: (id: string) => void;
   onUseNewCard: () => void;
   onUseCash: () => void;
+  onUseZelle: () => void;
   onBack: () => void;
   onPay: () => Promise<string | null | void>;
   onPaid: () => void;
@@ -1046,9 +1097,29 @@ function PayStep({
       <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
         Today’s bill
       </p>
-      <h2 className="font-display mt-3 text-4xl text-ink">
-        {collectBillHeading(context.appointment)}
-      </h2>
+      {context.visit ? (
+        <>
+          <h2 className="font-display mt-3 text-4xl text-ink">
+            {context.visit.customerName}
+          </h2>
+          <p className="font-body mt-2 text-sm text-taupe">
+            {formatVisitBillDate(context.visit.serviceDate)} · {context.visit.arrivalLabel}
+          </p>
+          <p className="font-body mt-1 text-sm text-taupe">
+            {context.visit.servicedDogCount}{" "}
+            {context.visit.servicedDogCount === 1 ? "dog" : "dogs"}
+          </p>
+          {context.visit.blockedMessage ? (
+            <p className="font-body mt-3 text-sm text-red-800">
+              {context.visit.blockedMessage}
+            </p>
+          ) : null}
+        </>
+      ) : (
+        <h2 className="font-display mt-3 text-4xl text-ink">
+          {collectBillHeading(context.appointment)}
+        </h2>
+      )}
       <ul className="mt-8 space-y-3">
         {lineItems.map((item) => (
           <li
@@ -1251,7 +1322,7 @@ function PayStep({
         Payment
       </p>
       <p className="font-body mt-2 text-sm text-taupe">
-        Choose a saved card, a different card, or cash.
+        Choose a saved card, a different card, cash, or Zelle.
       </p>
       <div className="mt-3 space-y-2">
         {methods.map((method) => (
@@ -1262,7 +1333,9 @@ function PayStep({
             <input
               type="radio"
               name="collect-card"
-              checked={!useNewCard && !useCash && selectedMethodId === method.id}
+              checked={
+                !useNewCard && !useCash && !useZelle && selectedMethodId === method.id
+              }
               onChange={() => onSelectMethod(method.id)}
             />
             {formatPaymentMethodLabel(method)}
@@ -1286,6 +1359,15 @@ function PayStep({
           />
           Cash
         </label>
+        <label className="flex items-center gap-3 rounded-2xl border border-lavender/40 bg-cream px-4 py-3 text-sm">
+          <input
+            type="radio"
+            name="collect-card"
+            checked={useZelle}
+            onChange={onUseZelle}
+          />
+          Zelle
+        </label>
       </div>
 
       {useNewCard ? (
@@ -1305,7 +1387,7 @@ function PayStep({
           ) : (
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || Boolean(context.visit?.blockedMessage)}
               onClick={() => void onPay()}
               className="mt-4 w-full rounded-sm bg-gold px-6 py-4 text-[11px] font-medium uppercase tracking-[0.16em] text-white disabled:opacity-50"
             >
@@ -1316,17 +1398,23 @@ function PayStep({
       ) : (
         <button
           type="button"
-          disabled={busy || (!useCash && !selectedMethodId)}
+          disabled={
+            busy ||
+            Boolean(context.visit?.blockedMessage) ||
+            (!useCash && !useZelle && !selectedMethodId)
+          }
           onClick={() => void onPay()}
           className="mt-8 w-full rounded-sm bg-gold px-6 py-4 text-[11px] font-medium uppercase tracking-[0.16em] text-white disabled:opacity-50"
         >
           {busy
-            ? useCash
+            ? useCash || useZelle
               ? "Recording…"
               : "Charging…"
-            : useCash
-              ? `Pay ${formatChargeMoney(total)} in cash`
-              : `Pay ${formatChargeMoney(total)}`}
+            : useZelle
+              ? `Record ${formatChargeMoney(total)} Zelle`
+              : useCash
+                ? `Pay ${formatChargeMoney(total)} in cash`
+                : `Pay ${formatChargeMoney(total)}`}
         </button>
       )}
 

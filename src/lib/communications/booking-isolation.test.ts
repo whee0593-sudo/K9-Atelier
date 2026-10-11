@@ -132,7 +132,7 @@ describe("booking and payment isolation", () => {
     const charges = source("src/lib/charges/service.ts");
     assert.match(
       charges,
-      /await sendAfterVisitThankYouSms\(appointment, chargeId\)[\s\S]*catch \(smsError\)[\s\S]*return charge/,
+      /await sendAfterVisitThankYouSms\(\s*petCount > 1 \? \{ \.\.\.appointment, petName: "your pets" \} : appointment,\s*charge\.id,[\s\S]*catch \(smsError\)[\s\S]*return charge/,
     );
   });
 });

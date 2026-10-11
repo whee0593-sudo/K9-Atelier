@@ -31,6 +31,7 @@ import {
   type CustomerProfile,
   type CustomerProfileRow,
 } from "@/lib/profiles/types";
+import { addStaffCustomerServiceAddress } from "@/lib/profiles/staff-addresses";
 import type { StaffCustomerCreateInput } from "@/lib/profiles/validation";
 import type { OptionalStaffPetInput } from "@/lib/pets/validation";
 import {
@@ -812,15 +813,39 @@ async function rollbackCreatedUser(
   }
 }
 
+type CreateStaffCustomerError = {
+  error:
+    | "unauthenticated"
+    | "forbidden"
+    | "conflict"
+    | "not_found"
+    | "server"
+    | "outside_area";
+  message?: string;
+};
+
+async function saveOptionalServiceAddress(
+  customerId: string,
+  address: StaffCustomerCreateInput["address"],
+): Promise<CreateStaffCustomerError | null> {
+  if (!address) return null;
+  const saved = await addStaffCustomerServiceAddress(customerId, address);
+  if (!("error" in saved)) return null;
+  if (
+    saved.error === "outside_area" ||
+    saved.error === "conflict" ||
+    saved.error === "not_found" ||
+    saved.error === "unauthenticated" ||
+    saved.error === "forbidden"
+  ) {
+    return { error: saved.error, message: saved.message };
+  }
+  return { error: "server", message: saved.message };
+}
+
 export async function createStaffCustomer(
   input: StaffCustomerCreateInput,
-): Promise<
-  | { customer: StaffCustomerRecord }
-  | {
-      error: "unauthenticated" | "forbidden" | "conflict" | "not_found" | "server";
-      message?: string;
-    }
-> {
+): Promise<{ customer: StaffCustomerRecord } | CreateStaffCustomerError> {
   const session = await getStaffSession();
   if ("error" in session) return session;
 
@@ -895,6 +920,12 @@ export async function createStaffCustomer(
       );
       return { error: "server" };
     }
+
+    const addressError = await saveOptionalServiceAddress(
+      input.customerId,
+      input.address,
+    );
+    if (addressError) return addressError;
 
     const pets: StaffCustomerRecord["pets"] = [];
     if (input.pet) {
@@ -975,6 +1006,12 @@ export async function createStaffCustomer(
     );
     await rollbackCreatedUser(admin, userId);
     return { error: "server" };
+  }
+
+  const addressError = await saveOptionalServiceAddress(userId, input.address);
+  if (addressError) {
+    await rollbackCreatedUser(admin, userId);
+    return addressError;
   }
 
   const pets: StaffCustomerRecord["pets"] = [];

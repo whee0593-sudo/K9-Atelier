@@ -4,6 +4,7 @@ import type { PaymentMethodRecord } from "@/lib/payments/types";
 
 export type CollectPaymentChoice =
   | { tender: "cash" }
+  | { tender: "zelle" }
   | { tender: "card"; useNewCard: true }
   | { tender: "card"; useNewCard: false; paymentMethodId: string };
 
@@ -11,10 +12,15 @@ export function isCashTender(tender: ChargeTender | null | undefined) {
   return tender === "cash";
 }
 
+/** Cash and Zelle are recorded on the visit. They do not create a Stripe charge. */
+export function isManualTender(tender: ChargeTender | null | undefined) {
+  return tender === "cash" || tender === "zelle";
+}
+
 export function buildCollectChargePaymentFields(choice: CollectPaymentChoice) {
-  if (choice.tender === "cash") {
+  if (choice.tender === "cash" || choice.tender === "zelle") {
     return {
-      tender: "cash" as const,
+      tender: choice.tender,
       useNewCard: false,
       paymentMethodId: undefined,
     };
@@ -37,10 +43,12 @@ export function collectReceiptPaymentLabel(input: {
   tender?: ChargeTender | null;
   method?: PaymentMethodRecord | null;
 }) {
+  if (input.tender === "zelle") return "Zelle";
   if (isCashTender(input.tender)) return "Cash";
   return formatReceiptPaymentMethod(input.method);
 }
 
 export function readChargeTender(value: unknown): ChargeTender {
-  return value === "cash" ? "cash" : "card";
+  if (value === "cash" || value === "zelle") return value;
+  return "card";
 }

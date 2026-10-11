@@ -497,6 +497,54 @@ describe("saved card Today's Bill checkout", () => {
     assert.equal(state.charges[0]?.stripePaymentIntentId, "pi_resumed");
   });
 
+  it("creates one visit PaymentIntent and keeps saved-card redirects off", () => {
+    const params = savedCardPaymentIntentParams({
+      amountCents: 50500,
+      stripeCustomerId: "cus_visit",
+      stripePaymentMethodId: "pm_saved_card",
+      offSession: false,
+      description: "K9 Atelier visit · Sarah",
+      appointmentId: "apt-daisy",
+      chargeId: "chg-visit",
+      kind: "service",
+      visitId: "visit-1",
+      customerId: "cust-1",
+    });
+    assert.equal(params.metadata.visit_id, "visit-1");
+    assert.equal(params.metadata.customer_id, "cust-1");
+    assert.equal(params.metadata.appointment_id, "apt-daisy");
+    assert.equal(params.amount, 50500);
+    assert.deepEqual(params.automatic_payment_methods, {
+      enabled: true,
+      allow_redirects: "never",
+    });
+  });
+
+  it("does not start a second charge when the visit payment row already exists", async () => {
+    const state: Memory = {
+      charges: [],
+      creates: [],
+      intents: new Map(),
+      reserved: [],
+      released: [],
+    };
+    const deps = memoryDeps(state);
+    deps.insertPending = async () => {
+      const error = new Error("duplicate visit charge") as Error & { code: string };
+      error.code = "23505";
+      throw error;
+    };
+    const result = await attemptSavedCardCharge(
+      input({ visitId: "visit-1", customerId: "cust-1" }),
+      deps,
+    );
+    assert.equal(result.ok, false);
+    if (result.ok) return;
+    assert.equal(result.error, "conflict");
+    assert.equal(result.message, SAVED_CARD_IN_PROGRESS_MESSAGE);
+    assert.equal(state.creates.length, 0);
+  });
+
   it("ignores a second click while the first checkout is still running", () => {
     const lock = { current: false };
     assert.equal(acquirePaymentSubmission(lock), true);
