@@ -30,24 +30,29 @@ export function formatServiceAddress(address: ServiceAddress) {
   return `${address.street}, ${address.city}, ${address.state} ${address.zip}`;
 }
 
-function roundToTenth(miles: number) {
-  return Math.round(miles * 10) / 10;
-}
-
-/** Nearest whole dollar for the customer-facing travel fee. */
+/** Nearest whole dollar. Miles are not rounded before this. */
 function roundTravelFee(amount: number) {
   return Math.round(amount);
 }
 
+/** Label only. The stored distance and the fee still use the raw miles. */
+export function formatTravelMiles(miles: number) {
+  if (!Number.isFinite(miles)) return "0";
+  const display = Math.round(miles * 100) / 100;
+  if (Number.isInteger(display)) return String(display);
+  return display.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
+
 /**
  * One-way travel fee from the service base.
+ * Bands use the original GPS miles:
  * 0–10 miles: $0
  * above 10 through 20: (distance − 10) × $6.50
  * above 20 through 25: $65 + (distance − 20) × $10
  * Beyond 25: no automatic fee
- * The dollar amount is rounded to the nearest whole dollar.
+ * Only the final dollar amount is rounded.
  */
-function travelFeeAmount(roundedMiles: number) {
+function travelFeeAmount(miles: number) {
   const {
     freeRadiusMiles,
     travelFeePerMile,
@@ -56,18 +61,17 @@ function travelFeeAmount(roundedMiles: number) {
     standardServiceMiles,
   } = business.serviceArea;
 
-  if (roundedMiles <= freeRadiusMiles || roundedMiles > standardServiceMiles) {
+  if (miles <= freeRadiusMiles || miles > standardServiceMiles) {
     return 0;
   }
 
-  if (roundedMiles <= maxDistanceMiles) {
-    const billableMiles = roundToTenth(roundedMiles - freeRadiusMiles);
-    return roundTravelFee(billableMiles * travelFeePerMile);
+  if (miles <= maxDistanceMiles) {
+    return roundTravelFee((miles - freeRadiusMiles) * travelFeePerMile);
   }
 
   const throughStandardMiles =
     (maxDistanceMiles - freeRadiusMiles) * travelFeePerMile;
-  const extendedMiles = roundToTenth(roundedMiles - maxDistanceMiles);
+  const extendedMiles = miles - maxDistanceMiles;
   return roundTravelFee(
     throughStandardMiles + extendedMiles * extendedTravelFeePerMile,
   );
@@ -80,10 +84,12 @@ export function calculateTravelFee(distanceMiles: number): TravelQuote {
     standardServiceMiles,
   } = business.serviceArea;
 
-  const rounded = roundToTenth(distanceMiles);
-  const withinFreeRadius = rounded <= freeRadiusMiles;
-  const withinStandardRate = rounded <= standardRateThroughMiles;
-  const withinServiceArea = rounded <= standardServiceMiles;
+  const miles = distanceMiles;
+  const withinFreeRadius = Number.isFinite(miles) && miles <= freeRadiusMiles;
+  const withinStandardRate =
+    Number.isFinite(miles) && miles <= standardRateThroughMiles;
+  const withinServiceArea =
+    Number.isFinite(miles) && miles <= standardServiceMiles;
 
   let zone: TravelZone = "outside";
   let billableMiles = 0;
@@ -93,23 +99,24 @@ export function calculateTravelFee(distanceMiles: number): TravelQuote {
     zone = "complimentary";
   } else if (withinServiceArea) {
     zone = withinStandardRate ? "standard" : "extended";
-    billableMiles = roundToTenth(rounded - freeRadiusMiles);
-    fee = travelFeeAmount(rounded);
+    billableMiles = miles - freeRadiusMiles;
+    fee = travelFeeAmount(miles);
   }
 
+  const shown = formatTravelMiles(miles);
   let summary: string;
   if (zone === "outside") {
     summary = `This address is outside our standard ${standardServiceMiles}-mile service area. Please contact us to inquire about availability.`;
   } else if (zone === "complimentary") {
-    summary = `${rounded} mi from base — Complimentary travel`;
+    summary = `${shown} mi from base — Complimentary travel`;
   } else if (zone === "standard") {
-    summary = `${rounded} mi from base — travel fee ${formatPrice(fee)}.`;
+    summary = `${shown} mi from base — travel fee ${formatPrice(fee)}.`;
   } else {
     summary = `Extended Service Area. An extended travel fee applies to this location. Travel fee ${formatPrice(fee)}.`;
   }
 
   return {
-    distanceMiles: rounded,
+    distanceMiles: miles,
     freeMiles: freeRadiusMiles,
     billableMiles,
     fee,

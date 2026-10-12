@@ -79,7 +79,7 @@ export function FeesPoliciesSection() {
               {formatPrice(extendedTravelFeePerMile)} per mile beyond{" "}
               {maxDistanceMiles}
             </li>
-            <li>One-way GPS driving distance, rounded to the nearest dollar</li>
+            <li>One-way GPS driving distance. The travel fee is rounded to the nearest dollar</li>
             <li>
               Beyond {standardServiceMiles} miles, please contact us. Online
               booking is not available.

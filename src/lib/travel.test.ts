@@ -43,12 +43,45 @@ describe("calculateTravelFee", () => {
     assert.equal(calculateTravelFee(21.8).fee, 83);
   });
 
-  it("treats distances that round to 10.0 miles as complimentary", () => {
-    const quote = calculateTravelFee(10.04);
-    assert.equal(quote.distanceMiles, 10);
-    assert.equal(quote.fee, 0);
-    assert.equal(quote.zone, "complimentary");
-    assert.match(quote.summary, /Complimentary travel/);
+  it("judges 10, 20, and 25 mile boundaries on the raw distance", () => {
+    const at10 = calculateTravelFee(10);
+    assert.equal(at10.distanceMiles, 10);
+    assert.equal(at10.fee, 0);
+    assert.equal(at10.zone, "complimentary");
+
+    const justOver10 = calculateTravelFee(10.04);
+    assert.equal(justOver10.distanceMiles, 10.04);
+    assert.equal(justOver10.zone, "standard");
+    assert.equal(justOver10.fee, 0);
+    assert.equal(justOver10.withinServiceArea, true);
+    assert.doesNotMatch(justOver10.summary, /Complimentary travel/);
+
+    assert.equal(calculateTravelFee(10.06).fee, 0);
+    assert.equal(calculateTravelFee(10.06).zone, "standard");
+    assert.equal(calculateTravelFee(10.08).fee, 1);
+
+    const justUnder20 = calculateTravelFee(19.96);
+    assert.equal(justUnder20.zone, "standard");
+    assert.equal(justUnder20.fee, 65);
+
+    const justOver20 = calculateTravelFee(20.04);
+    assert.equal(justOver20.distanceMiles, 20.04);
+    assert.equal(justOver20.zone, "extended");
+    assert.equal(justOver20.fee, 65);
+    assert.equal(justOver20.withinServiceArea, true);
+
+    const justUnder25 = calculateTravelFee(24.96);
+    assert.equal(justUnder25.zone, "extended");
+    assert.equal(justUnder25.fee, 115);
+    assert.equal(justUnder25.withinServiceArea, true);
+
+    for (const miles of [25.01, 25.04, 25.05]) {
+      const quote = calculateTravelFee(miles);
+      assert.equal(quote.distanceMiles, miles, `${miles} stays unrounded`);
+      assert.equal(quote.zone, "outside");
+      assert.equal(quote.withinServiceArea, false);
+      assert.equal(quote.fee, 0);
+    }
   });
 
   it("keeps exactly 20 and 25 miles inside the service area", () => {
@@ -74,7 +107,18 @@ describe("calculateTravelFee", () => {
         "This address is outside our standard 25-mile service area. Please contact us to inquire about availability.",
       );
     }
-    assert.equal(calculateTravelFee(25.05).distanceMiles, 25.1);
+    assert.equal(calculateTravelFee(25.05).distanceMiles, 25.05);
+  });
+
+  it("keeps the same fee when the quoted distance is submitted again", () => {
+    for (const miles of [8, 10, 10.06, 11, 19.5, 20, 20.04, 21.8, 24.96, 25, 25.04]) {
+      const first = calculateTravelFee(miles);
+      const again = calculateTravelFee(first.distanceMiles);
+      assert.equal(again.distanceMiles, miles);
+      assert.equal(again.fee, first.fee);
+      assert.equal(again.zone, first.zone);
+      assert.equal(again.withinServiceArea, first.withinServiceArea);
+    }
   });
 
   it("labels the extended band for the booking card", () => {
@@ -104,5 +148,6 @@ describe("calculateTravelFee", () => {
     assert.equal(calculator.includes("FIRST_CHARGE_PER_MILE"), false);
     assert.equal(calculator.includes("SECOND_CHARGE_PER_MILE"), false);
     assert.equal(calculator.includes("* 20"), false);
+    assert.equal(calculator.includes("roundToTenth"), false);
   });
 });

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { business, formatPrice } from "@/lib/business";
 import {
   formatServiceAddress,
+  formatTravelMiles,
   type ServiceAddress,
   type TravelQuote,
 } from "@/lib/travel";
@@ -348,7 +349,7 @@ export function BookingLocationTimeStep({
                 An extended travel fee applies to this location.
               </p>
               <p className="font-body mt-4 text-sm text-ink">
-                Distance · {quote.distanceMiles} miles
+                Distance · {formatTravelMiles(quote.distanceMiles)} miles
               </p>
               <p className="font-body mt-2 text-sm text-ink">
                 Extended Travel · +{formatPrice(quote.fee)}
@@ -363,7 +364,7 @@ export function BookingLocationTimeStep({
                 We would be delighted to come to you.
               </p>
               <p className="font-body mt-4 text-sm text-ink">
-                Distance · {quote.distanceMiles} miles
+                Distance · {formatTravelMiles(quote.distanceMiles)} miles
               </p>
               <p className="font-body mt-2 text-sm text-ink">
                 Extended Travel · +{formatPrice(quote.fee)}
