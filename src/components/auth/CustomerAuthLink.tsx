@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { resolveHeaderAccountDestination } from "@/lib/header-account-link";
 import { createClient } from "@/lib/supabase/client";
 
 export function CustomerAuthLink({
@@ -15,33 +16,60 @@ export function CustomerAuthLink({
   const [label, setLabel] = useState("Login");
 
   useEffect(() => {
+    let cancelled = false;
+    let generation = 0;
     let subscription: { unsubscribe: () => void } | undefined;
+
+    const apply = (destination: { href: string; label: string }) => {
+      if (cancelled) return;
+      setHref(destination.href);
+      setLabel(destination.label);
+    };
 
     try {
       const supabase = createClient();
 
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (user) {
-          setHref("/account");
-          setLabel("My Account");
+      const sync = async () => {
+        const current = ++generation;
+        try {
+          const destination = await resolveHeaderAccountDestination({
+            getUser: async () => {
+              const {
+                data: { user },
+              } = await supabase.auth.getUser();
+              return user ? { email: user.email } : null;
+            },
+            isStaffUser: async () => {
+              const { data, error } = await supabase.rpc("is_staff_user");
+              if (error) return null;
+              return data === true;
+            },
+          });
+          if (cancelled || current !== generation) return;
+          apply(destination);
+        } catch {
+          if (cancelled || current !== generation) return;
+          apply({ href: "/login", label: "Login" });
         }
-      });
+      };
 
-      const listener = supabase.auth.onAuthStateChange((_event, session) => {
-        if (session?.user) {
-          setHref("/account");
-          setLabel("My Account");
-        } else {
-          setHref("/login");
-          setLabel("Login");
-        }
+      void sync();
+
+      const listener = supabase.auth.onAuthStateChange(() => {
+        // Defer so getUser does not run inside the auth client's lock.
+        setTimeout(() => {
+          void sync();
+        }, 0);
       });
       subscription = listener.data.subscription;
     } catch {
       // Preview without Supabase still shows Login.
     }
 
-    return () => subscription?.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription?.unsubscribe();
+    };
   }, []);
 
   return (
