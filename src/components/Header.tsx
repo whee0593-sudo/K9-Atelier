@@ -11,7 +11,7 @@ import { CustomerAuthLink } from "@/components/auth/CustomerAuthLink";
 const navItems = [
   { href: "/", label: "The Atelier" },
   { href: "/services", label: "Services" },
-  { href: "/gallery", label: "Gallery" },
+  { href: "/gallery", label: "Our Work" },
   { href: "/reviews", label: "Reviews" },
   { href: "/about", label: "About" },
   { href: "/faq", label: "FAQ" },
