@@ -153,8 +153,9 @@ describe("homepage SEO", () => {
     const visibleText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
     assert.match(
       visibleText,
-      /Serving Jupiter Island · Jupiter · Tequesta · Palm Beach Gardens · Palm Beach · West Palm Beach/,
+      /Serving Jupiter Island · Jupiter · Tequesta · Palm Beach Gardens · Palm Beach(?! · West Palm Beach)/,
     );
+    assert.equal(visibleText.includes("West Palm Beach"), false);
     assert.doesNotMatch(
       html,
       /Palm Beach · Jupiter · Palm Beach Gardens · West Palm Beach/,
@@ -266,7 +267,8 @@ describe("homepage SEO", () => {
     );
     assert.match(
       visibleText,
-      /Serving Jupiter Island, Jupiter, Tequesta, Palm Beach Gardens, Palm Beach & West Palm Beach\./,
+      /Serving Jupiter Island, Jupiter, Tequesta, Palm Beach Gardens & Palm Beach\./,
     );
+    assert.equal(visibleText.includes("West Palm Beach"), false);
   });
 });
