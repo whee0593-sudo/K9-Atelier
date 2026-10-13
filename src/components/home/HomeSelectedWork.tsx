@@ -84,7 +84,7 @@ export function HomeSelectedWork() {
             href="/gallery"
             className="group font-body inline-flex min-h-[48px] items-center text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition duration-500 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-champagne motion-reduce:transition-none"
           >
-            View the Gallery
+            Explore Our Work
             <span
               aria-hidden="true"
               className="ml-1.5 inline-block transition-transform duration-500 group-hover:translate-x-1 motion-reduce:transition-none"

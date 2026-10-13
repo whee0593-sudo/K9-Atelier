@@ -212,7 +212,7 @@ describe("homepage SEO", () => {
     );
     assert.match(specialtyCard?.text ?? "", /^Specialty Care\b/);
     assert.match(specialtyCard?.text ?? "", /Senior · Comfort care/);
-    assert.match(byHref("/gallery")?.text ?? "", /View the Gallery/);
+    assert.match(byHref("/gallery")?.text ?? "", /Explore Our Work/);
   });
 
   it("places four lazy selected works between services and the first visit", () => {
@@ -226,7 +226,7 @@ describe("homepage SEO", () => {
     assert.match(section, /Selected Work/);
     assert.match(section, /Every coat, considered individually\./);
     assert.match(section, /href="\/gallery"/);
-    assert.match(section, /View the Gallery/);
+    assert.match(section, /Explore Our Work/);
 
     const sources = ["gallery-04.png", "gallery-11.png", "gallery-06.png", "gallery-16.png"];
     let previous = -1;
