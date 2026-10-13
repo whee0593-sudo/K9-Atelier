@@ -101,7 +101,7 @@ describe("staff reschedule and cancel server gates", () => {
     );
     const schedule = readFileSync(new URL("./schedule.ts", import.meta.url), "utf8");
     assert.match(reschedule, /getStaffSession/);
-    assert.match(reschedule, /assignArrivalWindow/);
+    assert.match(reschedule, /assertVisitScheduleAllowed/);
     assert.match(reschedule, /excludeAppointmentIds: visitAppointmentIds/);
     assert.equal(
       reschedule.includes("excludeAppointmentIds: rows") ||
@@ -111,7 +111,7 @@ describe("staff reschedule and cancel server gates", () => {
     const rescheduleBodyEarly = reschedule.slice(
       reschedule.indexOf("export async function rescheduleStaffAppointment"),
     );
-    const checkAt = rescheduleBodyEarly.indexOf("await assignArrivalWindow");
+    const checkAt = rescheduleBodyEarly.indexOf("await assertVisitScheduleAllowed");
     const emailSkip = rescheduleBodyEarly.indexOf("notifyCustomerAppointmentChange");
     assert.ok(checkAt > 0);
     assert.ok(emailSkip > checkAt);
@@ -135,7 +135,7 @@ describe("staff reschedule and cancel server gates", () => {
     const rescheduleBody = reschedule.slice(
       reschedule.indexOf("export async function rescheduleStaffAppointment"),
     );
-    const availabilityCall = rescheduleBody.indexOf("await assignArrivalWindow");
+    const availabilityCall = rescheduleBody.indexOf("await assertVisitScheduleAllowed");
     assert.ok(availabilityCall > 0);
     assert.doesNotMatch(
       rescheduleBody.slice(0, availabilityCall),

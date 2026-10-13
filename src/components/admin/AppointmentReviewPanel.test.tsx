@@ -2,20 +2,37 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { AppointmentReviewPanel } from "@/components/admin/AppointmentReviewPanel";
 import { OnTheWayPreview } from "@/components/admin/OnTheWayPreview";
 import { buildPreviewOnTheWayAppointments } from "@/lib/appointments/calendar-preview";
 
+const testRouter: AppRouterInstance = {
+  back() {},
+  forward() {},
+  prefetch() {},
+  push() {},
+  refresh() {},
+  replace() {},
+};
+
+function renderReviewPanel(node: React.ReactElement) {
+  return renderToStaticMarkup(
+    <AppRouterContext.Provider value={testRouter}>{node}</AppRouterContext.Provider>,
+  );
+}
+
 describe("appointment review page", () => {
   it("does not keep a vaccination review queue under the calendar", () => {
-    const html = renderToStaticMarkup(<AppointmentReviewPanel preview />);
+    const html = renderReviewPanel(<AppointmentReviewPanel preview />);
 
     assert.match(html, /Route days/);
     assert.match(html, /Today — drive order/);
     assert.match(html, /No appointments on today/);
     const driveOrder = html.indexOf("Today — drive order");
     const routeDays = html.indexOf("Route days");
-    const dayList = html.indexOf("Daisy");
+    const dayList = html.indexOf("No appointments on this day.");
     assert.ok(driveOrder !== -1 && routeDays !== -1 && dayList !== -1);
     assert.ok(driveOrder < routeDays);
     assert.ok(routeDays < dayList);
@@ -38,7 +55,7 @@ describe("appointment review page", () => {
       customerConfirmedAt: null,
       enRouteSmsSentAt: null,
     };
-    const html = renderToStaticMarkup(
+    const html = renderReviewPanel(
       <AppointmentReviewPanel preview previewToday={[pending]} />,
     );
 

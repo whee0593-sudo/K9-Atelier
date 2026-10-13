@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { business } from "@/lib/business";
 import { Container } from "@/components/luxury/Container";
 import { CustomerAuthLink } from "@/components/auth/CustomerAuthLink";
@@ -11,7 +11,7 @@ import { CustomerAuthLink } from "@/components/auth/CustomerAuthLink";
 const navItems = [
   { href: "/", label: "The Atelier" },
   { href: "/services", label: "Services" },
-  { href: "/gallery", label: "Gallery" },
+  { href: "/gallery", label: "Our Work" },
   { href: "/reviews", label: "Reviews" },
   { href: "/about", label: "About" },
   { href: "/faq", label: "FAQ" },
@@ -76,6 +76,10 @@ export function Header() {
 
   const closeMenu = () => setOpen(false);
 
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
   return (
     <header className="sticky top-0 z-50 border-b border-gray-line/70 bg-ivory/95 backdrop-blur-sm">
       <Container className="flex items-center justify-between gap-3 py-2 md:gap-4 md:py-3 xl:gap-6">
@@ -129,7 +133,10 @@ export function Header() {
           </button>
         ) : (
           <div className="flex shrink-0 items-center gap-2 md:gap-3">
-            <CustomerAuthLink className="inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-sm bg-deep-lavender px-4 text-[12px] font-medium uppercase tracking-[0.12em] text-ivory transition duration-500 hover:bg-ink md:min-h-[50px] md:px-6 md:tracking-[0.16em]" />
+            <CustomerAuthLink
+              onNavigate={closeMenu}
+              className="inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-sm bg-deep-lavender px-4 text-[12px] font-medium uppercase tracking-[0.12em] text-ivory transition duration-500 hover:bg-ink md:min-h-[50px] md:px-6 md:tracking-[0.16em]"
+            />
             <button
               type="button"
               className={
