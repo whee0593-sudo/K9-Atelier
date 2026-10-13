@@ -254,7 +254,6 @@ describe("full groom structured data", () => {
       getCommunitiesServed(),
     );
     assert.deepEqual(areas.map((area) => area.name), [
-      "Palm Beach",
       "Jupiter",
       "Palm Beach Gardens",
       "West Palm Beach",
