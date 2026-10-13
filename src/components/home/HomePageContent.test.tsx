@@ -267,7 +267,8 @@ describe("homepage SEO", () => {
     );
     assert.match(
       visibleText,
-      /Serving Jupiter Island, Jupiter, Tequesta, Palm Beach Gardens, Palm Beach & West Palm Beach\./,
+      /Serving Jupiter Island, Jupiter, Tequesta, Palm Beach Gardens & Palm Beach\./,
     );
+    assert.equal(visibleText.includes("West Palm Beach"), false);
   });
 });

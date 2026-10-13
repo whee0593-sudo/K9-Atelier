@@ -67,8 +67,8 @@ export function Footer() {
               <span className="whitespace-nowrap">Jupiter,</span>
               <br className="min-[375px]:hidden" />{" "}
               <span className="whitespace-nowrap">Tequesta,</span>{" "}
-              <span className="whitespace-nowrap">Palm Beach Gardens,</span>{" "}
-              <span className="whitespace-nowrap">Palm Beach & West Palm Beach.</span>
+              <span className="whitespace-nowrap">Palm Beach Gardens &</span>{" "}
+              <span className="whitespace-nowrap">Palm Beach.</span>
             </p>
             {brand.phone && phoneHref ? (
               <a
