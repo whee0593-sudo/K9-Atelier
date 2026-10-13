@@ -72,7 +72,7 @@ function HeroServiceMeta({ className = "" }: { className?: string }) {
         <span className="whitespace-nowrap">Jupiter ·</span>{" "}
         <span className="whitespace-nowrap">Tequesta ·</span>{" "}
         <span className="whitespace-nowrap">Palm Beach Gardens ·</span>{" "}
-        <span className="whitespace-nowrap">Palm Beach · West Palm Beach</span>
+        <span className="whitespace-nowrap">Palm Beach</span>
       </p>
       <p className="break-words">
         By Appointment Only · Dogs up to 45 lbs
