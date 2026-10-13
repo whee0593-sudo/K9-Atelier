@@ -144,4 +144,34 @@ describe("header account link wiring", () => {
     assert.equal(uses.length, 1);
     assert.doesNotMatch(headerSource, /href="\/account"|href="\/admin"/);
   });
+
+  it("closes the mobile menu when the account link is chosen", () => {
+    assert.match(
+      headerSource,
+      /<CustomerAuthLink\s+onNavigate=\{closeMenu\}/,
+    );
+  });
+});
+
+describe("mobile navigation menu", () => {
+  const headerSource = readFileSync(
+    new URL("../components/Header.tsx", import.meta.url),
+    "utf8",
+  );
+
+  it("closes the open menu when a navigation link is chosen", () => {
+    const menu = headerSource.split('id="mobile-nav"')[1] ?? "";
+    assert.match(menu, /onNavigate=\{closeMenu\}/);
+    assert.equal(menu.match(/onNavigate=\{closeMenu\}/g)?.length, 2);
+    assert.match(
+      headerSource,
+      /useEffect\(\(\) => \{\s*setOpen\(false\);\s*\}, \[pathname\]\);/,
+    );
+  });
+
+  it("keeps the menu button as the open and close control", () => {
+    assert.match(headerSource, /aria-label=\{open \? "Close menu" : "Open menu"\}/);
+    assert.match(headerSource, /onClick=\{\(\) => setOpen\(\(value\) => !value\)\}/);
+    assert.doesNotMatch(headerSource, /document\.body\.style\.overflow/);
+  });
 });
