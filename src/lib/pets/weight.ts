@@ -3,6 +3,9 @@ import { estimateServiceDurationMinutes } from "@/lib/services";
 /** Same upper bound as pet profile validation and pets_weight_lbs_check. */
 export const MAX_PET_WEIGHT_LBS = 200;
 
+export const WEIGHT_REQUIRED_MESSAGE =
+  "Add this dog's weight before booking. Weight must be greater than 0 and at most 200 lbs.";
+
 /**
  * Read a stored weight without turning null into 0.
  * Zero, negative, and over-max values stay numeric so booking can reject them.

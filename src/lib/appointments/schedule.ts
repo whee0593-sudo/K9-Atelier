@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig, hasSupabaseConfig } from "@/lib/supabase/env";
-import { liveServiceDurationMinutes } from "@/lib/pets/weight";
+import { resolveOccupiedStop } from "@/lib/appointments/occupied-stop";
 import { getBaseAddressFormatted } from "@/lib/server/base-address";
 import { geocodeBaseAddress } from "@/lib/geo";
 import {
@@ -46,11 +46,6 @@ export type { DayClosureRecord };
 
 type ScheduleError = { error: "misconfigured" | "server" };
 type OccupiedDay = { stops: OccupiedAppointment[]; bookedCount: number };
-
-function firstRelation<T>(value: T | T[] | null | undefined): T | null {
-  if (value == null) return null;
-  return Array.isArray(value) ? (value[0] ?? null) : value;
-}
 
 export function requireAdminClient() {
   if (!hasSupabaseConfig() || !hasSupabaseAdminConfig()) return null;
@@ -212,37 +207,21 @@ type OccupiedRow = {
   add_on_ids: string[] | null;
   address_zip: string | null;
   estimated_duration_minutes?: number | null;
-  pets: { weight_lbs?: number } | { weight_lbs?: number }[] | null;
+  service_started_at?: string | null;
+  service_ended_at?: string | null;
+  visit_id?: string | null;
+  pets: { weight_lbs?: number | string | null } | { weight_lbs?: number | string | null }[] | null;
 };
 
 type OccupiedLoadOptions = {
   excludeAppointmentIds?: string[];
 };
 
-function mapOccupiedRow(row: OccupiedRow): OccupiedAppointment | null {
-  const pet = firstRelation(row.pets);
-  const scheduledStart =
-    typeof row.scheduled_start === "number" ? row.scheduled_start : null;
-  if (scheduledStart == null) return null;
-  const stored = row.estimated_duration_minutes;
-  const durationMinutes =
-    typeof stored === "number" && stored > 0
-      ? stored
-      : liveServiceDurationMinutes(
-          String(row.service_id),
-          pet?.weight_lbs,
-          Array.isArray(row.add_on_ids)
-            ? row.add_on_ids.filter((id): id is string => typeof id === "string")
-            : [],
-        );
-  if (durationMinutes == null) return null;
-  return {
-    lat: typeof row.address_lat === "number" ? row.address_lat : null,
-    lon: typeof row.address_lon === "number" ? row.address_lon : null,
-    zip: typeof row.address_zip === "string" ? row.address_zip : null,
-    scheduledStart,
-    durationMinutes,
-  };
+function mapOccupiedRow(
+  row: OccupiedRow,
+  peers: readonly OccupiedRow[],
+): OccupiedAppointment {
+  return resolveOccupiedStop(row, peers).stop;
 }
 
 export async function loadOccupiedStopsByDate(
@@ -254,7 +233,7 @@ export async function loadOccupiedStopsByDate(
   if (!admin) return { byDate: new Map() };
 
   const select =
-    "id, appointment_date, address_lat, address_lon, scheduled_start, service_id, add_on_ids, address_zip, estimated_duration_minutes";
+    "id, appointment_date, address_lat, address_lon, scheduled_start, service_id, add_on_ids, address_zip, estimated_duration_minutes, service_started_at, service_ended_at, visit_id";
   let data: OccupiedRow[] | null = null;
   const withPets = await admin
     .from("appointments")
@@ -280,17 +259,18 @@ export async function loadOccupiedStopsByDate(
     data = (withPets.data ?? []) as OccupiedRow[];
   }
 
+  const rows = data ?? [];
   const exclude = new Set(options?.excludeAppointmentIds ?? []);
   const byDate = new Map<string, { stops: OccupiedAppointment[]; bookedCount: number }>();
-  for (const row of data ?? []) {
+  for (const row of rows) {
     if (row.id && exclude.has(row.id)) continue;
     const current = byDate.get(row.appointment_date) ?? {
       stops: [],
       bookedCount: 0,
     };
     current.bookedCount += 1;
-    const stop = mapOccupiedRow(row);
-    if (stop) current.stops.push(stop);
+    const peers = rows.filter((peer) => peer.appointment_date === row.appointment_date);
+    current.stops.push(mapOccupiedRow(row, peers));
     byDate.set(row.appointment_date, current);
   }
 

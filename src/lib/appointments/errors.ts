@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { AppointmentValidationError } from "@/lib/appointments/validation";
+import { WEIGHT_REQUIRED_MESSAGE } from "@/lib/pets/weight";
 
 export function appointmentJsonError(
   message: string,
@@ -54,7 +55,7 @@ export function mapAppointmentServiceError(
       );
     case "weight_required":
       return appointmentJsonError(
-        "Add this dog's weight before booking. Weight must be greater than 0 and at most 200 lbs.",
+        WEIGHT_REQUIRED_MESSAGE,
         409,
         "weightLbs",
       );
