@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { GoogleTagManager } from "@next/third-parties/google";
 import { SiteShell } from "@/components/SiteShell";
 import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
 import { bodyFont, displayFont } from "@/lib/fonts";
 import { GOOGLE_ADS_ID } from "@/lib/google-ads";
 import { getBrandSearchName } from "@/lib/business";
 import "./globals.css";
+
+/** Container only. Existing Google Ads gtag and conversion events stay as they are. */
+const GTM_CONTAINER_ID = "GTM-MKRPGPRZ";
 
 const siteTitle =
   "K9 Atelier Mobile Pet Spa | Best in Show Grooming — Jupiter, Palm Beach Gardens, West Palm Beach";
@@ -47,6 +51,15 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${displayFont.variable} ${bodyFont.variable}`}>
       <body className="min-h-screen antialiased font-body">
+        <noscript>
+          <iframe
+            src={`https://www.googletagmanager.com/ns.html?id=${GTM_CONTAINER_ID}`}
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          />
+        </noscript>
+        <GoogleTagManager gtmId={GTM_CONTAINER_ID} />
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ADS_ID}`}
           strategy="afterInteractive"
