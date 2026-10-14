@@ -8,7 +8,7 @@ const googleAds = readFileSync(
   "utf8",
 );
 
-const GTM_ID = "GTM-MKRPGPRZ";
+const GTM_ID = "GTM-WKRPGPRZ";
 
 describe("Google Tag Manager layout install", () => {
   it("installs the container with the Next.js GoogleTagManager component", () => {
@@ -16,7 +16,8 @@ describe("Google Tag Manager layout install", () => {
       layout,
       /import \{ GoogleTagManager \} from "@next\/third-parties\/google"/,
     );
-    assert.match(layout, /const GTM_CONTAINER_ID = "GTM-MKRPGPRZ"/);
+    assert.match(layout, /const GTM_CONTAINER_ID = "GTM-WKRPGPRZ"/);
+    assert.doesNotMatch(layout, /GTM-MKRPGPRZ/);
     const bodyStart = layout.indexOf("<body");
     const tagManager = layout.indexOf("<GoogleTagManager");
     assert.ok(tagManager > bodyStart);
@@ -42,7 +43,7 @@ describe("Google Tag Manager layout install", () => {
     assert.match(layout, /visibility:\s*"hidden"/);
     assert.match(layout, /height="0"/);
     assert.match(layout, /width="0"/);
-    assert.equal(GTM_ID, "GTM-MKRPGPRZ");
+    assert.equal(GTM_ID, "GTM-WKRPGPRZ");
   });
 
   it("does not add a second Google Ads tag or a new conversion event", () => {

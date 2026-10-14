@@ -9,7 +9,7 @@ import { getBrandSearchName } from "@/lib/business";
 import "./globals.css";
 
 /** Container only. Existing Google Ads gtag and conversion events stay as they are. */
-const GTM_CONTAINER_ID = "GTM-MKRPGPRZ";
+const GTM_CONTAINER_ID = "GTM-WKRPGPRZ";
 
 const siteTitle =
   "K9 Atelier Mobile Pet Spa | Best in Show Grooming — Jupiter, Palm Beach Gardens, West Palm Beach";
