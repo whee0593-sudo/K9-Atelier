@@ -1,11 +1,13 @@
 import { business } from "@/lib/business";
+import { bookingWeightLbs } from "@/lib/pets/weight";
 import {
   allBookableServices,
   getServicePriceEstimate,
 } from "@/lib/services";
 import type { CatalogChargeGroup, CatalogChargeItem } from "@/lib/charges/types";
 
-export function catalogChargeGroups(weightLbs: number): CatalogChargeGroup[] {
+export function catalogChargeGroups(weightLbs: number | null): CatalogChargeGroup[] {
+  const pricedWeight = bookingWeightLbs(weightLbs);
   const services = allBookableServices();
 
   return business.serviceCategories
@@ -16,15 +18,17 @@ export function catalogChargeGroups(weightLbs: number): CatalogChargeGroup[] {
       )) {
         if (service.options?.length) {
           for (const option of service.options) {
-            const estimate = getServicePriceEstimate(
-              service,
-              weightLbs,
-              option.name,
-            );
+            const estimate =
+              pricedWeight == null
+                ? null
+                : getServicePriceEstimate(service, pricedWeight, option.name);
             items.push({
               id: `${service.id}::${option.name}`,
               name: option.name,
-              suggestedAmount: option.priceFrom ?? estimate?.from ?? null,
+              suggestedAmount:
+                pricedWeight == null
+                  ? null
+                  : (option.priceFrom ?? estimate?.from ?? null),
             });
           }
           continue;
@@ -33,7 +37,10 @@ export function catalogChargeGroups(weightLbs: number): CatalogChargeGroup[] {
         items.push({
           id: service.id,
           name: service.name,
-          suggestedAmount: getServicePriceEstimate(service, weightLbs)?.from ?? null,
+          suggestedAmount:
+            pricedWeight == null
+              ? null
+              : (getServicePriceEstimate(service, pricedWeight)?.from ?? null),
         });
       }
       return {
@@ -45,6 +52,6 @@ export function catalogChargeGroups(weightLbs: number): CatalogChargeGroup[] {
     .filter((group) => group.items.length > 0);
 }
 
-export function catalogChargeItems(weightLbs: number): CatalogChargeItem[] {
+export function catalogChargeItems(weightLbs: number | null): CatalogChargeItem[] {
   return catalogChargeGroups(weightLbs).flatMap((group) => group.items);
 }

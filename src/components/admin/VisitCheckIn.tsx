@@ -234,6 +234,11 @@ export function VisitCheckIn({
       <p className="font-body mt-3 text-base text-taupe">
         {appointment.customerName ?? appointment.customerEmail}
       </p>
+      {context.petWeightStatus === "missing" ? (
+        <p className="font-body mt-4 text-sm text-red-800">
+          This dog has no weight on file. Suggested grooming prices stay hidden until a weight is saved.
+        </p>
+      ) : null}
       <p className="font-body mt-6 text-sm text-ink">
         {lineItems.length > 0
           ? lineItems.map((item) => item.label).join(" · ")

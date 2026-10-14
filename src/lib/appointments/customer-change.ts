@@ -30,6 +30,7 @@ import { dollarsToCents } from "@/lib/charges/money";
 import type { ChargeKind, ChargeLineItem } from "@/lib/charges/types";
 import { mapPetRowToRecord } from "@/lib/pets/map";
 import { PET_SELECT, type PetRow } from "@/lib/pets/types";
+import { bookingWeightLbs, liveServiceDurationMinutes } from "@/lib/pets/weight";
 import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
 import { vaccinationStatusSnapshotForBooking } from "@/lib/vaccinations/booking";
 import {
@@ -472,6 +473,7 @@ export async function applyAppointmentChange(
         | "payment_required"
         | "payment_failed"
         | "misconfigured"
+        | "weight_required"
         | "server";
     }
 > {
@@ -617,11 +619,12 @@ function durationDecisionForRow(row: ChangeRow) {
     status: row.status,
     appointmentDate: row.appointment_date,
     serviceEndedAt: row.service_ended_at,
-    liveEstimateMinutes: estimateServiceDurationMinutes(
-      row.service_id,
-      pet?.weight_lbs ?? 20,
-      row.add_on_ids ?? [],
-    ),
+    liveEstimateMinutes:
+      liveServiceDurationMinutes(
+        row.service_id,
+        pet?.weight_lbs,
+        row.add_on_ids ?? [],
+      ) ?? 0,
   });
 }
 
@@ -756,7 +759,8 @@ async function addDogToVisit(
         | "server"
         | "not_found"
         | "payment_required"
-        | "slot_unavailable";
+        | "slot_unavailable"
+        | "weight_required";
     }
 > {
   if (!input.petId || !input.serviceId) return { error: "conflict" as const };
@@ -780,6 +784,8 @@ async function addDogToVisit(
   if (!petRow) return { error: "not_found" as const };
 
   let pet = mapPetRowToRecord(petRow as PetRow);
+  const bookedWeight = bookingWeightLbs(pet.weightLbs);
+  if (bookedWeight == null) return { error: "weight_required" };
   try {
     const [enriched] = await attachVaccinationSummaries([pet]);
     if (enriched) pet = enriched;
@@ -790,7 +796,7 @@ async function addDogToVisit(
   const service = allBookableServices().find((entry) => entry.id === input.serviceId);
   if (!service) return { error: "conflict" as const };
 
-  const estimate = getServicePriceEstimate(service, pet.weightLbs);
+  const estimate = getServicePriceEstimate(service, bookedWeight);
   const paymentMethod = await resolvePaymentMethod(
     userId,
     visit.payment_method_id,
@@ -814,7 +820,7 @@ async function addDogToVisit(
 
   const durationMinutes = estimateServiceDurationMinutes(
     service.id,
-    pet.weightLbs,
+    bookedWeight,
     [],
   );
   const siblingDecisions = ordered.map(durationDecisionForRow);

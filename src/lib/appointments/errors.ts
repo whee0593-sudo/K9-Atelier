@@ -28,6 +28,7 @@ export function mapAppointmentServiceError(
     | "conflict"
     | "slot_unavailable"
     | "payment_required"
+    | "weight_required"
     | "server",
 ) {
   switch (error) {
@@ -50,6 +51,12 @@ export function mapAppointmentServiceError(
       return appointmentJsonError(
         "Please select a saved payment method for this appointment.",
         409,
+      );
+    case "weight_required":
+      return appointmentJsonError(
+        "Add this dog's weight before booking. Weight must be greater than 0 and at most 200 lbs.",
+        409,
+        "weightLbs",
       );
     default:
       return appointmentJsonError("Something went wrong. Please try again.", 500);

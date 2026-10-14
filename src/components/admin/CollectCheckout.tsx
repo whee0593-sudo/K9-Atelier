@@ -331,12 +331,16 @@ export function CollectCheckout({
   }
 
   function addCatalogItem(catalog: CatalogChargeItem) {
+    if (catalog.suggestedAmount == null) return;
     const patch = catalogLinePatch(catalog);
+    if (patch.amount == null) return;
+    const { amount, ...rest } = patch;
     setLineItems((current) => [
       ...current,
       {
         id: newLineId(),
-        ...patch,
+        ...rest,
+        amount,
         referralCategory:
           catalog.id === "travel-fee"
             ? "travel_fee"
@@ -711,6 +715,11 @@ export function CollectCheckout({
             <p className="font-body mt-1 text-sm text-taupe">
               {context.visit.servicedDogCount}{" "}
               {context.visit.servicedDogCount === 1 ? "dog" : "dogs"}
+            </p>
+          ) : null}
+          {context.petWeightStatus === "missing" ? (
+            <p className="font-body mt-3 text-sm text-red-800">
+              This dog has no weight on file. Suggested grooming prices stay hidden until a weight is saved.
             </p>
           ) : null}
           {context.visit?.blockedMessage ? (

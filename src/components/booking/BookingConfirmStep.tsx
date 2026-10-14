@@ -17,6 +17,7 @@ import {
   type BookableService,
 } from "@/lib/services";
 import { getServiceDisplayName } from "@/lib/service-display";
+import { bookingWeightLbs } from "@/lib/pets/weight";
 import { formatServiceAddress, type ServiceAddress, type TravelQuote } from "@/lib/travel";
 import type { PetProfile } from "@/lib/pets";
 import type { AppointmentRecord } from "@/lib/appointments/types";
@@ -87,8 +88,13 @@ export function BookingConfirmStep({
     "idle",
   );
 
-  const serviceEstimate = getServicePriceEstimate(service, pet.weightLbs);
-  const addOnTotal = estimateAddOnTotal(addOnIds, addOnOptions, pet.weightLbs);
+  const weightLbs = bookingWeightLbs(pet.weightLbs);
+  const serviceEstimate =
+    weightLbs == null ? null : getServicePriceEstimate(service, weightLbs);
+  const addOnTotal =
+    weightLbs == null
+      ? 0
+      : estimateAddOnTotal(addOnIds, addOnOptions, weightLbs);
   const serviceFrom = serviceEstimate?.from ?? 0;
   const estimatedTotal = serviceFrom + addOnTotal + travelQuote.fee;
   const displayServiceName = getServiceDisplayName(service.id, service.name);
@@ -264,7 +270,9 @@ export function BookingConfirmStep({
                   {getServiceDisplayName(addOn.id, addOn.name)}
                 </span>
                 <span className="text-ink">
-                  {formatServicePrice(addOn, pet.weightLbs, addOnOptions[id])}
+                  {weightLbs == null
+                    ? ""
+                    : formatServicePrice(addOn, weightLbs, addOnOptions[id])}
                 </span>
               </div>
             );

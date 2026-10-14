@@ -59,7 +59,9 @@ export type AppointmentChargeRecord = {
 
 export type CollectContext = {
   appointment: AdminAppointmentRecord;
-  petWeightLbs: number;
+  petWeightLbs: number | null;
+  /** Missing means suggested grooming prices were not calculated. */
+  petWeightStatus: "known" | "missing";
   lineItems: ChargeLineItem[];
   catalog: CatalogChargeItem[];
   catalogGroups: CatalogChargeGroup[];

@@ -1,13 +1,14 @@
 import { formatPetAgeLabel, getPetAgeYears } from "@/lib/pet-age";
 import type { PetRabiesStatus } from "@/lib/pets/types";
 import type { VaccinationBookingStatus } from "@/lib/vaccinations/types";
+import { bookingWeightLbs } from "@/lib/pets/weight";
 import { petProfileReadyToBook } from "@/lib/vaccinations/booking";
 
 export type PetProfile = {
   id: string;
   name: string;
   breed: string;
-  weightLbs: number;
+  weightLbs: number | null;
   /** ISO date YYYY-MM-DD — exact date of birth */
   dateOfBirth?: string | null;
   /** ISO date YYYY-MM-DD — when exact date is unknown */
@@ -89,7 +90,9 @@ export function getCustomerPetProfiles(): PetProfile[] {
 }
 
 export function formatPetSummary(pet: PetProfile) {
-  return `${pet.breed} · ${pet.weightLbs} lbs`;
+  const weightLbs = bookingWeightLbs(pet.weightLbs);
+  if (weightLbs == null) return pet.breed;
+  return `${pet.breed} · ${weightLbs} lbs`;
 }
 
 export function formatPetBookingCardLine(pet: PetProfile) {

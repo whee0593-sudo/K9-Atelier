@@ -21,12 +21,18 @@ export function listAmountForCatalog(
 }
 
 export function catalogLinePatch(catalog: CatalogChargeItem) {
-  return {
+  const patch: {
+    label: string;
+    amount?: number;
+    catalogId: string;
+    listAmount?: number;
+  } = {
     label: catalog.name,
-    amount: catalog.suggestedAmount ?? 0,
     catalogId: catalog.id,
     listAmount: listAmountForCatalog(catalog.id, catalog.suggestedAmount),
   };
+  if (catalog.suggestedAmount == null) return patch;
+  return { ...patch, amount: catalog.suggestedAmount };
 }
 
 export function listedAmountIfChanged(

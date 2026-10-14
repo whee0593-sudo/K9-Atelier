@@ -47,7 +47,7 @@ function getPetFieldValue(pet: PetProfile, fieldId: string): string {
     case "breed":
       return pet.breed;
     case "weightLbs":
-      return pet.weightLbs > 0 ? String(pet.weightLbs) : "";
+      return pet.weightLbs != null && pet.weightLbs > 0 ? String(pet.weightLbs) : "";
     case "sex":
       return pet.sex ?? "";
     case "temperament":

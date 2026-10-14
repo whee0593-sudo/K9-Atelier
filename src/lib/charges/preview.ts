@@ -72,6 +72,7 @@ export function buildPreviewCollectContext(
       serviceEndedAt: options.paid ? "2026-07-08T15:03:00.000Z" : null,
     },
     petWeightLbs,
+    petWeightStatus: "known",
     lineItems,
     catalog: catalogChargeItems(petWeightLbs),
     catalogGroups: catalogChargeGroups(petWeightLbs),

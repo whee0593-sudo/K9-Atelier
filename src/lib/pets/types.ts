@@ -23,7 +23,7 @@ export type PetRow = {
   customer_id: string;
   name: string;
   breed: string;
-  weight_lbs: number;
+  weight_lbs: number | string | null;
   date_of_birth: string | null;
   approximate_age_years: number | null;
   sex: string | null;
@@ -42,7 +42,7 @@ export type PetRecord = {
   id: string;
   name: string;
   breed: string;
-  weightLbs: number;
+  weightLbs: number | null;
   dateOfBirth: string | null;
   approximateAgeYears: number | null;
   sex: string | null;

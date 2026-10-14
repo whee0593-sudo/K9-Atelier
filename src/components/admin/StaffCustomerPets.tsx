@@ -124,7 +124,7 @@ function StaffPetDetails({
     { label: "Breed", value: detailValue(pet.breed) },
     {
       label: "Weight (lbs)",
-      value: pet.weightLbs > 0 ? String(pet.weightLbs) : "—",
+      value: pet.weightLbs != null && pet.weightLbs > 0 ? String(pet.weightLbs) : "—",
     },
     { label: "Age", value: petAgeSummaryLabel(pet) },
   ];

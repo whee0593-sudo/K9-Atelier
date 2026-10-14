@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { bookingWeightLbs } from "@/lib/pets/weight";
 import {
   formatServicePrice,
   getServicePriceEstimate,
@@ -56,7 +57,9 @@ function CareServiceCard({
   selected: boolean;
   onSelect: (service: BookableService) => void;
 }) {
-  const estimate = getServicePriceEstimate(service, pet.weightLbs);
+  const weightLbs = bookingWeightLbs(pet.weightLbs);
+  const estimate =
+    weightLbs == null ? null : getServicePriceEstimate(service, weightLbs);
   const displayName = getServiceDisplayName(service.id, service.name);
   const description = getServiceDisplayDescription(
     service.id,
@@ -88,11 +91,11 @@ function CareServiceCard({
           )}
         </>
       )}
-      {!estimate && (
+      {!estimate && weightLbs != null ? (
         <p className="font-body mt-2 text-sm text-taupe">
-          {formatServicePrice(service, pet.weightLbs)}
+          {formatServicePrice(service, weightLbs)}
         </p>
-      )}
+      ) : null}
       <button
         type="button"
         onClick={() => onSelect(service)}
@@ -182,9 +185,13 @@ export function BookingExperienceStep({
   );
   const [expandedSpa, setExpandedSpa] = useState(false);
   const spaIntro = getSpaTreatmentsIntro();
-  const categories = getBookingCareCategories(pet.weightLbs, {
-    includeMembersOnly,
-  });
+  const weightLbs = bookingWeightLbs(pet.weightLbs);
+  const categories =
+    weightLbs == null
+      ? []
+      : getBookingCareCategories(weightLbs, {
+          includeMembersOnly,
+        });
 
   useEffect(() => {
     try {

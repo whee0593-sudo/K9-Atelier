@@ -1,3 +1,4 @@
+import { bookingWeightLbs, readStoredWeightLbs } from "@/lib/pets/weight";
 import type { PetRecord, PetRow, PetWriteInput } from "@/lib/pets/types";
 import { parsePetRabiesStatus } from "@/lib/pets/types";
 import type { PetProfile } from "@/lib/pets";
@@ -28,7 +29,7 @@ export function mapPetRowToRecord(row: PetRow): PetRecord {
     id: row.id,
     name: row.name,
     breed: row.breed,
-    weightLbs: Number(row.weight_lbs),
+    weightLbs: readStoredWeightLbs(row.weight_lbs),
     dateOfBirth: row.date_of_birth,
     approximateAgeYears:
       row.approximate_age_years == null
@@ -83,7 +84,7 @@ export function mapPetProfileToWriteInput(pet: PetProfile): PetWriteInput {
   return {
     name: pet.name.trim(),
     breed: pet.breed.trim(),
-    weightLbs: pet.weightLbs,
+    weightLbs: bookingWeightLbs(pet.weightLbs) ?? 0,
     dateOfBirth,
     approximateAgeYears,
     sex: pet.sex ?? null,

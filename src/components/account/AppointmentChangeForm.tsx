@@ -22,6 +22,7 @@ import { useCustomerPets } from "@/lib/pets/use-customer-pets";
 import { allBookableServices, formatServicePrice, getBookableServicesForPet } from "@/lib/services";
 import { formatServiceAddress } from "@/lib/travel";
 import { petReadyToBook } from "@/lib/pets";
+import { bookingWeightLbs } from "@/lib/pets/weight";
 import { buildPreviewOnTheWayAppointments } from "@/lib/appointments/calendar-preview";
 
 type VisitContext = {
@@ -173,11 +174,15 @@ export function AppointmentChangeForm({
       petReadyToBook(pet),
   );
   const selectedAddPet = addablePets.find((pet) => pet.id === addPetId) ?? null;
-  const addServices = selectedAddPet
-    ? getBookableServicesForPet(selectedAddPet.weightLbs, {
-        includeMembersOnly: true,
-      })
-    : allBookableServices();
+  const selectedAddWeight = selectedAddPet
+    ? bookingWeightLbs(selectedAddPet.weightLbs)
+    : null;
+  const addServices =
+    selectedAddWeight != null
+      ? getBookableServicesForPet(selectedAddWeight, {
+          includeMembersOnly: true,
+        })
+      : allBookableServices();
 
   const feeTargets =
     action === "remove_dog"
@@ -384,8 +389,8 @@ export function AppointmentChangeForm({
               {addServices.map((service) => (
                 <option key={service.id} value={service.id}>
                   {service.name}
-                  {selectedAddPet
-                    ? ` · ${formatServicePrice(service, selectedAddPet.weightLbs)}`
+                  {selectedAddWeight != null
+                    ? ` · ${formatServicePrice(service, selectedAddWeight)}`
                     : ""}
                 </option>
               ))}

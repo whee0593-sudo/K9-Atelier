@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig, hasSupabaseConfig } from "@/lib/supabase/env";
-import { estimateServiceDurationMinutes } from "@/lib/services";
+import { liveServiceDurationMinutes } from "@/lib/pets/weight";
 import { getBaseAddressFormatted } from "@/lib/server/base-address";
 import { geocodeBaseAddress } from "@/lib/geo";
 import {
@@ -221,7 +221,6 @@ type OccupiedLoadOptions = {
 
 function mapOccupiedRow(row: OccupiedRow): OccupiedAppointment | null {
   const pet = firstRelation(row.pets);
-  const weightLbs = pet?.weight_lbs ?? 20;
   const scheduledStart =
     typeof row.scheduled_start === "number" ? row.scheduled_start : null;
   if (scheduledStart == null) return null;
@@ -229,13 +228,14 @@ function mapOccupiedRow(row: OccupiedRow): OccupiedAppointment | null {
   const durationMinutes =
     typeof stored === "number" && stored > 0
       ? stored
-      : estimateServiceDurationMinutes(
+      : liveServiceDurationMinutes(
           String(row.service_id),
-          weightLbs,
+          pet?.weight_lbs,
           Array.isArray(row.add_on_ids)
             ? row.add_on_ids.filter((id): id is string => typeof id === "string")
             : [],
         );
+  if (durationMinutes == null) return null;
   return {
     lat: typeof row.address_lat === "number" ? row.address_lat : null,
     lon: typeof row.address_lon === "number" ? row.address_lon : null,

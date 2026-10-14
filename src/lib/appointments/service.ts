@@ -17,6 +17,7 @@ import {
 import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
 import { mapPetRowToRecord } from "@/lib/pets/map";
 import { PET_SELECT, type PetRow } from "@/lib/pets/types";
+import { bookingWeightLbs } from "@/lib/pets/weight";
 import { resolveArrivalForBooking } from "@/lib/appointments/arrival-window";
 import { vaccinationStatusSnapshotForBooking } from "@/lib/vaccinations/booking";
 import {
@@ -104,6 +105,7 @@ export async function createAppointment(
         | "conflict"
         | "slot_unavailable"
         | "payment_required"
+        | "weight_required"
         | "server";
     }
 > {
@@ -126,6 +128,8 @@ export async function createAppointment(
   if (!petRow) return { error: "not_found" };
 
   const mappedPet = mapPetRowToRecord(petRow as PetRow);
+  const bookedWeight = bookingWeightLbs(mappedPet.weightLbs);
+  if (bookedWeight == null) return { error: "weight_required" };
   let pet = mappedPet;
   try {
     const [enriched] = await attachVaccinationSummaries([mappedPet]);
@@ -146,7 +150,7 @@ export async function createAppointment(
 
   const durationMinutes = estimateServiceDurationMinutes(
     input.serviceId,
-    pet.weightLbs,
+    bookedWeight,
     input.addOnIds,
   );
   const point = { lat: input.addressLat, lon: input.addressLon };

@@ -8,20 +8,34 @@ import {
 import { getServiceDisplayName } from "@/lib/service-display";
 import { resolveReferralCategory } from "@/lib/referrals/eligible";
 import { listAmountForCatalog, normalizeListAmount } from "@/lib/charges/list-amount";
+import { bookingWeightLbs } from "@/lib/pets/weight";
 import type { ChargeLineItem } from "@/lib/charges/types";
 
 export { catalogChargeItems, catalogChargeGroups } from "@/lib/charges/catalog";
 
 export function buildDefaultLineItems(
   appointment: AppointmentRecord,
-  weightLbs: number,
+  weightLbs: number | null,
 ): ChargeLineItem[] {
   const items: ChargeLineItem[] = [];
+  const pricedWeight = bookingWeightLbs(weightLbs);
+  if (pricedWeight == null) {
+    if (appointment.travelFee > 0) {
+      items.push({
+        id: randomUUID(),
+        label: "Travel fee",
+        amount: Number(appointment.travelFee),
+        catalogId: "travel-fee",
+        referralCategory: "travel_fee",
+      });
+    }
+    return items;
+  }
   const primary = allBookableServices().find(
     (service) => service.id === appointment.serviceId,
   );
   const primaryPrice = primary
-    ? getServicePriceEstimate(primary, weightLbs)?.from
+    ? getServicePriceEstimate(primary, pricedWeight)?.from
     : null;
 
   const primaryAmount = Number(primaryPrice ?? appointment.estimatedTotal ?? 0);
@@ -38,7 +52,7 @@ export function buildDefaultLineItems(
     const addOn = getAddOnService(addOnId);
     const optionName = appointment.addOnOptions[addOnId];
     const estimate = addOn
-      ? getServicePriceEstimate(addOn, weightLbs, optionName)
+      ? getServicePriceEstimate(addOn, pricedWeight, optionName)
       : null;
     const addOnAmount = Number(estimate?.from ?? 0);
     items.push({

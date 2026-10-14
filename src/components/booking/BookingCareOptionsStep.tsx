@@ -15,6 +15,7 @@ import {
   getServiceDisplayName,
 } from "@/lib/service-display";
 import { petMayBenefitFromGentleCare, type PetProfile } from "@/lib/pets";
+import { bookingWeightLbs } from "@/lib/pets/weight";
 import { guestCreativeOptionNotice } from "@/lib/booking-flow";
 import {
   bookingBackLinkClass,
@@ -101,7 +102,9 @@ export function BookingCareOptionsStep({
   const showGentleNotice = senior && petMayBenefitFromGentleCare(pet);
 
   function addOnPriceLabel(addOn: BookableService) {
-    const estimate = getServicePriceEstimate(addOn, pet.weightLbs);
+    const weightLbs = bookingWeightLbs(pet.weightLbs);
+    const estimate =
+      weightLbs == null ? null : getServicePriceEstimate(addOn, weightLbs);
     if (estimate) return `From ${formatPrice(estimate.from)}`;
     return formatServicePriceFrom(addOn);
   }

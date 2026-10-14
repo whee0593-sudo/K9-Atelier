@@ -87,7 +87,7 @@ function petHasContent(pet: PetProfile, notes: string) {
   return Boolean(
     pet.name.trim() ||
       pet.breed.trim() ||
-      pet.weightLbs > 0 ||
+      (pet.weightLbs != null && pet.weightLbs > 0) ||
       pet.dateOfBirth ||
       pet.approximateDateOfBirth ||
       pet.approximateAgeYears ||
@@ -131,7 +131,7 @@ function previewPet(
     id: crypto.randomUUID(),
     name: body.name,
     breed: body.breed,
-    weightLbs: body.weightLbs ?? 0,
+    weightLbs: body.weightLbs,
     dateOfBirth: body.dateOfBirth ?? null,
     approximateAgeYears: body.approximateAgeYears ?? null,
     sex: body.sex ?? null,
@@ -210,7 +210,9 @@ export function CreateCustomerProfileForm({
       }
       if (password !== confirmPassword) return "Passwords do not match.";
     }
-    if (pet.weightLbs > 200) return "Weight must be at most 200 lbs.";
+    if (pet.weightLbs != null && pet.weightLbs > 200) {
+      return "Weight must be at most 200 lbs.";
+    }
     return null;
   }
 

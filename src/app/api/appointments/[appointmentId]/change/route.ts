@@ -111,6 +111,13 @@ export async function POST(
           409,
         );
       }
+      if (result.error === "weight_required") {
+        return appointmentJsonError(
+          "Add this dog's weight before booking. Weight must be greater than 0 and at most 200 lbs.",
+          409,
+          "weightLbs",
+        );
+      }
       if (result.error === "conflict") {
         return appointmentJsonError(
           "This appointment can no longer be changed that way.",

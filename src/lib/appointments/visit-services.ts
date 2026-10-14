@@ -1,5 +1,5 @@
 import { assertVisitScheduleAllowed } from "@/lib/appointments/schedule";
-import { estimateServiceDurationMinutes } from "@/lib/services";
+import { liveServiceDurationMinutes } from "@/lib/pets/weight";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveAppointmentDuration } from "@/lib/visits/duration";
@@ -66,9 +66,9 @@ export async function updateAppointmentVisitServices(input: {
 
   const fields = appointmentFieldsFromVisitLineItems(lineItems);
   const pet = firstRelation<{ weight_lbs?: number | null }>(row.pets);
-  const durationMinutes = estimateServiceDurationMinutes(
+  const durationMinutes = liveServiceDurationMinutes(
     fields.serviceId || (row.service_id as string),
-    pet?.weight_lbs ?? 20,
+    pet?.weight_lbs,
     fields.addOnIds,
   );
   const nextOptions = mergeVisitLineItemsIntoOptions(
@@ -99,7 +99,9 @@ export async function updateAppointmentVisitServices(input: {
         add_on_options: service.addOnOptions,
         travel_fee: service.travelFee,
         estimated_total: service.estimatedTotal,
-        ...(futureRow ? { estimated_duration_minutes: durationMinutes } : {}),
+        ...(futureRow && durationMinutes != null
+          ? { estimated_duration_minutes: durationMinutes }
+          : {}),
       })
       .eq("id", row.id);
     if (saveError) {
@@ -121,7 +123,12 @@ export async function updateAppointmentVisitServices(input: {
       visitId: row.visit_id as string,
       service: {
         ...service,
-        durationMinutes: planned.rewriteSchedule ? durationMinutes : null,
+        durationMinutes: planned.rewriteSchedule
+          ? (durationMinutes ??
+            planned.schedule?.children.find((child) => child.id === row.id)
+              ?.durationMinutes ??
+            null)
+          : null,
       },
       schedule: planned.schedule,
     });
@@ -154,7 +161,7 @@ async function planVisitServiceChange(input: {
   appointmentDate: string;
   status: AppointmentStatus;
   serviceEndedAt: string | null;
-  durationMinutes: number;
+  durationMinutes: number | null;
 }): Promise<
   | {
       ok: true;
@@ -206,11 +213,12 @@ async function planVisitServiceChange(input: {
       status: row.status as AppointmentStatus,
       appointmentDate: row.appointment_date as string,
       serviceEndedAt: (row.service_ended_at as string | null) ?? null,
-      liveEstimateMinutes: estimateServiceDurationMinutes(
-        row.service_id as string,
-        weight?.weight_lbs ?? 20,
-        (row.add_on_ids as string[] | null) ?? [],
-      ),
+      liveEstimateMinutes:
+        liveServiceDurationMinutes(
+          row.service_id as string,
+          weight?.weight_lbs,
+          (row.add_on_ids as string[] | null) ?? [],
+        ) ?? 0,
       today,
     });
     const editing = row.id === input.appointmentId;
@@ -222,9 +230,11 @@ async function planVisitServiceChange(input: {
       visitSequence:
         typeof row.visit_sequence === "number" ? row.visit_sequence : null,
       estimatedDurationMinutes: editing
-        ? input.durationMinutes
+        ? (input.durationMinutes ?? decision.minutes ?? 0)
         : (decision.minutes ?? 0),
-      unknown: editing ? false : decision.unknown,
+      unknown: editing
+        ? input.durationMinutes == null && decision.unknown
+        : decision.unknown,
       timePreference: (row.time_preference ?? null) as
         | "morning" | "afternoon" | null,
     };

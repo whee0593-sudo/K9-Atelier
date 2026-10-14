@@ -18,6 +18,7 @@ import {
   sanitizeLineItems,
 } from "@/lib/charges/line-items";
 import { readStoredVisitLineItems } from "@/lib/charges/visit-line-items";
+import { bookingWeightLbs } from "@/lib/pets/weight";
 import { withCatalogListAmount } from "@/lib/charges/list-amount";
 import { dollarsToCents, sumLineItems } from "@/lib/charges/money";
 import type {
@@ -133,7 +134,8 @@ export async function getCollectContext(
     return { error: "server" };
   }
 
-  const weightLbs = Number(pet?.weight_lbs ?? 0);
+  const weightLbs = bookingWeightLbs(pet?.weight_lbs);
+  const petWeightStatus = weightLbs == null ? "missing" : "known";
   const methods = await listStaffCustomerPaymentMethods(appointment.customerId);
   if ("error" in methods) return { error: methods.error };
 
@@ -214,6 +216,7 @@ export async function getCollectContext(
     context: {
       appointment: appointmentWithTiming,
       petWeightLbs: weightLbs,
+      petWeightStatus,
       lineItems: defaultItems,
       catalog,
       catalogGroups: catalogChargeGroups(weightLbs),
@@ -303,7 +306,7 @@ async function loadVisitCollect(
       | { name?: string | null; weight_lbs?: number | null }[]
       | null;
     const petRow = Array.isArray(pet) ? pet[0] : pet;
-    const weight = Number(petRow?.weight_lbs ?? 0);
+    const weight = bookingWeightLbs(petRow?.weight_lbs);
     const addOnIds = (row.add_on_ids as string[] | null) ?? [];
     const addOnOptions =
       (row.add_on_options as Record<string, string> | null) ?? {};
@@ -315,7 +318,10 @@ async function loadVisitCollect(
         row.service_price == null ? null : Number(row.service_price),
       status: String(row.status ?? ""),
       serviceEndedAt: (row.service_ended_at as string | null) ?? null,
-      addOns: addOnIds.map((addOnId) => {
+      addOns:
+        weight == null
+          ? []
+          : addOnIds.map((addOnId) => {
         const addOn = getAddOnService(addOnId);
         const optionName = addOnOptions[addOnId];
         const estimate = addOn

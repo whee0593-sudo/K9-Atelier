@@ -1,6 +1,6 @@
 import type { AppointmentStatus } from "@/lib/appointments/types";
 import { preferenceFromStart } from "@/lib/booking-schedule";
-import { estimateServiceDurationMinutes } from "@/lib/services";
+import { liveServiceDurationMinutes } from "@/lib/pets/weight";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import { resolveAppointmentDuration } from "@/lib/visits/duration";
@@ -61,11 +61,12 @@ export async function compactVisitChildStarts(
       status: row.status,
       appointmentDate: row.appointment_date,
       serviceEndedAt: row.service_ended_at,
-      liveEstimateMinutes: estimateServiceDurationMinutes(
-        row.service_id,
-        pet?.weight_lbs ?? 20,
-        row.add_on_ids ?? [],
-      ),
+      liveEstimateMinutes:
+        liveServiceDurationMinutes(
+          row.service_id,
+          pet?.weight_lbs,
+          row.add_on_ids ?? [],
+        ) ?? 0,
     });
     return {
       id: row.id,

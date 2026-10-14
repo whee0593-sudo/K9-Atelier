@@ -1,4 +1,4 @@
-import { estimateServiceDurationMinutes } from "@/lib/services";
+import { liveServiceDurationMinutes } from "@/lib/pets/weight";
 import { groupBlocksByDate } from "@/lib/appointments/availability-blocks";
 import { loadAvailabilityBlocks } from "@/lib/appointments/availability-block-store";
 import {
@@ -151,11 +151,12 @@ function visitDurationDecision(row: LoadedAppointment) {
     status: row.status,
     appointmentDate: row.appointment_date,
     serviceEndedAt: row.service_ended_at,
-    liveEstimateMinutes: estimateServiceDurationMinutes(
-      row.service_id,
-      pet?.weight_lbs ?? 20,
-      row.add_on_ids ?? [],
-    ),
+    liveEstimateMinutes:
+      liveServiceDurationMinutes(
+        row.service_id,
+        pet?.weight_lbs,
+        row.add_on_ids ?? [],
+      ) ?? 0,
   });
 }
 

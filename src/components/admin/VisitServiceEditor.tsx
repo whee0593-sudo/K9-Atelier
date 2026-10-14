@@ -38,11 +38,15 @@ export function VisitServiceEditor({
   }
 
   function addCatalogItem(item: CatalogChargeItem) {
+    if (item.suggestedAmount == null) return;
+    const patch = catalogLinePatch(item);
+    if (patch.amount == null) return;
     onChange([
       ...lineItems,
       {
         id: newLineId(),
-        ...catalogLinePatch(item),
+        ...patch,
+        amount: patch.amount,
       },
     ]);
   }
@@ -63,9 +67,12 @@ export function VisitServiceEditor({
                 groups={catalogGroups}
                 selectedId={item.catalogId}
                 selectedLabel={item.label}
-                onSelect={(catalogItem) =>
-                  updateItem(item.id, catalogLinePatch(catalogItem))
-                }
+                onSelect={(catalogItem) => {
+                  if (catalogItem.suggestedAmount == null) return;
+                  const patch = catalogLinePatch(catalogItem);
+                  if (patch.amount == null) return;
+                  updateItem(item.id, { ...patch, amount: patch.amount });
+                }}
               />
             ) : (
               <input
