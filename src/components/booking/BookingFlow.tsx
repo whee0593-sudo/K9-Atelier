@@ -30,6 +30,7 @@ import {
 import { BookingCareOptionsStep } from "@/components/booking/BookingCareOptionsStep";
 import { BookingOwnerStep, type BookingOwnerDetails } from "@/components/booking/BookingOwnerStep";
 import { BookingPaymentStep } from "@/components/booking/BookingPaymentStep";
+import { BookingPriceSummaryStep } from "@/components/booking/BookingPriceSummaryStep";
 import { BookingConfirmStep } from "@/components/booking/BookingConfirmStep";
 import { BookingConfirmationView } from "@/components/booking/BookingReviewStep";
 import { CreativePairingModal } from "@/components/booking/CreativePairingModal";
@@ -119,6 +120,7 @@ export function BookingFlow({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodRecord | null>(
     null,
   );
+  const [acceptedPriceKey, setAcceptedPriceKey] = useState<string | null>(null);
   const [careSlotError, setCareSlotError] = useState<string | null>(null);
   const [reserved, setReserved] = useState(false);
   const [createdAppointment, setCreatedAppointment] =
@@ -163,6 +165,7 @@ export function BookingFlow({
     setSlotStartMinutes(null);
     setOwner(null);
     setPaymentMethod(null);
+    setAcceptedPriceKey(null);
     setShowCreativePairing(false);
     setCareSlotError(null);
   }
@@ -198,6 +201,7 @@ export function BookingFlow({
     );
     setOwner(null);
     setPaymentMethod(null);
+    setAcceptedPriceKey(null);
   }
 
   function handleExperienceContinue(service?: BookableService) {
@@ -312,6 +316,28 @@ export function BookingFlow({
     return true;
   }
 
+  const priceKey =
+    selectedPet && selectedService && travelQuote
+      ? [
+          selectedPet.id,
+          selectedPet.weightLbs,
+          selectedService.id,
+          [...selectedAddOnIds]
+            .sort()
+            .map((id) => `${id}=${addOnOptions[id] ?? ""}`)
+            .join(","),
+          travelQuote.distanceMiles,
+        ].join("|")
+      : "";
+  const priceAccepted = priceKey !== "" && acceptedPriceKey === priceKey;
+
+  useEffect(() => {
+    if (acceptedPriceKey && acceptedPriceKey !== priceKey) {
+      setAcceptedPriceKey(null);
+      setPaymentMethod(null);
+    }
+  }, [acceptedPriceKey, priceKey]);
+
   const currentStep = reserved
     ? 6
     : !selectedPet
@@ -322,7 +348,7 @@ export function BookingFlow({
           ? 3
           : !owner
             ? 4
-            : !paymentMethod
+            : !priceAccepted || !paymentMethod
               ? 5
               : 6;
 
@@ -475,13 +501,29 @@ export function BookingFlow({
         />
       )}
 
-      {currentStep === 5 && (
+      {currentStep === 5 &&
+      !priceAccepted &&
+      selectedPet &&
+      selectedService &&
+      travelQuote ? (
+        <BookingPriceSummaryStep
+          pet={selectedPet}
+          service={selectedService}
+          addOnIds={selectedAddOnIds}
+          addOnOptions={addOnOptions}
+          distanceMiles={travelQuote.distanceMiles}
+          onBack={() => setOwner(null)}
+          onContinue={() => setAcceptedPriceKey(priceKey)}
+        />
+      ) : null}
+
+      {currentStep === 5 && priceAccepted ? (
         <BookingPaymentStep
           initialPaymentMethodId={paymentMethod?.id ?? null}
-          onBack={() => setOwner(null)}
+          onBack={() => setAcceptedPriceKey(null)}
           onComplete={setPaymentMethod}
         />
-      )}
+      ) : null}
 
       {currentStep === 6 &&
         selectedPet &&

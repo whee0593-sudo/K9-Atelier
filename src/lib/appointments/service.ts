@@ -30,11 +30,12 @@ import {
   sendAppointmentStatusEmails,
 } from "@/lib/email/appointment-mails";
 import { getCustomerPaymentMethod } from "@/lib/payments/service";
-import { estimateServiceDurationMinutes } from "@/lib/services";
 import {
-  servicePriceFromEstimatedTotal,
-  visitArrivalFields,
-} from "@/lib/visits/visit";
+  evaluateSubmittedBookingPrice,
+  type BookingPriceQuote,
+} from "@/lib/booking-price";
+import { estimateServiceDurationMinutes } from "@/lib/services";
+import { snapshotServicePrice, visitArrivalFields } from "@/lib/visits/visit";
 import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
 import {
   assignArrivalWindow,
@@ -106,7 +107,11 @@ export async function createAppointment(
         | "slot_unavailable"
         | "payment_required"
         | "weight_required"
+        | "invalid_selection"
+        | "price_changed"
         | "server";
+      message?: string;
+      quote?: BookingPriceQuote;
     }
 > {
   const user = await requireAuthenticatedUser();
@@ -147,6 +152,28 @@ export async function createAppointment(
     input.paymentMethodId,
   );
   if (!paymentMethod) return { error: "payment_required" };
+
+  const priced = evaluateSubmittedBookingPrice(
+    {
+      serviceId: input.serviceId,
+      addOnIds: input.addOnIds,
+      addOnOptions: input.addOnOptions,
+      distanceMiles: input.travelDistanceMiles,
+      estimatedTotal: input.estimatedTotal,
+    },
+    bookedWeight,
+  );
+  if (!priced.ok) {
+    if (priced.code === "price_changed" && priced.quote) {
+      return {
+        error: "price_changed",
+        message: priced.message,
+        quote: priced.quote,
+      };
+    }
+    return { error: "invalid_selection", message: priced.message };
+  }
+  const quote = priced.quote;
 
   const durationMinutes = estimateServiceDurationMinutes(
     input.serviceId,
@@ -223,10 +250,7 @@ export async function createAppointment(
   }
 
   const status = "confirmed";
-  const servicePrice = servicePriceFromEstimatedTotal(
-    input.estimatedTotal,
-    input.travelFee,
-  );
+  const servicePrice = snapshotServicePrice(quote.estimatedServicePrice);
   const arrival = visitArrivalFields(schedule.scheduledStart);
 
   const { data: visitRow, error: visitError } = await supabase
@@ -245,8 +269,8 @@ export async function createAppointment(
       address_zip: input.address.zip,
       address_lat: input.addressLat,
       address_lon: input.addressLon,
-      travel_distance_miles: input.travelDistanceMiles,
-      travel_fee: input.travelFee,
+      travel_distance_miles: quote.travelDistanceMiles,
+      travel_fee: quote.travelFee,
     })
     .select("id")
     .single();
@@ -263,15 +287,15 @@ export async function createAppointment(
       visit_id: visitRow.id,
       pet_id: input.petId,
       service_id: input.serviceId,
-      service_name: input.serviceName,
+      service_name: quote.serviceName,
       add_on_ids: input.addOnIds,
       add_on_options: input.addOnOptions,
       address_street: input.address.street,
       address_city: input.address.city,
       address_state: input.address.state,
       address_zip: input.address.zip,
-      travel_distance_miles: input.travelDistanceMiles,
-      travel_fee: input.travelFee,
+      travel_distance_miles: quote.travelDistanceMiles,
+      travel_fee: quote.travelFee,
       service_price: servicePrice,
       estimated_duration_minutes: durationMinutes,
       visit_sequence: 1,
@@ -282,7 +306,7 @@ export async function createAppointment(
       address_lat: input.addressLat,
       address_lon: input.addressLon,
       timezone: business.booking.timezone,
-      estimated_total: input.estimatedTotal,
+      estimated_total: quote.estimatedTotal,
       new_client_deposit: 0,
       payment_method_id: input.paymentMethodId,
       vaccination_status_at_booking: vaccinationStatus,

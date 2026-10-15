@@ -26,7 +26,14 @@ export async function POST(request: Request) {
     const result = await createAppointment(input);
 
     if ("error" in result) {
-      return mapAppointmentServiceError(result.error);
+      return mapAppointmentServiceError(
+        result.error,
+        result.error === "price_changed"
+          ? { message: result.message, quote: result.quote }
+          : result.error === "invalid_selection"
+            ? { message: result.message }
+            : undefined,
+      );
     }
 
     return NextResponse.json({ appointment: result.appointment }, { status: 201 });

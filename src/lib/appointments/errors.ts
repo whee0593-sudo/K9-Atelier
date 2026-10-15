@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { AppointmentValidationError } from "@/lib/appointments/validation";
+import type { BookingPriceQuote } from "@/lib/booking-price";
+import { PRICE_CHANGED_MESSAGE } from "@/lib/booking-price";
 import { WEIGHT_REQUIRED_MESSAGE } from "@/lib/pets/weight";
 
 export function appointmentJsonError(
@@ -30,7 +32,10 @@ export function mapAppointmentServiceError(
     | "slot_unavailable"
     | "payment_required"
     | "weight_required"
+    | "invalid_selection"
+    | "price_changed"
     | "server",
+  extra?: { message?: string; quote?: BookingPriceQuote },
 ) {
   switch (error) {
     case "unauthenticated":
@@ -58,6 +63,22 @@ export function mapAppointmentServiceError(
         WEIGHT_REQUIRED_MESSAGE,
         409,
         "weightLbs",
+      );
+    case "invalid_selection":
+      return appointmentJsonError(
+        extra?.message ?? "That service cannot be booked.",
+        400,
+        "serviceId",
+      );
+    case "price_changed":
+      return NextResponse.json(
+        {
+          error: extra?.message ?? PRICE_CHANGED_MESSAGE,
+          field: "estimatedTotal",
+          code: "price_changed",
+          quote: extra?.quote ?? null,
+        },
+        { status: 409 },
       );
     default:
       return appointmentJsonError("Something went wrong. Please try again.", 500);

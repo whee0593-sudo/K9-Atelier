@@ -1,3 +1,4 @@
+import { guestBookingSelectionError, bookingMoney } from "@/lib/booking-price";
 import {
   CREATIVE_ACCENT_COLORING_ID,
   CUSTOM_CREATIVE_DESIGN_GUEST_MESSAGE,
@@ -166,7 +167,7 @@ export function validateCreateAppointmentInput(
     "travelDistanceMiles",
     "Travel distance",
   );
-  const submittedTravelFee = readNumber(record, "travelFee", "Travel fee");
+  readNumber(record, "travelFee", "Travel fee");
   const travelQuote = calculateTravelFee(submittedDistanceMiles);
   if (!travelQuote.withinServiceArea) {
     throw new AppointmentValidationError(
@@ -186,9 +187,22 @@ export function validateCreateAppointmentInput(
     );
   }
 
+  const selectionError = guestBookingSelectionError({
+    serviceId,
+    addOnIds,
+    addOnOptions,
+  });
+  if (selectionError) {
+    throw new AppointmentValidationError(
+      selectionError.message,
+      selectionError.code === "invalid_addon" ? "addOnIds" : "serviceId",
+    );
+  }
+
   const submittedTotal = readNumber(record, "estimatedTotal", "Estimated total");
-  const estimatedTotal =
-    Math.round((submittedTotal - submittedTravelFee + travelFee) * 100) / 100;
+  // The confirmed total is checked against the catalog after the pet weight
+  // is loaded. Do not rebuild it from the browser's service price.
+  const estimatedTotal = bookingMoney(submittedTotal);
   const customerFirstName = readString(
     record,
     "customerFirstName",

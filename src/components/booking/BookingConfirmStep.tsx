@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   bookingBackLinkClass,
   bookingFieldClass,
@@ -9,19 +9,23 @@ import {
   bookingNoticeClass,
   bookingPrimaryBtnClass,
 } from "@/components/booking/booking-ui";
-import { formatPrice } from "@/lib/business";
+import { BookingPriceLines } from "@/components/booking/BookingPriceLines";
 import {
-  formatServicePrice,
-  getAddOnService,
-  getServicePriceEstimate,
-  type BookableService,
-} from "@/lib/services";
-import { getServiceDisplayName } from "@/lib/service-display";
-import { bookingWeightLbs } from "@/lib/pets/weight";
+  BOOKING_PRICE_DISCLAIMER,
+  createSubmitGuard,
+  formatBookingDate,
+  quoteGuestBooking,
+  type BookingPriceQuote,
+} from "@/lib/booking-price";
+import type { BookableService } from "@/lib/services";
 import { formatServiceAddress, type ServiceAddress, type TravelQuote } from "@/lib/travel";
 import type { PetProfile } from "@/lib/pets";
+import { bookingWeightLbs } from "@/lib/pets/weight";
 import type { AppointmentRecord } from "@/lib/appointments/types";
-import { createCustomerAppointment } from "@/lib/appointments/client";
+import {
+  AppointmentClientError,
+  createCustomerAppointment,
+} from "@/lib/appointments/client";
 import { createCustomerPet } from "@/lib/pets/client";
 import { mapPetProfileToWriteInput } from "@/lib/pets/map";
 import { isPersistedPetId } from "@/lib/booking-flow";
@@ -48,23 +52,6 @@ type Props = {
   onReserved: (appointment: AppointmentRecord, pet: PetProfile) => void;
 };
 
-function estimateAddOnTotal(
-  addOnIds: string[],
-  addOnOptions: Record<string, string>,
-  weightLbs: number,
-) {
-  return addOnIds.reduce((sum, id) => {
-    const addOn = getAddOnService(id);
-    if (!addOn) return sum;
-    const estimate = getServicePriceEstimate(
-      addOn,
-      weightLbs,
-      addOnOptions[id],
-    );
-    return sum + (estimate?.from ?? 0);
-  }, 0);
-}
-
 export function BookingConfirmStep({
   pet,
   service,
@@ -83,21 +70,38 @@ export function BookingConfirmStep({
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [serverQuote, setServerQuote] = useState<BookingPriceQuote | null>(null);
+  const submitGuard = useRef(createSubmitGuard());
   const [referralCode, setReferralCode] = useState(initialReferralCode);
   const [referralStatus, setReferralStatus] = useState<"idle" | "valid" | "invalid">(
     "idle",
   );
 
   const weightLbs = bookingWeightLbs(pet.weightLbs);
-  const serviceEstimate =
-    weightLbs == null ? null : getServicePriceEstimate(service, weightLbs);
-  const addOnTotal =
+  const localQuote =
     weightLbs == null
-      ? 0
-      : estimateAddOnTotal(addOnIds, addOnOptions, weightLbs);
-  const serviceFrom = serviceEstimate?.from ?? 0;
-  const estimatedTotal = serviceFrom + addOnTotal + travelQuote.fee;
-  const displayServiceName = getServiceDisplayName(service.id, service.name);
+      ? null
+      : quoteGuestBooking({
+          serviceId: service.id,
+          weightLbs,
+          addOnIds,
+          addOnOptions,
+          distanceMiles: travelQuote.distanceMiles,
+        });
+  const quoted = serverQuote ? { ok: true as const, quote: serverQuote } : localQuote;
+  const quoteKey = [
+    service.id,
+    weightLbs ?? "",
+    travelQuote.distanceMiles,
+    [...addOnIds]
+      .sort()
+      .map((id) => `${id}:${addOnOptions[id] ?? ""}`)
+      .join(","),
+  ].join("|");
+
+  useEffect(() => {
+    setServerQuote(null);
+  }, [quoteKey]);
 
   useEffect(() => {
     const code = initialReferralCode.trim();
@@ -121,7 +125,9 @@ export function BookingConfirmStep({
   }, [initialReferralCode]);
 
   async function handleConfirm() {
-    if (travelQuote.lat == null || travelQuote.lon == null) {
+    if (!submitGuard.current.start()) return;
+    if (travelQuote.lat == null || travelQuote.lon == null || !quoted?.ok) {
+      submitGuard.current.end();
       setError("Please go back and confirm your address and appointment date.");
       return;
     }
@@ -137,18 +143,18 @@ export function BookingConfirmStep({
       const appointment = await createCustomerAppointment({
         petId: bookingPet.id,
         serviceId: service.id,
-        serviceName: displayServiceName,
+        serviceName: quoted.quote.serviceName,
         addOnIds,
         addOnOptions,
         address,
-        travelDistanceMiles: travelQuote.distanceMiles,
-        travelFee: travelQuote.fee,
+        travelDistanceMiles: quoted.quote.travelDistanceMiles,
+        travelFee: quoted.quote.travelFee,
         appointmentDate,
         appointmentTime,
         slotStartMinutes,
         addressLat: travelQuote.lat,
         addressLon: travelQuote.lon,
-        estimatedTotal,
+        estimatedTotal: quoted.quote.estimatedTotal,
         paymentMethodId: paymentMethod.id,
         customerPhone: owner.phone,
         customerFirstName: owner.firstName,
@@ -160,12 +166,20 @@ export function BookingConfirmStep({
       });
       onReserved(appointment, bookingPet);
     } catch (submitError) {
+      if (
+        submitError instanceof AppointmentClientError &&
+        submitError.code === "price_changed" &&
+        submitError.quote
+      ) {
+        setServerQuote(submitError.quote);
+      }
       setError(
         submitError instanceof Error
           ? submitError.message
           : "Could not confirm your appointment. Please try again.",
       );
     } finally {
+      submitGuard.current.end();
       setLoading(false);
     }
   }
@@ -189,7 +203,18 @@ export function BookingConfirmStep({
       <div className={`${bookingNoticeClass} mt-8 space-y-6`}>
         <div>
           <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
-            Dog
+            Customer
+          </p>
+          <p className="font-body mt-3 text-sm text-ink">
+            {owner.firstName} {owner.lastName}
+          </p>
+          <p className="font-body mt-1 text-sm text-taupe">{owner.email}</p>
+          <p className="font-body mt-1 text-sm text-taupe">{owner.phone}</p>
+        </div>
+
+        <div className="border-t border-gray-line/70 pt-6">
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
+            Pet
           </p>
           <p className="font-display mt-2 text-2xl text-ink">{pet.name}</p>
           <p className="font-body mt-1 text-sm text-ink">
@@ -199,11 +224,15 @@ export function BookingConfirmStep({
 
         <div className="border-t border-gray-line/70 pt-6">
           <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
-            Date &amp; Time
+            Appointment Date
           </p>
           <p className="font-body mt-3 text-sm text-ink">
-            {appointmentDate} · {appointmentTime}
+            {formatBookingDate(appointmentDate)}
           </p>
+          <p className="font-body mt-4 text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+            Arrival Window
+          </p>
+          <p className="font-body mt-3 text-sm text-ink">{appointmentTime}</p>
           <p className="font-body mt-2 text-xs text-taupe">
             Estimated arrival for our mobile route. Timing may vary due to weather
             or traffic. We will text you when we are on the way.
@@ -213,36 +242,15 @@ export function BookingConfirmStep({
           </p>
         </div>
 
-        <div className="border-t border-gray-line/70 pt-6">
-          <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
-            Care
+        {quoted?.ok ? (
+          <div className="border-t border-gray-line/70 pt-6">
+            <BookingPriceLines quote={quoted.quote} />
+          </div>
+        ) : (
+          <p className="font-body border-t border-gray-line/70 pt-6 text-sm text-red-800" role="alert">
+            {quoted?.message ?? "Add this dog's weight before we can price the visit."}
           </p>
-          <p className="font-body mt-3 text-sm text-ink">{displayServiceName}</p>
-          {addOnIds.length > 0 ? (
-            <p className="font-body mt-2 text-sm text-taupe">
-              {addOnIds
-                .map((id) => {
-                  const addOn = getAddOnService(id);
-                  return addOn
-                    ? getServiceDisplayName(addOn.id, addOn.name)
-                    : null;
-                })
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="border-t border-gray-line/70 pt-6">
-          <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
-            Owner
-          </p>
-          <p className="font-body mt-3 text-sm text-ink">
-            {owner.firstName} {owner.lastName}
-          </p>
-          <p className="font-body mt-1 text-sm text-taupe">{owner.email}</p>
-          <p className="font-body mt-1 text-sm text-taupe">{owner.phone}</p>
-        </div>
+        )}
 
         <div className="border-t border-gray-line/70 pt-6">
           <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
@@ -255,44 +263,11 @@ export function BookingConfirmStep({
             No charge now. Payment is settled after the appointment.
           </p>
         </div>
-
-        <div className="space-y-3 border-t border-gray-line/70 pt-6 text-sm">
-          <div className="flex justify-between gap-4">
-            <span className="text-taupe">Service</span>
-            <span className="text-ink">From {formatPrice(serviceFrom)}</span>
-          </div>
-          {addOnIds.map((id) => {
-            const addOn = getAddOnService(id);
-            if (!addOn) return null;
-            return (
-              <div key={id} className="flex justify-between gap-4">
-                <span className="text-taupe">
-                  {getServiceDisplayName(addOn.id, addOn.name)}
-                </span>
-                <span className="text-ink">
-                  {weightLbs == null
-                    ? ""
-                    : formatServicePrice(addOn, weightLbs, addOnOptions[id])}
-                </span>
-              </div>
-            );
-          })}
-          <div className="flex justify-between gap-4">
-            <span className="text-taupe">Travel</span>
-            <span className="text-ink">
-              {travelQuote.fee === 0
-                ? "Complimentary"
-                : `+${formatPrice(travelQuote.fee)}`}
-            </span>
-          </div>
-          <div className="flex justify-between gap-4 pt-2">
-            <span className="font-medium text-ink">Estimated total</span>
-            <span className="font-display text-2xl text-ink">
-              From {formatPrice(estimatedTotal)}
-            </span>
-          </div>
-        </div>
       </div>
+
+      <p className="font-body mt-6 text-sm leading-relaxed text-taupe">
+        {BOOKING_PRICE_DISCLAIMER}
+      </p>
 
       <div className={`${bookingNoticeClass} mt-6 space-y-4`}>
         <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
@@ -335,7 +310,7 @@ export function BookingConfirmStep({
 
       <button
         type="button"
-        disabled={loading}
+        disabled={loading || !quoted?.ok}
         onClick={() => void handleConfirm()}
         className={`${bookingPrimaryBtnClass} mt-8`}
       >
