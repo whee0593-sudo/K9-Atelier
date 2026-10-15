@@ -27,7 +27,7 @@ export const FULL_GROOM_ESTIMATE_NOTE =
   "Full Groom is estimated at the starting price for this weight, using the lowest coat type. Coat type is confirmed with you before the visit.";
 
 export const HAND_STRIPPING_ESTIMATE_NOTE =
-  "Hand Stripping is estimated at the hourly rate. This total includes that rate once.";
+  "Hand Stripping is shown from the hourly rate. That rate is included once in this estimate and is not a fixed final price.";
 
 const MONTHS = [
   "January",
@@ -264,11 +264,12 @@ export function quoteGuestBooking(input: {
   const estimatedTotal = bookingMoney(estimatedServicePrice + travelFee);
   const pricingBasis: BookingPricingBasis =
     service.pricingType === "hourly" ? "hourly" : "starting";
+  const hourlyLabel = `From ${formatPrice(servicePrice)}/hour`;
   const servicePriceLabel =
     service.pricingType === "free"
       ? "Complimentary"
       : pricingBasis === "hourly"
-        ? `${formatPrice(servicePrice)}/hr`
+        ? hourlyLabel
         : `From ${formatPrice(servicePrice)}`;
   const totalLabel =
     service.pricingType === "free"
@@ -276,7 +277,9 @@ export function quoteGuestBooking(input: {
         ? "Complimentary"
         : formatPrice(estimatedTotal)
       : pricingBasis === "hourly"
-        ? formatPrice(estimatedTotal)
+        ? travelFee === 0 && addOnPrice === 0
+          ? hourlyLabel
+          : `From ${formatPrice(estimatedTotal)}`
         : `From ${formatPrice(estimatedTotal)}`;
 
   return {
@@ -340,6 +343,22 @@ export function evaluateSubmittedBookingPrice(
     };
   }
   return quoted;
+}
+
+/** Hand Stripping copy for confirmation email. Other services return null. */
+export function confirmationEstimateLabel(
+  serviceId: string,
+  estimatedTotal: number,
+  travelFee: number,
+) {
+  if (serviceId !== "hand-stripping") return null;
+  const hourly = allBookableServices().find((item) => item.id === serviceId)
+    ?.hourlyRate;
+  if (hourly == null) return null;
+  if (travelFee === 0 && estimatedTotal === hourly) {
+    return `From ${formatPrice(hourly)}/hour`;
+  }
+  return `From ${formatPrice(estimatedTotal)} (from ${formatPrice(hourly)}/hour)`;
 }
 
 /** One in-flight confirm. A second click while the first is running does nothing. */

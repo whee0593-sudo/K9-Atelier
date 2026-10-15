@@ -46,6 +46,14 @@ type Props = {
   onBack: () => void;
 };
 
+export function bookingCarePriceLabel(
+  service: BookableService,
+  amount: number,
+) {
+  const price = `From ${formatPrice(amount)}`;
+  return service.pricingType === "hourly" ? `${price}/hour` : price;
+}
+
 function CareServiceCard({
   pet,
   service,
@@ -82,7 +90,7 @@ function CareServiceCard({
       {estimate && (
         <>
           <p className="font-display mt-2 text-2xl text-ink">
-            From {formatPrice(estimate.from)}
+            {bookingCarePriceLabel(service, estimate.from)}
           </p>
           {estimate.durationLabel && (
             <p className="font-body mt-2 text-sm text-taupe">

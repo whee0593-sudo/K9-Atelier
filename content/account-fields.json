@@ -156,7 +156,7 @@
           "label": "Breed",
           "type": "text",
           "required": true,
-          "placeholder": "Shih Tzu"
+          "placeholder": "e.g., Shih Tzu"
         },
         {
           "id": "weightLbs",

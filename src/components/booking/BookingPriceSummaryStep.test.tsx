@@ -109,9 +109,9 @@ describe("booking price summary", () => {
         onContinue={() => {}}
       />,
     );
-    assert.match(html, /\$160\/hr/);
+    assert.match(html, /From \$160\/hour/);
     assert.match(html, new RegExp(HAND_STRIPPING_ESTIMATE_NOTE));
-    assert.match(html, />\$160</);
+    assert.equal(html.includes(">$160<"), false);
   });
 });
 
@@ -166,6 +166,7 @@ describe("booking confirm step", () => {
         }}
         onBack={() => {}}
         onReserved={() => {}}
+        idempotencyKey="33333333-3333-4333-8333-333333333333"
       />,
     );
   }
@@ -210,7 +211,7 @@ describe("booking confirm step", () => {
     const stripping = confirm("hand-stripping", 50);
     assert.match(groom, /From \$140/);
     assert.match(groom, new RegExp(FULL_GROOM_ESTIMATE_NOTE));
-    assert.match(stripping, /\$160\/hr/);
+    assert.match(stripping, /From \$160\/hour/);
     assert.match(stripping, new RegExp(HAND_STRIPPING_ESTIMATE_NOTE));
   });
 });

@@ -2,8 +2,12 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { BookingExperienceStep } from "@/components/booking/BookingExperienceStep";
+import {
+  BookingExperienceStep,
+  bookingCarePriceLabel,
+} from "@/components/booking/BookingExperienceStep";
 import { createDraftBookingPet } from "@/lib/booking-flow";
+import { allBookableServices } from "@/lib/services";
 
 describe("BookingExperienceStep", () => {
   it("shows care categories with a plus, not the individual services", () => {
@@ -48,5 +52,18 @@ describe("BookingExperienceStep", () => {
     assert.match(html, /The Signature Bath selected/);
     assert.match(html, /Continue/);
     assert.equal(html.includes("From $90"), false);
+  });
+
+  it("labels hand stripping as an hourly starting rate", () => {
+    const stripping = allBookableServices().find(
+      (service) => service.id === "hand-stripping",
+    );
+    const bath = allBookableServices().find(
+      (service) => service.id === "signature-bath-care",
+    );
+    assert.ok(stripping);
+    assert.ok(bath);
+    assert.equal(bookingCarePriceLabel(stripping, 160), "From $160/hour");
+    assert.equal(bookingCarePriceLabel(bath, 90), "From $90");
   });
 });

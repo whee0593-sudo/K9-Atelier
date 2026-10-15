@@ -135,7 +135,7 @@ describe("calculateTravelFee", () => {
   it("is the only travel-fee formula used by booking entries", () => {
     const callers = [
       "src/app/api/travel-fee/route.ts",
-      "src/lib/appointments/validation.ts",
+      "src/lib/booking-distance.ts",
       "src/lib/staff/create-customer-booking.ts",
       "src/lib/profiles/staff-addresses.ts",
     ];
@@ -143,6 +143,11 @@ describe("calculateTravelFee", () => {
       const source = readFileSync(new URL(`../../${file}`, import.meta.url), "utf8");
       assert.match(source, /calculateTravelFee\(/);
     }
+    const validation = readFileSync(
+      new URL("./appointments/validation.ts", import.meta.url),
+      "utf8",
+    );
+    assert.equal(validation.includes("calculateTravelFee("), false);
 
     const calculator = readFileSync(new URL("./travel.ts", import.meta.url), "utf8");
     assert.equal(calculator.includes("FIRST_CHARGE_PER_MILE"), false);

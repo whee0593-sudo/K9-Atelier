@@ -5,7 +5,6 @@ import {
   isCustomCreativeDesignOption,
   isCustomCreativeDesignSelection,
 } from "@/lib/services";
-import { calculateTravelFee } from "@/lib/travel";
 import type { AppointmentWriteInput } from "@/lib/appointments/types";
 import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
 import {
@@ -162,21 +161,15 @@ export function validateCreateAppointmentInput(
         )
       : {};
 
-  const submittedDistanceMiles = readNumber(
+  // The browser still sends these numbers. They are not the service-area
+  // decision and they are not stored. createAppointment measures the address
+  // and prices the visit from that distance.
+  const travelDistanceMiles = readNumber(
     record,
     "travelDistanceMiles",
     "Travel distance",
   );
-  readNumber(record, "travelFee", "Travel fee");
-  const travelQuote = calculateTravelFee(submittedDistanceMiles);
-  if (!travelQuote.withinServiceArea) {
-    throw new AppointmentValidationError(
-      "Address is outside the service area.",
-      "address",
-    );
-  }
-  const travelDistanceMiles = travelQuote.distanceMiles;
-  const travelFee = travelQuote.fee;
+  const travelFee = readNumber(record, "travelFee", "Travel fee");
   if (
     isCustomCreativeDesignSelection(serviceId, addOnOptions[serviceId]) ||
     isCustomCreativeDesignOption(addOnOptions[CREATIVE_ACCENT_COLORING_ID])
@@ -201,8 +194,21 @@ export function validateCreateAppointmentInput(
 
   const submittedTotal = readNumber(record, "estimatedTotal", "Estimated total");
   // The confirmed total is checked against the catalog after the pet weight
-  // is loaded. Do not rebuild it from the browser's service price.
+  // and the measured driving distance are loaded. Do not rebuild it from the
+  // browser's service price or travel fee.
   const estimatedTotal = bookingMoney(submittedTotal);
+  const idempotencyKey = readString(
+    record,
+    "idempotencyKey",
+    "Confirmation",
+    80,
+  );
+  if (!UUID_PATTERN.test(idempotencyKey)) {
+    throw new AppointmentValidationError(
+      "Please review this appointment and confirm again.",
+      "idempotencyKey",
+    );
+  }
   const customerFirstName = readString(
     record,
     "customerFirstName",
@@ -262,6 +268,7 @@ export function validateCreateAppointmentInput(
     customerPhone,
     customerFirstName,
     customerLastName,
+    idempotencyKey,
     referralCode:
       typeof record.referralCode === "string"
         ? record.referralCode.trim()

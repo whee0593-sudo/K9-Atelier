@@ -24,6 +24,7 @@ import {
   type BookingConfirmationDetails,
 } from "@/lib/notifications";
 import { siteUrl } from "@/lib/email/resend";
+import { confirmationEstimateLabel } from "@/lib/booking-price";
 import { allBookableServices } from "@/lib/services";
 
 type CustomerContact = {
@@ -81,9 +82,13 @@ function confirmedAppointmentDetailRows(
     {
       label: "Estimated total",
       value:
-        appointment.estimatedTotal != null
-          ? formatPrice(appointment.estimatedTotal)
-          : "—",
+        appointment.estimatedTotal == null
+          ? "—"
+          : confirmationEstimateLabel(
+              appointment.serviceId,
+              appointment.estimatedTotal,
+              appointment.travelFee,
+            ) ?? formatPrice(appointment.estimatedTotal),
     },
   ];
 }
@@ -111,7 +116,14 @@ export function appointmentDetailRows(
   ];
 
   if (appointment.estimatedTotal != null) {
-    rows.push(["Estimated Total", `From ${formatPrice(appointment.estimatedTotal)}`]);
+    rows.push([
+      "Estimated Total",
+      confirmationEstimateLabel(
+        appointment.serviceId,
+        appointment.estimatedTotal,
+        appointment.travelFee,
+      ) ?? `From ${formatPrice(appointment.estimatedTotal)}`,
+    ]);
   }
 
   if (appointment.vaccinationStatusAtBooking === "needs_review") {
@@ -140,7 +152,11 @@ export function bookingDetailsFromAppointment(
     addressLabel: formatAppointmentAddress(appointment),
     priceLabel:
       appointment.estimatedTotal != null
-        ? formatPrice(appointment.estimatedTotal)
+        ? confirmationEstimateLabel(
+            appointment.serviceId,
+            appointment.estimatedTotal,
+            appointment.travelFee,
+          ) ?? formatPrice(appointment.estimatedTotal)
         : undefined,
     durationLabel: appointmentDurationLabel(appointment),
     isNewClient: false,
@@ -179,7 +195,11 @@ export function buildStaffNewAppointmentEmail(
   }`;
   const totalLabel =
     appointment.estimatedTotal != null
-      ? formatPrice(appointment.estimatedTotal)
+      ? confirmationEstimateLabel(
+          appointment.serviceId,
+          appointment.estimatedTotal,
+          appointment.travelFee,
+        ) ?? formatPrice(appointment.estimatedTotal)
       : "—";
 
   const rows: StaffNotificationRow[] = [
@@ -254,9 +274,13 @@ function customerAppointmentDetailRows(
     {
       label: "Estimated total",
       value:
-        appointment.estimatedTotal != null
-          ? formatPrice(appointment.estimatedTotal)
-          : "—",
+        appointment.estimatedTotal == null
+          ? "—"
+          : confirmationEstimateLabel(
+              appointment.serviceId,
+              appointment.estimatedTotal,
+              appointment.travelFee,
+            ) ?? formatPrice(appointment.estimatedTotal),
     },
   ];
 }
