@@ -34,6 +34,8 @@ export function mapAppointmentServiceError(
     | "weight_required"
     | "invalid_selection"
     | "price_changed"
+    | "address_unverified"
+    | "idempotency_mismatch"
     | "server",
   extra?: { message?: string; quote?: BookingPriceQuote },
 ) {
@@ -77,6 +79,26 @@ export function mapAppointmentServiceError(
           field: "estimatedTotal",
           code: "price_changed",
           quote: extra?.quote ?? null,
+        },
+        { status: 409 },
+      );
+    case "address_unverified":
+      return NextResponse.json(
+        {
+          error:
+            extra?.message ??
+            "We could not verify that address. Please check it and try again.",
+          field: "address",
+          code: "address_unverified",
+        },
+        { status: 422 },
+      );
+    case "idempotency_mismatch":
+      return NextResponse.json(
+        {
+          error:
+            "This confirmation does not match the appointment you started. Review the details and confirm again.",
+          code: "idempotency_mismatch",
         },
         { status: 409 },
       );

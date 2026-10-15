@@ -14,6 +14,7 @@ import {
   createAuthenticatedSupabaseClient,
   requireAuthenticatedUser,
 } from "@/lib/pets/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
 import { mapPetRowToRecord } from "@/lib/pets/map";
 import { PET_SELECT, type PetRow } from "@/lib/pets/types";
@@ -30,10 +31,15 @@ import {
   sendAppointmentStatusEmails,
 } from "@/lib/email/appointment-mails";
 import { getCustomerPaymentMethod } from "@/lib/payments/service";
+import { resolveGuestDrivingQuote } from "@/lib/booking-distance";
 import {
   evaluateSubmittedBookingPrice,
   type BookingPriceQuote,
 } from "@/lib/booking-price";
+import {
+  guestBookingIntentHash,
+  insertGuestBooking,
+} from "@/lib/appointments/guest-booking";
 import { estimateServiceDurationMinutes } from "@/lib/services";
 import { snapshotServicePrice, visitArrivalFields } from "@/lib/visits/visit";
 import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
@@ -109,6 +115,8 @@ export async function createAppointment(
         | "weight_required"
         | "invalid_selection"
         | "price_changed"
+        | "address_unverified"
+        | "idempotency_mismatch"
         | "server";
       message?: string;
       quote?: BookingPriceQuote;
@@ -153,12 +161,20 @@ export async function createAppointment(
   );
   if (!paymentMethod) return { error: "payment_required" };
 
+  const measured = await resolveGuestDrivingQuote(input.address);
+  if (!measured.ok) {
+    if (measured.code === "outside_area") {
+      return { error: "invalid_selection", message: measured.message };
+    }
+    return { error: "address_unverified", message: measured.message };
+  }
+
   const priced = evaluateSubmittedBookingPrice(
     {
       serviceId: input.serviceId,
       addOnIds: input.addOnIds,
       addOnOptions: input.addOnOptions,
-      distanceMiles: input.travelDistanceMiles,
+      distanceMiles: measured.distanceMiles,
       estimatedTotal: input.estimatedTotal,
     },
     bookedWeight,
@@ -180,7 +196,7 @@ export async function createAppointment(
     bookedWeight,
     input.addOnIds,
   );
-  const point = { lat: input.addressLat, lon: input.addressLon };
+  const point = measured.point;
   const base = await getBaseGeoPoint();
   const assignment = base
     ? await assignArrivalWindow({
@@ -252,93 +268,96 @@ export async function createAppointment(
   const status = "confirmed";
   const servicePrice = snapshotServicePrice(quote.estimatedServicePrice);
   const arrival = visitArrivalFields(schedule.scheduledStart);
-
-  const { data: visitRow, error: visitError } = await supabase
-    .from("visits")
-    .insert({
-      customer_id: user.id,
-      service_date: input.appointmentDate,
-      scheduled_start: arrival.scheduledStart,
-      appointment_time: arrival.appointmentTime,
-      time_preference: schedule.timePreference,
-      timezone: business.booking.timezone,
-      status,
-      address_street: input.address.street,
-      address_city: input.address.city,
-      address_state: input.address.state,
-      address_zip: input.address.zip,
-      address_lat: input.addressLat,
-      address_lon: input.addressLon,
-      travel_distance_miles: quote.travelDistanceMiles,
-      travel_fee: quote.travelFee,
-    })
-    .select("id")
-    .single();
-
-  if (visitError || !visitRow) {
-    console.error("createAppointment visit insert failed:", visitError?.message);
-    return { error: "server" };
-  }
+  const payloadHash = guestBookingIntentHash({
+    petId: input.petId,
+    serviceId: input.serviceId,
+    addOnIds: input.addOnIds,
+    addOnOptions: input.addOnOptions,
+    address: input.address,
+    appointmentDate: input.appointmentDate,
+    slotStartMinutes: input.slotStartMinutes,
+    paymentMethodId: input.paymentMethodId,
+  });
+  const admin = createAdminClient();
+  const saved = await insertGuestBooking(
+    {
+      rpc: (fn, args) =>
+        admin.rpc(fn, args) as PromiseLike<{
+          data: unknown;
+          error: { code?: string; message?: string } | null;
+        }>,
+    },
+    {
+      idempotencyKey: input.idempotencyKey,
+      payloadHash,
+      visit: {
+        customer_id: user.id,
+        service_date: input.appointmentDate,
+        scheduled_start: arrival.scheduledStart,
+        appointment_time: arrival.appointmentTime,
+        time_preference: schedule.timePreference,
+        timezone: business.booking.timezone,
+        status,
+        address_street: input.address.street,
+        address_city: input.address.city,
+        address_state: input.address.state,
+        address_zip: input.address.zip,
+        address_lat: point.lat,
+        address_lon: point.lon,
+        travel_distance_miles: quote.travelDistanceMiles,
+        travel_fee: quote.travelFee,
+      },
+      appointment: {
+        customer_id: user.id,
+        pet_id: input.petId,
+        service_id: input.serviceId,
+        service_name: quote.serviceName,
+        add_on_ids: input.addOnIds,
+        add_on_options: input.addOnOptions,
+        address_street: input.address.street,
+        address_city: input.address.city,
+        address_state: input.address.state,
+        address_zip: input.address.zip,
+        travel_distance_miles: quote.travelDistanceMiles,
+        travel_fee: quote.travelFee,
+        service_price: servicePrice,
+        estimated_duration_minutes: durationMinutes,
+        visit_sequence: 1,
+        appointment_date: input.appointmentDate,
+        appointment_time: schedule.appointmentTime,
+        scheduled_start: schedule.scheduledStart,
+        time_preference: schedule.timePreference,
+        address_lat: point.lat,
+        address_lon: point.lon,
+        timezone: business.booking.timezone,
+        estimated_total: quote.estimatedTotal,
+        new_client_deposit: 0,
+        payment_method_id: input.paymentMethodId,
+        vaccination_status_at_booking: vaccinationStatus,
+        status,
+        confirmed_at: new Date().toISOString(),
+      },
+    },
+  );
+  if ("error" in saved) return saved;
 
   const { data, error } = await supabase
     .from("appointments")
-    .insert({
-      customer_id: user.id,
-      visit_id: visitRow.id,
-      pet_id: input.petId,
-      service_id: input.serviceId,
-      service_name: quote.serviceName,
-      add_on_ids: input.addOnIds,
-      add_on_options: input.addOnOptions,
-      address_street: input.address.street,
-      address_city: input.address.city,
-      address_state: input.address.state,
-      address_zip: input.address.zip,
-      travel_distance_miles: quote.travelDistanceMiles,
-      travel_fee: quote.travelFee,
-      service_price: servicePrice,
-      estimated_duration_minutes: durationMinutes,
-      visit_sequence: 1,
-      appointment_date: input.appointmentDate,
-      appointment_time: schedule.appointmentTime,
-      scheduled_start: schedule.scheduledStart,
-      time_preference: schedule.timePreference,
-      address_lat: input.addressLat,
-      address_lon: input.addressLon,
-      timezone: business.booking.timezone,
-      estimated_total: quote.estimatedTotal,
-      new_client_deposit: 0,
-      payment_method_id: input.paymentMethodId,
-      vaccination_status_at_booking: vaccinationStatus,
-      status,
-      confirmed_at: status === "confirmed" ? new Date().toISOString() : null,
-    })
     .select(APPOINTMENT_SELECT)
+    .eq("id", saved.appointmentId)
     .single();
-
-  if (error) {
-    console.error("createAppointment insert failed:", error.code, error.message);
-    const { hasSupabaseAdminConfig } = await import("@/lib/supabase/env");
-    if (hasSupabaseAdminConfig()) {
-      const { createAdminClient } = await import("@/lib/supabase/admin");
-      const { error: visitDeleteError } = await createAdminClient()
-        .from("visits")
-        .delete()
-        .eq("id", visitRow.id);
-      if (visitDeleteError) {
-        console.error(
-          "createAppointment orphan visit cleanup failed:",
-          visitDeleteError.message,
-        );
-      }
-    }
-    if (error.code === "23505") return { error: "slot_unavailable" };
+  if (error || !data) {
+    console.error("createAppointment reload failed:", error?.message);
     return { error: "server" };
   }
 
   const appointment = mapAppointmentRowToRecord(data as AppointmentRow);
 
-  if (referralCodeToAttach) {
+  // The visit and appointment are already committed. Mail and SMS run only
+  // when this request created them. A retry returns the original appointment
+  // and skips this block, so it does not send a second notice. A crash after
+  // commit and before this block does not send on the retry either.
+  if (saved.created && referralCodeToAttach) {
     try {
       const { attachReferralOnBooking } = await import("@/lib/referrals/service");
       await attachReferralOnBooking({
@@ -351,18 +370,20 @@ export async function createAppointment(
     }
   }
 
-  try {
-    const contact =
-      (await fetchCustomerContact(user.id)) ??
-      (user.email ? { email: user.email, name: null } : null);
-    if (contact) {
-      await sendAppointmentCreatedEmails(appointment, {
-        ...contact,
-        phone: contact.phone ?? input.customerPhone,
-      });
+  if (saved.created) {
+    try {
+      const contact =
+        (await fetchCustomerContact(user.id)) ??
+        (user.email ? { email: user.email, name: null } : null);
+      if (contact) {
+        await sendAppointmentCreatedEmails(appointment, {
+          ...contact,
+          phone: contact.phone ?? input.customerPhone,
+        });
+      }
+    } catch (emailError) {
+      console.error("createAppointment email failed:", emailError);
     }
-  } catch (emailError) {
-    console.error("createAppointment email failed:", emailError);
   }
 
   return { appointment };

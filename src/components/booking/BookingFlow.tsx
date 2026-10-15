@@ -31,6 +31,7 @@ import { BookingCareOptionsStep } from "@/components/booking/BookingCareOptionsS
 import { BookingOwnerStep, type BookingOwnerDetails } from "@/components/booking/BookingOwnerStep";
 import { BookingPaymentStep } from "@/components/booking/BookingPaymentStep";
 import { BookingPriceSummaryStep } from "@/components/booking/BookingPriceSummaryStep";
+import { nextIdempotencyKey } from "@/lib/booking-intent";
 import { BookingConfirmStep } from "@/components/booking/BookingConfirmStep";
 import { BookingConfirmationView } from "@/components/booking/BookingReviewStep";
 import { CreativePairingModal } from "@/components/booking/CreativePairingModal";
@@ -121,6 +122,10 @@ export function BookingFlow({
     null,
   );
   const [acceptedPriceKey, setAcceptedPriceKey] = useState<string | null>(null);
+  const [idempotency, setIdempotency] = useState<{
+    intent: string;
+    key: string;
+  } | null>(null);
   const [careSlotError, setCareSlotError] = useState<string | null>(null);
   const [reserved, setReserved] = useState(false);
   const [createdAppointment, setCreatedAppointment] =
@@ -330,6 +335,36 @@ export function BookingFlow({
         ].join("|")
       : "";
   const priceAccepted = priceKey !== "" && acceptedPriceKey === priceKey;
+  const bookingIntent =
+    selectedPet &&
+    selectedService &&
+    address &&
+    appointmentDate &&
+    slotStartMinutes != null &&
+    paymentMethod
+      ? [
+          selectedPet.id,
+          selectedService.id,
+          [...selectedAddOnIds]
+            .sort()
+            .map((id) => `${id}=${addOnOptions[id] ?? ""}`)
+            .join(","),
+          address.street,
+          address.city,
+          address.state,
+          address.zip,
+          appointmentDate,
+          slotStartMinutes,
+          paymentMethod.id,
+        ].join("|")
+      : "";
+
+  useEffect(() => {
+    if (!bookingIntent) return;
+    setIdempotency((current) =>
+      nextIdempotencyKey(current, bookingIntent, () => crypto.randomUUID()),
+    );
+  }, [bookingIntent]);
 
   useEffect(() => {
     if (acceptedPriceKey && acceptedPriceKey !== priceKey) {
@@ -547,6 +582,7 @@ export function BookingFlow({
             owner={owner}
             paymentMethod={paymentMethod}
             initialReferralCode={initialReferralCode}
+            idempotencyKey={idempotency?.key ?? ""}
             onBack={() => setPaymentMethod(null)}
             onReserved={(appointment, pet) => {
               trackGoogleAdsBookingConversion(appointment.id);

@@ -38,6 +38,7 @@ function body(overrides: Record<string, unknown> = {}) {
     addressLon: -80.0534,
     estimatedTotal: 1,
     paymentMethodId: "22222222-2222-4222-8222-222222222222",
+    idempotencyKey: "33333333-3333-4333-8333-333333333333",
     customerPhone: "5613466778",
     customerFirstName: "Tia",
     customerLastName: "Francavilla",
@@ -134,8 +135,8 @@ describe("guest booking price", () => {
     assert.equal(quoted.ok, true);
     if (!quoted.ok) return;
     assert.equal(quoted.quote.servicePrice, 160);
-    assert.equal(quoted.quote.servicePriceLabel, "$160/hr");
-    assert.equal(quoted.quote.totalLabel, "$160");
+    assert.equal(quoted.quote.servicePriceLabel, "From $160/hour");
+    assert.equal(quoted.quote.totalLabel, "From $160/hour");
     assert.equal(quoted.quote.estimateNote, HAND_STRIPPING_ESTIMATE_NOTE);
     assert.equal(quoted.quote.pricingBasis, "hourly");
   });
@@ -237,6 +238,15 @@ describe("submitted booking price", () => {
     assert.equal(input.travelFee, 0);
   });
 
+  it("does not decide the service area from the submitted mileage", () => {
+    const forged = validateCreateAppointmentInput(
+      body({ travelDistanceMiles: 40, travelFee: 1, estimatedTotal: 1 }),
+    );
+    assert.equal(forged.travelDistanceMiles, 40);
+    assert.equal(forged.travelFee, 1);
+    assert.equal(forged.estimatedTotal, 1);
+  });
+
   it("rejects an illegal add-on before an appointment can be created", () => {
     assert.throws(
       () =>
@@ -301,17 +311,31 @@ describe("create appointment price gate", () => {
       new URL("./appointments/service.ts", import.meta.url),
       "utf8",
     );
+    const measuredAt = source.indexOf("const measured = await resolveGuestDrivingQuote");
     const priceAt = source.indexOf("const priced = evaluateSubmittedBookingPrice");
-    const visitAt = source.indexOf('.from("visits")');
+    const saveAt = source.indexOf("const saved = await insertGuestBooking");
     const emailAt = source.lastIndexOf("sendAppointmentCreatedEmails(");
-    assert.ok(priceAt > 0);
-    assert.ok(priceAt < visitAt);
-    assert.ok(visitAt < emailAt);
+    assert.ok(measuredAt > 0);
+    assert.ok(measuredAt < priceAt);
+    assert.ok(priceAt < saveAt);
+    assert.ok(saveAt < emailAt);
     assert.equal(source.split("sendAppointmentCreatedEmails(").length - 1, 1);
+    assert.match(source, /if \(saved\.created\)/);
     assert.match(source, /status = "confirmed"/);
     assert.match(source, /assignArrivalWindow\(/);
-    assert.match(source, /travel_fee: quote\.travelFee/);
-    assert.match(source, /estimated_total: quote\.estimatedTotal/);
+    assert.match(source, /distanceMiles: measured\.distanceMiles/);
+    assert.equal(source.includes("distanceMiles: input.travelDistanceMiles"), false);
+    assert.equal(source.includes("input.travelDistanceMiles"), false);
+    assert.equal(source.includes("input.travelFee"), false);
+    assert.match(source, /createAdminClient\(/);
+    const createdGate = source.indexOf("if (saved.created)");
+    const emailCall = source.indexOf("sendAppointmentCreatedEmails(");
+    assert.ok(createdGate > 0 && createdGate < emailCall);
+    assert.equal(
+      source.slice(0, createdGate).includes("sendAppointmentCreatedEmails("),
+      false,
+    );
+    assert.equal(source.includes('.from("visits")'), false);
     assert.equal(source.includes("input.estimatedTotal"), true);
     assert.equal(source.includes("servicePriceFromEstimatedTotal"), false);
   });

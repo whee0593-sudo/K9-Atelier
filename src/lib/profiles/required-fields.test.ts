@@ -40,6 +40,7 @@ function validAppointmentBody(overrides: Record<string, unknown> = {}) {
     addressLon: -80.0534,
     estimatedTotal: 95,
     paymentMethodId: "22222222-2222-4222-8222-222222222222",
+    idempotencyKey: "33333333-3333-4333-8333-333333333333",
     customerPhone: "5613466778",
     customerFirstName: "Tia",
     customerLastName: "Francavilla",

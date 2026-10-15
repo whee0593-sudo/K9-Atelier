@@ -28,6 +28,8 @@ export type AppointmentWriteInput = {
   addressLon: number;
   estimatedTotal: number;
   paymentMethodId: string;
+  /** Stable for one booking intent. Retries reuse it. A new intent uses a new key. */
+  idempotencyKey: string;
   customerPhone: string;
   customerFirstName: string;
   customerLastName: string;

@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     if ("error" in result) {
       return mapAppointmentServiceError(
         result.error,
-        result.error === "price_changed"
+        result.error === "price_changed" || result.error === "address_unverified"
           ? { message: result.message, quote: result.quote }
           : result.error === "invalid_selection"
             ? { message: result.message }

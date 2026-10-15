@@ -48,6 +48,7 @@ type Props = {
   owner: BookingOwnerDetails;
   paymentMethod: PaymentMethodRecord;
   initialReferralCode?: string;
+  idempotencyKey: string;
   onBack: () => void;
   onReserved: (appointment: AppointmentRecord, pet: PetProfile) => void;
 };
@@ -65,6 +66,7 @@ export function BookingConfirmStep({
   owner,
   paymentMethod,
   initialReferralCode = "",
+  idempotencyKey,
   onBack,
   onReserved,
 }: Props) {
@@ -125,6 +127,10 @@ export function BookingConfirmStep({
   }, [initialReferralCode]);
 
   async function handleConfirm() {
+    if (!idempotencyKey) {
+      setError("Please review this appointment and confirm again.");
+      return;
+    }
     if (!submitGuard.current.start()) return;
     if (travelQuote.lat == null || travelQuote.lon == null || !quoted?.ok) {
       submitGuard.current.end();
@@ -162,6 +168,7 @@ export function BookingConfirmStep({
         smsConsent: owner.smsConsent,
         photoMarketingConsent: owner.photoMarketingConsent,
         servicePoliciesConsent: owner.servicePoliciesConsent,
+        idempotencyKey,
         referralCode: referralCode.trim() || undefined,
       });
       onReserved(appointment, bookingPet);
@@ -310,7 +317,7 @@ export function BookingConfirmStep({
 
       <button
         type="button"
-        disabled={loading || !quoted?.ok}
+        disabled={loading || !quoted?.ok || !idempotencyKey}
         onClick={() => void handleConfirm()}
         className={`${bookingPrimaryBtnClass} mt-8`}
       >
