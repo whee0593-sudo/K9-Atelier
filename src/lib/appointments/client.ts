@@ -1,17 +1,34 @@
+import type { BookingPriceQuote } from "@/lib/booking-price";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 
 export class AppointmentClientError extends Error {
   readonly status: number;
+  readonly code?: string;
+  readonly quote?: BookingPriceQuote;
 
-  constructor(message: string, status: number) {
+  constructor(
+    message: string,
+    status: number,
+    details?: { code?: string; quote?: BookingPriceQuote },
+  ) {
     super(message);
     this.name = "AppointmentClientError";
     this.status = status;
+    this.code = details?.code;
+    this.quote = details?.quote;
   }
 }
 
 async function readAppointmentResponse<T>(response: Response): Promise<T> {
-  let body: { error?: string; appointment?: AppointmentRecord; appointments?: AppointmentRecord[]; ok?: boolean };
+  let body: {
+    error?: string;
+    code?: string;
+    field?: string;
+    quote?: BookingPriceQuote;
+    appointment?: AppointmentRecord;
+    appointments?: AppointmentRecord[];
+    ok?: boolean;
+  };
   try {
     body = (await response.json()) as typeof body;
   } catch {
@@ -22,6 +39,15 @@ async function readAppointmentResponse<T>(response: Response): Promise<T> {
     throw new AppointmentClientError(
       body.error ?? "Something went wrong. Please try again.",
       response.status,
+      {
+        code:
+          body.code ??
+          (body.field === "estimatedTotal" ? "price_changed" : undefined),
+        quote:
+          body.quote && typeof body.quote.estimatedTotal === "number"
+            ? body.quote
+            : undefined,
+      },
     );
   }
 
