@@ -850,11 +850,42 @@ describe("customer confirmation stays on its own path", () => {
       "supabase/migrations/20261016020000_merchant_communication_compatibility.sql",
     );
     assert.doesNotMatch(migration, /CREATE OR REPLACE FUNCTION private\.communication_logs_protect_snapshot/);
+    assert.doesNotMatch(migration, /CREATE OR REPLACE FUNCTION private\.communication_logs_block_provider_retry/);
     assert.doesNotMatch(migration, /DROP TRIGGER/);
     assert.doesNotMatch(migration, /DROP POLICY/);
     assert.doesNotMatch(migration, /CREATE\s+(OR REPLACE\s+)?FUNCTION[^;]*communication_logs_claim/i);
     assert.match(migration, /does not replace communication_logs_claim/);
+    assert.match(migration, /does not replace communication_logs_block_provider_retry/);
+    assert.match(migration, /both production triggers already exist/);
     assert.match(migration, /IF NOT EXISTS/);
     assert.match(migration, /blocks another automatic send/);
+    assert.match(migration, /OLD\.provider_called_at IS NOT NULL/);
+    assert.match(migration, /OLD\.status IS DISTINCT FROM 'pending'/);
+    assert.match(migration, /NEW\.status = 'pending'/);
+    const store = source("src/lib/communications/supabase-store.ts");
+    const updates = [...store.matchAll(/\.update\(\{([\s\S]*?)\}\)/g)].map((match) => match[1]);
+    const pendingUpdates = updates.filter((body) => /status:\s*"pending"/.test(body));
+    assert.equal(pendingUpdates.length, 1);
+    assert.match(pendingUpdates[0] ?? "", /provider_called_at: calledAt/);
+    assert.match(pendingUpdates[0] ?? "", /skip_reason: null/);
+    const skippedClaim = store.slice(
+      store.indexOf("async function claimSkipped"),
+      store.indexOf("function insertPayload"),
+    );
+    assert.match(skippedClaim, /status: "pending"/);
+    assert.match(skippedClaim, /provider_called_at: calledAt/);
+    assert.match(skippedClaim, /skip_reason: null/);
+    assert.match(skippedClaim, /\.eq\("status", "skipped"\)/);
+    assert.match(skippedClaim, /\.is\("provider_called_at", null\)/);
+    assert.doesNotMatch(skippedClaim, /claim_token:/);
+    assert.doesNotMatch(store, /claimed_at/);
+    const markCalled = store.slice(
+      store.indexOf("async function markCalled"),
+      store.indexOf("async function claimSkipped"),
+    );
+    assert.match(markCalled, /provider_called_at: calledAt/);
+    assert.doesNotMatch(markCalled, /status:/);
+    const complete = store.slice(store.indexOf("async complete"));
+    assert.doesNotMatch(complete, /"pending"/);
   });
 });

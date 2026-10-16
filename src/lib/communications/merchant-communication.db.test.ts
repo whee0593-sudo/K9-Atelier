@@ -88,6 +88,13 @@ describe("communication log protection in postgres", () => {
          AND NOT tgisinternal`,
     );
     assert.equal(triggers.rows[0]?.count, "1");
+    const block = await db.query<{ count: string }>(
+      `SELECT count(*)::text AS count
+       FROM pg_trigger
+       WHERE tgname = 'communication_logs_block_provider_retry'
+         AND NOT tgisinternal`,
+    );
+    assert.equal(block.rows[0]?.count, "1");
   });
 
   it("freezes the snapshot and still allows status and provider_called_at", async () => {
@@ -204,6 +211,68 @@ describe("communication log protection in postgres", () => {
     }
   });
 
+  it("rejects a return to pending after the provider was called", async () => {
+    const key = `${KEY}|block-retry`;
+    await db.query(
+      `INSERT INTO public.communication_logs (
+         channel, notification_type, audience, recipient, body_text, status,
+         idempotency_key
+       ) VALUES (
+         'email', 'merchant_visit_confirmed', 'staff', 'penny@k9atelier.com',
+         'New visit confirmed', 'pending', $1
+       )`,
+      [key],
+    );
+
+    const called = await db.query<{ id: string }>(
+      `UPDATE public.communication_logs
+       SET provider_called_at = now()
+       WHERE idempotency_key = $1 AND status = 'pending' AND provider_called_at IS NULL
+       RETURNING id::text AS id`,
+      [key],
+    );
+    assert.equal(called.rows.length, 1);
+
+    const samePending = await db.query<{ id: string }>(
+      `UPDATE public.communication_logs
+       SET status = 'pending'
+       WHERE idempotency_key = $1 AND status = 'pending'
+       RETURNING id::text AS id`,
+      [key],
+    );
+    assert.equal(samePending.rows.length, 1);
+
+    for (const status of ["accepted", "failed", "uncertain", "skipped", "delivered"]) {
+      await db.query(
+        `UPDATE public.communication_logs SET status = $2 WHERE idempotency_key = $1`,
+        [key, status],
+      );
+      const rejected = await rejectSql(
+        `UPDATE public.communication_logs SET status = 'pending' WHERE idempotency_key = '${key}'`,
+      );
+      assert.match(rejected, /provider_called_at blocks a return to pending/);
+    }
+
+    const tokens = await db.query<{ claim_token: string; claimed_at: string }>(
+      `SELECT claim_token::text AS claim_token, claimed_at::text AS claimed_at
+       FROM public.communication_logs WHERE idempotency_key = $1`,
+      [key],
+    );
+    await db.query(
+      `UPDATE public.communication_logs
+       SET status = 'uncertain', error_message = 'provider timeout'
+       WHERE idempotency_key = $1`,
+      [key],
+    );
+    const after = await db.query<{ claim_token: string; claimed_at: string }>(
+      `SELECT claim_token::text AS claim_token, claimed_at::text AS claimed_at
+       FROM public.communication_logs WHERE idempotency_key = $1`,
+      [key],
+    );
+    assert.equal(after.rows[0]?.claim_token, tokens.rows[0]?.claim_token);
+    assert.equal(after.rows[0]?.claimed_at, tokens.rows[0]?.claimed_at);
+  });
+
   it("lets staff read logs and blocks other authenticated writes", async () => {
     await db.exec(`UPDATE private.staff_flag SET is_staff = false`);
     await db.exec(`SET ROLE authenticated`);
@@ -247,6 +316,21 @@ describe("communication log protection in postgres", () => {
       END;
       $body$;
 
+      CREATE OR REPLACE FUNCTION private.communication_logs_block_provider_retry()
+      RETURNS trigger
+      LANGUAGE plpgsql
+      SET search_path = ''
+      AS $body$
+      BEGIN
+        IF NEW.status = 'pending' AND OLD.status IS DISTINCT FROM 'pending' THEN
+          RAISE EXCEPTION 'sentinel-block' USING ERRCODE = '23514';
+        END IF;
+        RETURN NEW;
+      END;
+      $body$;
+
+      COMMENT ON COLUMN public.communication_logs.provider_called_at IS 'sentinel-comment';
+
       DROP POLICY communication_logs_select_staff ON public.communication_logs;
       CREATE POLICY communication_logs_select_staff
         ON public.communication_logs
@@ -261,6 +345,20 @@ describe("communication log protection in postgres", () => {
     );
     assert.match(sentinel, /sentinel-protect/);
     assert.doesNotMatch(sentinel, /communication log snapshot is immutable/);
+
+    const blockSentinel = await rejectSql(
+      `UPDATE public.communication_logs SET status = 'pending' WHERE id = '${LOG}'`,
+    );
+    assert.match(blockSentinel, /sentinel-block/);
+    assert.doesNotMatch(blockSentinel, /provider_called_at blocks a return to pending/);
+
+    const comment = await db.query<{ description: string | null }>(
+      `SELECT col_description('public.communication_logs'::regclass, attnum) AS description
+       FROM pg_attribute
+       WHERE attrelid = 'public.communication_logs'::regclass
+         AND attname = 'provider_called_at'`,
+    );
+    assert.equal(comment.rows[0]?.description, "sentinel-comment");
 
     await db.exec(`UPDATE private.staff_flag SET is_staff = true`);
     await db.exec(`SET ROLE authenticated`);

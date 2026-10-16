@@ -2,69 +2,93 @@
 -- CREATE TABLE IF NOT EXISTS does not alter columns on a table that already exists.
 -- This file does not replace communication_logs_claim.
 -- This file does not CREATE OR REPLACE communication_logs_protect_snapshot.
+-- This file does not replace communication_logs_block_provider_retry.
 -- This file does not DROP or recreate an existing trigger or policy.
 -- A non-null provider_called_at blocks another automatic send.
 -- accepted is not delivered. failed and uncertain are not reclaimed.
+-- When both production triggers already exist, this file returns without
+-- adding indexes, policies, comments, grants, or functions.
 
 BEGIN;
 
-CREATE SCHEMA IF NOT EXISTS private;
-
-CREATE TABLE IF NOT EXISTS public.communication_logs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  channel text NOT NULL CHECK (channel IN ('email', 'sms')),
-  notification_type text NOT NULL,
-  audience text NOT NULL DEFAULT 'customer' CHECK (audience IN ('customer', 'staff')),
-  customer_id uuid REFERENCES public.profiles (id) ON DELETE SET NULL,
-  visit_id uuid REFERENCES public.visits (id) ON DELETE SET NULL,
-  appointment_ids uuid[] NOT NULL DEFAULT '{}',
-  pet_ids uuid[] NOT NULL DEFAULT '{}',
-  recipient text NOT NULL,
-  subject text,
-  body_text text NOT NULL,
-  body_html text,
-  reply_to text,
-  status text NOT NULL CHECK (
-    status IN (
-      'pending',
-      'skipped',
-      'accepted',
-      'failed',
-      'uncertain',
-      'delivered',
-      'undelivered',
-      'bounced'
-    )
-  ),
-  skip_reason text CHECK (
-    skip_reason IS NULL
-    OR skip_reason IN ('missing_config', 'invalid_recipient')
-  ),
-  provider text CHECK (provider IS NULL OR provider IN ('resend', 'twilio')),
-  provider_message_id text,
-  provider_called_at timestamptz,
-  error_message text,
-  idempotency_key text NOT NULL,
-  claim_token uuid NOT NULL DEFAULT gen_random_uuid(),
-  claimed_at timestamptz NOT NULL DEFAULT now(),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  accepted_at timestamptz,
-  failed_at timestamptz,
-  delivered_at timestamptz,
-  CONSTRAINT communication_logs_idempotency_key_unique UNIQUE (idempotency_key),
-  CONSTRAINT communication_logs_body_present CHECK (
-    char_length(body_text) > 0 OR body_html IS NOT NULL
-  )
-);
-
-ALTER TABLE public.communication_logs
-  ADD COLUMN IF NOT EXISTS provider_called_at timestamptz;
-
-COMMENT ON COLUMN public.communication_logs.provider_called_at IS
-  'Set immediately before the provider is contacted. A non-null value blocks another automatic send. accepted is not delivered. failed and uncertain are not reclaimed.';
-
-DO $$
+DO $migration$
+DECLARE
+  logs regclass;
 BEGIN
+  logs := to_regclass('public.communication_logs');
+  IF logs IS NOT NULL THEN
+    IF EXISTS (
+      SELECT 1
+      FROM pg_trigger
+      WHERE tgname = 'communication_logs_protect_snapshot'
+        AND tgrelid = logs
+        AND NOT tgisinternal
+    ) AND EXISTS (
+      SELECT 1
+      FROM pg_trigger
+      WHERE tgname = 'communication_logs_block_provider_retry'
+        AND tgrelid = logs
+        AND NOT tgisinternal
+    ) THEN
+      RETURN;
+    END IF;
+  END IF;
+
+  CREATE SCHEMA IF NOT EXISTS private;
+
+  CREATE TABLE IF NOT EXISTS public.communication_logs (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    channel text NOT NULL CHECK (channel IN ('email', 'sms')),
+    notification_type text NOT NULL,
+    audience text NOT NULL DEFAULT 'customer' CHECK (audience IN ('customer', 'staff')),
+    customer_id uuid REFERENCES public.profiles (id) ON DELETE SET NULL,
+    visit_id uuid REFERENCES public.visits (id) ON DELETE SET NULL,
+    appointment_ids uuid[] NOT NULL DEFAULT '{}',
+    pet_ids uuid[] NOT NULL DEFAULT '{}',
+    recipient text NOT NULL,
+    subject text,
+    body_text text NOT NULL,
+    body_html text,
+    reply_to text,
+    status text NOT NULL CHECK (
+      status IN (
+        'pending',
+        'skipped',
+        'accepted',
+        'failed',
+        'uncertain',
+        'delivered',
+        'undelivered',
+        'bounced'
+      )
+    ),
+    skip_reason text CHECK (
+      skip_reason IS NULL
+      OR skip_reason IN ('missing_config', 'invalid_recipient')
+    ),
+    provider text CHECK (provider IS NULL OR provider IN ('resend', 'twilio')),
+    provider_message_id text,
+    provider_called_at timestamptz,
+    error_message text,
+    idempotency_key text NOT NULL,
+    claim_token uuid NOT NULL DEFAULT gen_random_uuid(),
+    claimed_at timestamptz NOT NULL DEFAULT now(),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    accepted_at timestamptz,
+    failed_at timestamptz,
+    delivered_at timestamptz,
+    CONSTRAINT communication_logs_idempotency_key_unique UNIQUE (idempotency_key),
+    CONSTRAINT communication_logs_body_present CHECK (
+      char_length(body_text) > 0 OR body_html IS NOT NULL
+    )
+  );
+
+  ALTER TABLE public.communication_logs
+    ADD COLUMN IF NOT EXISTS provider_called_at timestamptz;
+
+  COMMENT ON COLUMN public.communication_logs.provider_called_at IS
+    'Set immediately before the provider is contacted. A non-null value blocks another automatic send. accepted is not delivered. failed and uncertain are not reclaimed.';
+
   IF NOT EXISTS (
     SELECT 1
     FROM pg_constraint AS uniqueness
@@ -84,44 +108,41 @@ BEGIN
     CREATE UNIQUE INDEX communication_logs_idempotency_key_uidx
       ON public.communication_logs (idempotency_key);
   END IF;
-END $$;
 
-CREATE INDEX IF NOT EXISTS communication_logs_customer_created_idx
-  ON public.communication_logs (customer_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS communication_logs_customer_created_idx
+    ON public.communication_logs (customer_id, created_at DESC);
 
-CREATE INDEX IF NOT EXISTS communication_logs_status_created_idx
-  ON public.communication_logs (status, created_at DESC);
+  CREATE INDEX IF NOT EXISTS communication_logs_status_created_idx
+    ON public.communication_logs (status, created_at DESC);
 
-CREATE INDEX IF NOT EXISTS communication_logs_visit_id_idx
-  ON public.communication_logs (visit_id);
+  CREATE INDEX IF NOT EXISTS communication_logs_visit_id_idx
+    ON public.communication_logs (visit_id);
 
-CREATE TABLE IF NOT EXISTS public.communication_log_alerts (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  code text NOT NULL,
-  message text NOT NULL,
-  log_id uuid REFERENCES public.communication_logs (id) ON DELETE SET NULL,
-  idempotency_key text,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+  CREATE TABLE IF NOT EXISTS public.communication_log_alerts (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    code text NOT NULL,
+    message text NOT NULL,
+    log_id uuid REFERENCES public.communication_logs (id) ON DELETE SET NULL,
+    idempotency_key text,
+    created_at timestamptz NOT NULL DEFAULT now()
+  );
 
-COMMENT ON TABLE public.communication_log_alerts IS
-  'Visible signal when a merchant notice could not be claimed or its outcome could not be saved. The message stores a visit id and channel, not the recipient or body.';
+  COMMENT ON TABLE public.communication_log_alerts IS
+    'Visible signal when a merchant notice could not be claimed or its outcome could not be saved. The message stores a visit id and channel, not the recipient or body.';
 
-COMMENT ON COLUMN public.communication_log_alerts.idempotency_key IS
-  'SHA-256 prefix of the send key. Do not store the raw recipient, message body, confirm link, or payment data.';
+  COMMENT ON COLUMN public.communication_log_alerts.idempotency_key IS
+    'SHA-256 prefix of the send key. Do not store the raw recipient, message body, confirm link, or payment data.';
 
-CREATE INDEX IF NOT EXISTS communication_log_alerts_created_idx
-  ON public.communication_log_alerts (created_at DESC);
+  CREATE INDEX IF NOT EXISTS communication_log_alerts_created_idx
+    ON public.communication_log_alerts (created_at DESC);
 
-CREATE UNIQUE INDEX IF NOT EXISTS communication_log_alerts_code_key_uidx
-  ON public.communication_log_alerts (code, idempotency_key)
-  WHERE idempotency_key IS NOT NULL;
+  CREATE UNIQUE INDEX IF NOT EXISTS communication_log_alerts_code_key_uidx
+    ON public.communication_log_alerts (code, idempotency_key)
+    WHERE idempotency_key IS NOT NULL;
 
--- Fresh databases get a snapshot trigger that freezes the message and allows
--- status, skip_reason, and provider_called_at to change. An existing function
--- is left untouched, including its body.
-DO $migration$
-BEGIN
+  -- Fresh databases get a snapshot trigger that freezes the message and allows
+  -- status, skip_reason, and provider_called_at to change. An existing function
+  -- is left untouched, including its body.
   IF NOT EXISTS (
     SELECT 1
     FROM pg_proc AS fn
@@ -164,11 +185,7 @@ BEGIN
     REVOKE ALL ON FUNCTION private.communication_logs_protect_snapshot() FROM authenticated;
     GRANT EXECUTE ON FUNCTION private.communication_logs_protect_snapshot() TO service_role;
   END IF;
-END
-$migration$;
 
-DO $migration$
-BEGIN
   IF NOT EXISTS (
     SELECT 1
     FROM pg_trigger
@@ -181,15 +198,58 @@ BEGIN
       FOR EACH ROW
       EXECUTE FUNCTION private.communication_logs_protect_snapshot();
   END IF;
-END
-$migration$;
 
-GRANT SELECT ON TABLE public.communication_logs TO authenticated;
-GRANT ALL ON TABLE public.communication_logs TO service_role;
-ALTER TABLE public.communication_logs ENABLE ROW LEVEL SECURITY;
+  -- Fresh-database stand-in for the confirmed production rule only:
+  -- a row whose provider_called_at is already set cannot move from another
+  -- status back to pending. This is not the production function body.
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_proc AS fn
+    JOIN pg_namespace AS ns ON ns.oid = fn.pronamespace
+    WHERE ns.nspname = 'private'
+      AND fn.proname = 'communication_logs_block_provider_retry'
+  ) THEN
+    EXECUTE $create_block$
+      CREATE FUNCTION private.communication_logs_block_provider_retry()
+      RETURNS trigger
+      LANGUAGE plpgsql
+      SET search_path = ''
+      AS $body$
+      BEGIN
+        IF OLD.provider_called_at IS NOT NULL
+          AND OLD.status IS DISTINCT FROM 'pending'
+          AND NEW.status = 'pending'
+        THEN
+          RAISE EXCEPTION 'provider_called_at blocks a return to pending'
+            USING ERRCODE = '23514';
+        END IF;
+        RETURN NEW;
+      END;
+      $body$;
+    $create_block$;
+    REVOKE ALL ON FUNCTION private.communication_logs_block_provider_retry() FROM PUBLIC;
+    REVOKE ALL ON FUNCTION private.communication_logs_block_provider_retry() FROM anon;
+    REVOKE ALL ON FUNCTION private.communication_logs_block_provider_retry() FROM authenticated;
+    GRANT EXECUTE ON FUNCTION private.communication_logs_block_provider_retry() TO service_role;
+  END IF;
 
-DO $migration$
-BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_trigger
+    WHERE tgname = 'communication_logs_block_provider_retry'
+      AND tgrelid = 'public.communication_logs'::regclass
+      AND NOT tgisinternal
+  ) THEN
+    CREATE TRIGGER communication_logs_block_provider_retry
+      BEFORE UPDATE ON public.communication_logs
+      FOR EACH ROW
+      EXECUTE FUNCTION private.communication_logs_block_provider_retry();
+  END IF;
+
+  GRANT SELECT ON TABLE public.communication_logs TO authenticated;
+  GRANT ALL ON TABLE public.communication_logs TO service_role;
+  ALTER TABLE public.communication_logs ENABLE ROW LEVEL SECURITY;
+
   IF NOT EXISTS (
     SELECT 1
     FROM pg_policies
@@ -203,15 +263,11 @@ BEGIN
       TO authenticated
       USING (private.is_staff());
   END IF;
-END
-$migration$;
 
-GRANT SELECT ON TABLE public.communication_log_alerts TO authenticated;
-GRANT ALL ON TABLE public.communication_log_alerts TO service_role;
-ALTER TABLE public.communication_log_alerts ENABLE ROW LEVEL SECURITY;
+  GRANT SELECT ON TABLE public.communication_log_alerts TO authenticated;
+  GRANT ALL ON TABLE public.communication_log_alerts TO service_role;
+  ALTER TABLE public.communication_log_alerts ENABLE ROW LEVEL SECURITY;
 
-DO $migration$
-BEGIN
   IF NOT EXISTS (
     SELECT 1
     FROM pg_policies

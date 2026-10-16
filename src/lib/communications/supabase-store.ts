@@ -82,6 +82,8 @@ export function createSupabaseCommunicationStore(
   }
 
   async function claimSkipped(row: LogRow): Promise<ClaimResult> {
+    // The only status change back to pending. Production rejects that change
+    // once provider_called_at is already set, so this update requires it to be null.
     const calledAt = new Date().toISOString();
     const { data, error } = await logs()
       .update({
