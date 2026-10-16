@@ -716,6 +716,26 @@ describe("merchant visit notices", () => {
     assert.equal(again.replayed, 0);
     assert.equal(box.emailCalls.length, 1);
   });
+
+  it("keeps the queued alert when the same claim failure is recorded twice", async () => {
+    const box = harness();
+    const input = {
+      code: "claim_unavailable",
+      message: "v=visit-1 t=merchant_visit_confirmed c=email fp=-",
+      idempotencyKeyHash: "ready-email",
+    };
+    assert.equal(await box.store.recordAlert(input), true);
+    assert.equal(await box.store.recordAlert(input), true);
+    assert.equal(box.store.alerts().length, 1);
+    const replay = await replayDeferredMerchantAlerts({
+      ...box.deps,
+      loadVisit: async () => facts(),
+    });
+    assert.equal(replay.replayed, 1);
+    assert.equal(replay.kept, 0);
+    assert.equal(box.emailCalls.length, 1);
+    assert.equal(box.smsCalls.length, 1);
+  });
 });
 
 describe("customer confirmation stays on its own path", () => {

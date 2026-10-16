@@ -273,6 +273,69 @@ describe("communication log protection in postgres", () => {
     assert.equal(after.rows[0]?.claimed_at, tokens.rows[0]?.claimed_at);
   });
 
+  it("rejects values outside the production checks and keeps one alert per code and key", async () => {
+    const cases = [
+      `INSERT INTO public.communication_logs (
+         channel, notification_type, audience, recipient, body_text, status, idempotency_key
+       ) VALUES (
+         'email', 'merchant_visit_confirmed', 'staff', 'penny@k9atelier.com',
+         'body', 'sent', '${KEY}|bad-status'
+       )`,
+      `INSERT INTO public.communication_logs (
+         channel, notification_type, audience, recipient, body_text, status, skip_reason, idempotency_key
+       ) VALUES (
+         'email', 'merchant_visit_confirmed', 'staff', 'penny@k9atelier.com',
+         'body', 'skipped', 'other', '${KEY}|bad-skip'
+       )`,
+      `INSERT INTO public.communication_logs (
+         channel, notification_type, audience, recipient, body_text, status, provider, idempotency_key
+       ) VALUES (
+         'email', 'merchant_visit_confirmed', 'staff', 'penny@k9atelier.com',
+         'body', 'pending', 'mailgun', '${KEY}|bad-provider'
+       )`,
+      `INSERT INTO public.communication_logs (
+         channel, notification_type, audience, recipient, body_text, status, idempotency_key
+       ) VALUES (
+         'email', 'merchant_visit_confirmed', 'merchant', 'penny@k9atelier.com',
+         'body', 'pending', '${KEY}|bad-audience'
+       )`,
+      `INSERT INTO public.communication_logs (
+         channel, notification_type, audience, recipient, body_text, status, idempotency_key
+       ) VALUES (
+         'push', 'merchant_visit_confirmed', 'staff', 'penny@k9atelier.com',
+         'body', 'pending', '${KEY}|bad-channel'
+       )`,
+    ];
+    for (const sql of cases) {
+      const rejected = await rejectSql(sql);
+      assert.match(rejected, /check constraint|violates check/i);
+    }
+
+    const hash = "abc123abc123abc123abc123";
+    await db.query(
+      `INSERT INTO public.communication_log_alerts (code, message, idempotency_key)
+       VALUES ('claim_unavailable', 'v=visit t=merchant_visit_confirmed c=email fp=-', $1)`,
+      [hash],
+    );
+    const duplicate = await rejectSql(
+      `INSERT INTO public.communication_log_alerts (code, message, idempotency_key)
+       VALUES ('claim_unavailable', 'again', '${hash}')`,
+    );
+    assert.match(duplicate, /duplicate key|communication_log_alerts_code_key_uidx/i);
+    const kept = await db.query<{ count: string }>(
+      `SELECT count(*)::text AS count
+       FROM public.communication_log_alerts
+       WHERE code = 'claim_unavailable' AND idempotency_key = $1`,
+      [hash],
+    );
+    assert.equal(kept.rows[0]?.count, "1");
+    await db.query(
+      `INSERT INTO public.communication_log_alerts (code, message, idempotency_key)
+       VALUES ('outcome_unresolved', 'other code', $1)`,
+      [hash],
+    );
+  });
+
   it("lets staff read logs and blocks other authenticated writes", async () => {
     await db.exec(`UPDATE private.staff_flag SET is_staff = false`);
     await db.exec(`SET ROLE authenticated`);
