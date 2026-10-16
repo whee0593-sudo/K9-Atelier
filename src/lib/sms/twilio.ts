@@ -104,3 +104,59 @@ export async function sendSms(input: SendSmsInput): Promise<boolean> {
     messagingServiceSid: messagingServiceSid || undefined,
   });
 }
+
+export type TrackedSmsResult =
+  | { outcome: "accepted"; providerMessageId: string }
+  | { outcome: "failed"; error: string }
+  | { outcome: "uncertain"; error: string };
+
+/** Merchant path. Returns a provider id when Twilio accepts the message. */
+export async function sendTrackedSms(input: SendSmsInput): Promise<TrackedSmsResult> {
+  const accountSid = envValue("TWILIO_ACCOUNT_SID");
+  const authToken = envValue("TWILIO_AUTH_TOKEN");
+  const fromNumber = envValue("TWILIO_FROM_NUMBER");
+  const messagingServiceSid = envValue("TWILIO_MESSAGING_SERVICE_SID");
+  if (!accountSid || !authToken || (!fromNumber && !messagingServiceSid)) {
+    return { outcome: "failed", error: "Twilio is not configured" };
+  }
+
+  const params = new URLSearchParams();
+  params.set("To", input.to);
+  params.set("Body", input.body);
+  if (messagingServiceSid) params.set("MessagingServiceSid", messagingServiceSid);
+  else params.set("From", fromNumber);
+
+  try {
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: params.toString(),
+      },
+    );
+    const body = await response.text();
+    if (!response.ok) {
+      const error = `Twilio ${response.status}`;
+      return response.status >= 500
+        ? { outcome: "uncertain", error }
+        : { outcome: "failed", error };
+    }
+    let providerMessageId = "";
+    try {
+      const parsed = JSON.parse(body) as { sid?: unknown };
+      if (typeof parsed.sid === "string") providerMessageId = parsed.sid;
+    } catch {
+      providerMessageId = "";
+    }
+    if (!providerMessageId) {
+      return { outcome: "uncertain", error: "Twilio response did not include a sid" };
+    }
+    return { outcome: "accepted", providerMessageId };
+  } catch {
+    return { outcome: "uncertain", error: "Twilio request did not finish" };
+  }
+}
