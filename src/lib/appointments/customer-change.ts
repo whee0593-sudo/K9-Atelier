@@ -18,10 +18,12 @@ import {
   fetchCustomerContact,
   type CustomerContact,
 } from "@/lib/email/appointment-context";
+import { notifyCustomerAppointmentChange } from "@/lib/email/appointment-mails";
+import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
 import {
-  notifyCustomerAppointmentChange,
-  notifyStaffNewAppointment,
-} from "@/lib/email/appointment-mails";
+  notifyMerchantRescheduleCompletedFromAppointments,
+  notifyMerchantVisitCancelledFromAppointments,
+} from "@/lib/communications/merchant-notices";
 import { getOrCreateStripeCustomerId } from "@/lib/payments/service";
 import { business } from "@/lib/business";
 import { getStripe } from "@/lib/stripe/server";
@@ -526,6 +528,7 @@ export async function applyAppointmentChange(
     const slotStartMinutes =
       input.slotStartMinutes ??
       (input.timePreference === "afternoon" ? 12 * 60 : 9 * 60);
+    const previousWhenLabel = earliestChangeWhen(targetRows);
     const moved = await rescheduleRows(targetRows, input.date, slotStartMinutes);
     if ("error" in moved) return moved;
     await sendChangeConfirmationEmail({
@@ -536,6 +539,9 @@ export async function applyAppointmentChange(
       cardBrand: charged.cardBrand,
       cardLast4: charged.cardLast4,
     });
+    if (previousWhenLabel) {
+      await notifyMerchantRescheduleCompleted(moved.appointments, previousWhenLabel, contact);
+    }
     return { ok: true, quote };
   }
 
@@ -566,6 +572,15 @@ export async function applyAppointmentChange(
     cardBrand: charged.cardBrand,
     cardLast4: charged.cardLast4,
   });
+  if (input.action === "cancel") {
+    await notifyMerchantVisitCancelled(
+      recordsFromRows(targetRows).map((row) => ({
+        ...row,
+        status: "cancelled" as const,
+      })),
+      contact,
+    );
+  }
   return { ok: true, quote };
 }
 
@@ -573,6 +588,48 @@ function recordsFromRows(rows: ChangeRow[]): AppointmentRecord[] {
   return rows.map((row) =>
     mapAppointmentRowToRecord(row as unknown as AppointmentRow),
   );
+}
+
+function earliestChangeWhen(rows: ChangeRow[]) {
+  const ordered = [...rows].sort(
+    (left, right) => (left.scheduled_start ?? 0) - (right.scheduled_start ?? 0),
+  );
+  const row = ordered[0];
+  if (!row?.appointment_date || !row.appointment_time) return null;
+  return `${formatAppointmentDateLabel(row.appointment_date)}, ${row.appointment_time}`;
+}
+
+async function notifyMerchantRescheduleCompleted(
+  appointments: AppointmentRecord[],
+  previousWhenLabel: string,
+  contact: CustomerContact | null,
+) {
+  try {
+    await notifyMerchantRescheduleCompletedFromAppointments(
+      appointments,
+      previousWhenLabel,
+      {
+        customerName: contact?.name ?? null,
+        replyTo: contact?.email ?? null,
+      },
+    );
+  } catch (error) {
+    console.error("appointment reschedule merchant notify failed:", error);
+  }
+}
+
+async function notifyMerchantVisitCancelled(
+  appointments: AppointmentRecord[],
+  contact: CustomerContact | null,
+) {
+  try {
+    await notifyMerchantVisitCancelledFromAppointments(appointments, {
+      customerName: contact?.name ?? null,
+      replyTo: contact?.email ?? null,
+    });
+  } catch (error) {
+    console.error("appointment cancel merchant notify failed:", error);
+  }
 }
 
 async function sendChangeConfirmationEmail({
@@ -900,7 +957,6 @@ async function addDogToVisit(
   try {
     const contact = await fetchCustomerContact(userId);
     if (contact) {
-      await notifyStaffNewAppointment(appointment, contact);
       await notifyCustomerAppointmentChange("add_dog", appointment, contact);
     }
   } catch (emailError) {

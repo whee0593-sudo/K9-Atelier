@@ -29,6 +29,7 @@ import {
   sendAppointmentCreatedEmails,
   sendAppointmentStatusEmails,
 } from "@/lib/email/appointment-mails";
+import { notifyMerchantVisitConfirmedFromAppointments } from "@/lib/communications/merchant-notices";
 import { getCustomerPaymentMethod } from "@/lib/payments/service";
 import { estimateServiceDurationMinutes } from "@/lib/services";
 import {
@@ -327,8 +328,9 @@ export async function createAppointment(
     }
   }
 
+  let contact: Awaited<ReturnType<typeof fetchCustomerContact>> = null;
   try {
-    const contact =
+    contact =
       (await fetchCustomerContact(user.id)) ??
       (user.email ? { email: user.email, name: null } : null);
     if (contact) {
@@ -339,6 +341,15 @@ export async function createAppointment(
     }
   } catch (emailError) {
     console.error("createAppointment email failed:", emailError);
+  }
+
+  try {
+    await notifyMerchantVisitConfirmedFromAppointments([appointment], {
+      customerName: contact?.name ?? null,
+      replyTo: contact?.email ?? null,
+    });
+  } catch (merchantError) {
+    console.error("createAppointment merchant notify failed:", merchantError);
   }
 
   return { appointment };

@@ -23,6 +23,7 @@ import {
   sendAppointmentSubmittedSms,
 } from "@/lib/sms/appointment-sms";
 
+/** Legacy per-appointment staff mail. Visit notices are sent separately. */
 export async function notifyStaffNewAppointment(
   appointment: AppointmentRecord,
   customer: CustomerContact,
@@ -175,7 +176,6 @@ export async function sendAppointmentCreatedEmails(
   appointment: AppointmentRecord,
   customer: CustomerContact,
 ) {
-  await notifyStaffNewAppointment(appointment, customer);
   await notifyCustomerAppointmentSubmitted(appointment, customer);
 }
 
