@@ -51,7 +51,10 @@ export type CommunicationStore = {
     idempotencyKeyHash: string;
     logId?: string | null;
   }): Promise<boolean>;
-  listAlerts(code: string): Promise<Array<{ id: string; message: string }>>;
+  listAlerts(
+    code: string,
+    options?: { excludeIds?: string[] },
+  ): Promise<Array<{ id: string; message: string }>>;
   deleteAlert(id: string): Promise<void>;
 };
 

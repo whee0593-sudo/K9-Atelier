@@ -686,6 +686,36 @@ describe("merchant visit notices", () => {
     assert.equal(replay.kept, 0);
     assert.equal(box.emailCalls.length, before);
   });
+
+  it("replays a notice that sits behind a full page of stuck alerts", async () => {
+    const box = harness();
+    for (let index = 0; index < 25; index += 1) {
+      await box.store.recordAlert({
+        code: "claim_unavailable",
+        message: `stuck-${index}`,
+        idempotencyKeyHash: `stuck-${index}`,
+      });
+    }
+    await box.store.recordAlert({
+      code: "claim_unavailable",
+      message: "v=visit-1 t=merchant_visit_confirmed c=email fp=-",
+      idempotencyKeyHash: "ready-email",
+    });
+    const replay = await replayDeferredMerchantAlerts({
+      ...box.deps,
+      loadVisit: async () => facts(),
+    });
+    assert.equal(replay.replayed, 1);
+    assert.equal(replay.kept, 25);
+    assert.equal(box.emailCalls.length, 1);
+    assert.equal(box.smsCalls.length, 1);
+    const again = await replayDeferredMerchantAlerts({
+      ...box.deps,
+      loadVisit: async () => facts(),
+    });
+    assert.equal(again.replayed, 0);
+    assert.equal(box.emailCalls.length, 1);
+  });
 });
 
 describe("customer confirmation stays on its own path", () => {

@@ -182,12 +182,17 @@ export function createSupabaseCommunicationStore(
       return isUniqueViolation(error);
     },
 
-    async listAlerts(code) {
-      const { data, error } = await alerts()
+    async listAlerts(code, options) {
+      let query = alerts()
         .select("id, message")
         .eq("code", code)
         .order("created_at", { ascending: true })
         .limit(25);
+      const excludeIds = options?.excludeIds?.filter(Boolean) ?? [];
+      if (excludeIds.length > 0) {
+        query = query.not("id", "in", `(${excludeIds.join(",")})`);
+      }
+      const { data, error } = await query;
       if (error) throw new Error(error.message);
       return (data ?? []).map((row) => ({
         id: row.id as string,

@@ -154,12 +154,14 @@ export function createMemoryCommunicationStore(
         return true;
       });
     },
-    listAlerts(code) {
-      return exclusive(() =>
-        alerts
-          .filter((alert) => alert.code === code)
-          .map((alert) => ({ id: alert.id, message: alert.message })),
-      );
+    listAlerts(code, options) {
+      return exclusive(() => {
+        const excluded = new Set(options?.excludeIds ?? []);
+        return alerts
+          .filter((alert) => alert.code === code && !excluded.has(alert.id))
+          .slice(0, 25)
+          .map((alert) => ({ id: alert.id, message: alert.message }));
+      });
     },
     deleteAlert(id) {
       return exclusive(() => {

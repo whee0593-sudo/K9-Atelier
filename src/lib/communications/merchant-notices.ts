@@ -735,8 +735,9 @@ async function replayOneAlert(
 
 /**
  * Retries merchant notices whose log claim could not be saved.
- * Drains up to eight batches. A batch that cannot claim or finish stops the loop.
- * uncertain, failed, and any row with provider_called_at are not sent again.
+ * Each pass reads 25 alerts. A full page that cannot settle is skipped so a
+ * later page can still run, up to eight pages. uncertain, failed, and any row
+ * with provider_called_at are not sent again.
  * A skipped row stays queued until config exists, then one claim sends it.
  */
 export async function replayDeferredMerchantAlerts(deps?: MerchantNotifyDeps & {
@@ -746,25 +747,32 @@ export async function replayDeferredMerchantAlerts(deps?: MerchantNotifyDeps & {
   if (!store) return { replayed: 0, kept: 0 };
   const loadVisit = deps?.loadVisit ?? loadVisitFacts;
   let replayed = 0;
+  const blocked: string[] = [];
   for (let batch = 0; batch < 8; batch += 1) {
-    const alerts = await store.listAlerts("claim_unavailable");
-    if (alerts.length === 0) return { replayed, kept: 0 };
+    const alerts = await store.listAlerts("claim_unavailable", {
+      excludeIds: blocked,
+    });
+    if (alerts.length === 0) break;
     let progress = 0;
     for (const alert of alerts) {
       const parsed = parseMerchantAlert(alert.message);
-      if (!parsed) continue;
-      const facts = await loadVisit(parsed.visitId);
-      if (!facts) continue;
-      const summary = await replayOneAlert(parsed, facts, deps);
-      if (!summary || !channelSettled(summary[parsed.channel])) continue;
+      const facts = parsed ? await loadVisit(parsed.visitId) : null;
+      const summary =
+        parsed && facts ? await replayOneAlert(parsed, facts, deps) : null;
+      if (!parsed || !facts || !summary || !channelSettled(summary[parsed.channel])) {
+        blocked.push(alert.id);
+        continue;
+      }
       await store.deleteAlert(alert.id);
       replayed += 1;
       progress += 1;
     }
-    if (progress === 0) break;
+    if (progress === 0 && alerts.length < 25) break;
   }
-  const remaining = await store.listAlerts("claim_unavailable");
-  return { replayed, kept: remaining.length };
+  const remaining = await store.listAlerts("claim_unavailable", {
+    excludeIds: blocked,
+  });
+  return { replayed, kept: remaining.length + blocked.length };
 }
 
 export async function notifyMerchantRescheduleCompletedFromAppointments(
