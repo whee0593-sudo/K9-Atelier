@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -205,12 +205,63 @@ function fixtureSql() {
       vaccination_status_at_booking text,
       status public.appointment_status NOT NULL DEFAULT 'confirmed',
       confirmed_at timestamptz,
-      staff_created boolean NOT NULL DEFAULT false
+      staff_created boolean NOT NULL DEFAULT false,
+      customer_confirm_token_hash text,
+      customer_confirm_expires_at timestamptz
     );
     CREATE UNIQUE INDEX appointments_unique_scheduled_start
       ON public.appointments (appointment_date, scheduled_start)
       WHERE status IS DISTINCT FROM 'cancelled'
         AND scheduled_start IS NOT NULL;
+
+    REVOKE ALL ON TABLE public.visits FROM PUBLIC;
+    REVOKE ALL ON TABLE public.visits FROM anon;
+    GRANT SELECT, INSERT ON TABLE public.visits TO authenticated;
+    GRANT ALL ON TABLE public.visits TO service_role;
+    REVOKE ALL ON TABLE public.appointments FROM PUBLIC;
+    REVOKE ALL ON TABLE public.appointments FROM anon;
+    GRANT SELECT, INSERT ON TABLE public.appointments TO authenticated;
+    GRANT ALL ON TABLE public.appointments TO service_role;
+    GRANT SELECT ON TABLE public.pets TO authenticated;
+    GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+    ALTER ROLE service_role BYPASSRLS;
+    ALTER TABLE public.visits ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
+    CREATE POLICY visits_select_own
+      ON public.visits
+      FOR SELECT
+      TO authenticated
+      USING (customer_id = (SELECT auth.uid()));
+    CREATE POLICY appointments_select_own
+      ON public.appointments
+      FOR SELECT
+      TO authenticated
+      USING (customer_id = (SELECT auth.uid()));
+    CREATE POLICY visits_insert_own
+      ON public.visits
+      FOR INSERT
+      TO authenticated
+      WITH CHECK (customer_id = (SELECT auth.uid()));
+    CREATE POLICY appointments_insert_own
+      ON public.appointments
+      FOR INSERT
+      TO authenticated
+      WITH CHECK (
+        customer_id = (SELECT auth.uid())
+        AND EXISTS (
+          SELECT 1
+          FROM public.pets p
+          WHERE p.id = pet_id
+            AND p.customer_id = (SELECT auth.uid())
+            AND p.archived_at IS NULL
+        )
+        AND EXISTS (
+          SELECT 1
+          FROM public.visits v
+          WHERE v.id = visit_id
+            AND v.customer_id = (SELECT auth.uid())
+        )
+      );
 
     INSERT INTO public.profiles (id) VALUES ('${CUSTOMER}');
     INSERT INTO public.pets (id, customer_id) VALUES ('${PET}', '${CUSTOMER}');
@@ -219,18 +270,21 @@ function fixtureSql() {
   `;
 }
 
+const EXPAND = "supabase/migrations/20261015190000_guest_booking_idempotency.sql";
+const CONTRACT = "supabase/manual/guest-booking-contract.sql";
+const ROLLBACK_EXPAND = "supabase/manual/rollback-guest-booking-expand.sql";
+const APP_ROLLBACK = "supabase/manual/guest-booking-app-rollback.sql";
+const FORWARD_FIX = "supabase/manual/guest-booking-contract-forward-fix.sql";
+
+function sqlFile(relativePath: string) {
+  return readFileSync(path.join(process.cwd(), relativePath), "utf8");
+}
+
 before(async () => {
   db = new PGlite();
   await db.exec(fixtureSql());
 
-  const migration = readFileSync(
-    path.join(
-      process.cwd(),
-      "supabase/migrations/20261015190000_guest_booking_idempotency.sql",
-    ),
-    "utf8",
-  );
-  await db.exec(migration);
+  await db.exec(sqlFile(EXPAND));
 });
 
 describe("guest booking idempotency", () => {
@@ -279,21 +333,12 @@ describe("guest booking idempotency", () => {
     assert.equal(claims.rows[0]?.count, "0");
   });
 
-  it("keeps the claim and both inserts inside one locked function", () => {
-    const sql = readFileSync(
-      path.join(
-        process.cwd(),
-        "supabase/migrations/20261015190000_guest_booking_idempotency.sql",
-      ),
-      "utf8",
-    );
-    const rollback = readFileSync(
-      path.join(
-        process.cwd(),
-        "supabase/manual/rollback-guest-booking-idempotency.sql",
-      ),
-      "utf8",
-    );
+  it("keeps expand and contract in separate execution paths", () => {
+    const sql = sqlFile(EXPAND);
+    const contract = sqlFile(CONTRACT);
+    const rollback = sqlFile(ROLLBACK_EXPAND);
+    const appRollback = sqlFile(APP_ROLLBACK);
+    const forwardFix = sqlFile(FORWARD_FIX);
     const visitAt = sql.indexOf("INSERT INTO public.visits");
     const appointmentAt = sql.indexOf("INSERT INTO public.appointments");
     assert.match(sql, /ON CONFLICT \(customer_id, idempotency_key\) DO NOTHING/);
@@ -308,22 +353,72 @@ describe("guest booking idempotency", () => {
       /REVOKE ALL ON FUNCTION public\.create_guest_booking\(uuid, text, jsonb, jsonb\) FROM authenticated/,
     );
     assert.equal(sql.includes("TO authenticated"), false);
-    assert.match(sql, /REVOKE INSERT ON TABLE public\.visits FROM authenticated/);
-    assert.match(
-      sql,
-      /REVOKE INSERT ON TABLE public\.appointments FROM authenticated/,
-    );
+    assert.equal(sql.includes("REVOKE INSERT"), false);
+    assert.equal(sql.includes("DROP POLICY"), false);
     assert.equal(sql.includes("UPDATE public.appointments"), false);
     assert.equal(sql.includes("ALTER TABLE public.visits"), false);
     assert.ok(visitAt > 0 && visitAt < appointmentAt);
     assert.equal(sql.includes("create_staff_visit"), false);
     assert.equal(sql.includes("ALTER TABLE public.appointments"), false);
+
+    assert.match(contract, /guest_booking_contract_refused/);
+    assert.match(contract, /REVOKE INSERT ON TABLE public\.visits FROM authenticated/);
+    assert.match(
+      contract,
+      /REVOKE INSERT ON TABLE public\.appointments FROM authenticated/,
+    );
+    assert.match(contract, /DROP POLICY IF EXISTS visits_insert_own/);
+    assert.match(contract, /DROP POLICY IF EXISTS appointments_insert_own/);
+    assert.equal(contract.includes("GRANT INSERT"), false);
+    assert.equal(contract.includes("DROP TABLE"), false);
+    assert.equal(contract.includes("DROP FUNCTION"), false);
+    assert.equal(
+      contract.includes("CREATE OR REPLACE FUNCTION public.create_staff_visit"),
+      false,
+    );
+
+    assert.match(rollback, /guest_booking_requests_not_empty/);
     assert.match(rollback, /DROP FUNCTION IF EXISTS public.create_guest_booking/);
     assert.match(rollback, /DROP TABLE IF EXISTS public.guest_booking_requests/);
-    assert.match(rollback, /CREATE POLICY visits_insert_own/);
-    assert.match(rollback, /CREATE POLICY appointments_insert_own/);
+    assert.ok(
+      rollback.indexOf("guest_booking_requests_not_empty") <
+        rollback.indexOf("DROP TABLE IF EXISTS public.guest_booking_requests"),
+    );
+    assert.equal(rollback.includes("GRANT INSERT"), false);
     assert.equal(rollback.includes("DROP TABLE public.appointments"), false);
     assert.equal(rollback.includes("DROP TABLE public.visits"), false);
+    assert.equal(appRollback.includes("DROP TABLE"), false);
+    assert.equal(appRollback.includes("GRANT INSERT"), false);
+    assert.equal(appRollback.includes("DROP FUNCTION"), false);
+    assert.match(appRollback, /guest_booking_app_rollback_blocked/);
+    assert.equal(forwardFix.includes("GRANT INSERT"), false);
+    assert.equal(forwardFix.includes("DROP TABLE"), false);
+    assert.equal(forwardFix.includes("DROP FUNCTION"), false);
+    assert.match(forwardFix, /guest_booking_contract_not_applied/);
+
+    const migrationsDir = path.join(process.cwd(), "supabase", "migrations");
+    const migrationNames = readdirSync(migrationsDir);
+    assert.equal(migrationNames.includes("guest-booking-contract.sql"), false);
+    assert.equal(
+      existsSync(
+        path.join(process.cwd(), "supabase/manual/rollback-guest-booking-idempotency.sql"),
+      ),
+      false,
+    );
+    for (const name of migrationNames) {
+      const text = readFileSync(path.join(migrationsDir, name), "utf8");
+      assert.equal(
+        text.includes("REVOKE INSERT ON TABLE public.visits"),
+        false,
+        name,
+      );
+    }
+    const config = readFileSync(path.join(process.cwd(), "supabase/config.toml"), "utf8");
+    assert.match(config, /\[db\.migrations\]/);
+    assert.match(config, /enabled = true/);
+    assert.match(config, /schema_paths = \[\]/);
+    assert.equal(config.includes("guest-booking-contract"), false);
+    assert.equal(config.includes("manual/"), false);
   });
 
   it("stores the fee from the raw miles when the mile column rounds to a tenth", async () => {
@@ -345,20 +440,21 @@ describe("guest booking idempotency", () => {
     assert.equal(stored.rows[0]?.fee_kept, true);
   });
 
-  it("does not let a signed-in customer insert a visit directly", async () => {
+  it("still lets the old app insert its own visit after expand", async () => {
     await db.exec(`GRANT authenticated TO CURRENT_USER`);
     await db.exec(`SET ROLE authenticated`);
     try {
-      await assert.rejects(() =>
-        db.exec(`
-          INSERT INTO public.visits (
-            customer_id, service_date, address_street, address_city,
-            address_state, address_zip
-          ) VALUES (
-            '${CUSTOMER}', '2026-10-21', '1 Main', 'Lake Park', 'FL', '33403'
-          )
-        `),
-      );
+      const inserted = await db.query<{ id: string }>(`
+        INSERT INTO public.visits (
+          customer_id, service_date, scheduled_start, appointment_time,
+          address_street, address_city, address_state, address_zip
+        ) VALUES (
+          '${CUSTOMER}', '2026-10-21', 540, '9:00 AM',
+          '1 Main', 'Lake Park', 'FL', '33403'
+        )
+        RETURNING id
+      `);
+      assert.equal(typeof inserted.rows[0]?.id, "string");
     } finally {
       await db.exec(`RESET ROLE`);
     }
@@ -451,15 +547,7 @@ describe("two concurrent guest bookings", () => {
     await left.connect();
     await right.connect();
     await left.query(fixtureSql());
-    await left.query(
-      readFileSync(
-        path.join(
-          process.cwd(),
-          "supabase/migrations/20261015190000_guest_booking_idempotency.sql",
-        ),
-        "utf8",
-      ),
-    );
+    await left.query(sqlFile(EXPAND));
     await left.query(`
       CREATE FUNCTION public.guest_booking_test_pause() RETURNS trigger
       LANGUAGE plpgsql AS $fn$
@@ -556,5 +644,316 @@ describe("two concurrent guest bookings", () => {
     );
     assert.equal(visits.rows[0]?.count, "3");
     assert.equal(claims.rows[0]?.count, "3");
+  });
+
+  async function freshDatabase(name: string) {
+    await left!.query(`DROP DATABASE IF EXISTS ${name}`);
+    await left!.query(`CREATE DATABASE ${name}`);
+    const client = new Client({
+      host: socketDir,
+      port,
+      user: "postgres",
+      database: name,
+    });
+    await client.connect();
+    await client.query(fixtureSql());
+    await client.query(`GRANT anon, authenticated, service_role TO CURRENT_USER`);
+    return client;
+  }
+
+  function staffVisitSql() {
+    const source = sqlFile("supabase/migrations/20261007180000_visit_sequence.sql");
+    const start = source.indexOf("CREATE OR REPLACE FUNCTION public.create_staff_visit(");
+    const end = source.indexOf("-- Service fields, travel mirror");
+    if (start < 0 || end < start) {
+      throw new Error("create_staff_visit block was not found");
+    }
+    return `
+      CREATE OR REPLACE FUNCTION public.visit_arrival_label(p_minutes integer)
+      RETURNS text
+      LANGUAGE sql
+      IMMUTABLE
+      AS $fn$
+        SELECT CASE
+          WHEN p_minutes IS NULL THEN NULL::text
+          ELSE
+            (CASE
+              WHEN (p_minutes / 60) % 12 = 0 THEN 12
+              ELSE (p_minutes / 60) % 12
+            END)::text
+            || ':'
+            || pg_catalog.lpad((pg_catalog.mod(p_minutes, 60))::text, 2, '0')
+            || CASE WHEN (p_minutes / 60) >= 12 THEN ' PM' ELSE ' AM' END
+        END;
+      $fn$;
+      ${source.slice(start, end)}
+    `;
+  }
+
+  async function asRole<T>(
+    client: Client,
+    role: "authenticated" | "service_role" | "anon",
+    run: () => Promise<T>,
+  ) {
+    await client.query(`SET ROLE ${role}`);
+    try {
+      return await run();
+    } finally {
+      await client.query("RESET ROLE");
+    }
+  }
+
+  async function oldAppInsert(client: Client, start: number) {
+    return asRole(client, "authenticated", async () => {
+      const visit = await client.query<{ id: string }>(
+        `INSERT INTO public.visits (
+           customer_id, service_date, scheduled_start, appointment_time,
+           address_street, address_city, address_state, address_zip
+         ) VALUES ($1, '2026-10-22', $2, '9:00 AM', '1 Main', 'Lake Park', 'FL', '33403')
+         RETURNING id`,
+        [CUSTOMER, start],
+      );
+      const visitId = visit.rows[0]?.id;
+      await client.query(
+        `INSERT INTO public.appointments (
+           customer_id, visit_id, visit_sequence, pet_id, service_id, service_name,
+           address_street, address_city, address_state, address_zip,
+           appointment_date, appointment_time, scheduled_start, staff_created
+         ) VALUES (
+           $1, $2, 1, $3, 'signature-bath-care', 'The Signature Bath',
+           '1 Main', 'Lake Park', 'FL', '33403',
+           '2026-10-22', '9:00 AM', $4, false
+         )`,
+        [CUSTOMER, visitId, PET, start],
+      );
+      return visitId;
+    });
+  }
+
+  it("accepts the old app and the new app together after expand", async () => {
+    const client = await freshDatabase("k9_guest_compat");
+    try {
+      await client.query(sqlFile(EXPAND));
+      await client.query(staffVisitSql());
+      const oldVisit = await oldAppInsert(client, 480);
+      assert.equal(typeof oldVisit, "string");
+
+      await asRole(client, "service_role", async () => {
+        const saved = await call(client, "hash-new-app", KEY, 510);
+        assert.equal(bookingResult(saved.rows[0]?.result).created, true);
+        const staffVisit = await client.query<{ id: string }>(
+          `SELECT public.create_staff_visit($1::jsonb, $2::jsonb) AS id`,
+          [
+            JSON.stringify({
+              customer_id: CUSTOMER,
+              service_date: "2026-10-22",
+              scheduled_start: 630,
+              time_preference: "morning",
+              timezone: "America/New_York",
+              status: "confirmed",
+              address_street: "1 Main",
+              address_city: "Lake Park",
+              address_state: "FL",
+              address_zip: "33403",
+              travel_distance_miles: 4,
+              travel_fee: 0,
+            }),
+            JSON.stringify([
+              {
+                customer_id: CUSTOMER,
+                pet_id: PET,
+                service_id: "signature-bath-care",
+                service_name: "The Signature Bath",
+                visit_sequence: 1,
+                address_street: "1 Main",
+                address_city: "Lake Park",
+                address_state: "FL",
+                address_zip: "33403",
+                appointment_date: "2026-10-22",
+                appointment_time: "10:30 AM",
+                scheduled_start: 630,
+                status: "confirmed",
+                staff_created: true,
+              },
+            ]),
+          ],
+        );
+        assert.equal(typeof staffVisit.rows[0]?.id, "string");
+      });
+
+      await assert.rejects(
+        asRole(client, "authenticated", () =>
+          call(client, "hash-browser", OTHER_KEY, 660),
+        ),
+        (error: unknown) =>
+          error instanceof Error && /permission denied/i.test(error.message),
+      );
+      await assert.rejects(
+        asRole(client, "anon", () => call(client, "hash-anon", OTHER_KEY, 690)),
+        (error: unknown) =>
+          error instanceof Error && /permission denied/i.test(error.message),
+      );
+
+      await client.query(sqlFile(APP_ROLLBACK));
+      const kept = await client.query<{ claims: string; visits: string }>(
+        `SELECT
+           (SELECT count(*)::text FROM public.guest_booking_requests) AS claims,
+           (SELECT count(*)::text FROM public.visits) AS visits`,
+      );
+      assert.equal(kept.rows[0]?.claims, "1");
+      assert.equal(kept.rows[0]?.visits, "3");
+    } finally {
+      await client.end();
+    }
+  });
+
+  it("refuses the contract until the operator confirms, then blocks the old insert", async () => {
+    const client = await freshDatabase("k9_guest_contract");
+    try {
+      await client.query(sqlFile(EXPAND));
+      await client.query(staffVisitSql());
+      await client.query(sqlFile(EXPAND));
+      const before = await oldAppInsert(client, 700);
+      assert.equal(typeof before, "string");
+
+      await assert.rejects(client.query(sqlFile(CONTRACT)));
+      await client.query("ROLLBACK");
+      const stillOpen = await oldAppInsert(client, 720);
+      assert.equal(typeof stillOpen, "string");
+
+      await client.query(
+        `SELECT set_config('k9.guest_booking_contract', 'apply', false)`,
+      );
+      await client.query(sqlFile(CONTRACT));
+
+      await assert.rejects(oldAppInsert(client, 740));
+      const privileges = await client.query<{
+        visit_insert: boolean;
+        appointment_insert: boolean;
+        service_execute: boolean;
+        customer_execute: boolean;
+      }>(
+        `SELECT
+           has_table_privilege('authenticated', 'public.visits', 'INSERT') AS visit_insert,
+           has_table_privilege('authenticated', 'public.appointments', 'INSERT') AS appointment_insert,
+           has_function_privilege(
+             'service_role',
+             'public.create_guest_booking(uuid,text,jsonb,jsonb)',
+             'EXECUTE'
+           ) AS service_execute,
+           has_function_privilege(
+             'authenticated',
+             'public.create_guest_booking(uuid,text,jsonb,jsonb)',
+             'EXECUTE'
+           ) AS customer_execute`,
+      );
+      assert.equal(privileges.rows[0]?.visit_insert, false);
+      assert.equal(privileges.rows[0]?.appointment_insert, false);
+      assert.equal(privileges.rows[0]?.service_execute, true);
+      assert.equal(privileges.rows[0]?.customer_execute, false);
+
+      await asRole(client, "service_role", async () => {
+        const saved = await call(client, "hash-after-contract", KEY, 760);
+        assert.equal(bookingResult(saved.rows[0]?.result).created, true);
+        const staffVisit = await client.query<{ id: string }>(
+          `SELECT public.create_staff_visit($1::jsonb, $2::jsonb) AS id`,
+          [
+            JSON.stringify({
+              customer_id: CUSTOMER,
+              service_date: "2026-10-23",
+              scheduled_start: 780,
+              timezone: "America/New_York",
+              status: "confirmed",
+              address_street: "1 Main",
+              address_city: "Lake Park",
+              address_state: "FL",
+              address_zip: "33403",
+            }),
+            JSON.stringify([
+              {
+                customer_id: CUSTOMER,
+                pet_id: PET,
+                service_id: "signature-bath-care",
+                service_name: "The Signature Bath",
+                visit_sequence: 1,
+                address_street: "1 Main",
+                address_city: "Lake Park",
+                address_state: "FL",
+                address_zip: "33403",
+                appointment_date: "2026-10-23",
+                scheduled_start: 780,
+                status: "confirmed",
+                staff_created: true,
+              },
+            ]),
+          ],
+        );
+        assert.equal(typeof staffVisit.rows[0]?.id, "string");
+      });
+
+      const beforeRepair = await client.query<{ claims: string }>(
+        `SELECT count(*)::text AS claims FROM public.guest_booking_requests`,
+      );
+      await client.query(sqlFile(EXPAND));
+      await client.query(sqlFile(FORWARD_FIX));
+      const afterRepair = await client.query<{
+        claims: string;
+        visit_insert: boolean;
+      }>(
+        `SELECT
+           (SELECT count(*)::text FROM public.guest_booking_requests) AS claims,
+           has_table_privilege('authenticated', 'public.visits', 'INSERT') AS visit_insert`,
+      );
+      assert.equal(afterRepair.rows[0]?.claims, beforeRepair.rows[0]?.claims);
+      assert.equal(afterRepair.rows[0]?.visit_insert, false);
+      await assert.rejects(client.query(sqlFile(APP_ROLLBACK)));
+    } finally {
+      await client.end();
+    }
+  });
+
+  it("drops an empty expand and keeps claims that already point at a booking", async () => {
+    const empty = await freshDatabase("k9_guest_expand_empty");
+    try {
+      await empty.query(sqlFile(EXPAND));
+      await empty.query(sqlFile(ROLLBACK_EXPAND));
+      const gone = await empty.query<{ fn: string | null; rel: string | null }>(
+        `SELECT
+           to_regprocedure('public.create_guest_booking(uuid,text,jsonb,jsonb)')::text AS fn,
+           to_regclass('public.guest_booking_requests')::text AS rel`,
+      );
+      assert.equal(gone.rows[0]?.fn, null);
+      assert.equal(gone.rows[0]?.rel, null);
+      const stillOpen = await oldAppInsert(empty, 800);
+      assert.equal(typeof stillOpen, "string");
+    } finally {
+      await empty.end();
+    }
+
+    const used = await freshDatabase("k9_guest_expand_used");
+    try {
+      await used.query(sqlFile(EXPAND));
+      await used.query(`GRANT service_role TO CURRENT_USER`);
+      await asRole(used, "service_role", () =>
+        call(used, "hash-keep", KEY, 820),
+      );
+      await assert.rejects(used.query(sqlFile(ROLLBACK_EXPAND)));
+      await used.query("ROLLBACK");
+      const kept = await used.query<{ claims: string; visits: string; appointments: string }>(
+        `SELECT
+           (SELECT count(*)::text FROM public.guest_booking_requests) AS claims,
+           (SELECT count(*)::text FROM public.visits) AS visits,
+           (SELECT count(*)::text FROM public.appointments) AS appointments`,
+      );
+      assert.equal(kept.rows[0]?.claims, "1");
+      assert.equal(kept.rows[0]?.visits, "1");
+      assert.equal(kept.rows[0]?.appointments, "1");
+      const fn = await used.query<{ fn: string | null }>(
+        `SELECT to_regprocedure('public.create_guest_booking(uuid,text,jsonb,jsonb)')::text AS fn`,
+      );
+      assert.equal(fn.rows[0]?.fn !== null, true);
+    } finally {
+      await used.end();
+    }
   });
 });

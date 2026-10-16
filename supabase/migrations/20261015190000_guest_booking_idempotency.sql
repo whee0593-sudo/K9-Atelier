@@ -1,16 +1,18 @@
--- Guest booking idempotency. Not applied to production by this change.
--- One row claims one customer confirmation key.
--- create_guest_booking inserts the visit and the appointment in the same
--- transaction, so a failed appointment insert does not leave a visit behind.
--- Replaying the same key and the same booking contents returns the original
--- appointment. The same key with different contents is rejected.
--- Existing appointment rows are not rewritten. Staff booking does not call this function.
--- Only service_role may execute the function or insert a visit. The browser
--- session cannot bypass the server's measured distance and price check.
+-- Migration A（Expand）。
+-- 本文件留在 supabase/migrations，会随 supabase db push / db reset 按时间顺序执行。
+-- 只新增 guest_booking_requests 和 create_guest_booking。
+-- EXECUTE 只授予 service_role。
+-- 不收回 authenticated 对 visits、appointments 的 INSERT。
+-- 不删除 visits_insert_own、appointments_insert_own。
+-- 旧版应用仍走原来的客户插入路径。
+-- 收回旧插入权限的 Contract 在 supabase/manual/guest-booking-contract.sql，
+-- 不在自动迁移目录里，也不能提前执行。
+-- 本文件可重复执行：再次运行会补上函数，不会恢复或删除客户 INSERT。
+-- 尚未对生产执行。
 
 BEGIN;
 
-CREATE TABLE public.guest_booking_requests (
+CREATE TABLE IF NOT EXISTS public.guest_booking_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id uuid NOT NULL REFERENCES public.profiles (id) ON DELETE CASCADE,
   idempotency_key uuid NOT NULL,
@@ -248,13 +250,5 @@ REVOKE ALL ON FUNCTION public.create_guest_booking(uuid, text, jsonb, jsonb) FRO
 REVOKE ALL ON FUNCTION public.create_guest_booking(uuid, text, jsonb, jsonb) FROM anon;
 REVOKE ALL ON FUNCTION public.create_guest_booking(uuid, text, jsonb, jsonb) FROM authenticated;
 GRANT EXECUTE ON FUNCTION public.create_guest_booking(uuid, text, jsonb, jsonb) TO service_role;
-
--- Self-serve inserts go through create_guest_booking. A signed-in browser
--- session can no longer write visits or appointments directly. Staff booking
--- keeps its own service-role function and does not use these policies.
-REVOKE INSERT ON TABLE public.visits FROM authenticated;
-REVOKE INSERT ON TABLE public.appointments FROM authenticated;
-DROP POLICY IF EXISTS visits_insert_own ON public.visits;
-DROP POLICY IF EXISTS appointments_insert_own ON public.appointments;
 
 COMMIT;
