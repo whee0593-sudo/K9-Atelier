@@ -74,20 +74,24 @@ export function createMemoryCommunicationStore(
         }
         const existing = rows.get(snapshot.idempotencyKey);
         if (existing) {
-          if (existing.status === "failed" && !existing.providerMessageId) {
+          if (
+            existing.providerCalledAt ||
+            existing.status === "uncertain" ||
+            existing.status === "accepted" ||
+            existing.status === "delivered" ||
+            existing.status === "undelivered" ||
+            existing.status === "bounced"
+          ) {
+            return terminalDuplicate(existing) ?? { action: "unresolved" };
+          }
+          if (snapshot.intendedStatus === "skipped") return { action: "recorded" };
+          if (
+            existing.status === "skipped" ||
+            (existing.status === "pending" && !existing.providerCalledAt)
+          ) {
             existing.status = "pending";
             existing.providerCalledAt = new Date().toISOString();
             existing.claimToken = randomUUID();
-            return {
-              action: "send",
-              id: existing.id,
-              claimToken: existing.claimToken,
-            };
-          }
-          const blocked = terminalDuplicate(existing);
-          if (blocked) return blocked;
-          if (existing.status === "pending" && !existing.providerCalledAt) {
-            existing.providerCalledAt = new Date().toISOString();
             return {
               action: "send",
               id: existing.id,

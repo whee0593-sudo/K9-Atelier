@@ -22,8 +22,9 @@ function isUniqueViolation(error: { code?: string } | null) {
 
 /**
  * Uses the production communication_logs columns, including provider_called_at.
- * Does not call communication_logs_claim. A row whose provider_called_at is set
- * is never claimed for another send.
+ * Does not call communication_logs_claim. That RPC's return shape is not in
+ * git, so calling it would be a second, unverified claim rule.
+ * A row whose provider_called_at is set is never claimed for another send.
  */
 export function createSupabaseCommunicationStore(
   admin: SupabaseClient,
@@ -42,32 +43,25 @@ export function createSupabaseCommunicationStore(
     return (data as LogRow | null) ?? null;
   }
 
-  async function decideExisting(row: LogRow): Promise<ClaimResult> {
-    if (row.status === "failed" && !row.provider_message_id) {
-      return reclaimFailed(row);
-    }
-    const blocked = duplicateOrUnresolved(row);
-    if (blocked) return blocked;
-    if (row.status === "pending" && !row.provider_called_at) {
-      return markCalled(row);
-    }
-    return { action: "unresolved" };
-  }
-
-  function duplicateOrUnresolved(row: LogRow): ClaimResult | null {
+  async function decideExisting(
+    row: LogRow,
+    snapshot: CommunicationSnapshot,
+  ): Promise<ClaimResult> {
     if (
       row.status === "accepted" ||
       row.status === "delivered" ||
       row.status === "undelivered" ||
-      row.status === "bounced" ||
-      row.status === "skipped"
+      row.status === "bounced"
     ) {
       return { action: "duplicate" };
     }
     if (row.status === "uncertain" || row.provider_called_at) {
       return { action: "unresolved" };
     }
-    return null;
+    if (snapshot.intendedStatus === "skipped") return { action: "recorded" };
+    if (row.status === "skipped") return claimSkipped(row);
+    if (row.status === "pending") return markCalled(row);
+    return { action: "unresolved" };
   }
 
   async function markCalled(row: LogRow): Promise<ClaimResult> {
@@ -87,19 +81,17 @@ export function createSupabaseCommunicationStore(
     };
   }
 
-  async function reclaimFailed(row: LogRow): Promise<ClaimResult> {
+  async function claimSkipped(row: LogRow): Promise<ClaimResult> {
     const calledAt = new Date().toISOString();
     const { data, error } = await logs()
       .update({
         status: "pending",
         provider_called_at: calledAt,
-        failed_at: null,
-        error_message: null,
-        claimed_at: calledAt,
+        skip_reason: null,
       })
       .eq("id", row.id)
-      .eq("status", "failed")
-      .is("provider_message_id", null)
+      .eq("status", "skipped")
+      .is("provider_called_at", null)
       .select("id, claim_token")
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -136,7 +128,7 @@ export function createSupabaseCommunicationStore(
   return {
     async claim(snapshot) {
       const existing = await readByKey(snapshot.idempotencyKey);
-      if (existing) return decideExisting(existing);
+      if (existing) return decideExisting(existing, snapshot);
 
       const claimToken = randomUUID();
       const { data, error } = await logs()
@@ -147,7 +139,7 @@ export function createSupabaseCommunicationStore(
         if (!isUniqueViolation(error)) throw new Error(error.message);
         const raced = await readByKey(snapshot.idempotencyKey);
         if (!raced) throw new Error(error.message);
-        return decideExisting(raced);
+        return decideExisting(raced, snapshot);
       }
 
       if (snapshot.intendedStatus === "skipped") return { action: "recorded" };

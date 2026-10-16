@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { describe, it } from "node:test";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildBookingConfirmationEmail } from "@/lib/notifications";
 import { createMemoryCommunicationStore } from "@/lib/communications/memory-store";
@@ -12,13 +12,19 @@ import {
   readMerchantNotifyPhone,
 } from "@/lib/communications/merchant-config";
 import {
+  buildMerchantCustomerReplyCCopy,
   buildMerchantRescheduleCopy,
+  buildMerchantVisitCancelledCopy,
   buildMerchantVisitConfirmedCopy,
+  buildMerchantVisitPetsChangedCopy,
   merchantVisitIsConfirmed,
+  notifyMerchantCustomerReplyC,
   notifyMerchantReschedule,
   notifyMerchantVisitConfirmed,
+  notifyMerchantVisitPetsChanged,
   replayDeferredMerchantAlerts,
   rescheduleFingerprint,
+  rosterFingerprint,
   type MerchantVisitFacts,
 } from "@/lib/communications/merchant-notices";
 import type { ProviderSendResult } from "@/lib/communications/store";
@@ -189,10 +195,14 @@ describe("merchant visit notices", () => {
       merchantIdempotencyKey({
         channel: "email",
         notificationType: "merchant_visit_confirmed",
-        visitId: "visit-1",
-        recipient: "penny@k9atelier.com",
+        scope: "visit:visit-1",
       }),
     );
+    assert.equal(
+      emailRow?.snapshot.idempotencyKey,
+      "email|merchant_visit_confirmed|staff|visit:visit-1|-",
+    );
+    assert.equal(emailRow?.snapshot.idempotencyKey.includes("penny@"), false);
     assert.equal(emailRow?.snapshot.idempotencyKey.includes("pet-1"), false);
   });
 
@@ -281,7 +291,7 @@ describe("merchant visit notices", () => {
     assert.equal(box.smsCalls.length, 1);
   });
 
-  it("reclaims a definite provider failure once and leaves an accepted row unsent", async () => {
+  it("does not resend after the provider was called, including a definite failure", async () => {
     const box = harness();
     box.setEmailResult({ outcome: "failed", error: "Resend 422" });
     const failed = await notifyMerchantVisitConfirmed(facts(), box.deps);
@@ -290,19 +300,52 @@ describe("merchant visit notices", () => {
     const emailRow = box.store.rows().find((row) => row.snapshot.channel === "email");
     assert.equal(emailRow?.status, "failed");
     assert.equal(emailRow?.providerMessageId, null);
+    assert.ok(emailRow?.providerCalledAt);
     box.setEmailResult({ outcome: "accepted", providerMessageId: "email-2" });
     const retried = await notifyMerchantVisitConfirmed(facts(), box.deps);
-    assert.equal(retried.email, "accepted");
+    assert.equal(retried.email, "uncertain");
     assert.equal(retried.sms, "duplicate");
-    assert.equal(box.emailCalls.length, 2);
+    assert.equal(box.emailCalls.length, 1);
     assert.equal(box.smsCalls.length, 1);
-    const settled = await notifyMerchantVisitConfirmed(facts(), box.deps);
-    assert.equal(settled.email, "duplicate");
-    assert.equal(box.emailCalls.length, 2);
     assert.equal(
       box.store.rows().find((row) => row.snapshot.channel === "email")?.status,
-      "accepted",
+      "failed",
     );
+  });
+
+  it("sends once after a skipped row when the sender config is fixed", async () => {
+    const store = createMemoryCommunicationStore();
+    const emailCalls: string[] = [];
+    const sender = {
+      email: async (input: { from: string }) => {
+        emailCalls.push(input.from);
+        return { outcome: "accepted" as const, providerMessageId: "email-later" };
+      },
+      sms: async () => ({ outcome: "accepted" as const, providerMessageId: "sms-later" }),
+    };
+    const skipped = await notifyMerchantVisitConfirmed(facts(), {
+      store,
+      env: merchantEnv({ MERCHANT_NOTIFY_FROM_EMAIL: "" }),
+      sender,
+    });
+    assert.equal(skipped.email, "skipped");
+    assert.equal(emailCalls.length, 0);
+    const emailRow = store.rows().find((row) => row.snapshot.channel === "email");
+    assert.equal(emailRow?.providerCalledAt, null);
+    const sent = await notifyMerchantVisitConfirmed(facts(), {
+      store,
+      env: merchantEnv(),
+      sender,
+    });
+    assert.equal(sent.email, "accepted");
+    assert.equal(emailCalls.length, 1);
+    const again = await notifyMerchantVisitConfirmed(facts(), {
+      store,
+      env: merchantEnv(),
+      sender,
+    });
+    assert.equal(again.email, "duplicate");
+    assert.equal(emailCalls.length, 1);
   });
 
   it("does not resend when the provider outcome is uncertain", async () => {
@@ -463,6 +506,186 @@ describe("merchant visit notices", () => {
     assert.equal(same.email, "duplicate");
     assert.equal(box.emailCalls.length, 2);
   });
+
+  it("sends one roster notice per actual dog-list change", async () => {
+    const previous = facts().pets;
+    const next = [
+      ...previous,
+      {
+        appointmentId: "appt-2",
+        petId: "pet-2",
+        petName: "Milo",
+        serviceName: "Bath",
+        status: "confirmed" as const,
+      },
+    ];
+    const copy = buildMerchantVisitPetsChangedCopy({
+      ...facts(),
+      previousPets: previous,
+      pets: next,
+    });
+    assert.equal(copy.subject, "Dogs on this visit changed");
+    assert.match(copy.emailText, /Previous dogs: Bella/);
+    assert.match(copy.emailText, /Current dogs: Bella · Full Haircut; Milo · Bath/);
+    assert.match(copy.emailText, /not a new confirmation/);
+    assert.match(copy.emailText, /not a cancellation of the whole visit/);
+    assert.doesNotMatch(copy.subject, /New visit confirmed|Visit cancelled/);
+    assert.doesNotMatch(copy.sms, /New visit confirmed|Visit cancelled/);
+    assert.doesNotMatch(copy.emailText, /New visit confirmed|Visit cancelled/);
+    const cancelled = buildMerchantVisitCancelledCopy(facts());
+    assert.equal(cancelled.subject, "Visit cancelled");
+    assert.notEqual(copy.subject, cancelled.subject);
+    assert.notEqual(copy.subject, buildMerchantVisitConfirmedCopy(facts()).subject);
+
+    const box = harness();
+    const changed = {
+      ...facts(),
+      previousPets: previous,
+      pets: next,
+    };
+    const sent = await notifyMerchantVisitPetsChanged(changed, box.deps);
+    assert.deepEqual(sent, { email: "accepted", sms: "accepted" });
+    const same = await notifyMerchantVisitPetsChanged(changed, box.deps);
+    assert.equal(same.email, "duplicate");
+    assert.equal(box.emailCalls.length, 1);
+    const removed = await notifyMerchantVisitPetsChanged(
+      { ...facts(), previousPets: next, pets: previous },
+      box.deps,
+    );
+    assert.equal(removed.email, "accepted");
+    assert.equal(box.emailCalls.length, 2);
+    assert.equal(
+      rosterFingerprint(previous, next),
+      "pet-1=>pet-1,pet-2",
+    );
+    const unchanged = await notifyMerchantVisitPetsChanged(
+      { ...facts(), previousPets: previous, pets: previous },
+      box.deps,
+    );
+    assert.deepEqual(unchanged, { email: "not_confirmed", sms: "not_confirmed" });
+    assert.equal(box.emailCalls.length, 2);
+  });
+
+  it("sends one customer-confirmed merchant email for concurrent reply C webhooks", async () => {
+    const box = harness();
+    const input = {
+      visitId: "visit-1",
+      customerId: "customer-1",
+      customerName: "Ada Lovelace",
+      replyTo: "ada@example.com",
+      appointmentId: "appt-1",
+      petId: "pet-1",
+      petName: "Bella",
+      serviceName: "Full Haircut",
+      whenLabel: facts().whenLabel,
+      addressLabel: facts().addressLabel,
+    };
+    const [first, second] = await Promise.all([
+      notifyMerchantCustomerReplyC(input, box.deps),
+      notifyMerchantCustomerReplyC(input, box.deps),
+    ]);
+    const outcomes = [first.email, second.email].sort();
+    assert.deepEqual(outcomes, ["accepted", "uncertain"]);
+    assert.equal(first.sms, "skipped");
+    assert.equal(second.sms, "skipped");
+    assert.equal(box.emailCalls.length, 1);
+    assert.equal(box.smsCalls.length, 0);
+    assert.equal(box.emailCalls[0]?.subject, "[K9 Atelier] Customer confirmed — Bella");
+    const row = box.store.rows()[0];
+    assert.equal(row?.snapshot.notificationType, "merchant_customer_reply_c");
+    assert.equal(
+      row?.snapshot.idempotencyKey,
+      "email|merchant_customer_reply_c|staff|visit:visit-1|appt-1",
+    );
+    assert.equal(
+      box.store.rows().some((entry) => entry.snapshot.notificationType === "merchant_visit_confirmed"),
+      false,
+    );
+    const copy = buildMerchantCustomerReplyCCopy({
+      petName: "Bella",
+      serviceName: "Full Haircut",
+      whenLabel: facts().whenLabel,
+    });
+    assert.match(copy.emailText, /replied C to confirm/);
+    assert.doesNotMatch(copy.subject, /New visit confirmed/);
+    const missing = await notifyMerchantCustomerReplyC(
+      { ...input, visitId: null },
+      box.deps,
+    );
+    assert.equal(missing.email, "unrecorded");
+    assert.equal(box.emailCalls.length, 1);
+  });
+
+  it("keeps a skipped replay queued and does not resend an uncertain outcome", async () => {
+    const box = harness(merchantEnv(), {
+      claimFailures: 4,
+      alertFailures: 0,
+      completeFailures: 0,
+    });
+    await notifyMerchantVisitConfirmed(facts(), box.deps);
+    box.faults.claimFailures = 0;
+    box.deps.env = merchantEnv({ MERCHANT_NOTIFY_FROM_EMAIL: "", MERCHANT_NOTIFY_PHONE: "" });
+    const waiting = await replayDeferredMerchantAlerts({
+      ...box.deps,
+      loadVisit: async () => facts(),
+    });
+    assert.equal(waiting.replayed, 0);
+    assert.equal(waiting.kept, 2);
+    assert.equal(box.emailCalls.length, 0);
+    assert.equal(
+      box.store.rows().every((row) => row.providerCalledAt == null),
+      true,
+    );
+    box.deps.env = merchantEnv();
+    const sent = await replayDeferredMerchantAlerts({
+      ...box.deps,
+      loadVisit: async () => facts(),
+    });
+    assert.deepEqual(sent, { replayed: 2, kept: 0 });
+    assert.equal(box.emailCalls.length, 1);
+    assert.equal(box.smsCalls.length, 1);
+    box.setEmailResult({ outcome: "uncertain", error: "Resend 503" });
+    box.faults.claimFailures = 1;
+    await notifyMerchantVisitPetsChanged(
+      {
+        ...facts(),
+        previousPets: facts().pets,
+        pets: [
+          ...facts().pets,
+          {
+            appointmentId: "appt-2",
+            petId: "pet-2",
+            petName: "Milo",
+            serviceName: "Bath",
+            status: "confirmed",
+          },
+        ],
+      },
+      box.deps,
+    );
+    const before = box.emailCalls.length;
+    box.faults.claimFailures = 0;
+    box.setEmailResult({ outcome: "accepted", providerMessageId: "email-new" });
+    const withMilo = facts({
+      pets: [
+        ...facts().pets,
+        {
+          appointmentId: "appt-2",
+          petId: "pet-2",
+          petName: "Milo",
+          serviceName: "Bath",
+          status: "confirmed",
+        },
+      ],
+    });
+    const replay = await replayDeferredMerchantAlerts({
+      ...box.deps,
+      loadVisit: async () => withMilo,
+    });
+    assert.equal(replay.replayed, 1);
+    assert.equal(replay.kept, 0);
+    assert.equal(box.emailCalls.length, before);
+  });
 });
 
 describe("customer confirmation stays on its own path", () => {
@@ -511,22 +734,97 @@ describe("customer confirmation stays on its own path", () => {
     assert.match(source("src/lib/staff/confirm-customer-booking.ts"), /visit_id/);
   });
 
-  it("notifies the merchant of a customer cancel and a completed reschedule", () => {
+  it("notifies the merchant of a customer cancel, a completed reschedule, and a roster change", () => {
     const change = source("src/lib/appointments/customer-change.ts");
     assert.match(change, /notifyMerchantVisitCancelled/);
     assert.match(change, /notifyMerchantRescheduleCompletedFromAppointments/);
+    assert.match(change, /notifyMerchantVisitPetsChangedFromAppointments/);
+    assert.match(change, /if \(input\.action === "remove_dog"\)/);
     assert.doesNotMatch(change, /notifyMerchantReschedule\(/);
     assert.doesNotMatch(change, /notifyStaffNewAppointment/);
     assert.match(change, /notifyCustomerAppointmentChange\("add_dog"/);
+    const addedStart = change.indexOf("async function addDogToVisit");
+    const addedEnd = change.indexOf("\nasync function ", addedStart + 10);
+    const added = change.slice(addedStart, addedEnd);
+    assert.match(added, /notifyMerchantPetsChanged/);
+    assert.doesNotMatch(added, /notifyMerchantVisitConfirmed/);
+    assert.doesNotMatch(added, /notifyMerchantVisitCancelled/);
     assert.doesNotMatch(source("src/lib/appointments/staff-reschedule.ts"), /notifyMerchant/);
   });
 
   it("does not treat a customer reply C as a new visit notice", () => {
     const inbound = source("src/lib/sms/inbound.ts");
     assert.doesNotMatch(inbound, /notifyMerchantVisitConfirmed/);
-    assert.match(inbound, /Customer confirmed —/);
+    assert.doesNotMatch(inbound, /sendEmail\(/);
+    assert.match(inbound, /notifyMerchantCustomerReplyC/);
+    assert.match(inbound, /visit_id/);
+    assert.match(inbound, /sendSms\(/);
     const confirmedCopy = buildMerchantVisitConfirmedCopy(facts());
     assert.equal(confirmedCopy.subject, "New visit confirmed");
     assert.doesNotMatch(confirmedCopy.subject, /Customer confirmed/);
+    const reply = buildMerchantCustomerReplyCCopy({
+      petName: "Bella",
+      serviceName: "Bath",
+      whenLabel: "Wednesday, November 4, 2026, 2:00 PM",
+    });
+    assert.match(reply.subject, /Customer confirmed — Bella/);
+  });
+
+  it("keeps customer sendEmail and sendSms boolean and leaves notifyStaffNewAppointment unhooked", () => {
+    assert.match(
+      source("src/lib/email/resend.ts"),
+      /export async function sendEmail\(input: SendEmailInput\): Promise<boolean>/,
+    );
+    assert.match(
+      source("src/lib/sms/twilio.ts"),
+      /export async function sendSms\(input: SendSmsInput\): Promise<boolean>/,
+    );
+    const needle = ["notifyStaffNewAppointment", "("].join("");
+    const hits: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir)) {
+        const full = join(dir, entry);
+        if (statSync(full).isDirectory()) {
+          walk(full);
+          continue;
+        }
+        if (!/\.(ts|tsx)$/.test(entry)) continue;
+        const text = readFileSync(full, "utf8");
+        if (text.includes(needle)) hits.push(relative(root, full));
+      }
+    };
+    walk(join(root, "src"));
+    assert.deepEqual(hits, ["src/lib/email/appointment-mails.ts"]);
+    assert.equal(source("src/lib/email/appointment-mails.ts").split(needle).length, 2);
+  });
+
+  it("replays merchant claims on an hourly cron that does not rerun customer reminders", () => {
+    const vercel = JSON.parse(source("vercel.json")) as {
+      crons: Array<{ path: string; schedule: string }>;
+    };
+    assert.deepEqual(
+      vercel.crons.filter((cron) => cron.path === "/api/cron/merchant-notice-replay"),
+      [{ path: "/api/cron/merchant-notice-replay", schedule: "5 * * * *" }],
+    );
+    assert.equal(
+      vercel.crons.filter((cron) => cron.path === "/api/cron/appointment-reminders").length,
+      2,
+    );
+    const replay = source("src/app/api/cron/merchant-notice-replay/route.ts");
+    assert.match(replay, /replayDeferredMerchantAlerts/);
+    assert.doesNotMatch(replay, /sendThreeDayConfirmRequestSms|sendNextDayFollowUp|sendThreeWeekRebookReminders/);
+    const reminders = source("src/app/api/cron/appointment-reminders/route.ts");
+    assert.match(reminders, /try \{/);
+    assert.match(reminders, /replayDeferredMerchantAlerts/);
+    const migration = source(
+      "supabase/migrations/20261016020000_merchant_communication_compatibility.sql",
+    );
+    assert.doesNotMatch(migration, /CREATE OR REPLACE FUNCTION private\.communication_logs_protect_snapshot/);
+    assert.doesNotMatch(migration, /DROP TRIGGER/);
+    assert.doesNotMatch(migration, /DROP POLICY/);
+    assert.doesNotMatch(migration, /CREATE\s+(OR REPLACE\s+)?FUNCTION[^;]*communication_logs_claim/i);
+    assert.match(migration, /does not replace communication_logs_claim/);
+    assert.match(migration, /IF NOT EXISTS/);
+    assert.match(migration, /blocks another automatic send/);
   });
 });

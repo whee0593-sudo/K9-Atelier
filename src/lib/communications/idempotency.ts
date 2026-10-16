@@ -1,21 +1,28 @@
 import { createHash } from "node:crypto";
 
+/**
+ * Same shape as Production `communication_idempotency_key`:
+ * channel|notification_type|audience|scope|fingerprint
+ * The merchant address is not part of the key.
+ */
 export function merchantIdempotencyKey(input: {
   channel: "email" | "sms";
   notificationType: string;
-  visitId: string;
-  recipient: string;
+  scope: string;
   fingerprint?: string | null;
 }) {
-  const parts = [
+  const fingerprint = input.fingerprint?.trim() || "-";
+  return [
     input.channel,
     input.notificationType,
     "staff",
-    `visit:${input.visitId}`,
-    `recipient:${input.recipient.trim().toLowerCase()}`,
-  ];
-  if (input.fingerprint) parts.push(`fp:${input.fingerprint}`);
-  return parts.join("|");
+    input.scope,
+    fingerprint,
+  ].join("|");
+}
+
+export function merchantVisitScope(visitId: string) {
+  return `visit:${visitId}`;
 }
 
 /** Short hash stored on alerts. The raw recipient and body stay out of that table. */

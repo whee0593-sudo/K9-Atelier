@@ -18,9 +18,8 @@ export type DispatchMerchantChannelInput = {
 };
 
 function alertMessage(snapshot: CommunicationSnapshot) {
-  const fingerprint = snapshot.idempotencyKey.includes("|fp:")
-    ? snapshot.idempotencyKey.split("|fp:").slice(1).join("|fp:")
-    : "-";
+  const parts = snapshot.idempotencyKey.split("|");
+  const fingerprint = parts.length >= 5 ? parts.slice(4).join("|") : "-";
   return `v=${snapshot.visitId} t=${snapshot.notificationType} c=${snapshot.channel} fp=${fingerprint}`;
 }
 

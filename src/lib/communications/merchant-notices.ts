@@ -1,7 +1,10 @@
 import { mapAppointmentRowToRecord } from "@/lib/appointments/map";
 import type { AppointmentRecord, AppointmentRow } from "@/lib/appointments/types";
 import { dispatchMerchantChannel } from "@/lib/communications/dispatch";
-import { merchantIdempotencyKey } from "@/lib/communications/idempotency";
+import {
+  merchantIdempotencyKey,
+  merchantVisitScope,
+} from "@/lib/communications/idempotency";
 import {
   MERCHANT_NOTIFY_EMAIL,
   readMerchantFromAddress,
@@ -71,6 +74,8 @@ const CONFIRMED = "merchant_visit_confirmed";
 const CANCELLED = "merchant_visit_cancelled";
 const RESCHEDULE_COMPLETED = "merchant_reschedule_completed";
 const RESCHEDULE_REQUESTED = "merchant_reschedule_requested";
+const PETS_CHANGED = "merchant_visit_pets_changed";
+const CUSTOMER_REPLY_C = "merchant_customer_reply_c";
 
 export function merchantVisitIsConfirmed(pets: Array<{ status: string }>) {
   const active = pets.filter((pet) => pet.status !== "cancelled");
@@ -160,6 +165,91 @@ export function buildMerchantVisitConfirmedCopy(facts: MerchantVisitFacts) {
     emailHtml: letter.html,
     sms: `K9 Atelier: New visit confirmed for ${petNames(facts.pets)} on ${facts.whenLabel}. ${facts.addressLabel}`,
   };
+}
+
+export type MerchantPetsChangedFacts = MerchantVisitFacts & {
+  previousPets: MerchantPetLine[];
+};
+
+export function rosterFingerprint(
+  previous: MerchantPetLine[],
+  next: MerchantPetLine[],
+) {
+  const side = (pets: MerchantPetLine[]) =>
+    [...new Set(pets.map((pet) => pet.petId).filter(Boolean))].sort().join(",");
+  return `${side(previous)}=>${side(next)}`;
+}
+
+export function rosterChanged(
+  previous: MerchantPetLine[],
+  next: MerchantPetLine[],
+) {
+  const [before, after] = rosterFingerprint(previous, next).split("=>");
+  return before !== after;
+}
+
+export function buildMerchantVisitPetsChangedCopy(facts: MerchantPetsChangedFacts) {
+  const subject = "Dogs on this visit changed";
+  const intro =
+    "The dogs on this visit changed. This notice is only that roster change. It is not a new confirmation, and it is not a cancellation of the whole visit.";
+  const rows: StaffNotificationRow[] = [
+    { label: "Previous dogs", value: petSummary(facts.previousPets) || "None" },
+    { label: "Current dogs", value: petSummary(facts.pets) || "None" },
+    { label: "When", value: facts.whenLabel },
+    { label: "Address", value: facts.addressLabel },
+  ];
+  if (facts.customerName) rows.unshift({ label: "Customer", value: facts.customerName });
+  const letter = staffLetter({
+    subject,
+    intro,
+    rows,
+    textLines: [
+      intro,
+      "",
+      `Previous dogs: ${petSummary(facts.previousPets) || "None"}`,
+      `Current dogs: ${petSummary(facts.pets) || "None"}`,
+      `When: ${facts.whenLabel}`,
+      `Address: ${facts.addressLabel}`,
+    ],
+  });
+  return {
+    subject,
+    emailText: letter.text,
+    emailHtml: letter.html,
+    sms: `K9 Atelier: Dogs on this visit changed. Was ${petNames(facts.previousPets)}. Now ${petNames(facts.pets)}. ${facts.whenLabel}.`,
+  };
+}
+
+export function buildMerchantCustomerReplyCCopy(input: {
+  customerName?: string | null;
+  petName: string;
+  serviceName: string;
+  whenLabel: string;
+}) {
+  const subject = `[K9 Atelier] Customer confirmed — ${input.petName}`;
+  const intro =
+    "The customer replied C to confirm. This is the customer SMS confirmation. It does not change staff or vaccination booking status, and it is not a new visit confirmation.";
+  const who = input.customerName?.trim() || "A customer";
+  const letter = staffLetter({
+    subject,
+    intro,
+    rows: [
+      { label: "Customer", value: who },
+      { label: "Pet", value: input.petName },
+      { label: "Service", value: input.serviceName },
+      { label: "When", value: input.whenLabel },
+    ],
+    textLines: [
+      intro,
+      "",
+      `${who} replied C to confirm.`,
+      "",
+      `Pet: ${input.petName}`,
+      `Service: ${input.serviceName}`,
+      `Date: ${input.whenLabel}`,
+    ],
+  });
+  return { subject, emailText: letter.text, emailHtml: letter.html };
 }
 
 export function buildMerchantVisitCancelledCopy(facts: MerchantVisitFacts) {
@@ -257,8 +347,7 @@ function snapshotBase(
     idempotencyKey: merchantIdempotencyKey({
       channel,
       notificationType,
-      visitId: facts.visitId,
-      recipient,
+      scope: merchantVisitScope(facts.visitId),
       fingerprint,
     }),
   };
@@ -277,6 +366,7 @@ async function sendPair(input: {
   emailText: string;
   emailHtml: string;
   sms: string;
+  includeSms?: boolean;
   deps?: MerchantNotifyDeps;
 }): Promise<MerchantNotifySummary> {
   const store = input.deps?.store === undefined ? defaultStore() : input.deps.store;
@@ -350,23 +440,27 @@ async function sendPair(input: {
     ((message) => sendTrackedEmail(message));
   const sendSms = input.deps?.sender?.sms ?? ((message) => sendTrackedSms(message));
 
+  const emailPromise = dispatchMerchantChannel({
+    store,
+    snapshot: emailSnapshot,
+    skip: Boolean(emailSkipReason),
+    send: emailSkipReason
+      ? undefined
+      : () =>
+          sendEmail({
+            from: from.ok ? from.from : "",
+            to: emailRecipient,
+            subject: input.subject,
+            text: input.emailText,
+            html: input.emailHtml,
+            replyTo: input.facts.replyTo ?? undefined,
+          }),
+  });
+  if (input.includeSms === false) {
+    return { email: await emailPromise, sms: "skipped" };
+  }
   const [email, sms] = await Promise.all([
-    dispatchMerchantChannel({
-      store,
-      snapshot: emailSnapshot,
-      skip: Boolean(emailSkipReason),
-      send: emailSkipReason
-        ? undefined
-        : () =>
-            sendEmail({
-              from: from.ok ? from.from : "",
-              to: emailRecipient,
-              subject: input.subject,
-              text: input.emailText,
-              html: input.emailHtml,
-              replyTo: input.facts.replyTo ?? undefined,
-            }),
-    }),
+    emailPromise,
     dispatchMerchantChannel({
       store,
       snapshot: smsSnapshot,
@@ -436,6 +530,81 @@ export function rescheduleFingerprint(previousWhen: string, nextWhen: string) {
   return `${previousWhen}=>${nextWhen}`;
 }
 
+export async function notifyMerchantVisitPetsChanged(
+  facts: MerchantPetsChangedFacts,
+  deps?: MerchantNotifyDeps,
+): Promise<MerchantNotifySummary> {
+  if (!rosterChanged(facts.previousPets, facts.pets)) {
+    return { email: "not_confirmed", sms: "not_confirmed" };
+  }
+  const copy = buildMerchantVisitPetsChangedCopy(facts);
+  return sendPair({
+    facts,
+    notificationType: PETS_CHANGED,
+    fingerprint: rosterFingerprint(facts.previousPets, facts.pets),
+    subject: copy.subject,
+    emailText: copy.emailText,
+    emailHtml: copy.emailHtml,
+    sms: copy.sms,
+    deps,
+  });
+}
+
+export async function notifyMerchantCustomerReplyC(
+  input: {
+    visitId: string | null;
+    customerId: string | null;
+    customerName?: string | null;
+    replyTo?: string | null;
+    appointmentId: string;
+    petId: string;
+    petName: string;
+    serviceName: string;
+    whenLabel: string;
+    addressLabel?: string;
+  },
+  deps?: MerchantNotifyDeps,
+): Promise<MerchantNotifySummary> {
+  if (!input.visitId) {
+    console.error("MERCHANT_NOTIFY_UNRECORDED", "missing-visit", CUSTOMER_REPLY_C);
+    return { email: "unrecorded", sms: "skipped" };
+  }
+  const facts: MerchantVisitFacts = {
+    visitId: input.visitId,
+    customerId: input.customerId,
+    customerName: input.customerName ?? null,
+    replyTo: input.replyTo ?? null,
+    whenLabel: input.whenLabel,
+    addressLabel: input.addressLabel ?? "",
+    pets: [
+      {
+        appointmentId: input.appointmentId,
+        petId: input.petId,
+        petName: input.petName,
+        serviceName: input.serviceName,
+        status: "confirmed",
+      },
+    ],
+  };
+  const copy = buildMerchantCustomerReplyCCopy({
+    customerName: input.customerName,
+    petName: input.petName,
+    serviceName: input.serviceName,
+    whenLabel: input.whenLabel,
+  });
+  return sendPair({
+    facts,
+    notificationType: CUSTOMER_REPLY_C,
+    fingerprint: input.appointmentId,
+    subject: copy.subject,
+    emailText: copy.emailText,
+    emailHtml: copy.emailHtml,
+    sms: "",
+    includeSms: false,
+    deps,
+  });
+}
+
 export async function notifyMerchantVisitConfirmedFromAppointments(
   appointments: AppointmentRecord[],
   extra?: { customerName?: string | null; replyTo?: string | null },
@@ -462,20 +631,12 @@ export function parseMerchantAlert(message: string) {
   };
 }
 
-const TERMINAL_OUTCOMES = new Set<DispatchOutcome>([
-  "accepted",
-  "failed",
-  "uncertain",
-  "skipped",
-  "duplicate",
-]);
-
-function bothChannelsSettled(summary: MerchantNotifySummary) {
+function channelSettled(outcome: DispatchOutcome | "not_confirmed") {
   return (
-    summary.email !== "not_confirmed" &&
-    summary.sms !== "not_confirmed" &&
-    TERMINAL_OUTCOMES.has(summary.email) &&
-    TERMINAL_OUTCOMES.has(summary.sms)
+    outcome === "accepted" ||
+    outcome === "failed" ||
+    outcome === "uncertain" ||
+    outcome === "duplicate"
   );
 }
 
@@ -500,9 +661,83 @@ async function loadVisitFacts(visitId: string) {
   );
 }
 
+function petsFromIds(all: MerchantPetLine[], csv: string) {
+  const ids = csv.split(",").map((id) => id.trim()).filter(Boolean);
+  const lines: MerchantPetLine[] = [];
+  for (const id of ids) {
+    const pet = all.find((row) => row.petId === id);
+    if (!pet) return null;
+    lines.push(pet);
+  }
+  return lines;
+}
+
+async function replayOneAlert(
+  parsed: NonNullable<ReturnType<typeof parseMerchantAlert>>,
+  facts: MerchantVisitFacts,
+  deps?: MerchantNotifyDeps,
+): Promise<MerchantNotifySummary | null> {
+  if (parsed.notificationType === CONFIRMED) {
+    return notifyMerchantVisitConfirmed(facts, deps);
+  }
+  if (parsed.notificationType === CANCELLED) {
+    return notifyMerchantVisitCancelled(facts, deps);
+  }
+  if (
+    parsed.notificationType === RESCHEDULE_COMPLETED ||
+    parsed.notificationType === RESCHEDULE_REQUESTED
+  ) {
+    const [previousWhenLabel, nextWhenLabel] = (parsed.fingerprint ?? "").split("=>");
+    return notifyMerchantReschedule(
+      parsed.notificationType === RESCHEDULE_COMPLETED ? "completed" : "requested",
+      {
+        ...facts,
+        previousWhenLabel: previousWhenLabel || facts.whenLabel,
+        whenLabel: nextWhenLabel || facts.whenLabel,
+        fingerprint:
+          parsed.fingerprint ?? rescheduleFingerprint(facts.whenLabel, facts.whenLabel),
+      },
+      deps,
+    );
+  }
+  if (parsed.notificationType === PETS_CHANGED) {
+    const sides = (parsed.fingerprint ?? "").split("=>");
+    if (sides.length !== 2) return null;
+    const previousPets = petsFromIds(facts.pets, sides[0] ?? "");
+    const currentPets = petsFromIds(facts.pets, sides[1] ?? "");
+    if (!previousPets || !currentPets) return null;
+    return notifyMerchantVisitPetsChanged(
+      { ...facts, previousPets, pets: currentPets },
+      deps,
+    );
+  }
+  if (parsed.notificationType === CUSTOMER_REPLY_C) {
+    const pet = facts.pets.find((row) => row.appointmentId === parsed.fingerprint);
+    if (!pet) return null;
+    return notifyMerchantCustomerReplyC(
+      {
+        visitId: facts.visitId,
+        customerId: facts.customerId,
+        customerName: facts.customerName,
+        replyTo: facts.replyTo,
+        appointmentId: pet.appointmentId,
+        petId: pet.petId,
+        petName: pet.petName,
+        serviceName: pet.serviceName,
+        whenLabel: facts.whenLabel,
+        addressLabel: facts.addressLabel,
+      },
+      deps,
+    );
+  }
+  return null;
+}
+
 /**
  * Retries merchant notices whose log claim could not be saved.
- * A later successful claim sends once. An accepted or in-flight row is not sent again.
+ * Drains up to eight batches. A batch that cannot claim or finish stops the loop.
+ * uncertain, failed, and any row with provider_called_at are not sent again.
+ * A skipped row stays queued until config exists, then one claim sends it.
  */
 export async function replayDeferredMerchantAlerts(deps?: MerchantNotifyDeps & {
   loadVisit?: (visitId: string) => Promise<MerchantVisitFacts | null>;
@@ -510,52 +745,26 @@ export async function replayDeferredMerchantAlerts(deps?: MerchantNotifyDeps & {
   const store = deps?.store === undefined ? defaultStore() : deps.store;
   if (!store) return { replayed: 0, kept: 0 };
   const loadVisit = deps?.loadVisit ?? loadVisitFacts;
-  const alerts = await store.listAlerts("claim_unavailable");
   let replayed = 0;
-  let kept = 0;
-  for (const alert of alerts) {
-    const parsed = parseMerchantAlert(alert.message);
-    if (!parsed) {
-      kept += 1;
-      continue;
+  for (let batch = 0; batch < 8; batch += 1) {
+    const alerts = await store.listAlerts("claim_unavailable");
+    if (alerts.length === 0) return { replayed, kept: 0 };
+    let progress = 0;
+    for (const alert of alerts) {
+      const parsed = parseMerchantAlert(alert.message);
+      if (!parsed) continue;
+      const facts = await loadVisit(parsed.visitId);
+      if (!facts) continue;
+      const summary = await replayOneAlert(parsed, facts, deps);
+      if (!summary || !channelSettled(summary[parsed.channel])) continue;
+      await store.deleteAlert(alert.id);
+      replayed += 1;
+      progress += 1;
     }
-    const facts = await loadVisit(parsed.visitId);
-    if (!facts) {
-      kept += 1;
-      continue;
-    }
-    let summary: MerchantNotifySummary;
-    if (parsed.notificationType === CONFIRMED) {
-      summary = await notifyMerchantVisitConfirmed(facts, deps);
-    } else if (parsed.notificationType === CANCELLED) {
-      summary = await notifyMerchantVisitCancelled(facts, deps);
-    } else if (
-      parsed.notificationType === RESCHEDULE_COMPLETED ||
-      parsed.notificationType === RESCHEDULE_REQUESTED
-    ) {
-      const [previousWhenLabel, nextWhenLabel] = (parsed.fingerprint ?? "").split("=>");
-      summary = await notifyMerchantReschedule(
-        parsed.notificationType === RESCHEDULE_COMPLETED ? "completed" : "requested",
-        {
-          ...facts,
-          previousWhenLabel: previousWhenLabel || facts.whenLabel,
-          whenLabel: nextWhenLabel || facts.whenLabel,
-          fingerprint: parsed.fingerprint ?? rescheduleFingerprint(facts.whenLabel, facts.whenLabel),
-        },
-        deps,
-      );
-    } else {
-      kept += 1;
-      continue;
-    }
-    if (!bothChannelsSettled(summary)) {
-      kept += 1;
-      continue;
-    }
-    await store.deleteAlert(alert.id);
-    replayed += 1;
+    if (progress === 0) break;
   }
-  return { replayed, kept };
+  const remaining = await store.listAlerts("claim_unavailable");
+  return { replayed, kept: remaining.length };
 }
 
 export async function notifyMerchantRescheduleCompletedFromAppointments(
@@ -575,6 +784,30 @@ export async function notifyMerchantRescheduleCompletedFromAppointments(
       ...facts,
       previousWhenLabel,
       fingerprint: rescheduleFingerprint(previousWhenLabel, facts.whenLabel),
+    },
+    deps,
+  );
+}
+
+export async function notifyMerchantVisitPetsChangedFromAppointments(
+  previous: AppointmentRecord[],
+  next: AppointmentRecord[],
+  extra?: { customerName?: string | null; replyTo?: string | null },
+  deps?: MerchantNotifyDeps,
+) {
+  const nextFacts = factsFromAppointments(next.length > 0 ? next : previous, extra);
+  const previousFacts = factsFromAppointments(previous, extra);
+  if (!nextFacts || !previousFacts) {
+    console.error("MERCHANT_NOTIFY_UNRECORDED", "missing-visit", PETS_CHANGED);
+    return { email: "unrecorded" as const, sms: "unrecorded" as const };
+  }
+  const active = (pets: MerchantPetLine[]) =>
+    pets.filter((pet) => pet.status !== "cancelled");
+  return notifyMerchantVisitPetsChanged(
+    {
+      ...nextFacts,
+      previousPets: active(previousFacts.pets),
+      pets: active(nextFacts.pets),
     },
     deps,
   );

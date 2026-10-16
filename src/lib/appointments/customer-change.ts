@@ -23,6 +23,7 @@ import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
 import {
   notifyMerchantRescheduleCompletedFromAppointments,
   notifyMerchantVisitCancelledFromAppointments,
+  notifyMerchantVisitPetsChangedFromAppointments,
 } from "@/lib/communications/merchant-notices";
 import { getOrCreateStripeCustomerId } from "@/lib/payments/service";
 import { business } from "@/lib/business";
@@ -581,6 +582,13 @@ export async function applyAppointmentChange(
       contact,
     );
   }
+  if (input.action === "remove_dog") {
+    await notifyMerchantPetsChanged(
+      recordsFromRows(siblings.rows),
+      remainingAppointments,
+      contact,
+    );
+  }
   return { ok: true, quote };
 }
 
@@ -629,6 +637,21 @@ async function notifyMerchantVisitCancelled(
     });
   } catch (error) {
     console.error("appointment cancel merchant notify failed:", error);
+  }
+}
+
+async function notifyMerchantPetsChanged(
+  previous: AppointmentRecord[],
+  next: AppointmentRecord[],
+  contact: CustomerContact | null,
+) {
+  try {
+    await notifyMerchantVisitPetsChangedFromAppointments(previous, next, {
+      customerName: contact?.name ?? null,
+      replyTo: contact?.email ?? null,
+    });
+  } catch (error) {
+    console.error("appointment pets changed merchant notify failed:", error);
   }
 }
 
@@ -954,14 +977,20 @@ async function addDogToVisit(
   }
 
   const appointment = mapAppointmentRowToRecord(data as unknown as AppointmentRow);
+  let contact: CustomerContact | null = null;
   try {
-    const contact = await fetchCustomerContact(userId);
+    contact = await fetchCustomerContact(userId);
     if (contact) {
       await notifyCustomerAppointmentChange("add_dog", appointment, contact);
     }
   } catch (emailError) {
     console.error("addDogToVisit email failed:", emailError);
   }
+  await notifyMerchantPetsChanged(
+    recordsFromRows(ordered),
+    [...recordsFromRows(ordered), appointment],
+    contact,
+  );
 
   if (visit.visit_id) {
     await compactVisitChildStarts(visit.visit_id);
