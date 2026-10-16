@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Elements } from "@stripe/react-stripe-js";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -144,23 +145,11 @@ export function BookingPaymentStep({
         Payment
       </p>
       <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
-        Leave a card on file
+        Secure Your Appointment
       </h2>
-      <p className="font-body mt-4 max-w-xl text-sm leading-relaxed text-taupe">
-        Saving a payment method is how this appointment is reserved. You will
-        not be charged at this stage. Payment is settled after your visit. Late
-        cancellations and no-shows may be charged to this card according to our
-        policy.
+      <p className="font-body mt-3 max-w-xl text-sm leading-relaxed text-taupe">
+        A card on file is required to reserve your appointment. No charge today.
       </p>
-
-      <div className={`${bookingNoticeClass} mt-8 space-y-4`}>
-        <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
-          No charge at booking
-        </p>
-        <p className="font-body text-sm leading-relaxed text-taupe">
-          We verify and save the card only. There is no charge when you confirm.
-        </p>
-      </div>
 
       {loading ? (
         <p className="font-body mt-8 text-sm text-taupe">Preparing card setup…</p>
@@ -252,11 +241,14 @@ export function BookingPaymentStep({
         </p>
       ) : null}
 
+      <p className="font-body mt-6 text-xs italic leading-relaxed text-taupe">
+        Late cancellation and no-show fees may apply.
+      </p>
       <button
         type="button"
         onClick={handleContinue}
         disabled={loading}
-        className={`${bookingPrimaryBtnClass} mt-8`}
+        className={`${bookingPrimaryBtnClass} mt-4`}
       >
         Continue
       </button>

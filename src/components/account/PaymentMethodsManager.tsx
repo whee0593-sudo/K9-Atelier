@@ -114,13 +114,11 @@ function AddCardForm({
             Payment Preference
           </p>
           <p className="font-body text-sm leading-relaxed text-taupe">
-            Thank you for choosing K9 Atelier. Cash or Zelle is always
-            appreciated, while your card will be securely saved as a convenient
-            backup payment method.
+            Cash or Zelle is preferred. Your card is securely saved as a backup.
           </p>
         </div>
       ) : null}
-      {allowWallets ? (
+      {allowWallets && !bookingCardCopy ? (
         <p className="text-sm text-text-muted">
           On your phone, Apple Pay or Google Pay can save this card. You will
           not be charged now.
@@ -136,29 +134,22 @@ function AddCardForm({
           {error}
         </p>
       )}
-      <div>
-        {bookingCardCopy ? (
-          <p className="font-body mb-3 text-xs italic leading-relaxed text-taupe">
-            A card on file is required to reserve your appointment.
-          </p>
-        ) : null}
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => void handleSubmit()}
-            disabled={submitting || !stripe}
-            className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-          >
-            {submitting ? "Verifying…" : "Save Card"}
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-xl border border-lavender px-4 py-2 text-sm text-text-muted"
-          >
-            Cancel
-          </button>
-        </div>
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={() => void handleSubmit()}
+          disabled={submitting || !stripe}
+          className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+        >
+          {submitting ? "Verifying…" : "Save Card"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-xl border border-lavender px-4 py-2 text-sm text-text-muted"
+        >
+          Cancel
+        </button>
       </div>
     </div>
   );
