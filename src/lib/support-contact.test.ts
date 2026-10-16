@@ -4,9 +4,14 @@ import {
   CONTACT_INQUIRY_CONSULTATION,
   CONTACT_INQUIRY_GENERAL,
   MAX_SUPPORT_PHOTOS,
+  SUPPORT_CONTACT_INVALID,
+  SUPPORT_CONTACT_REQUIRED,
+  SUPPORT_EMAIL_INVALID,
+  SUPPORT_PHONE_INVALID,
   inquiryTypeFromQuery,
   inquiryTypeLabel,
   isAllowedSupportPhoto,
+  resolveSupportChannels,
 } from "./support-contact";
 
 describe("inquiryTypeFromQuery", () => {
@@ -30,6 +35,74 @@ describe("inquiryTypeLabel", () => {
     assert.equal(
       inquiryTypeLabel(CONTACT_INQUIRY_CONSULTATION),
       "Grooming Consultation",
+    );
+  });
+});
+
+describe("resolveSupportChannels", () => {
+  it("accepts email only, phone only, and both", () => {
+    assert.deepEqual(resolveSupportChannels({ email: " Guest@Example.com " }), {
+      ok: true,
+      email: "Guest@Example.com",
+      phone: "",
+    });
+    assert.deepEqual(
+      resolveSupportChannels({ phone: "(847) 624-5115" }),
+      { ok: true, email: "", phone: "(847) 624-5115" },
+    );
+    assert.deepEqual(
+      resolveSupportChannels({
+        email: "guest@example.com",
+        phone: "8476245115",
+      }),
+      { ok: true, email: "guest@example.com", phone: "8476245115" },
+    );
+  });
+
+  it("rejects a missing contact method and illegal formats", () => {
+    assert.deepEqual(resolveSupportChannels({ email: " ", phone: "" }), {
+      ok: false,
+      error: SUPPORT_CONTACT_REQUIRED,
+    });
+    assert.deepEqual(resolveSupportChannels({ email: "not-an-email" }), {
+      ok: false,
+      error: SUPPORT_EMAIL_INVALID,
+    });
+    assert.deepEqual(resolveSupportChannels({ phone: "123" }), {
+      ok: false,
+      error: SUPPORT_PHONE_INVALID,
+    });
+    assert.deepEqual(
+      resolveSupportChannels({
+        email: "guest@example.com",
+        phone: "12345",
+      }),
+      { ok: false, error: SUPPORT_PHONE_INVALID },
+    );
+  });
+
+  it("keeps the legacy single contact field working", () => {
+    assert.deepEqual(resolveSupportChannels({ contact: "guest@example.com" }), {
+      ok: true,
+      email: "guest@example.com",
+      phone: "",
+    });
+    assert.deepEqual(resolveSupportChannels({ contact: "8476245115" }), {
+      ok: true,
+      email: "",
+      phone: "8476245115",
+    });
+    assert.deepEqual(resolveSupportChannels({ contact: "hello" }), {
+      ok: false,
+      error: SUPPORT_CONTACT_INVALID,
+    });
+    assert.deepEqual(
+      resolveSupportChannels({
+        email: "",
+        phone: "",
+        contact: "legacy@example.com",
+      }),
+      { ok: true, email: "legacy@example.com", phone: "" },
     );
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   bookingFieldClass,
   bookingLabelClass,
@@ -14,7 +14,7 @@ import {
   SUPPORT_PHOTO_ACCEPT,
   inquiryTypeFromQuery,
   isAllowedSupportPhoto,
-  isValidContact,
+  resolveSupportChannels,
 } from "@/lib/support-contact";
 
 type PhotoDraft = {
@@ -35,7 +35,8 @@ export function ContactBoardForm({
   const [inquiryType, setInquiryType] = useState(
     inquiryTypeFromQuery(initialInquiry),
   );
-  const [contact, setContact] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [groomingPreferences, setGroomingPreferences] = useState("");
@@ -115,8 +116,9 @@ export function ContactBoardForm({
     if (sending || success) return;
     setError(null);
 
-    if (!isValidContact(contact)) {
-      setError("Please enter a valid email address or phone number.");
+    const channels = resolveSupportChannels({ email, phone });
+    if (!channels.ok) {
+      setError(channels.error);
       return;
     }
     const resolvedSubject = isConsultation
@@ -134,7 +136,8 @@ export function ContactBoardForm({
     setSending(true);
     try {
       const body = new FormData();
-      body.set("contact", contact.trim());
+      body.set("email", channels.email);
+      body.set("phone", channels.phone);
       body.set("subject", resolvedSubject);
       body.set("inquiryType", inquiryType);
       body.set("message", message.trim());
@@ -156,7 +159,8 @@ export function ContactBoardForm({
       }
 
       setSuccess(true);
-      setContact("");
+      setEmail("");
+      setPhone("");
       setSubject("");
       setGroomingPreferences("");
       setMessage("");
@@ -220,22 +224,52 @@ export function ContactBoardForm({
       ) : null}
 
       <div>
-        <label htmlFor="board-contact" className={bookingLabelClass}>
-          Email or phone number
-          <span className="text-champagne"> *</span>
+        <label htmlFor="board-email" className={bookingLabelClass}>
+          Email Address
+          <span className="font-normal normal-case tracking-normal text-taupe">
+            {" "}
+            (Optional)
+          </span>
         </label>
         <input
-          id="board-contact"
-          type="text"
-          autoComplete="email tel"
-          value={contact}
+          id="board-email"
+          type="email"
+          autoComplete="email"
+          inputMode="email"
+          value={email}
           onChange={(event) => {
-            setContact(event.target.value);
+            setEmail(event.target.value);
             setError(null);
           }}
-          placeholder="you@example.com or (561) 555-0123"
+          placeholder="you@example.com"
           className={inputClass()}
         />
+      </div>
+
+      <div>
+        <label htmlFor="board-phone" className={bookingLabelClass}>
+          Phone Number
+          <span className="font-normal normal-case tracking-normal text-taupe">
+            {" "}
+            (Optional)
+          </span>
+        </label>
+        <input
+          id="board-phone"
+          type="tel"
+          autoComplete="tel"
+          inputMode="tel"
+          value={phone}
+          onChange={(event) => {
+            setPhone(event.target.value);
+            setError(null);
+          }}
+          placeholder="(561) 555-0123"
+          className={inputClass()}
+        />
+        <p className="font-body mt-2 text-xs leading-relaxed text-taupe">
+          Email address, phone number, or both.
+        </p>
       </div>
 
       {isConsultation ? null : (

@@ -5,14 +5,15 @@ import { createClient } from "@/lib/supabase/server";
 import {
   inquiryTypeFromQuery,
   inquiryTypeLabel,
-  isValidContact,
-  isValidEmail,
-  normalizeContact,
+  resolveSupportChannels,
 } from "@/lib/support-contact";
+import { buildSupportNotification } from "@/lib/support-mail";
 import { parseSupportPhotos } from "@/lib/support-photos";
 
 type SupportFields = {
   contact: string;
+  email: string;
+  phone: string;
   message: string;
   topic: string;
   subject: string;
@@ -49,6 +50,8 @@ async function readSupportFields(request: Request): Promise<{
     return {
       fields: {
         contact: readText(form.get("contact")),
+        email: readText(form.get("email")),
+        phone: readText(form.get("phone")),
         message: readText(form.get("message")),
         topic: readText(form.get("topic")),
         subject: readText(form.get("subject")),
@@ -70,6 +73,8 @@ async function readSupportFields(request: Request): Promise<{
   return {
     fields: {
       contact: typeof body.contact === "string" ? body.contact : "",
+      email: typeof body.email === "string" ? body.email : "",
+      phone: typeof body.phone === "string" ? body.phone : "",
       message: typeof body.message === "string" ? body.message : "",
       topic: typeof body.topic === "string" ? body.topic : "",
       subject: typeof body.subject === "string" ? body.subject : "",
@@ -89,6 +94,8 @@ async function readSupportFields(request: Request): Promise<{
 function emptyFields(): SupportFields {
   return {
     contact: "",
+    email: "",
+    phone: "",
     message: "",
     topic: "",
     subject: "",
@@ -106,7 +113,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error }, { status: 400 });
   }
 
-  const contact = normalizeContact(parsed.fields.contact);
+  const channels = resolveSupportChannels({
+    email: parsed.fields.email,
+    phone: parsed.fields.phone,
+    contact: parsed.fields.contact,
+  });
+  if (!channels.ok) {
+    return NextResponse.json({ error: channels.error }, { status: 400 });
+  }
+
   const message = parsed.fields.message.trim();
   const inquiryType = inquiryTypeFromQuery(parsed.fields.inquiryType);
   const inquiryLabel = inquiryTypeLabel(inquiryType);
@@ -117,13 +132,6 @@ export async function POST(request: Request) {
   const isConcern = parsed.fields.topic === "concern";
   const appointmentId = safeRef(parsed.fields.appointmentId);
   const chargeId = safeRef(parsed.fields.chargeId);
-
-  if (!isValidContact(contact)) {
-    return NextResponse.json(
-      { error: "Please enter a valid email address or phone number." },
-      { status: 400 },
-    );
-  }
 
   if (!isConcern && !guestSubject) {
     return NextResponse.json(
@@ -189,44 +197,30 @@ export async function POST(request: Request) {
     process.env.SUPPORT_FROM_EMAIL?.trim() ||
     `K9 Atelier <${business.brand.email}>`;
   const toEmail = business.brand.email;
-  const contactLabel = isValidEmail(contact) ? "Email" : "Phone";
-  const subject = isConcern
-    ? `K9 Atelier concern (${contactLabel}: ${contact})`
-    : `K9 Atelier: ${guestSubject} (${contactLabel}: ${contact})`;
-  const text = [
-    isConcern
-      ? "New private concern from k9atelier.com"
-      : "New message from k9atelier.com/contact",
-    "",
-    `${contactLabel}: ${contact}`,
-    `Inquiry type: ${inquiryLabel}`,
-    guestSubject ? `Subject: ${guestSubject}` : "",
-    groomingPreferences
-      ? `Grooming preferences & coat goals:\n${groomingPreferences}`
-      : "",
-    customerAccountId ? `Customer account: ${customerAccountId}` : "",
-    appointmentId ? `Related appointment: ${appointmentId}` : "",
-    chargeId ? `Related receipt: ${chargeId}` : "",
-    parsed.photos.length
-      ? `Photos attached: ${parsed.photos.length}`
-      : "",
-    `Submitted: ${new Date().toISOString()}`,
-    "",
-    "Message:",
+  const notification = buildSupportNotification({
+    email: channels.email,
+    phone: channels.phone,
+    inquiryLabel,
+    guestSubject,
+    groomingPreferences,
+    isConcern,
+    customerAccountId,
+    appointmentId,
+    chargeId,
+    photoCount: parsed.photos.length,
     message,
-  ]
-    .filter((line, index, lines) => line !== "" || lines[index - 1] !== "")
-    .join("\n");
+    submittedAt: new Date().toISOString(),
+  });
 
   const payload: Record<string, unknown> = {
     from: fromEmail,
     to: [toEmail],
-    subject,
-    text,
+    subject: notification.subject,
+    text: notification.text,
   };
 
-  if (isValidEmail(contact)) {
-    payload.reply_to = contact;
+  if (notification.replyTo) {
+    payload.reply_to = notification.replyTo;
   }
 
   if (parsed.photos.length > 0) {
