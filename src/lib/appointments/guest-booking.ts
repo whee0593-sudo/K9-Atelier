@@ -16,6 +16,7 @@ export type GuestBookingIntent = {
   serviceId: string;
   addOnIds: string[];
   addOnOptions: Record<string, string>;
+  spaGoals?: string[];
   address: ServiceAddress;
   appointmentDate: string;
   slotStartMinutes: number;
@@ -34,6 +35,7 @@ export function guestBookingIntentHash(input: GuestBookingIntent) {
     serviceId: input.serviceId,
     addOnIds: [...input.addOnIds].sort(),
     addOnOptions,
+    spaGoals: [...(input.spaGoals ?? [])].sort(),
     street: input.address.street.trim().toLowerCase(),
     city: input.address.city.trim().toLowerCase(),
     state: input.address.state.trim().toUpperCase(),

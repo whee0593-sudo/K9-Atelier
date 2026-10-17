@@ -26,7 +26,7 @@ const QUESTIONS = [
   "Do you groom puppies or senior dogs?",
   "What if my dog is nervous or has special needs?",
   "What vaccinations are required?",
-  "Can I combine a Spa Ritual with a Full Groom?",
+  "Can I combine Luxury Spa Day with a Full Groom?",
   "Are your grooming and creative color products pet-safe?",
   "Why do I need to save a credit card?",
   "Can I pay with cash or Zelle?",

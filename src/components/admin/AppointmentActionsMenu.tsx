@@ -6,7 +6,10 @@ import { createPortal } from "react-dom";
 import { AdminCancelAppointmentButton } from "@/components/admin/AdminCancelAppointmentButton";
 import { AdminRescheduleAppointmentButton } from "@/components/admin/AdminRescheduleAppointmentButton";
 import { CallCustomerButton } from "@/components/admin/CallCustomerButton";
+import { allergyStatusLabel, allergyWarning } from "@/lib/allergies";
 import { formatFullDate } from "@/lib/appointments/availability-blocks";
+import { isLuxurySpaDay } from "@/lib/service-catalog";
+import { spaGoalTitle } from "@/lib/spa-goals";
 import { appointmentStatusLabel } from "@/lib/appointments/map";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import { formatPrice } from "@/lib/business";
@@ -105,6 +108,7 @@ export function AppointmentActionsMenu({
     phone: phone || null,
   });
 
+  const allergyAlert = allergyWarning(appointment.allergySnapshot ?? null);
   const summary = (
     <dl className="mt-3 space-y-2 text-sm text-text">
       <DetailRow label="Customer" value={customerLabel(appointment)} />
@@ -136,6 +140,51 @@ export function AppointmentActionsMenu({
           <DetailRow label="Breed" value={appointment.petBreed} />
           <DetailRow label="Weight" value={formatWeight(appointment.petWeightLbs)} />
           <DetailRow label="Service" value={appointment.serviceName} />
+          {isLuxurySpaDay(appointment.serviceId) ||
+          (appointment.spaGoals?.length ?? 0) > 0 ? (
+            <DetailRow
+              label="Spa goals"
+              value={
+                appointment.spaGoals?.length
+                  ? appointment.spaGoals.map((goal) => spaGoalTitle(goal)).join(", ")
+                  : "None selected"
+              }
+            />
+          ) : null}
+          <div>
+            <dt className="text-text-muted">Allergies &amp; sensitivities</dt>
+            <dd className="[overflow-wrap:anywhere]">
+              {allergyAlert ? (
+                <>
+                  <p className="font-semibold text-red-700">{allergyAlert.banner}</p>
+                  <p className="mt-2 font-semibold text-red-700">
+                    ALLERGIES &amp; SENSITIVITIES
+                  </p>
+                  {allergyAlert.lines.map((line) => (
+                    <p key={line} className="font-semibold text-red-700">
+                      {line}
+                    </p>
+                  ))}
+                </>
+              ) : null}
+              <p className={allergyAlert ? "mt-2" : undefined}>
+                {appointment.petName}:{" "}
+                {allergyStatusLabel(appointment.allergySnapshot?.petStatus)}
+                {appointment.allergySnapshot?.petStatus === "yes" &&
+                appointment.allergySnapshot.petDetails
+                  ? ` — ${appointment.allergySnapshot.petDetails}`
+                  : ""}
+              </p>
+              <p>
+                Household:{" "}
+                {allergyStatusLabel(appointment.allergySnapshot?.householdStatus)}
+                {appointment.allergySnapshot?.householdStatus === "yes" &&
+                appointment.allergySnapshot.householdDetails
+                  ? ` — ${appointment.allergySnapshot.householdDetails}`
+                  : ""}
+              </p>
+            </dd>
+          </div>
           <DetailRow
             label="Requested date"
             value={formatFullDate(appointment.appointmentDate)}

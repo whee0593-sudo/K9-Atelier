@@ -1,4 +1,5 @@
 import { business, formatDuration, formatPrice } from "./business";
+import { canonicalServiceId } from "./service-catalog";
 
 export type BookingPolicyItem = {
   title: string;
@@ -114,6 +115,7 @@ export const CREATIVE_REQUIRED_BASE_IDS = [
 ] as const;
 
 export const SPA_SERVICE_IDS = [
+  "luxury-spa-day",
   "dead-sea-mud-bath",
   "aromatherapy-oil-bath",
   "sensitive-skin-treatment",
@@ -325,22 +327,23 @@ export function formatServicePrice(
 }
 
 export function supportsSeniorAddOn(serviceId: string) {
-  if (serviceId === "hand-stripping") return false;
-  return [
-    "signature-bath-care",
-    "custom-full-haircut",
-    "long-coat-show-care",
-    "dead-sea-mud-bath",
-    "aromatherapy-oil-bath",
-    "sensitive-skin-treatment",
-  ].includes(serviceId);
+  const id = canonicalServiceId(serviceId);
+  if (id === "hand-stripping") return false;
+  return (
+    [
+      "signature-bath-care",
+      "custom-full-haircut",
+      "show-level-coat-care",
+    ].includes(id) || isSpaService(id)
+  );
 }
 
 export function supportsMiniTrimAddOn(serviceId: string) {
-  if (serviceId === "custom-full-haircut" || isSpaService(serviceId)) {
+  const id = canonicalServiceId(serviceId);
+  if (id === "custom-full-haircut" || isSpaService(id)) {
     return false;
   }
-  if (serviceId === "hand-stripping" || serviceId === "end-of-life-care") {
+  if (id === "hand-stripping" || id === "end-of-life-care") {
     return false;
   }
   return true;
@@ -385,7 +388,32 @@ export function getRequiredBaseServicesForCreative() {
 }
 
 export function isSpaService(serviceId: string) {
-  return (SPA_SERVICE_IDS as readonly string[]).includes(serviceId);
+  return (SPA_SERVICE_IDS as readonly string[]).includes(
+    canonicalServiceId(serviceId),
+  );
+}
+
+export function retiredCatalogServices(): BookableService[] {
+  return business.retiredServices.map((service) => ({
+    id: service.id,
+    name: service.name,
+    description: service.description,
+    categoryId: "retired",
+    categoryName: "Retired",
+    pricingType: service.pricingType,
+    tiers: service.tiers,
+    bookableAsPrimary: false,
+  }));
+}
+
+/** Bookable catalog first, then retired care plans. Aliases share one service. */
+export function findCatalogService(serviceId: string) {
+  const id = canonicalServiceId(serviceId);
+  return (
+    allBookableServices().find((service) => service.id === id) ??
+    retiredCatalogServices().find((service) => service.id === id) ??
+    null
+  );
 }
 
 export function isCreativeColoringCategory(categoryId: string) {
@@ -468,7 +496,7 @@ export function estimateServiceDurationMinutes(
   weightLbs: number,
   addOnIds: string[] = [],
 ) {
-  const service = allBookableServices().find((item) => item.id === serviceId);
+  const service = findCatalogService(serviceId);
   const tier = service ? getTierForPet(service, weightLbs) : null;
   const min =
     tier?.durationMin ?? service?.durationMin ?? service?.durationMax ?? 60;

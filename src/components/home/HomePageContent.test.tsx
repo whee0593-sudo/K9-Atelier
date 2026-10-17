@@ -173,7 +173,7 @@ describe("homepage SEO", () => {
     );
     const byHref = (href: string) => anchors.find((anchor) => anchor.href === href);
 
-    assert.equal(byHref("/services/long-coat-care")?.text, "show-level coat care");
+    assert.equal(byHref("/services/show-level-coat-care")?.text, "show-level coat care");
     assert.equal(
       anchors.find((anchor) => anchor.text === "extra-gentle senior care")?.href,
       "/services/specialty-care",
@@ -199,8 +199,8 @@ describe("homepage SEO", () => {
     assert.match(byHref("/services/full-groom")?.text ?? "", /^Full Grooming\b/);
     assert.match(byHref("/services/bath-coat-care")?.text ?? "", /^Bath & Coat Care\b/);
     assert.match(byHref("/services/hand-stripping")?.text ?? "", /^Hand Stripping\b/);
-    assert.match(byHref("/services/spa")?.text ?? "", /^Spa Rituals\b/);
-    assert.match(byHref("/services/spa")?.text ?? "", /Skin · Coat · Wellness/);
+    assert.match(byHref("/services/spa")?.text ?? "", /^Luxury Spa Day\b/);
+    assert.match(byHref("/services/spa")?.text ?? "", /A fully customized spa experience/);
     assert.match(byHref("/services/spa")?.text ?? "", /From \$140/);
     assert.match(byHref("/services/color")?.text ?? "", /^Creative Color\b/);
     assert.match(byHref("/services/color")?.text ?? "", /Pet-safe color artistry/);

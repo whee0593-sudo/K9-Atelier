@@ -4,6 +4,7 @@ import {
   formatPrice,
   getBrandWebsiteUrl,
 } from "@/lib/business";
+import { canonicalServiceId } from "@/lib/service-catalog";
 import {
   allBookableServices,
   type BookableService,
@@ -185,18 +186,14 @@ export function absoluteSiteUrl(path: string) {
 
 export const BATH_COAT_IDS = [
   "signature-bath-care",
-  "long-coat-show-care",
+  "show-level-coat-care",
 ] as const;
 
 export const FULL_GROOM_IDS = ["custom-full-haircut"] as const;
 
 export const HAND_STRIPPING_IDS = ["hand-stripping"] as const;
 
-export const SPA_IDS = [
-  "dead-sea-mud-bath",
-  "aromatherapy-oil-bath",
-  "sensitive-skin-treatment",
-] as const;
+export const SPA_IDS = ["luxury-spa-day"] as const;
 
 export const COLOR_IDS = ["creative-accent-coloring"] as const;
 
@@ -233,7 +230,7 @@ export const SERVICES_DIRECTORY_DESCRIPTIONS: Record<
   "bath-coat-care": "Bathing · Coat & skin maintenance",
   "full-groom": "Haircuts · Styling · Coat care",
   "hand-stripping": "Traditional wire-coat maintenance",
-  spa: "Skin · Coat · Wellness",
+  spa: "A fully customized spa experience",
   color: "Pet-safe color artistry",
   "specialty-care": "Senior · Extra-gentle comfort care",
   "add-ons": "Finishing · Coat support",
@@ -304,19 +301,19 @@ export const SERVICE_CATEGORIES: readonly ServiceCategory[] = [
   {
     slug: "spa",
     path: SPA_PATH,
-    navLabel: "Spa Rituals",
-    directoryName: "Spa Rituals",
-    directoryDescription: "Skin · Coat · Wellness",
+    navLabel: "Luxury Spa Day",
+    directoryName: "Luxury Spa Day",
+    directoryDescription: "A fully customized spa experience",
     showStartingPrice: true,
     serviceIds: SPA_IDS,
     layout: "cards",
-    pageTitle: "Spa Rituals | K9 Atelier",
+    pageTitle: "Luxury Spa Day | K9 Atelier",
     pageDescription:
-      "Quiet spa rituals for skin, coat, and comfort. Private mobile wellness baths in Palm Beach, scheduled separately from full haircut appointments.",
-    pageEyebrow: "Spa Rituals",
-    pageH1: "Quiet Rituals for Skin, Coat & Comfort.",
+      "A fully customized, relaxing spa experience for your pup. Nail, ear, and teeth care included. Mini trim included.",
+    pageEyebrow: "Luxury Spa Day",
+    pageH1: "Luxury Spa Day",
     pageIntro:
-      "Spa Rituals include a complete wellness bath experience and are best scheduled separately from full haircut appointments to prevent over-tiring your dog.",
+      "A fully customized, relaxing spa experience for your pup. Nail, ear, and teeth care included. Mini trim included.",
   },
   {
     slug: "color",
@@ -389,19 +386,17 @@ export function getServiceCategory(slug: string) {
 
 const CARD_SUMMARIES: Record<string, string> = {
   "signature-bath-care":
-    "Essential coat and hygiene care tailored to your dog’s coat type.",
+    "Bath, blow-dry, and brush-out. Nail, ear, and teeth care included.",
   "custom-full-haircut":
     "A complete grooming experience finished with a custom haircut tailored to coat, lifestyle, and expression.",
+  "show-level-coat-care":
+    "An upgraded bath with show-level coat conditioning. Nail, ear, and teeth care included. Mini trim included.",
   "long-coat-show-care":
-    "Weekly maintenance for full-coat breeds, preserving length and preventing matting between appointments.",
+    "An upgraded bath with show-level coat conditioning. Nail, ear, and teeth care included. Mini trim included.",
   "hand-stripping":
     "Traditional hand stripping for wire-coated breeds, preserving harsh texture, color, and natural coat protection.",
-  "dead-sea-mud-bath":
-    "Mineral-rich Dead Sea mud care paired with gentle body massage and meticulous coat finishing.",
-  "aromatherapy-oil-bath":
-    "A warm bathing ritual with pet-appropriate lavender and chamomile care, paired with gentle massage.",
-  "sensitive-skin-treatment":
-    "Gentle botanical and oatmeal/aloe-based care created for dogs with dry or sensitive skin.",
+  "luxury-spa-day":
+    "A fully customized, relaxing spa experience for your pup. Nail, ear, and teeth care included. Mini trim included.",
   "dematting-brush-out":
     "Patient, skin-safe mat removal for light to moderate tangles, always prioritizing your dog’s comfort.",
   "deshedding-treatment":
@@ -416,11 +411,10 @@ const CARD_SUMMARIES: Record<string, string> = {
 const CARD_BEST_FOR: Record<string, string> = {
   "signature-bath-care": "Regular coat maintenance",
   "custom-full-haircut": "A complete haircut and style",
+  "show-level-coat-care": "Full-coat breeds on a weekly schedule",
   "long-coat-show-care": "Full-coat breeds on a weekly schedule",
+  "luxury-spa-day": "A relaxing spa day",
   "hand-stripping": "Wire-coated breeds",
-  "dead-sea-mud-bath": "Heavy double coats and high-shedding breeds",
-  "aromatherapy-oil-bath": "Dry, dull, or tangle-prone coats",
-  "sensitive-skin-treatment": "Sensitive, dry, or irritated skin",
   "dematting-brush-out": "Light to moderate tangles",
   "deshedding-treatment": "Heavy-shedding double coats",
   "senior-comfort-care": SPECIALTY_CARE_SENIOR_BEST_FOR,
@@ -453,7 +447,8 @@ export const SERVICES_HASH_ROUTES: Record<string, string> = {
 };
 
 export function getServiceById(id: string) {
-  return allBookableServices().find((service) => service.id === id) ?? null;
+  const canonical = canonicalServiceId(id);
+  return allBookableServices().find((service) => service.id === canonical) ?? null;
 }
 
 /** Public Specialty Care wording. Catalog ids, prices, and booking names stay unchanged. */

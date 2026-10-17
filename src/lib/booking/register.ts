@@ -106,6 +106,15 @@ export async function registerBookingCustomer(
       phone: input.phone,
       referral_source: input.referralSource,
       referral_name: input.referralName,
+      ...(input.householdAllergyStatus !== undefined
+        ? {
+            household_allergy_status: input.householdAllergyStatus,
+            household_allergy_details:
+              input.householdAllergyStatus === "yes"
+                ? input.householdAllergyDetails ?? null
+                : null,
+          }
+        : {}),
     })
     .eq("id", data.user.id);
 

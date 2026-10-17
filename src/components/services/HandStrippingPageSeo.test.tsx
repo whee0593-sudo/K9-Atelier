@@ -193,7 +193,7 @@ describe("hand stripping page content", () => {
     );
     const signatureBath = links.find(
       (link) =>
-        link.href === "/services/bath-coat-care" && link.text === "Signature Bath & Care",
+        link.href === "/services/bath-coat-care" && link.text === "Signature Bath",
     );
     const groomer = links.find(
       (link) => link.href === "/about" && /Meet Your Groomer/.test(link.text),
@@ -212,7 +212,7 @@ describe("hand stripping page content", () => {
     assert.ok(signatureBath);
     assert.match(
       html,
-      /please add a <a[^>]*href="\/services\/bath-coat-care"[^>]*>Signature Bath &amp; Care<\/a> service to your booking\./,
+      /please add a <a[^>]*href="\/services\/bath-coat-care"[^>]*>Signature Bath<\/a> service to your booking\./,
     );
     assert.ok(groomer);
     assert.match(groomer.text, /^Meet Your Groomer/);
@@ -240,7 +240,7 @@ describe("hand stripping page content", () => {
     assert.equal(serviceDurationLabel(service), service.durationNote);
     assert.equal(
       service.note,
-      "If a bath is desired immediately after hand stripping, please add a Signature Bath & Care service to your booking.",
+      "If a bath is desired immediately after hand stripping, please add a Signature Bath service to your booking.",
     );
     assert.match(
       service.description,

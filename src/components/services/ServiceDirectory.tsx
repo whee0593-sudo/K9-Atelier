@@ -75,7 +75,7 @@ function DirectoryCard({ category }: { category: ServiceCategory }) {
         href={LONG_COAT_CARE_PATH}
         className="font-body relative z-[2] mt-4 inline-flex min-h-12 max-w-full items-center self-start text-left text-sm leading-snug text-deep-lavender underline decoration-champagne/70 underline-offset-4 transition duration-500 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne motion-reduce:transition-none"
       >
-        Show-Level Long-Coat Care
+        Show-Level Coat Care
       </Link>
       <PriceLine price={price} />
       <ExploreLabel />

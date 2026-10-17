@@ -5,7 +5,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 (globalThis as { React?: typeof React }).React = React;
-import { metadata } from "@/app/services/long-coat-care/page";
+import { metadata } from "@/app/services/show-level-coat-care/page";
 import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
 import { LongCoatCareJsonLd } from "@/components/seo/LongCoatCareJsonLd";
 import { LongCoatCareView } from "@/components/services/LongCoatCareView";
@@ -84,17 +84,17 @@ describe("long-coat care page metadata", () => {
     assert.equal(metadata.title, LONG_COAT_CARE_PAGE_TITLE);
     assert.equal(
       metadata.title,
-      "Show-Level Long-Coat Care in Palm Beach | K9 Atelier",
+      "Show-Level Coat Care in Palm Beach | K9 Atelier",
     );
     assert.equal(metadata.description, LONG_COAT_CARE_PAGE_DESCRIPTION);
     assert.equal(
       metadata.description,
-      "Private mobile long-coat grooming for Maltese, Yorkshire Terriers and other full-coated small breeds, focused on preserving length, coat health and silky condition.",
+      "Private mobile show-level coat care for Maltese, Yorkshire Terriers and other full-coated small breeds, focused on preserving length, coat health and silky condition.",
     );
     assert.equal(metadata.alternates?.canonical, LONG_COAT_CARE_CANONICAL);
     assert.equal(
       metadata.alternates?.canonical,
-      "https://k9atelier.com/services/long-coat-care",
+      "https://k9atelier.com/services/show-level-coat-care",
     );
     assert.equal(metadata.openGraph?.title, LONG_COAT_CARE_PAGE_TITLE);
     assert.equal(metadata.openGraph?.description, LONG_COAT_CARE_PAGE_DESCRIPTION);
@@ -111,7 +111,7 @@ describe("long-coat care page content", () => {
       match[1].replace(/<[^>]+>/g, "").trim(),
     );
     assert.deepEqual(headings, [LONG_COAT_CARE_PAGE_H1]);
-    assert.match(html, /Show-Level Long-Coat Care/);
+    assert.match(html, /Show-Level Coat Care/);
     assert.match(html, new RegExp(LONG_COAT_CARE_PAGE_INTRO.replace(/[().]/g, "\\$&")));
     assert.match(html, /Maintaining a Full Coat/);
     assert.match(html, /Unlike a full haircut, long-coat care is designed to maintain and protect length rather than shorten the overall coat\./);
@@ -159,7 +159,7 @@ describe("long-coat care page content", () => {
   it("reuses Show Care for Long Coats prices from the catalog", () => {
     const service = getServiceById("long-coat-show-care");
     assert.ok(service);
-    assert.equal(service.name, "Show Care for Long Coats");
+    assert.equal(service.name, "Show-Level Coat Care");
     assert.deepEqual(
       service.tiers?.map((tier) => [tier.weightTier, tier.priceFrom]),
       [
@@ -170,7 +170,7 @@ describe("long-coat care page content", () => {
     );
 
     const html = renderToStaticMarkup(<LongCoatCareView />);
-    assert.match(html, /Show Care for Long Coats/);
+    assert.match(html, /Show-Level Coat Care/);
     assert.match(html, /From \$120/);
     assert.match(html, /From \$140/);
     assert.match(html, /From \$160/);
@@ -204,13 +204,13 @@ describe("show care card link", () => {
         headingAs="h2"
         anchorId="long-coat-show-care"
         learnMoreHref={LONG_COAT_CARE_PATH}
-        learnMoreLabel="Learn About Long-Coat Care"
+        learnMoreLabel="Show-Level Coat Care"
       />,
     );
     const links = anchors(html);
     const learn = links.find((link) => link.href === LONG_COAT_CARE_PATH);
     assert.ok(learn);
-    assert.match(learn.text, /Learn About Long-Coat Care/);
+    assert.match(learn.text, /Show-Level Coat Care/);
     assert.ok(links.some((link) => link.href === "/book" && /Book an Appointment/.test(link.text)));
 
     const source = readFileSync(
@@ -218,7 +218,7 @@ describe("show care card link", () => {
       "utf8",
     );
     assert.match(source, /long-coat-show-care/);
-    assert.match(source, /Learn About Long-Coat Care/);
+    assert.match(source, /Show-Level Coat Care/);
     assert.match(source, /LONG_COAT_CARE_PATH/);
   });
 });
@@ -245,12 +245,12 @@ describe("long-coat care structured data", () => {
     const services = nodes.filter((node) => typesOf(node).includes("Service"));
     assert.equal(services.length, 1);
     const service = services[0];
-    assert.equal(service["@id"], "https://k9atelier.com/services/long-coat-care#service");
+    assert.equal(service["@id"], "https://k9atelier.com/services/show-level-coat-care#service");
     assert.equal(service.name, LONG_COAT_CARE_SERVICE_NAME);
-    assert.equal(service.name, "Show-Level Long-Coat Care");
+    assert.equal(service.name, "Show-Level Coat Care");
     assert.equal(service.serviceType, LONG_COAT_CARE_SERVICE_TYPE);
-    assert.equal(service.serviceType, "Mobile Long-Coat Dog Grooming");
-    assert.equal(service.url, "https://k9atelier.com/services/long-coat-care");
+    assert.equal(service.serviceType, "Mobile Show-Level Coat Care");
+    assert.equal(service.url, "https://k9atelier.com/services/show-level-coat-care");
     assert.equal(service.description, LONG_COAT_CARE_PAGE_DESCRIPTION);
     assert.equal(service.offers, undefined);
     const provider = service.provider as JsonLdNode;
@@ -283,7 +283,7 @@ describe("long-coat care structured data", () => {
       [
         [1, "Home", "https://k9atelier.com/"],
         [2, "Services", "https://k9atelier.com/services"],
-        [3, "Show-Level Long-Coat Care", "https://k9atelier.com/services/long-coat-care"],
+        [3, "Show-Level Coat Care", "https://k9atelier.com/services/show-level-coat-care"],
       ],
     );
 

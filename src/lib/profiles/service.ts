@@ -12,10 +12,10 @@ import {
 } from "@/lib/profiles/types";
 
 const PROFILE_SELECT =
-  "id, email, first_name, last_name, phone, preferred_contact, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship";
+  "id, email, first_name, last_name, phone, preferred_contact, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship, household_allergy_status, household_allergy_details";
 
 function toUpdateRow(input: CustomerProfileWriteInput) {
-  return {
+  const row: Record<string, string | null> = {
     first_name: input.firstName,
     last_name: input.lastName,
     phone: input.phone || null,
@@ -24,6 +24,14 @@ function toUpdateRow(input: CustomerProfileWriteInput) {
     emergency_contact_phone: input.emergencyContactPhone,
     emergency_contact_relationship: input.emergencyContactRelationship,
   };
+  if (input.householdAllergyStatus !== undefined) {
+    row.household_allergy_status = input.householdAllergyStatus;
+    row.household_allergy_details =
+      input.householdAllergyStatus === "yes"
+        ? input.householdAllergyDetails ?? null
+        : null;
+  }
+  return row;
 }
 
 export async function getOwnProfile(): Promise<

@@ -256,10 +256,10 @@ export function BookingExperienceStep({
       </button>
 
       <p className="font-body mt-8 text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
-        Care
+        Choose a Grooming Service
       </p>
       <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
-        Choose the care {pet.name} should receive.
+        Choose a Grooming Service
       </h2>
 
       <div className="mt-10 space-y-4">

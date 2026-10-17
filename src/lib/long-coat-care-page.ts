@@ -1,16 +1,19 @@
-export const LONG_COAT_CARE_PATH = "/services/long-coat-care";
+import { SHOW_LEVEL_COAT_CARE_ID } from "@/lib/service-catalog";
+import { SHOW_LEVEL_COAT_CARE_PATH } from "@/lib/site-redirects";
+
+export const LONG_COAT_CARE_PATH = SHOW_LEVEL_COAT_CARE_PATH;
 export const LONG_COAT_CARE_PAGE_TITLE =
-  "Show-Level Long-Coat Care in Palm Beach | K9 Atelier";
+  "Show-Level Coat Care in Palm Beach | K9 Atelier";
 export const LONG_COAT_CARE_PAGE_DESCRIPTION =
-  "Private mobile long-coat grooming for Maltese, Yorkshire Terriers and other full-coated small breeds, focused on preserving length, coat health and silky condition.";
-export const LONG_COAT_CARE_PAGE_H1 = "Show-Level Long-Coat Care";
+  "Private mobile show-level coat care for Maltese, Yorkshire Terriers and other full-coated small breeds, focused on preserving length, coat health and silky condition.";
+export const LONG_COAT_CARE_PAGE_H1 = "Show-Level Coat Care";
 export const LONG_COAT_CARE_PAGE_INTRO =
-  "Private mobile long-coat grooming for Maltese, Yorkshire Terriers (Yorkies) and other full-coated small breeds, focused on preserving length, maintaining a healthy silky coat and preventing matting with personalized one-on-one care.";
+  "Private mobile show-level coat care for Maltese, Yorkshire Terriers (Yorkies) and other full-coated small breeds, focused on preserving length, maintaining a healthy silky coat and preventing matting with personalized one-on-one care.";
 export const LONG_COAT_CARE_CANONICAL =
-  "https://k9atelier.com/services/long-coat-care";
-export const LONG_COAT_CARE_SERVICE_NAME = "Show-Level Long-Coat Care";
-export const LONG_COAT_CARE_SERVICE_TYPE = "Mobile Long-Coat Dog Grooming";
-export const LONG_COAT_CARE_SERVICE_ID = "long-coat-show-care";
+  "https://k9atelier.com/services/show-level-coat-care";
+export const LONG_COAT_CARE_SERVICE_NAME = "Show-Level Coat Care";
+export const LONG_COAT_CARE_SERVICE_TYPE = "Mobile Show-Level Coat Care";
+export const LONG_COAT_CARE_SERVICE_ID = SHOW_LEVEL_COAT_CARE_ID;
 
 /** Same six communities already published on the services page and in the footer. */
 export const LONG_COAT_CARE_AREA_SERVED = [
@@ -27,7 +30,7 @@ export const LONG_COAT_CARE_AREA_SENTENCE =
 
 export const LONG_COAT_CARE_MAINTAIN_HEADING = "Maintaining a Full Coat";
 export const LONG_COAT_CARE_MAINTAIN_BODY =
-  "Show-Level Long-Coat Care is maintenance for a dog kept in a full coat. The visit preserves length and supports coat health through washing, conditioning, detangling, and careful blow-drying. Sanitary areas and paws are tidied as part of that care. The overall coat is not cut short.";
+  "Show-Level Coat Care is maintenance for a dog kept in a full coat. The visit preserves length and supports coat health through washing, conditioning, detangling, and careful blow-drying. Sanitary areas and paws are tidied as part of that care. The overall coat is not cut short.";
 export const LONG_COAT_CARE_DISTINCTION =
   "Unlike a full haircut, long-coat care is designed to maintain and protect length rather than shorten the overall coat.";
 export const LONG_COAT_CARE_RHYTHM =

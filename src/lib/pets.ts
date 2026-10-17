@@ -1,3 +1,4 @@
+import type { AllergyStatus } from "@/lib/allergies";
 import { formatPetAgeLabel, getPetAgeYears } from "@/lib/pet-age";
 import type { PetRabiesStatus } from "@/lib/pets/types";
 import type { VaccinationBookingStatus } from "@/lib/vaccinations/types";
@@ -21,6 +22,8 @@ export type PetProfile = {
   temperament?: string;
   medicalNotes?: string;
   groomingPreferences?: string;
+  allergyStatus?: AllergyStatus | null;
+  allergyDetails?: string;
   adminServiceNotes?: string;
   rabiesStatus?: PetRabiesStatus | null;
   vaccineExpiration?: string;

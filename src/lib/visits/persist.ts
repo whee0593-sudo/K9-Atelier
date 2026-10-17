@@ -24,6 +24,14 @@ export type StaffVisitAppointmentInsert = {
   service_name: string;
   add_on_ids: string[];
   add_on_options: Record<string, string>;
+  spa_goals?: string[];
+  allergy_snapshot?: {
+    petName: string;
+    petStatus: string | null;
+    petDetails: string | null;
+    householdStatus: string | null;
+    householdDetails: string | null;
+  } | null;
   address_street: string;
   address_city: string;
   address_state: string;

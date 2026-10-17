@@ -4,8 +4,16 @@
 
 **Tagline:** K9 ATELIER — grooming, elevated.
 
+> 2026-10 预约服务第一阶段以 `content/business.json` 为现行目录。下面旧价目只作历史参考，不再作为网站或预约的价格来源。
+>
+> - 主洗护是 Bath, Coat Care & Spa：Signature Bath、Show-Level Coat Care、Luxury Spa Day。
+> - Show-Level Coat Care 取代 Show Care for Long Coats 和 Show-Level Long-Coat Care。页面是 `/services/show-level-coat-care`。旧路径 `/services/long-coat-care` 做永久 301。
+> - Luxury Spa Day 起价 From $140。三个旧 Spa 的体型价相同，所以沿用：15 磅内 $140 / 60 分钟，15–30 磅 $160 / 75 分钟，31–45 磅 $180 / 90 分钟。护理目标不另加价。
+> - Dead Sea Mud Bath、Aromatherapy Essential Oil Bath Soak、Sensitive Skin & Dander Soothing Treatment 不再作为可预约服务，只留作内部护理方案。不要转成收费 Add-On。
+> - 过敏信息和 Spa 护理目标可选，不能挡住预约。见 `content/BOOKING-RULES.md`。
+
 网站分区：
-1. Bath, Show Care & Spa — Signature Bath、Show Care for Long Coats、三项 Spa
+1. Bath, Coat Care & Spa — Signature Bath、Show-Level Coat Care、Luxury Spa Day
 2. Full Grooming & Hand Stripping — Custom Full Haircut、Hand Stripping
 3. Creative Accent Coloring
 4. Add-On Care — DeMatting、DeShedding、Senior & Gentle Comfort Care、Mini Trim

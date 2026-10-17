@@ -1,12 +1,14 @@
 /** Customer-facing presentation names — backend service IDs unchanged. */
 export const SERVICE_DISPLAY_NAMES: Record<string, string> = {
-  "signature-bath-care": "The Signature Bath",
+  "signature-bath-care": "Signature Bath",
   "custom-full-haircut": "The Atelier Full Groom",
-  "long-coat-show-care": "Show Care for Long Coats",
+  "show-level-coat-care": "Show-Level Coat Care",
+  "long-coat-show-care": "Show-Level Coat Care",
   "hand-stripping": "Hand Stripping",
-  "dead-sea-mud-bath": "Dead Sea Mineral Ritual",
-  "aromatherapy-oil-bath": "Lavender & Chamomile Bath Ritual",
-  "sensitive-skin-treatment": "Sensitive Skin Botanical Ritual",
+  "luxury-spa-day": "Luxury Spa Day",
+  "dead-sea-mud-bath": "Dead Sea Mud Bath Treatment",
+  "aromatherapy-oil-bath": "Aromatherapy Essential Oil Bath Soak",
+  "sensitive-skin-treatment": "Sensitive Skin & Dander Soothing Treatment",
   "creative-accent-coloring": "Creative Accent Color",
   "deshedding-treatment": "DeShedding Care",
   "dematting-brush-out": "Gentle DeMatting",
@@ -17,19 +19,17 @@ export const SERVICE_DISPLAY_NAMES: Record<string, string> = {
 
 export const SERVICE_DISPLAY_DESCRIPTIONS: Record<string, string> = {
   "signature-bath-care":
-    "Coat-specific cleansing, conditioning and meticulous finishing.",
+    "Bath, blow-dry, and brush-out. Nail, ear, and teeth care included.",
   "custom-full-haircut":
     "Complete grooming with bespoke haircut and finishing.",
+  "show-level-coat-care":
+    "An upgraded bath with show-level coat conditioning. Nail, ear, and teeth care included. Mini trim included.",
   "long-coat-show-care":
-    "A weekly wash-and-care ritual for full-coat breeds — preserving length, preventing matting, and keeping a silky, show-ready finish.",
+    "An upgraded bath with show-level coat conditioning. Nail, ear, and teeth care included. Mini trim included.",
   "hand-stripping":
     "Traditional coat preservation for wire-haired breeds.",
-  "dead-sea-mud-bath":
-    "Mineral-rich care paired with gentle massage and meticulous coat finishing.",
-  "aromatherapy-oil-bath":
-    "A warm bathing ritual with pet-appropriate lavender and chamomile care.",
-  "sensitive-skin-treatment":
-    "Gentle botanical care created for dry or sensitive skin.",
+  "luxury-spa-day":
+    "A fully customized, relaxing spa experience for your pup. Nail, ear, and teeth care included. Mini trim included.",
   "creative-accent-coloring":
     "A bespoke pop of pet-appropriate color, tailored to your dog's coat and your preferred look.",
   "deshedding-treatment": "For coats with excess undercoat.",
@@ -41,11 +41,11 @@ export const SERVICE_DISPLAY_DESCRIPTIONS: Record<string, string> = {
 };
 
 export const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
-  "bath-show-spa": "Bath, Show Care & Spa",
+  "bath-show-spa": "Bath, Coat Care & Spa",
   "full-grooming": "Full Grooming & Hand Stripping",
   "add-on-care": "Add-On Care",
   "bath-grooming": "Signature Grooming",
-  "spa-wellness": "Spa Rituals",
+  "spa-wellness": "Luxury Spa Day",
   "creative-accent-coloring": "Creative Accent Color",
   "end-of-life-care": "Gentle Care",
 };
@@ -59,7 +59,13 @@ export function getCatalogItemDisplayLabel(
   fallback: string,
 ) {
   if (catalogId) return getServiceDisplayName(catalogId, fallback);
-  if (fallback === "Long Coat Show Care") return "Show Care for Long Coats";
+  if (
+    fallback === "Long Coat Show Care" ||
+    fallback === "Show Care for Long Coats" ||
+    fallback === "Show-Level Long-Coat Care"
+  ) {
+    return "Show-Level Coat Care";
+  }
   return fallback;
 }
 

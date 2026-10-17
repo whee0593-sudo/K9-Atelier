@@ -168,9 +168,9 @@ const faqGroups: Array<{ title: string; items: FaqItem[] }> = [
         ],
       },
       {
-        q: "Can I combine a Spa Ritual with a Full Groom?",
+        q: "Can I combine Luxury Spa Day with a Full Groom?",
         paragraphs: [
-          "To keep your dog comfortable and avoid an overly long session, Spa Rituals are generally scheduled separately from Full Groom appointments. We're happy to recommend the best care schedule for your dog.",
+          "To keep your dog comfortable and avoid an overly long session, Luxury Spa Day is generally scheduled separately from Full Groom appointments. We're happy to recommend the best care schedule for your dog.",
         ],
       },
       {

@@ -10,38 +10,17 @@ import {
 } from "@/components/home/home-spa-wellness";
 
 describe("home spa wellness content", () => {
-  it("keeps three ritual names and short suitability lines", () => {
-    assert.equal(homeSpaWellnessServices.length, 3);
-    assert.deepEqual(
-      homeSpaWellnessServices.map((service) => service.title),
-      [
-        "Dead Sea Mineral Ritual",
-        "Lavender & Chamomile Bath Ritual",
-        "Sensitive Skin Botanical Ritual",
-      ],
-    );
-    assert.deepEqual(
-      homeSpaWellnessServices.map((service) => service.suitability),
-      [
-        "For heavy shedding and dense double coats.",
-        "For dry, dull or tangle-prone coats.",
-        "For dry or sensitive skin.",
-      ],
-    );
-  });
-
-  it("preserves the existing long descriptions for collapse", () => {
+  it("shows Luxury Spa Day instead of the retired spa rituals", () => {
+    assert.equal(homeSpaWellnessServices.length, 1);
+    assert.equal(homeSpaWellnessServices[0]?.title, "Luxury Spa Day");
+    assert.equal(homeSpaWellnessServices[0]?.suitability, "From $140");
     assert.match(
-      homeSpaWellnessServices[0].details,
-      /Dead Sea mud care/,
+      homeSpaWellnessServices[0]?.details ?? "",
+      /fully customized, relaxing spa experience/,
     );
-    assert.match(
-      homeSpaWellnessServices[1].details,
-      /lavender and chamomile/,
-    );
-    assert.match(
-      homeSpaWellnessServices[2].details,
-      /oatmeal\/aloe-based care/,
+    assert.equal(
+      homeSpaWellnessServices.some((service) => /Dead Sea|Aromatherapy|Sensitive Skin Botanical/.test(service.title)),
+      false,
     );
   });
 
@@ -52,19 +31,12 @@ describe("home spa wellness content", () => {
 
   it("points the CTA to spa wellness pricing", () => {
     assert.equal(homeSpaWellnessIntro.ctaHref, "/services/spa");
-    assert.equal(
-      homeSpaWellnessIntro.ctaLabel,
-      "View Spa Services & Pricing",
-    );
+    assert.equal(homeSpaWellnessIntro.ctaLabel, "View Luxury Spa Day");
     assert.equal(homeSpaWellnessIntro.eyebrow, "Spa & Wellness");
     assert.equal(homeSpaWellnessIntro.title, "Care for Skin, Coat & Comfort");
-    assert.equal(
+    assert.match(
       homeSpaWellnessIntro.body,
-      "Targeted spa treatments selected for your dog’s skin and coat needs.",
-    );
-    assert.equal(
-      homeSpaWellnessIntro.note,
-      "Spa Rituals are scheduled separately from full haircut appointments.",
+      /fully customized, relaxing spa experience/,
     );
   });
 });
@@ -86,12 +58,12 @@ describe("home spa wellness markup", () => {
       assert.match(html, new RegExp(escapeRegExp(escapeHtml(service.details))));
     }
 
-    assert.equal((html.match(/aria-expanded="false"/g) ?? []).length, 3);
-    assert.equal((html.match(/aria-controls="/g) ?? []).length, 3);
-    assert.equal((html.match(/>View Details</g) ?? []).length, 3);
+    assert.equal((html.match(/aria-expanded="false"/g) ?? []).length, 1);
+    assert.equal((html.match(/aria-controls="/g) ?? []).length, 1);
+    assert.equal((html.match(/>View Details</g) ?? []).length, 1);
     assert.equal(html.includes("Hide Details"), false);
     assert.match(html, /grid-rows-\[0fr\]/);
-    assert.equal(html.includes("From $140"), false);
+    assert.match(html, /From \$140/);
     assert.equal(html.includes("All spa treatments include"), false);
   });
 

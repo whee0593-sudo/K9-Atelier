@@ -1,3 +1,5 @@
+import { readAllergyStatus, type AllergyStatus } from "@/lib/allergies";
+
 export type CustomerProfile = {
   id: string;
   email: string;
@@ -8,6 +10,8 @@ export type CustomerProfile = {
   emergencyContactName: string;
   emergencyContactPhone: string;
   emergencyContactRelationship: string;
+  householdAllergyStatus?: AllergyStatus | null;
+  householdAllergyDetails?: string | null;
 };
 
 export type CustomerProfileWriteInput = {
@@ -18,6 +22,8 @@ export type CustomerProfileWriteInput = {
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
   emergencyContactRelationship: string | null;
+  householdAllergyStatus?: AllergyStatus | null;
+  householdAllergyDetails?: string | null;
   /** Staff-only: login email. Customers cannot change email from My Account. */
   email?: string;
 };
@@ -32,6 +38,8 @@ export type CustomerProfileRow = {
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
   emergency_contact_relationship: string | null;
+  household_allergy_status?: AllergyStatus | null;
+  household_allergy_details?: string | null;
 };
 
 export const PREFERRED_CONTACT_OPTIONS = ["Email", "Text Message"] as const;
@@ -56,5 +64,8 @@ export function mapProfileRow(row: CustomerProfileRow): CustomerProfile {
     emergencyContactName: row.emergency_contact_name ?? "",
     emergencyContactPhone: row.emergency_contact_phone ?? "",
     emergencyContactRelationship: row.emergency_contact_relationship ?? "",
+    householdAllergyStatus:
+      readAllergyStatus(row.household_allergy_status ?? null) ?? null,
+    householdAllergyDetails: row.household_allergy_details ?? null,
   };
 }

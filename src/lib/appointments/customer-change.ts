@@ -41,6 +41,9 @@ import {
   estimateServiceDurationMinutes,
   getServicePriceEstimate,
 } from "@/lib/services";
+import { canonicalServiceId, isRetiredSpaService } from "@/lib/service-catalog";
+import { spaGoalsForService } from "@/lib/spa-goals";
+import { loadBookingAllergySnapshot } from "@/lib/appointments/service";
 import { resolveAppointmentDuration } from "@/lib/visits/duration";
 import {
   hasVisitSequence,
@@ -119,6 +122,7 @@ export type ApplyAppointmentChangeInput = {
   slotStartMinutes?: number;
   petId?: string;
   serviceId?: string;
+  spaGoals?: string[];
   removeAppointmentId?: string;
 };
 
@@ -873,8 +877,17 @@ async function addDogToVisit(
     console.error("addDogToVisit vaccination summary failed:", vaccinationError);
   }
 
-  const service = allBookableServices().find((entry) => entry.id === input.serviceId);
+  const serviceId = canonicalServiceId(input.serviceId);
+  if (isRetiredSpaService(serviceId)) return { error: "conflict" as const };
+  const service = allBookableServices().find((entry) => entry.id === serviceId);
   if (!service) return { error: "conflict" as const };
+  const spaGoals = spaGoalsForService(service.id, input.spaGoals);
+  if (!spaGoals.ok) return { error: "conflict" as const };
+  const allergySnapshot = await loadBookingAllergySnapshot(
+    userId,
+    input.petId,
+    service.name,
+  );
 
   const estimate = getServicePriceEstimate(service, bookedWeight);
   const paymentMethod = await resolvePaymentMethod(
@@ -944,6 +957,8 @@ async function addDogToVisit(
       service_name: getServiceDisplayName(service.id, service.name),
       add_on_ids: [],
       add_on_options: {},
+      spa_goals: spaGoals.goals,
+      allergy_snapshot: allergySnapshot,
       address_street: visit.address_street,
       address_city: visit.address_city,
       address_state: visit.address_state,

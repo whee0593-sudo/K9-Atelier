@@ -1,3 +1,4 @@
+import { readAllergyStatus, type AllergyStatus } from "@/lib/allergies";
 import {
   isReferralSourceValue,
   normalizeReferralName,
@@ -19,6 +20,8 @@ export type BookingRegisterInput = {
   phone: string;
   referralSource: ReferralSourceValue | null;
   referralName: string | null;
+  householdAllergyStatus?: AllergyStatus | null;
+  householdAllergyDetails?: string | null;
 };
 
 function assertPlainObject(value: unknown): Record<string, unknown> {
@@ -92,6 +95,21 @@ export function validateBookingRegisterInput(body: unknown): BookingRegisterInpu
     ? normalizeReferralName(referralSource, record.referralName)
     : null;
 
+  const householdAllergyStatus = readAllergyStatus(record.householdAllergyStatus);
+  if (
+    record.householdAllergyStatus !== undefined &&
+    householdAllergyStatus === undefined
+  ) {
+    throw new ProfileValidationError(
+      "Choose Yes, No known allergies, or Not sure.",
+      "householdAllergyStatus",
+    );
+  }
+  const householdAllergyDetails =
+    typeof record.householdAllergyDetails === "string"
+      ? record.householdAllergyDetails.trim()
+      : null;
+
   return {
     email,
     password,
@@ -100,5 +118,12 @@ export function validateBookingRegisterInput(body: unknown): BookingRegisterInpu
     phone,
     referralSource,
     referralName,
+    ...(record.householdAllergyStatus !== undefined
+      ? {
+          householdAllergyStatus: householdAllergyStatus ?? null,
+          householdAllergyDetails:
+            householdAllergyStatus === "yes" ? householdAllergyDetails : null,
+        }
+      : {}),
   };
 }

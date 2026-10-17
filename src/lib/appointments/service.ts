@@ -42,6 +42,10 @@ import {
   insertGuestBooking,
 } from "@/lib/appointments/guest-booking";
 import { estimateServiceDurationMinutes } from "@/lib/services";
+import {
+  buildAllergySnapshot,
+  readAllergyStatus,
+} from "@/lib/allergies";
 import { snapshotServicePrice, visitArrivalFields } from "@/lib/visits/visit";
 import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
 import {
@@ -49,6 +53,58 @@ import {
   claimDayPlan,
   getBaseGeoPoint,
 } from "@/lib/appointments/schedule";
+
+export async function loadBookingAllergySnapshot(
+  customerId: string,
+  petId: string,
+  fallbackPetName: string,
+) {
+  try {
+    const admin = createAdminClient();
+    const [petResult, profileResult] = await Promise.all([
+      admin
+        .from("pets")
+        .select("name, allergy_status, allergy_details")
+        .eq("id", petId)
+        .maybeSingle(),
+      admin
+        .from("profiles")
+        .select("household_allergy_status, household_allergy_details")
+        .eq("id", customerId)
+        .maybeSingle(),
+    ]);
+    if (petResult.error || profileResult.error) {
+      console.error(
+        "loadBookingAllergySnapshot skipped:",
+        petResult.error?.message ?? profileResult.error?.message,
+      );
+      return null;
+    }
+    const petStatus = readAllergyStatus(petResult.data?.allergy_status ?? null);
+    const householdStatus = readAllergyStatus(
+      profileResult.data?.household_allergy_status ?? null,
+    );
+    return buildAllergySnapshot({
+      petName:
+        typeof petResult.data?.name === "string" && petResult.data.name.trim()
+          ? petResult.data.name
+          : fallbackPetName,
+      petStatus: petStatus ?? null,
+      petDetails:
+        typeof petResult.data?.allergy_details === "string"
+          ? petResult.data.allergy_details
+          : null,
+      householdStatus: householdStatus ?? null,
+      householdDetails:
+        typeof profileResult.data?.household_allergy_details === "string"
+          ? profileResult.data.household_allergy_details
+          : null,
+    });
+  } catch (error) {
+    console.error("loadBookingAllergySnapshot skipped:", error);
+    return null;
+  }
+}
 
 const APPOINTMENT_SELECT = `
   id,
@@ -58,6 +114,8 @@ const APPOINTMENT_SELECT = `
   service_name,
   add_on_ids,
   add_on_options,
+  spa_goals,
+  allergy_snapshot,
   address_street,
   address_city,
   address_state,
@@ -271,14 +329,20 @@ export async function createAppointment(
   const arrival = visitArrivalFields(schedule.scheduledStart);
   const payloadHash = guestBookingIntentHash({
     petId: input.petId,
-    serviceId: input.serviceId,
+    serviceId: quote.serviceId,
     addOnIds: input.addOnIds,
     addOnOptions: input.addOnOptions,
+    spaGoals: input.spaGoals ?? [],
     address: input.address,
     appointmentDate: input.appointmentDate,
     slotStartMinutes: input.slotStartMinutes,
     paymentMethodId: input.paymentMethodId,
   });
+  const allergySnapshot = await loadBookingAllergySnapshot(
+    user.id,
+    input.petId,
+    quote.serviceName,
+  );
   const admin = createAdminClient();
   const saved = await insertGuestBooking(
     {
@@ -311,10 +375,12 @@ export async function createAppointment(
       appointment: {
         customer_id: user.id,
         pet_id: input.petId,
-        service_id: input.serviceId,
+        service_id: quote.serviceId,
         service_name: quote.serviceName,
         add_on_ids: input.addOnIds,
         add_on_options: input.addOnOptions,
+        spa_goals: input.spaGoals ?? [],
+        allergy_snapshot: allergySnapshot,
         address_street: input.address.street,
         address_city: input.address.city,
         address_state: input.address.state,

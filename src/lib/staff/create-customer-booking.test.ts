@@ -188,7 +188,7 @@ describe("validateStaffCustomerBookingInput", () => {
     assert.equal(input.pets[1]?.serviceId, "custom-full-haircut");
     assert.deepEqual(input.pets[1]?.serviceIds, ["custom-full-haircut"]);
     assert.equal(input.serviceId, "signature-bath-care");
-    assert.equal(input.serviceName, "Signature Bath & Care");
+    assert.equal(input.serviceName, "Signature Bath");
   });
 
   it("accepts two different services for the same dog", () => {
@@ -216,9 +216,7 @@ describe("validateStaffCustomerBookingInput", () => {
     const serviceIds = [
       "signature-bath-care",
       "long-coat-show-care",
-      "dead-sea-mud-bath",
-      "aromatherapy-oil-bath",
-      "sensitive-skin-treatment",
+      "luxury-spa-day",
       "custom-full-haircut",
     ];
     const input = validateStaffCustomerBookingInput(
@@ -232,7 +230,12 @@ describe("validateStaffCustomerBookingInput", () => {
         },
       }),
     );
-    assert.deepEqual(input.pets[0]?.serviceIds, serviceIds);
+    assert.deepEqual(input.pets[0]?.serviceIds, [
+      "signature-bath-care",
+      "show-level-coat-care",
+      "luxury-spa-day",
+      "custom-full-haircut",
+    ]);
   });
 
   it("keeps every coloring style selectable", () => {
@@ -324,16 +327,16 @@ describe("validateStaffCustomerBookingInput", () => {
           breed: "Poodle",
           weightLbs: 14,
           serviceIds: [
-            "dead-sea-mud-bath",
+            "luxury-spa-day",
             "senior-comfort-care",
             "dematting-brush-out",
           ],
         },
       }),
     );
-    assert.equal(input.serviceName, "SPA/Dead Sea Mud Bath Treatment");
+    assert.equal(input.serviceName, "Luxury Spa Day");
     assert.deepEqual(input.pets[0]?.serviceIds, [
-      "dead-sea-mud-bath",
+      "luxury-spa-day",
       "senior-comfort-care",
       "dematting-brush-out",
     ]);

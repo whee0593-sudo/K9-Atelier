@@ -4,6 +4,8 @@ import type {
   AppointmentRow,
 } from "@/lib/appointments/types";
 import { stringAddOnOptions } from "@/lib/charges/visit-line-items";
+import { parseAllergySnapshot } from "@/lib/allergies";
+import { parseSpaGoals } from "@/lib/spa-goals";
 import { getServiceDisplayName } from "@/lib/service-display";
 import type { VaccinationBookingStatus } from "@/lib/vaccinations/types";
 import { displayAppointmentTime } from "@/lib/appointments/arrival-window";
@@ -45,6 +47,11 @@ export function mapAppointmentRowToRecord(row: AppointmentRow): AppointmentRecor
     addOnOptions: stringAddOnOptions(
       row.add_on_options as Record<string, unknown> | null,
     ),
+    spaGoals: (() => {
+      const parsed = parseSpaGoals(row.spa_goals ?? []);
+      return parsed.ok ? parsed.goals : [];
+    })(),
+    allergySnapshot: parseAllergySnapshot(row.allergy_snapshot),
     addressStreet: row.address_street,
     addressCity: row.address_city,
     addressState: row.address_state,

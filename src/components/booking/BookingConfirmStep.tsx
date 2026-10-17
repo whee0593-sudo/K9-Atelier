@@ -34,12 +34,15 @@ import {
   type PaymentMethodRecord,
 } from "@/lib/payments/types";
 import type { BookingOwnerDetails } from "@/components/booking/BookingOwnerStep";
+import { allergyStatusLabel } from "@/lib/allergies";
+import { spaGoalTitle, type SpaGoalId } from "@/lib/spa-goals";
 
 type Props = {
   pet: PetProfile;
   service: BookableService;
   addOnIds: string[];
   addOnOptions: Record<string, string>;
+  spaGoals?: SpaGoalId[];
   address: ServiceAddress;
   travelQuote: TravelQuote;
   appointmentDate: string;
@@ -58,6 +61,7 @@ export function BookingConfirmStep({
   service,
   addOnIds,
   addOnOptions,
+  spaGoals = [],
   address,
   travelQuote,
   appointmentDate,
@@ -152,6 +156,7 @@ export function BookingConfirmStep({
         serviceName: quoted.quote.serviceName,
         addOnIds,
         addOnOptions,
+        spaGoals,
         address,
         travelDistanceMiles: quoted.quote.travelDistanceMiles,
         travelFee: quoted.quote.travelFee,
@@ -227,6 +232,41 @@ export function BookingConfirmStep({
           <p className="font-body mt-1 text-sm text-ink">
             {pet.breed} · {pet.weightLbs} lbs
           </p>
+        </div>
+
+        <div className="border-t border-gray-line/70 pt-6">
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
+            Service
+          </p>
+          <p className="font-body mt-3 text-sm text-ink">{quoted?.ok ? quoted.quote.serviceName : service.name}</p>
+          {spaGoals.length > 0 ? (
+            <ul className="font-body mt-3 space-y-1 text-sm text-taupe">
+              {spaGoals.map((goal) => (
+                <li key={goal}>{spaGoalTitle(goal)}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+
+        <div className="border-t border-gray-line/70 pt-6">
+          <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
+            Known Allergies &amp; Sensitivities
+          </p>
+          <p className="font-body mt-3 text-sm text-ink">
+            {pet.name}: {allergyStatusLabel(pet.allergyStatus)}
+          </p>
+          {pet.allergyStatus === "yes" && pet.allergyDetails?.trim() ? (
+            <p className="font-body mt-1 text-sm text-taupe">{pet.allergyDetails}</p>
+          ) : null}
+          <p className="font-body mt-3 text-sm text-ink">
+            Household: {allergyStatusLabel(owner.householdAllergyStatus)}
+          </p>
+          {owner.householdAllergyStatus === "yes" &&
+          owner.householdAllergyDetails?.trim() ? (
+            <p className="font-body mt-1 text-sm text-taupe">
+              {owner.householdAllergyDetails}
+            </p>
+          ) : null}
         </div>
 
         <div className="border-t border-gray-line/70 pt-6">

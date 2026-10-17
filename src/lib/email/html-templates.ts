@@ -1,3 +1,4 @@
+import { allergyWarning } from "@/lib/allergies";
 import { business, formatDuration, formatPrice } from "@/lib/business";
 import { formatChargeMoney } from "@/lib/charges/money";
 import {
@@ -16,6 +17,7 @@ import {
   buildCustomerSimpleLetterEmail,
   buildCustomerVaccinationApprovedEmail,
   buildStaffNotificationEmail,
+  escapeHtml,
   type CustomerLetterDetailRow,
   type StaffNotificationRow,
 } from "@/lib/email/layout";
@@ -202,6 +204,12 @@ export function buildStaffNewAppointmentEmail(
         ) ?? formatPrice(appointment.estimatedTotal)
       : "—";
 
+  const allergy = allergyWarning(appointment.allergySnapshot ?? null);
+  const allergyBanner = allergy
+    ? `<p style="margin:0 0 12px; font-size:18px; font-weight:700; letter-spacing:0.04em; color:#9B1C1C;">${escapeHtml(allergy.banner)}</p>
+<p style="margin:0 0 6px; font-size:13px; font-weight:700; letter-spacing:0.04em; color:#9B1C1C;">ALLERGIES &amp; SENSITIVITIES</p>
+<p style="margin:0 0 16px; font-size:14px; font-weight:700; line-height:1.6; color:#9B1C1C; white-space:pre-wrap;">${escapeHtml(allergy.lines.join("\n"))}</p>`
+    : "";
   const rows: StaffNotificationRow[] = [
     { label: "Customer", value: customerLabel },
     { label: "Pet", value: petLabel },
@@ -223,9 +231,12 @@ export function buildStaffNewAppointmentEmail(
     });
   }
 
-  const introHtml = `<p style="margin:0 0 16px; font-size:15px;">${introLine}</p>`;
+  const introHtml = `${allergyBanner}<p style="margin:0 0 16px; font-size:15px;">${introLine}</p>`;
 
   const text = [
+    ...(allergy
+      ? [allergy.banner, "", "ALLERGIES & SENSITIVITIES", ...allergy.lines, ""]
+      : []),
     introLine,
     "",
     `Customer: ${customerLabel}`,

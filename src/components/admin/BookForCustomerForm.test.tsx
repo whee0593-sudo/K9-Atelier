@@ -159,15 +159,16 @@ describe("BookForCustomerForm preview schedule", () => {
     const light = html.slice(lightStart, heavyStart);
     const heavy = html.slice(heavyStart, html.indexOf("</select>", heavyStart));
     assert.match(light, /Custom Full Haircut &amp; Styling/);
-    assert.match(light, />SPA\/Dead Sea Mud Bath Treatment</);
-    assert.match(light, />SPA\/Aromatherapy Essential Oil Bath Soak</);
-    assert.match(light, />SPA\/Sensitive Skin &amp; Dander Soothing Treatment</);
+    assert.match(light, />Luxury Spa Day</);
+    assert.doesNotMatch(light, /Dead Sea/);
+    assert.doesNotMatch(light, /Aromatherapy/);
+    assert.doesNotMatch(light, /Sensitive Skin/);
     assert.match(light, />Specialty care\/Extra-gentle senior care</);
     assert.match(light, />Specialty care\/End-of-Life Comfort Care</);
     assert.match(light, />Add-on care\/Dematting &amp; gentle brush-out</);
     assert.match(light, />Add-on care\/DeShedding Treatment</);
     assert.match(light, />Add-on care\/Mini Trim</);
-    assert.doesNotMatch(light, />Dead Sea Mud Bath Treatment</);
+    assert.doesNotMatch(light, />SPA\//);
     assert.match(light, />Creative coloring\/Temporary Fun</);
     assert.match(light, />Creative coloring\/Ears &amp; Tail Accent</);
     assert.match(light, />Creative coloring\/Paws &amp; Boots Accent</);
@@ -178,13 +179,11 @@ describe("BookForCustomerForm preview schedule", () => {
     );
     assert.deepEqual(lightLabels, [
       "Select a service",
-      "Signature Bath & Care",
-      "Show Care for Long Coats",
+      "Signature Bath",
+      "Show-Level Coat Care",
       "Custom Full Haircut & Styling",
       "Hand Stripping",
-      "SPA/Dead Sea Mud Bath Treatment",
-      "SPA/Aromatherapy Essential Oil Bath Soak",
-      "SPA/Sensitive Skin & Dander Soothing Treatment",
+      "Luxury Spa Day",
       "Creative coloring/Temporary Fun",
       "Creative coloring/Ears & Tail Accent",
       "Creative coloring/Paws & Boots Accent",

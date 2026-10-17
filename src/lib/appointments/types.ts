@@ -1,3 +1,5 @@
+import type { AllergySnapshot } from "@/lib/allergies";
+import type { SpaGoalId } from "@/lib/spa-goals";
 import type { VaccinationBookingStatus } from "@/lib/vaccinations/types";
 
 export type AppointmentStatus =
@@ -11,6 +13,7 @@ export type AppointmentWriteInput = {
   serviceName: string;
   addOnIds: string[];
   addOnOptions: Record<string, string>;
+  spaGoals?: SpaGoalId[];
   address: {
     street: string;
     city: string;
@@ -46,6 +49,8 @@ export type AppointmentRecord = {
   serviceName: string;
   addOnIds: string[];
   addOnOptions: Record<string, string>;
+  spaGoals?: SpaGoalId[];
+  allergySnapshot?: AllergySnapshot | null;
   addressStreet: string;
   addressCity: string;
   addressState: string;
@@ -93,6 +98,8 @@ export type AppointmentRow = {
   service_name: string;
   add_on_ids: string[];
   add_on_options: Record<string, string> | null;
+  spa_goals?: string[] | null;
+  allergy_snapshot?: AllergySnapshot | Record<string, unknown> | null;
   address_street: string;
   address_city: string;
   address_state: string;

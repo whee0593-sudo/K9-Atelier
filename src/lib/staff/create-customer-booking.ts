@@ -26,6 +26,7 @@ import { drivingDistanceMiles, geocodeAddress } from "@/lib/geo";
 import { getBaseAddressFormatted } from "@/lib/server/base-address";
 import { formatServiceAddress, calculateTravelFee } from "@/lib/travel";
 import { mapValidatedInputToInsertRow } from "@/lib/pets/map";
+import { loadBookingAllergySnapshot } from "@/lib/appointments/service";
 import { PET_SELECT } from "@/lib/pets/types";
 import {
   bookedServiceAmount,
@@ -714,6 +715,11 @@ export async function createStaffCustomerBooking(
         const estimatedTotal =
           Math.round((servicePrice + travelFee) * 100) / 100;
 
+        const allergySnapshot = await loadBookingAllergySnapshot(
+          userId,
+          petRow.id as string,
+          serviceNameForPet,
+        );
         pendingAppointments.push({
           customer_id: userId,
           pet_id: petRow.id as string,
@@ -721,6 +727,8 @@ export async function createStaffCustomerBooking(
           service_name: serviceNameForPet,
           add_on_ids: input.addOnIds,
           add_on_options: optionName ? { [petService.id]: optionName } : {},
+          spa_goals: [],
+          allergy_snapshot: allergySnapshot,
           address_street: address.street,
           address_city: address.city,
           address_state: address.state,

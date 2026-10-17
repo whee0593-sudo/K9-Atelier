@@ -1,4 +1,6 @@
 import { guestBookingSelectionError, bookingMoney } from "@/lib/booking-price";
+import { canonicalServiceId } from "@/lib/service-catalog";
+import { spaGoalsForService } from "@/lib/spa-goals";
 import {
   CREATIVE_ACCENT_COLORING_ID,
   CUSTOM_CREATIVE_DESIGN_GUEST_MESSAGE,
@@ -82,7 +84,13 @@ export function validateCreateAppointmentInput(
     throw new AppointmentValidationError("Invalid pet id.", "petId");
   }
 
-  const serviceId = readString(record, "serviceId", "Service", 120);
+  const serviceId = canonicalServiceId(
+    readString(record, "serviceId", "Service", 120),
+  );
+  const spaGoals = spaGoalsForService(serviceId, record.spaGoals);
+  if (!spaGoals.ok) {
+    throw new AppointmentValidationError(spaGoals.message, "spaGoals");
+  }
   const serviceName = readString(record, "serviceName", "Service", 200);
   const appointmentDate = readString(
     record,
@@ -249,6 +257,7 @@ export function validateCreateAppointmentInput(
     serviceName,
     addOnIds,
     addOnOptions,
+    spaGoals: spaGoals.goals,
     address: {
       street: readString(addressObj, "street", "Street", 200),
       city: readString(addressObj, "city", "City", 120),

@@ -57,7 +57,7 @@ describe("guest booking price", () => {
     });
     assert.equal(quoted.ok, true);
     if (!quoted.ok) return;
-    assert.equal(quoted.quote.serviceName, "The Signature Bath");
+    assert.equal(quoted.quote.serviceName, "Signature Bath");
     assert.equal(quoted.quote.servicePrice, 90);
     assert.equal(quoted.quote.servicePriceLabel, "From $90");
     assert.equal(quoted.quote.addOnLabel, "None");
