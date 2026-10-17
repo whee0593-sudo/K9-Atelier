@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { allBookableServices, getServicePriceEstimate } from "@/lib/services";
+import {
+  allBookableServices,
+  getServicePriceEstimate,
+  MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
+} from "@/lib/services";
 import {
   StaffBookingValidationError,
   staffCreatedAccountBlockReason,
@@ -189,6 +193,53 @@ describe("validateStaffCustomerBookingInput", () => {
     assert.deepEqual(input.pets[1]?.serviceIds, ["custom-full-haircut"]);
     assert.equal(input.serviceId, "signature-bath-care");
     assert.equal(input.serviceName, "Signature Bath");
+  });
+
+  it("rejects a second Mini Trim charge on a service that already includes it", () => {
+    assert.throws(
+      () =>
+        validateStaffCustomerBookingInput(
+          validBody({
+            serviceId: undefined,
+            pet: {
+              name: "Luna",
+              breed: "Poodle",
+              weightLbs: 14,
+              serviceIds: ["show-level-coat-care", "mini-trim"],
+            },
+          }),
+        ),
+      (error: unknown) =>
+        error instanceof StaffBookingValidationError &&
+        error.message === MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
+    );
+    assert.throws(
+      () =>
+        validateStaffCustomerBookingInput(
+          validBody({
+            serviceId: "luxury-spa-day",
+            addOnIds: ["mini-trim"],
+          }),
+        ),
+      (error: unknown) =>
+        error instanceof StaffBookingValidationError &&
+        error.field === "addOnIds",
+    );
+    const bath = validateStaffCustomerBookingInput(
+      validBody({
+        serviceId: undefined,
+        pet: {
+          name: "Luna",
+          breed: "Poodle",
+          weightLbs: 14,
+          serviceIds: ["signature-bath-care", "mini-trim"],
+        },
+      }),
+    );
+    assert.deepEqual(bath.pets[0]?.serviceIds, [
+      "signature-bath-care",
+      "mini-trim",
+    ]);
   });
 
   it("accepts two different services for the same dog", () => {

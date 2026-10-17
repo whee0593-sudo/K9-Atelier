@@ -28,10 +28,13 @@ import { formatServiceAddress, calculateTravelFee } from "@/lib/travel";
 import { mapValidatedInputToInsertRow } from "@/lib/pets/map";
 import { loadBookingAllergySnapshot } from "@/lib/appointments/service";
 import { PET_SELECT } from "@/lib/pets/types";
+import { ALLERGY_PROFILE_UNAVAILABLE_MESSAGE } from "@/lib/allergies";
 import {
   bookedServiceAmount,
   estimateServiceDurationMinutes,
   allBookableServices,
+  selectionRepeatsIncludedMiniTrim,
+  MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
 } from "@/lib/services";
 import { keepPrimaryIfReferralFails } from "@/lib/referrals/allocate-code";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -496,6 +499,7 @@ export async function createStaffCustomerBooking(
         | "schedule_conflict"
         | "outside_area"
         | "misconfigured"
+        | "allergy_unavailable"
         | "server";
       message?: string;
     }
@@ -547,6 +551,18 @@ export async function createStaffCustomerBooking(
       error: "outside_area",
       message: quote.summary,
     };
+  }
+
+  for (const pet of input.pets) {
+    const petServiceIds =
+      pet.serviceIds.length > 0
+        ? pet.serviceIds
+        : pet.serviceId
+          ? [pet.serviceId]
+          : [];
+    if (selectionRepeatsIncludedMiniTrim(petServiceIds, input.addOnIds)) {
+      return { error: "conflict", message: MINI_TRIM_ALREADY_INCLUDED_MESSAGE };
+    }
   }
 
   const firstPet = input.pets[0];
@@ -715,11 +731,19 @@ export async function createStaffCustomerBooking(
         const estimatedTotal =
           Math.round((servicePrice + travelFee) * 100) / 100;
 
-        const allergySnapshot = await loadBookingAllergySnapshot(
+        const allergy = await loadBookingAllergySnapshot(
           userId,
           petRow.id as string,
           serviceNameForPet,
         );
+        if (!allergy.ok) {
+          console.error("createStaffCustomerBooking allergy profile could not be read");
+          return {
+            error: "allergy_unavailable",
+            message: ALLERGY_PROFILE_UNAVAILABLE_MESSAGE,
+          };
+        }
+        const allergySnapshot = allergy.snapshot;
         pendingAppointments.push({
           customer_id: userId,
           pet_id: petRow.id as string,

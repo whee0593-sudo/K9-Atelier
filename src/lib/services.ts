@@ -338,14 +338,38 @@ export function supportsSeniorAddOn(serviceId: string) {
   );
 }
 
+export const MINI_TRIM_ADD_ON_ID = "mini-trim";
+
+export const MINI_TRIM_ALREADY_INCLUDED_MESSAGE =
+  "Mini Trim is already included with this grooming service. Extra trimming is added only as a separate confirmed adjustment, not by charging Mini Trim again.";
+
+/** Show-Level Coat Care, Luxury Spa Day, and the full groom already include Mini Trim. */
+export function serviceIncludesMiniTrim(serviceId: string) {
+  const id = canonicalServiceId(serviceId);
+  return (
+    id === "show-level-coat-care" ||
+    id === "luxury-spa-day" ||
+    id === "custom-full-haircut"
+  );
+}
+
+export function selectionRepeatsIncludedMiniTrim(
+  serviceIds: readonly string[],
+  addOnIds: readonly string[] = [],
+) {
+  const services = serviceIds.map((id) => canonicalServiceId(id));
+  const addOns = addOnIds.map((id) => canonicalServiceId(id));
+  const included = services.some((id) => serviceIncludesMiniTrim(id));
+  const chargesMiniTrim =
+    services.includes(MINI_TRIM_ADD_ON_ID) ||
+    addOns.includes(MINI_TRIM_ADD_ON_ID);
+  return included && chargesMiniTrim;
+}
+
 export function supportsMiniTrimAddOn(serviceId: string) {
   const id = canonicalServiceId(serviceId);
-  if (id === "custom-full-haircut" || isSpaService(id)) {
-    return false;
-  }
-  if (id === "hand-stripping" || id === "end-of-life-care") {
-    return false;
-  }
+  if (serviceIncludesMiniTrim(id) || isSpaService(id)) return false;
+  if (id === "hand-stripping" || id === "end-of-life-care") return false;
   return true;
 }
 

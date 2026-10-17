@@ -10,6 +10,7 @@ import {
 } from "@/lib/visits/visit";
 import { getStaffSession } from "@/lib/staff/auth";
 import { sanitizeLineItems } from "@/lib/charges/line-items";
+import { selectionRepeatsIncludedMiniTrim } from "@/lib/services";
 import { sumLineItems } from "@/lib/charges/money";
 import {
   appointmentFieldsFromVisitLineItems,
@@ -39,6 +40,7 @@ export async function updateAppointmentVisitServices(input: {
         | "forbidden"
         | "not_found"
         | "invalid"
+        | "mini_trim_included"
         | "slot_unavailable"
         | "server";
     }
@@ -48,6 +50,15 @@ export async function updateAppointmentVisitServices(input: {
 
   const lineItems = sanitizeLineItems(input.lineItems);
   if (!lineItems) return { error: "invalid" };
+  const catalogIds = lineItems.flatMap((item) => {
+    const catalog = item.catalogId ?? "";
+    if (!catalog || catalog === "travel-fee" || catalog === "no-show") return [];
+    const id = catalog.split("::")[0];
+    return id ? [id] : [];
+  });
+  if (selectionRepeatsIncludedMiniTrim(catalogIds)) {
+    return { error: "mini_trim_included" };
+  }
 
   const admin = createAdminClient();
   const { data: row, error } = await admin

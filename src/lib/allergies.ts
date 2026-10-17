@@ -53,6 +53,67 @@ export function allergyStatusLabel(status: AllergyStatus | null | undefined) {
   return "Not recorded";
 }
 
+export const ALLERGY_PROFILE_UNAVAILABLE_MESSAGE =
+  "We could not load allergy and sensitivity information. Please try again. This appointment was not saved.";
+
+export type AllergySnapshotLoad =
+  | { ok: true; snapshot: AllergySnapshot }
+  | { ok: false; error: "unavailable" };
+
+type AllergyPetRead = {
+  name?: string | null;
+  allergy_status?: unknown;
+  allergy_details?: unknown;
+} | null;
+
+type AllergyProfileRead = {
+  household_allergy_status?: unknown;
+  household_allergy_details?: unknown;
+} | null;
+
+/**
+ * A database error, a missing pet row, or an unrecognized status is a failed
+ * read. It is not "No known allergies", Not sure, or an unfilled profile.
+ * A successful read with a null status stays unfilled.
+ */
+export function allergySnapshotFromProfileRead(input: {
+  petError: boolean;
+  profileError: boolean;
+  pet: AllergyPetRead;
+  profile: AllergyProfileRead;
+  fallbackPetName: string;
+}): AllergySnapshotLoad {
+  if (input.petError || input.profileError || input.pet == null) {
+    return { ok: false, error: "unavailable" };
+  }
+  const petStatus = readAllergyStatus(input.pet.allergy_status ?? null);
+  const householdStatus = readAllergyStatus(
+    input.profile?.household_allergy_status ?? null,
+  );
+  if (petStatus === undefined || householdStatus === undefined) {
+    return { ok: false, error: "unavailable" };
+  }
+  return {
+    ok: true,
+    snapshot: buildAllergySnapshot({
+      petName:
+        typeof input.pet.name === "string" && input.pet.name.trim()
+          ? input.pet.name
+          : input.fallbackPetName,
+      petStatus,
+      petDetails:
+        typeof input.pet.allergy_details === "string"
+          ? input.pet.allergy_details
+          : null,
+      householdStatus,
+      householdDetails:
+        typeof input.profile?.household_allergy_details === "string"
+          ? input.profile.household_allergy_details
+          : null,
+    }),
+  };
+}
+
 function cleanDetails(status: AllergyStatus | null, details: string | null) {
   if (status !== "yes") return null;
   const trimmed = details?.trim() ?? "";

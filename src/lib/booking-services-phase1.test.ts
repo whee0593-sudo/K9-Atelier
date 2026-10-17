@@ -5,12 +5,17 @@ import {
   AppointmentValidationError,
   validateCreateAppointmentInput,
 } from "@/lib/appointments/validation";
+import { mapAppointmentServiceError } from "@/lib/appointments/errors";
+import { guestBookingIntentHash } from "@/lib/appointments/guest-booking";
 import {
+  ALLERGY_PROFILE_UNAVAILABLE_MESSAGE,
+  allergySnapshotFromProfileRead,
   allergyStatusLabel,
   allergyWarning,
   buildAllergySnapshot,
   readAllergyStatus,
 } from "@/lib/allergies";
+import { buildDefaultLineItems } from "@/lib/charges/line-items";
 import { getUpcomingBookableDates } from "@/lib/booking-slots";
 import { bookingCareRowsForCategory, getBookingCareCategories } from "@/lib/booking-flow";
 import { guestBookingSelectionError, quoteGuestBooking } from "@/lib/booking-price";
@@ -34,6 +39,8 @@ import {
   estimateServiceDurationMinutes,
   getAvailableAddOns,
   getServicePriceEstimate,
+  MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
+  selectionRepeatsIncludedMiniTrim,
   supportsMiniTrimAddOn,
 } from "@/lib/services";
 import { getServiceById } from "@/lib/service-page";
@@ -275,7 +282,9 @@ describe("retired spa services and add-ons", () => {
       supportsMiniTrimAddOn("signature-bath-care"),
     );
     assert.equal(supportsMiniTrimAddOn(LUXURY_SPA_DAY_ID), false);
-    assert.equal(supportsMiniTrimAddOn(SHOW_LEVEL_COAT_CARE_ID), true);
+    assert.equal(supportsMiniTrimAddOn(SHOW_LEVEL_COAT_CARE_ID), false);
+    assert.equal(supportsMiniTrimAddOn("custom-full-haircut"), false);
+    assert.equal(supportsMiniTrimAddOn("signature-bath-care"), true);
   });
 
   it("renames show-level rows in place and does not delete appointment history", () => {
@@ -289,15 +298,29 @@ describe("retired spa services and add-ons", () => {
     assert.match(sql, /ADD COLUMN IF NOT EXISTS spa_goals/);
     assert.match(sql, /ADD COLUMN IF NOT EXISTS allergy_snapshot/);
     assert.match(sql, /household_allergy_status/);
-    assert.match(
-      sql,
-      /UPDATE public\.appointments\s+SET\s+service_id = 'show-level-coat-care',\s+service_name = 'Show-Level Coat Care'\s+WHERE service_id = 'long-coat-show-care'/,
-    );
     assert.equal(sql.includes("DELETE FROM public.appointments"), false);
     assert.equal(sql.includes("DROP TABLE"), false);
     assert.equal(sql.includes("REVOKE INSERT ON TABLE public.visits"), false);
     assert.match(sql, /p_appointment -> 'spa_goals'/);
     assert.match(sql, /v_item -> 'allergy_snapshot'/);
+    assert.equal(/UPDATE public\.appointments/.test(sql), false);
+    assert.match(sql, /BEGIN;/);
+    assert.match(sql, /COMMIT;/);
+    const rename = readFileSync(
+      new URL(
+        "../../supabase/migrations/20261017121000_show_level_service_id.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    assert.match(
+      rename,
+      /UPDATE public\.appointments\s+SET\s+service_id = 'show-level-coat-care',\s+service_name = 'Show-Level Coat Care'\s+WHERE btrim\(service_id\) = 'long-coat-show-care'/,
+    );
+    assert.match(rename, /appointments_show_level_id_backup/);
+    assert.equal(rename.includes("DELETE FROM"), false);
+    assert.match(rename, /BEGIN;/);
+    assert.match(rename, /COMMIT;/);
   });
 });
 
@@ -385,5 +408,199 @@ describe("allergy snapshot and staff email", () => {
     );
     assert.equal(customer.text.includes("ALLERGY:"), false);
     assert.equal(customer.html.includes("ALLERGIES &amp; SENSITIVITIES"), false);
+  });
+
+  it("does not turn a failed allergy read into no known allergies", () => {
+    const failed = allergySnapshotFromProfileRead({
+      petError: true,
+      profileError: false,
+      pet: { name: "Maple", allergy_status: "yes", allergy_details: "Peanut" },
+      profile: { household_allergy_status: "none" },
+      fallbackPetName: "Maple",
+    });
+    const missingPet = allergySnapshotFromProfileRead({
+      petError: false,
+      profileError: false,
+      pet: null,
+      profile: null,
+      fallbackPetName: "Maple",
+    });
+    const blank = allergySnapshotFromProfileRead({
+      petError: false,
+      profileError: false,
+      pet: { name: "Maple", allergy_status: null, allergy_details: null },
+      profile: null,
+      fallbackPetName: "Maple",
+    });
+    const unsure = allergySnapshotFromProfileRead({
+      petError: false,
+      profileError: false,
+      pet: { name: "Maple", allergy_status: "unsure" },
+      profile: { household_allergy_status: "unsure" },
+      fallbackPetName: "Maple",
+    });
+    const none = allergySnapshotFromProfileRead({
+      petError: false,
+      profileError: false,
+      pet: { name: "Maple", allergy_status: "none" },
+      profile: { household_allergy_status: "none" },
+      fallbackPetName: "Maple",
+    });
+    assert.equal(failed.ok, false);
+    assert.equal(missingPet.ok, false);
+    assert.equal(blank.ok, true);
+    assert.equal(unsure.ok, true);
+    assert.equal(none.ok, true);
+    if (!blank.ok || !unsure.ok || !none.ok) return;
+    assert.equal(blank.snapshot.petStatus, null);
+    assert.equal(blank.snapshot.householdStatus, null);
+    assert.equal(allergyStatusLabel(blank.snapshot.petStatus), "Not recorded");
+    assert.equal(unsure.snapshot.petStatus, "unsure");
+    assert.equal(none.snapshot.petStatus, "none");
+    assert.equal(allergyWarning(blank.snapshot), null);
+    assert.equal(allergyWarning(unsure.snapshot), null);
+    assert.equal(allergyWarning(none.snapshot), null);
+    assert.notEqual(blank.snapshot.petStatus, "none");
+    assert.notEqual(unsure.snapshot.petStatus, "none");
+  });
+
+  it("stops the booking before the idempotent insert when the allergy read fails", async () => {
+    const response = mapAppointmentServiceError("allergy_unavailable");
+    assert.equal(response.status, 503);
+    const body = (await response.json()) as { error?: string; code?: string };
+    assert.equal(body.code, "allergy_unavailable");
+    assert.equal(body.error, ALLERGY_PROFILE_UNAVAILABLE_MESSAGE);
+    assert.equal(/no known allergies/i.test(body.error ?? ""), false);
+
+    const service = readFileSync(
+      new URL("./appointments/service.ts", import.meta.url),
+      "utf8",
+    );
+    const addDog = readFileSync(
+      new URL("./appointments/customer-change.ts", import.meta.url),
+      "utf8",
+    );
+    const staff = readFileSync(
+      new URL("./staff/create-customer-booking.ts", import.meta.url),
+      "utf8",
+    );
+    assert.ok(
+      service.indexOf('error: "allergy_unavailable"') <
+        service.indexOf("insertGuestBooking("),
+    );
+    assert.ok(
+      addDog.indexOf('error: "allergy_unavailable"') <
+        addDog.indexOf('.from("appointments")\n    .insert'),
+    );
+    assert.ok(
+      staff.indexOf('error: "allergy_unavailable"') <
+        staff.indexOf("createStaffVisit("),
+    );
+    const intent = {
+      petId: "11111111-1111-4111-8111-111111111111",
+      serviceId: SHOW_LEVEL_COAT_CARE_ID,
+      addOnIds: [] as string[],
+      addOnOptions: {},
+      address: {
+        street: "100 Olive Ave",
+        city: "West Palm Beach",
+        state: "FL",
+        zip: "33401",
+      },
+      appointmentDate: "2026-10-24",
+      slotStartMinutes: 600,
+      paymentMethodId: "22222222-2222-4222-8222-222222222222",
+    };
+    assert.equal(guestBookingIntentHash(intent), guestBookingIntentHash(intent));
+  });
+});
+
+describe("included mini trim is not charged again", () => {
+  it("keeps Mini Trim on Signature Bath and rejects it on services that already include it", () => {
+    assert.equal(
+      getAvailableAddOns("bath-show-spa", SHOW_LEVEL_COAT_CARE_ID).some(
+        (service) => service.id === "mini-trim",
+      ),
+      false,
+    );
+    assert.equal(
+      getAvailableAddOns("bath-show-spa", LUXURY_SPA_DAY_ID).some(
+        (service) => service.id === "mini-trim",
+      ),
+      false,
+    );
+    assert.equal(
+      getAvailableAddOns("bath-show-spa", "signature-bath-care").some(
+        (service) => service.id === "mini-trim",
+      ),
+      true,
+    );
+    for (const serviceId of [SHOW_LEVEL_COAT_CARE_ID, LUXURY_SPA_DAY_ID, "custom-full-haircut"]) {
+      const quoted = quoteGuestBooking({
+        serviceId,
+        weightLbs: 12,
+        addOnIds: ["mini-trim"],
+        addOnOptions: {},
+        distanceMiles: 4,
+      });
+      assert.equal(quoted.ok, false);
+      if (!quoted.ok) assert.equal(quoted.code, "invalid_addon");
+      assert.equal(selectionRepeatsIncludedMiniTrim([serviceId], ["mini-trim"]), true);
+    }
+    const bath = quoteGuestBooking({
+      serviceId: "signature-bath-care",
+      weightLbs: 12,
+      addOnIds: ["mini-trim"],
+      addOnOptions: {},
+      distanceMiles: 4,
+    });
+    assert.equal(bath.ok, true);
+    if (bath.ok) {
+      assert.equal(bath.quote.servicePrice, 90);
+      assert.equal(bath.quote.addOnPrice, 30);
+      assert.equal(bath.quote.estimatedServicePrice, 120);
+    }
+    const showLevel = quoteGuestBooking({
+      serviceId: SHOW_LEVEL_COAT_CARE_ID,
+      weightLbs: 12,
+      addOnIds: ["dematting-brush-out"],
+      addOnOptions: {},
+      distanceMiles: 4,
+    });
+    assert.equal(showLevel.ok, true);
+    if (showLevel.ok) {
+      assert.equal(showLevel.quote.servicePrice, 120);
+      assert.equal(showLevel.quote.addOns.some((item) => item.id === "mini-trim"), false);
+    }
+    assert.throws(
+      () =>
+        validateCreateAppointmentInput(
+          bookingBody({
+            serviceId: SHOW_LEVEL_COAT_CARE_ID,
+            addOnIds: ["mini-trim"],
+            estimatedTotal: 150,
+          }),
+        ),
+      (error: unknown) =>
+        error instanceof AppointmentValidationError &&
+        error.message === "That add-on cannot be booked with this service.",
+    );
+    const lines = buildDefaultLineItems(
+      appointment({
+        serviceId: SHOW_LEVEL_COAT_CARE_ID,
+        serviceName: "Show-Level Coat Care",
+        addOnIds: ["mini-trim", "dematting-brush-out"],
+        estimatedTotal: 150,
+      }),
+      12,
+    );
+    assert.equal(lines.some((item) => item.catalogId === "mini-trim"), false);
+    assert.equal(lines.some((item) => item.catalogId === "dematting-brush-out"), true);
+    assert.equal(MINI_TRIM_ALREADY_INCLUDED_MESSAGE.includes("Mini Trim"), true);
+    assert.equal(selectionRepeatsIncludedMiniTrim(["signature-bath-care", "mini-trim"]), false);
+    assert.equal(
+      selectionRepeatsIncludedMiniTrim(["long-coat-show-care", "mini-trim"]),
+      true,
+    );
   });
 });

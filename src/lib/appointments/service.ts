@@ -42,10 +42,7 @@ import {
   insertGuestBooking,
 } from "@/lib/appointments/guest-booking";
 import { estimateServiceDurationMinutes } from "@/lib/services";
-import {
-  buildAllergySnapshot,
-  readAllergyStatus,
-} from "@/lib/allergies";
+import { allergySnapshotFromProfileRead } from "@/lib/allergies";
 import { snapshotServicePrice, visitArrivalFields } from "@/lib/visits/visit";
 import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
 import {
@@ -73,36 +70,23 @@ export async function loadBookingAllergySnapshot(
         .eq("id", customerId)
         .maybeSingle(),
     ]);
-    if (petResult.error || profileResult.error) {
-      console.error(
-        "loadBookingAllergySnapshot skipped:",
-        petResult.error?.message ?? profileResult.error?.message,
-      );
-      return null;
-    }
-    const petStatus = readAllergyStatus(petResult.data?.allergy_status ?? null);
-    const householdStatus = readAllergyStatus(
-      profileResult.data?.household_allergy_status ?? null,
-    );
-    return buildAllergySnapshot({
-      petName:
-        typeof petResult.data?.name === "string" && petResult.data.name.trim()
-          ? petResult.data.name
-          : fallbackPetName,
-      petStatus: petStatus ?? null,
-      petDetails:
-        typeof petResult.data?.allergy_details === "string"
-          ? petResult.data.allergy_details
-          : null,
-      householdStatus: householdStatus ?? null,
-      householdDetails:
-        typeof profileResult.data?.household_allergy_details === "string"
-          ? profileResult.data.household_allergy_details
-          : null,
+    const loaded = allergySnapshotFromProfileRead({
+      petError: Boolean(petResult.error),
+      profileError: Boolean(profileResult.error),
+      pet: petResult.data,
+      profile: profileResult.data,
+      fallbackPetName,
     });
+    if (!loaded.ok) {
+      console.error(
+        "loadBookingAllergySnapshot failed:",
+        petResult.error?.message ?? profileResult.error?.message ?? "unreadable",
+      );
+    }
+    return loaded;
   } catch (error) {
-    console.error("loadBookingAllergySnapshot skipped:", error);
-    return null;
+    console.error("loadBookingAllergySnapshot failed:", error);
+    return { ok: false as const, error: "unavailable" as const };
   }
 }
 
@@ -176,6 +160,7 @@ export async function createAppointment(
         | "price_changed"
         | "address_unverified"
         | "idempotency_mismatch"
+        | "allergy_unavailable"
         | "server";
       message?: string;
       quote?: BookingPriceQuote;
@@ -338,11 +323,16 @@ export async function createAppointment(
     slotStartMinutes: input.slotStartMinutes,
     paymentMethodId: input.paymentMethodId,
   });
-  const allergySnapshot = await loadBookingAllergySnapshot(
+  const allergy = await loadBookingAllergySnapshot(
     user.id,
     input.petId,
     quote.serviceName,
   );
+  if (!allergy.ok) {
+    console.error("createAppointment allergy profile could not be read");
+    return { error: "allergy_unavailable" };
+  }
+  const allergySnapshot = allergy.snapshot;
   const admin = createAdminClient();
   const saved = await insertGuestBooking(
     {

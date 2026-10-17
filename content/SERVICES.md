@@ -10,7 +10,8 @@
 > - Show-Level Coat Care 取代 Show Care for Long Coats 和 Show-Level Long-Coat Care。页面是 `/services/show-level-coat-care`。旧路径 `/services/long-coat-care` 做永久 301。
 > - Luxury Spa Day 起价 From $140。三个旧 Spa 的体型价相同，所以沿用：15 磅内 $140 / 60 分钟，15–30 磅 $160 / 75 分钟，31–45 磅 $180 / 90 分钟。护理目标不另加价。
 > - Dead Sea Mud Bath、Aromatherapy Essential Oil Bath Soak、Sensitive Skin & Dander Soothing Treatment 不再作为可预约服务，只留作内部护理方案。不要转成收费 Add-On。
-> - 过敏信息和 Spa 护理目标可选，不能挡住预约。见 `content/BOOKING-RULES.md`。
+> - 过敏信息和 Spa 护理目标可选。读取过敏档案失败时不能把预约存成无过敏。见 `content/BOOKING-RULES.md`。
+> - Show-Level Coat Care、Luxury Spa Day 和 Full Groom 已含 Mini Trim，不能再把 Mini Trim 当成同一项目加价。Signature Bath 仍可加 Mini Trim。其他 Add-On 的名称、价格和分类不变。
 
 网站分区：
 1. Bath, Coat Care & Spa — Signature Bath、Show-Level Coat Care、Luxury Spa Day

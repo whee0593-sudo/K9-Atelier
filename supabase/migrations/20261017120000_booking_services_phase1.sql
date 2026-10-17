@@ -1,8 +1,11 @@
 -- Booking services phase 1.
 -- 尚未对生产执行。部署前由审核人单独批准后再跑。
 -- 不删除预约、付款或客户行。appointments.id 仍是原来的 uuid 主键。
--- service_id 是文本业务标识，不是外键。Show-Level Coat Care 只把旧标识改成新标识。
+-- 本文件只加列、约束和兼容旧请求的函数。旧网站在这些列有默认值之后仍可预约。
+-- 不在这里改历史 service_id。旧 Production 代码不认识 show-level-coat-care。
+-- 标识更新在 20261017121000_show_level_service_id.sql，必须等新代码上线后再跑。
 -- 三个旧 Spa 的历史 service_id 保留，供已有预约读取时长和名称。
+-- 整文件一个事务。任一语句失败则列、约束和函数一起回滚。可重复执行。
 
 BEGIN;
 
@@ -467,12 +470,5 @@ REVOKE ALL ON FUNCTION public.create_staff_visit(jsonb, jsonb) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.create_staff_visit(jsonb, jsonb) FROM anon;
 REVOKE ALL ON FUNCTION public.create_staff_visit(jsonb, jsonb) FROM authenticated;
 GRANT EXECUTE ON FUNCTION public.create_staff_visit(jsonb, jsonb) TO service_role;
-
--- One service. Keep the appointment uuid. Do not rewrite rows that already use the new id.
-UPDATE public.appointments
-SET
-  service_id = 'show-level-coat-care',
-  service_name = 'Show-Level Coat Care'
-WHERE service_id = 'long-coat-show-care';
 
 COMMIT;

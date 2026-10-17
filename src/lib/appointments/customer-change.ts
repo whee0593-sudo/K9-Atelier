@@ -481,6 +481,7 @@ export async function applyAppointmentChange(
         | "payment_failed"
         | "misconfigured"
         | "weight_required"
+        | "allergy_unavailable"
         | "server";
     }
 > {
@@ -844,7 +845,8 @@ async function addDogToVisit(
         | "not_found"
         | "payment_required"
         | "slot_unavailable"
-        | "weight_required";
+        | "weight_required"
+        | "allergy_unavailable";
     }
 > {
   if (!input.petId || !input.serviceId) return { error: "conflict" as const };
@@ -883,11 +885,16 @@ async function addDogToVisit(
   if (!service) return { error: "conflict" as const };
   const spaGoals = spaGoalsForService(service.id, input.spaGoals);
   if (!spaGoals.ok) return { error: "conflict" as const };
-  const allergySnapshot = await loadBookingAllergySnapshot(
+  const allergy = await loadBookingAllergySnapshot(
     userId,
     input.petId,
     service.name,
   );
+  if (!allergy.ok) {
+    console.error("addDogToVisit allergy profile could not be read");
+    return { error: "allergy_unavailable" as const };
+  }
+  const allergySnapshot = allergy.snapshot;
 
   const estimate = getServicePriceEstimate(service, bookedWeight);
   const paymentMethod = await resolvePaymentMethod(
