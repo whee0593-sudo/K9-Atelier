@@ -4,7 +4,7 @@
 
 统一领取规则在应用代码 `decideClaim`（`src/lib/communications/claim.ts`）。没有第二套 `decideExisting`。`communication_logs_claim` 的函数体不在仓库里，迁移不会替换它。
 
-客人物流短信、次日回访、21 天回访提醒、客户自助预约的店主通知，都写 `communication_logs`。幂等键形状是 `channel|notificationType|audience|scope|fingerprint`。同一次上门用 `visit:<uuid>`。应用不写 `visit_notifications`，避免两套账本各发一次。
+客人物流短信、次日回访、21 天回访提醒、店主通知，都写 `communication_logs`。幂等键形状是 `channel|notificationType|audience|scope|fingerprint`。同一次上门用 `visit:<uuid>`。没有 `visit_id` 的历史预约用 `appointment:<uuid>`，仍然发送原来的在途、接回和次日回访，不套一个空的 Visit 键。应用不写 `visit_notifications`，避免两套账本各发一次。
 
 ## 四份迁移的顺序
 
@@ -29,6 +29,12 @@
 
 示例只放在 `.env.example`。不要把真实号码或密钥写进仓库，也不要在这里改 Vercel 环境变量。
 
-客户自助预约会先读完整 Visit。未取消的狗没有全部确认时，不写已发送、也不发店主通知。旧的 `notifyStaffNewAppointment` 不再从自助预约路径发送。加狗那条员工邮件还在，是否改成 Visit 通知待确认。
+客户自助预约和员工代客预约的客户确认，都会先读完整 Visit。未取消的狗没有全部确认时，不写已发送、也不发店主通知。没有 Visit 的单条历史预约，在它自己确认后按预约键发一次。员工代客预约在创建时不发店主通知，避免和确认时的通知重复。
+
+客户回复 C 只在第一次确认时给店主发一封邮件，键是 `merchant_customer_reply_c` 加上该预约 id。它不走未入账的 `sendEmail`，也不会再发一遍 Visit 确认通知。
+
+加狗使用单独的 `merchant_visit_pet_added`，指纹是新预约 id。它替换原来的 `notifyStaffNewAppointment`，不重复发送 Visit 确认通知，客户自己的加狗邮件仍单独发送。邮件和短信各有自己的领取记录。
+
+次日回访只在同一 Visit 最后一只未取消狗完成日的次日 10:00（美东）发送。没有 Visit 的历史预约按那一条预约的完成时间计算同一个窗口。错过该小时不补发，也不提前写 `followup_sent_at`。
 
 不确定的服务商结果（超时、5xx、没有消息 id）停止再发。只有明确拒绝，或当时因为缺配置跳过，才允许以后重试。

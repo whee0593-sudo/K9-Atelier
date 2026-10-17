@@ -29,6 +29,47 @@ describe("notification call sites", () => {
     const createdFn = created.slice(created.indexOf("export async function sendAppointmentCreatedEmails"));
     assert.equal(createdFn.includes("notifyStaffNewAppointment"), false);
     assert.equal(source("src/lib/appointments/service.ts").includes("sendAppointmentEnRouteSms"), false);
+    assert.equal(
+      source("src/lib/appointments/service.ts").includes(
+        'if (!appointment.visitId) return { error: "conflict" }',
+      ),
+      false,
+    );
+    assert.equal(
+      source("src/lib/sms/checkout.ts").includes("if (!data?.visit_id) return false"),
+      false,
+    );
+    assert.equal(
+      source("src/lib/followup/send.ts").includes("if (!row.visit_id) return null"),
+      false,
+    );
+    assert.equal(
+      source("src/lib/appointments/customer-change.ts").includes("notifyStaffNewAppointment"),
+      false,
+    );
+    assert.equal(
+      source("src/lib/appointments/customer-change.ts").includes(
+        "notifyMerchantPetAddedForAppointment",
+      ),
+      true,
+    );
+    assert.equal(source("src/lib/sms/inbound.ts").includes("sendEmail"), false);
+    assert.equal(
+      source("src/lib/sms/inbound.ts").includes("notifyMerchantCustomerReplyC"),
+      true,
+    );
+    assert.equal(
+      source("src/lib/staff/confirm-customer-booking.ts").includes("notifyMerchantSelfBooking"),
+      true,
+    );
+    assert.equal(
+      source("src/lib/staff/create-customer-booking.ts").includes("notifyMerchantSelfBooking"),
+      false,
+    );
+    assert.equal(
+      source("src/lib/staff/create-customer-booking.ts").includes("notifyStaffNewAppointment"),
+      false,
+    );
     const support = source("src/app/api/support/route.ts");
     assert.equal(support.includes("https://api.resend.com/emails"), true);
     assert.equal(support.includes("deliverTrackedNotice"), false);

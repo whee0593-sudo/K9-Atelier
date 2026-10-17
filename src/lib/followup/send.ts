@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import { deliverTrackedNotice, type DeliveryOutcome } from "@/lib/communications/deliver";
 import {
+  communicationAppointmentScope,
   communicationIdempotencyKey,
   communicationVisitScope,
 } from "@/lib/communications/keys";
@@ -32,7 +33,8 @@ import { isSmsConfigured } from "@/lib/sms/twilio";
 const FOLLOW_UP_LOOKBACK_DAYS = 21;
 
 export type FollowUpDog = VisitDogFact & {
-  visitId: string;
+  visitId: string | null;
+  scope: string;
   customerId: string;
   customerEmail: string;
   customerPhone: string | null;
@@ -53,7 +55,8 @@ export type FollowUpJobDeps = {
   smsConfigured: boolean;
   loadVisits: () => Promise<FollowUpDog[][] | null>;
   deliver: (input: {
-    visitId: string;
+    visitId: string | null;
+    scope: string;
     channel: "email" | "sms";
     dogs: FollowUpDog[];
     recipient: string;
@@ -143,6 +146,7 @@ export async function runNextDayFollowUpJob(
       outcomes.push(
         await deps.deliver({
           visitId: anchor.visitId,
+          scope: anchor.scope,
           channel: "email",
           dogs,
           recipient: email,
@@ -156,6 +160,7 @@ export async function runNextDayFollowUpJob(
       outcomes.push(
         await deps.deliver({
           visitId: anchor.visitId,
+          scope: anchor.scope,
           channel: "sms",
           dogs,
           recipient: phone,
@@ -219,13 +224,16 @@ function firstRelation<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
-function mapDog(row: FollowUpRow): FollowUpDog | null {
-  if (!row.visit_id) return null;
+function mapDog(row: FollowUpRow): FollowUpDog {
   const profile = firstRelation(row.profiles);
   const pet = firstRelation(row.pets);
+  const visitId = row.visit_id?.trim() || null;
   return {
     appointmentId: row.id,
-    visitId: row.visit_id,
+    visitId,
+    scope: visitId
+      ? communicationVisitScope(visitId)
+      : communicationAppointmentScope(row.id),
     status: row.status,
     serviceEndedAt: row.service_ended_at,
     followupSentAt: row.followup_sent_at,
@@ -280,13 +288,15 @@ export async function sendNextDayFollowUp(
         console.error("sendNextDayFollowUp lookup failed:", error.message);
         return null;
       }
+      const seeds = (data ?? []) as Array<{ id: string; visit_id?: string | null }>;
       const visitIds = [
         ...new Set(
-          ((data ?? []) as Array<{ visit_id?: string | null }>)
+          seeds
             .map((row) => row.visit_id)
             .filter((id): id is string => Boolean(id)),
         ),
       ];
+      const orphanIds = seeds.filter((row) => !row.visit_id).map((row) => row.id);
       const visits: FollowUpDog[][] = [];
       for (const visitId of visitIds) {
         const loaded = await admin
@@ -302,10 +312,22 @@ export async function sendNextDayFollowUp(
           );
           return null;
         }
-        const dogs = ((loaded.data ?? []) as unknown as FollowUpRow[])
-          .map(mapDog)
-          .filter((dog): dog is FollowUpDog => Boolean(dog));
+        const dogs = ((loaded.data ?? []) as unknown as FollowUpRow[]).map(mapDog);
         if (dogs.length > 0) visits.push(dogs);
+      }
+      if (orphanIds.length > 0) {
+        const loaded = await admin
+          .from("appointments")
+          .select(DOG_SELECT)
+          .in("id", orphanIds)
+          .neq("status", "cancelled");
+        if (loaded.error) {
+          console.error("sendNextDayFollowUp appointment lookup failed:", loaded.error.message);
+          return null;
+        }
+        for (const row of (loaded.data ?? []) as unknown as FollowUpRow[]) {
+          visits.push([mapDog(row)]);
+        }
       }
       return visits;
     },
@@ -328,7 +350,7 @@ export async function sendNextDayFollowUp(
           channel: input.channel,
           notificationType: "next_day_followup",
           audience: "customer",
-          scope: communicationVisitScope(input.visitId),
+          scope: input.scope,
           fingerprint: "-",
         }),
       };

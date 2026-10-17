@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { visitLogisticsKey } from "@/lib/communications/keys";
+import {
+  communicationAppointmentScope,
+  visitLogisticsKey,
+} from "@/lib/communications/keys";
 import {
   planNextDayFollowUp,
   planRebookReminder,
@@ -17,6 +20,10 @@ describe("visit logistics", () => {
       visitLogisticsKey(visitId.toLowerCase(), "en_route"),
     );
     assert.equal(visitLogisticsKey(visitId, "en_route").includes("dog-"), false);
+    assert.equal(
+      visitLogisticsKey(visitId, "en_route").includes(communicationAppointmentScope(visitId)),
+      false,
+    );
   });
 
   it("waits to text checkout until every active dog is finished", () => {
@@ -91,6 +98,27 @@ describe("next-day follow-up visit gate", () => {
       now: TEN_AM,
     });
     assert.equal(plan.action, "already_sent");
+  });
+
+  it("does not send after the 10:00 window, including a single historical dog", () => {
+    const dogs = [
+      {
+        appointmentId: "apt-old",
+        status: "confirmed",
+        serviceEndedAt: "2026-09-22T18:00:00.000Z",
+        followupSentAt: null,
+      },
+    ];
+    const due = planNextDayFollowUp({ dogs, now: TEN_AM });
+    assert.equal(due.action, "send");
+    const missed = planNextDayFollowUp({
+      dogs,
+      now: new Date("2026-09-24T14:00:00.000Z"),
+    });
+    assert.equal(missed.action, "wait");
+    if (missed.action === "wait") {
+      assert.equal(missed.reason, "followup_window_missed");
+    }
   });
 });
 

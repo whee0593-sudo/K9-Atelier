@@ -1,5 +1,5 @@
 import { deliverTrackedNotice, type DeliveryOutcome } from "@/lib/communications/deliver";
-import { visitLogisticsKey } from "@/lib/communications/keys";
+import { communicationIdempotencyKey } from "@/lib/communications/keys";
 import type { CommunicationClaimStore } from "@/lib/communications/store";
 import type { ProviderAttempt } from "@/lib/communications/types";
 import {
@@ -9,7 +9,9 @@ import {
 
 export async function deliverVisitLogisticsSms(input: {
   event: "en_route" | "checkout_ready";
-  visitId: string;
+  visitId: string | null;
+  /** `visit:<uuid>` or, for a historical row, `appointment:<uuid>`. */
+  scope: string;
   dogs: VisitDogFact[];
   customerId: string | null;
   petIds: string[];
@@ -40,7 +42,13 @@ export async function deliverVisitLogisticsSms(input: {
       bodyText: input.body,
       bodyHtml: null,
       replyTo: null,
-      idempotencyKey: visitLogisticsKey(input.visitId, input.event),
+      idempotencyKey: communicationIdempotencyKey({
+        channel: "sms",
+        notificationType: input.event,
+        audience: "customer",
+        scope: input.scope,
+        fingerprint: "-",
+      }),
     },
     send: input.send,
   });

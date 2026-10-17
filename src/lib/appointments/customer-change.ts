@@ -18,10 +18,7 @@ import {
   fetchCustomerContact,
   type CustomerContact,
 } from "@/lib/email/appointment-context";
-import {
-  notifyCustomerAppointmentChange,
-  notifyStaffNewAppointment,
-} from "@/lib/email/appointment-mails";
+import { notifyCustomerAppointmentChange } from "@/lib/email/appointment-mails";
 import { getOrCreateStripeCustomerId } from "@/lib/payments/service";
 import { business } from "@/lib/business";
 import { getStripe } from "@/lib/stripe/server";
@@ -897,14 +894,29 @@ async function addDogToVisit(
   }
 
   const appointment = mapAppointmentRowToRecord(data as unknown as AppointmentRow);
+  let contact: CustomerContact | null = null;
   try {
-    const contact = await fetchCustomerContact(userId);
-    if (contact) {
-      await notifyStaffNewAppointment(appointment, contact);
+    contact = await fetchCustomerContact(userId);
+  } catch (contactError) {
+    console.error("addDogToVisit contact lookup failed:", contactError);
+  }
+  try {
+    const { notifyMerchantPetAddedForAppointment } = await import(
+      "@/lib/communications/merchant-visit"
+    );
+    await notifyMerchantPetAddedForAppointment(appointment, {
+      name: contact?.name ?? null,
+      email: contact?.email ?? null,
+    });
+  } catch (notifyError) {
+    console.error("addDogToVisit merchant notice failed:", notifyError);
+  }
+  if (contact) {
+    try {
       await notifyCustomerAppointmentChange("add_dog", appointment, contact);
+    } catch (emailError) {
+      console.error("addDogToVisit email failed:", emailError);
     }
-  } catch (emailError) {
-    console.error("addDogToVisit email failed:", emailError);
   }
 
   if (visit.visit_id) {

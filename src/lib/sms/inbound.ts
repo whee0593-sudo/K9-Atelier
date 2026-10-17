@@ -4,8 +4,6 @@ import { mapAppointmentRowToAdminRecord } from "@/lib/appointments/map";
 import type { AppointmentRow } from "@/lib/appointments/types";
 import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
 import { contactFromAdminAppointment } from "@/lib/email/appointment-context";
-import { business } from "@/lib/business";
-import { sendEmail } from "@/lib/email/resend";
 import { phonesMatch } from "@/lib/sms/phone";
 import { sendSms } from "@/lib/sms/twilio";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
@@ -21,6 +19,7 @@ import { handleStaffPhoneReply } from "@/lib/sms/staff-reply";
 const INBOUND_SELECT = `
   id,
   customer_id,
+  visit_id,
   pet_id,
   service_id,
   service_name,
@@ -184,19 +183,44 @@ export async function handleInboundCustomerSms(input: {
   await sendSms({ to: input.from, body: reply });
 
   if (!already) {
-    await sendEmail({
-      to: business.brand.email,
-      subject: `[K9 Atelier] Customer confirmed — ${appointment.petName}`,
-      text: [
-        `${contact?.name ?? contact?.email ?? "A customer"} replied ${input.body.trim()} to confirm.`,
-        "",
-        `Pet: ${appointment.petName}`,
-        `Service: ${appointment.serviceName}`,
-        `Date: ${dateLabel} · ${appointment.appointmentTime}`,
-        "",
-        "This is the customer SMS confirmation. It does not change staff/vaccination booking status.",
-      ].join("\n"),
-    });
+    try {
+      const { notifyMerchantCustomerReplyC } = await import(
+        "@/lib/communications/merchant-visit"
+      );
+      const { createSupabaseClaimStore } = await import(
+        "@/lib/communications/supabase-store"
+      );
+      const addressLabel = [
+        appointment.addressStreet,
+        appointment.addressCity,
+        appointment.addressState,
+        appointment.addressZip,
+      ]
+        .filter(Boolean)
+        .join(", ");
+      await notifyMerchantCustomerReplyC(
+        {
+          visitId: appointment.visitId ?? null,
+          appointmentId: appointment.id,
+          customerId: appointment.customerId,
+          petId: appointment.petId,
+          customerName: contact?.name ?? contact?.email ?? null,
+          replyTo: contact?.email ?? null,
+          petName: appointment.petName,
+          serviceName: appointment.serviceName,
+          whenLabel: `${dateLabel}, ${appointment.appointmentTime ?? ""}`.trim(),
+          addressLabel,
+          replyText: input.body.trim(),
+        },
+        { store: createSupabaseClaimStore(admin) },
+      );
+    } catch (notifyError) {
+      console.error(
+        "handleInboundCustomerSms merchant notice failed:",
+        appointment.id,
+        notifyError,
+      );
+    }
   }
 
   return { handled: "yes", already, appointmentId: appointment.id };

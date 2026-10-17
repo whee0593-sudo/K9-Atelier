@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  notifyMerchantCustomerReplyC,
+  notifyMerchantPetAdded,
   notifyMerchantVisitConfirmed,
   replayMerchantVisitConfirmed,
+  type MerchantAppointmentNotice,
   type MerchantVisitFacts,
 } from "@/lib/communications/merchant-visit";
 import { memoryClaimStore } from "@/lib/communications/store";
@@ -111,5 +114,115 @@ describe("merchant visit confirmation", () => {
     assert.equal(replay.retried, 1);
     assert.equal(attempts.includes("retry-sms"), false);
     assert.equal(attempts.includes("retry-email"), true);
+  });
+});
+
+function appointmentNotice(
+  patch: Partial<MerchantAppointmentNotice> = {},
+): MerchantAppointmentNotice {
+  return {
+    visitId: "22222222-2222-4222-8222-222222222222",
+    appointmentId: "apt-1",
+    customerId: "cust-1",
+    petId: "pet-1",
+    customerName: "Sarah",
+    replyTo: "sarah@example.com",
+    petName: "Lychee",
+    serviceName: "Full Groom",
+    whenLabel: "Wednesday, September 23, 10:00 AM",
+    addressLabel: "1 Main St, West Palm Beach, FL 33401",
+    replyText: "C",
+    ...patch,
+  };
+}
+
+describe("merchant reply C and added dog", () => {
+  it("does not reuse the visit-confirmed key", async () => {
+    const store = memoryClaimStore();
+    let sends = 0;
+    const send = async (): Promise<ProviderAttempt> => {
+      sends += 1;
+      return { outcome: "accepted", providerMessageId: `id-${sends}` };
+    };
+    await notifyMerchantVisitConfirmed(facts(["confirmed"]), {
+      store,
+      env: ENV,
+      sendEmail: send,
+      sendSms: send,
+    });
+    const reply = await notifyMerchantCustomerReplyC(appointmentNotice(), {
+      store,
+      env: ENV,
+      sendEmail: send,
+    });
+    const added = await notifyMerchantPetAdded(
+      appointmentNotice({ appointmentId: "apt-new", petName: "Otto" }),
+      { store, env: ENV, sendEmail: send, sendSms: send },
+    );
+    const again = await notifyMerchantCustomerReplyC(appointmentNotice(), {
+      store,
+      env: ENV,
+      sendEmail: send,
+    });
+    const keys = [...store.rows.keys()];
+    assert.equal(reply, "accepted");
+    assert.equal(again, "duplicate");
+    assert.equal(added.email, "accepted");
+    assert.equal(added.sms, "accepted");
+    assert.equal(keys.filter((key) => key.includes("merchant_visit_confirmed")).length, 2);
+    assert.equal(keys.filter((key) => key.includes("merchant_customer_reply_c")).length, 1);
+    assert.equal(keys.filter((key) => key.startsWith("sms|merchant_customer_reply_c")).length, 0);
+    assert.equal(keys.filter((key) => key.includes("merchant_visit_pet_added")).length, 2);
+    assert.equal(sends, 5);
+  });
+
+  it("keeps a historical reply on the appointment key", async () => {
+    const store = memoryClaimStore();
+    await notifyMerchantCustomerReplyC(
+      appointmentNotice({ visitId: null, appointmentId: "APT-OLD" }),
+      {
+        store,
+        env: ENV,
+        sendEmail: async () => ({ outcome: "accepted", providerMessageId: "re_old" }),
+      },
+    );
+    const key = [...store.rows.keys()][0] ?? "";
+    assert.equal(key.includes("appointment:apt-old"), true);
+    assert.equal(key.includes("visit:"), false);
+    assert.equal(key.includes("merchant_customer_reply_c"), true);
+  });
+
+  it("retries a rejected added-dog email and holds an uncertain text", async () => {
+    const store = memoryClaimStore();
+    const attempts: string[] = [];
+    const first = await notifyMerchantPetAdded(appointmentNotice({ appointmentId: "apt-new" }), {
+      store,
+      env: ENV,
+      sendEmail: async () => {
+        attempts.push("reject");
+        return { outcome: "failed", error: "provider rejected 422" };
+      },
+      sendSms: async () => {
+        attempts.push("timeout");
+        return { outcome: "uncertain", error: "timeout" };
+      },
+    });
+    assert.equal(first.email, "failed");
+    assert.equal(first.sms, "uncertain");
+    const replay = await replayMerchantVisitConfirmed({
+      store,
+      env: ENV,
+      sendEmail: async () => {
+        attempts.push("retry-email");
+        return { outcome: "accepted", providerMessageId: "re_3" };
+      },
+      sendSms: async () => {
+        attempts.push("retry-sms");
+        return { outcome: "accepted", providerMessageId: "SM3" };
+      },
+    });
+    assert.equal(replay.retried, 1);
+    assert.equal(attempts.includes("retry-email"), true);
+    assert.equal(attempts.includes("retry-sms"), false);
   });
 });

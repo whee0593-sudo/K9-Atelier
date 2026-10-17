@@ -275,6 +275,15 @@ export async function confirmStaffCreatedBooking(input: {
     console.error("confirmStaffCreatedBooking email failed:", emailError);
   }
 
+  try {
+    const { notifyMerchantSelfBooking } = await import(
+      "@/lib/communications/merchant-visit"
+    );
+    await notifyMerchantSelfBooking(appointment.id);
+  } catch (notifyError) {
+    console.error("confirmStaffCreatedBooking merchant notice failed:", notifyError);
+  }
+
   return {
     appointment,
     email: result.email,

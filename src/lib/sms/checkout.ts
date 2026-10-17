@@ -1,5 +1,9 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deliverVisitLogisticsSms } from "@/lib/communications/visit-sms";
+import {
+  communicationAppointmentScope,
+  communicationVisitScope,
+} from "@/lib/communications/keys";
 import { createSupabaseClaimStore } from "@/lib/communications/supabase-store";
 import { sendTrackedSms } from "@/lib/communications/provider";
 import { joinPetNames } from "@/lib/communications/visit-readiness";
@@ -45,7 +49,7 @@ export async function sendCheckoutReadySms(appointmentId: string) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("appointments")
-    .select("id, customer_id, visit_id, pets ( name, sex ), profiles ( first_name, last_name, phone )")
+    .select("id, customer_id, pet_id, visit_id, status, service_ended_at, pets ( name, sex ), profiles ( first_name, last_name, phone )")
     .eq("id", appointmentId)
     .maybeSingle();
 
@@ -53,30 +57,51 @@ export async function sendCheckoutReadySms(appointmentId: string) {
     console.error("sendCheckoutReadySms lookup failed:", error.message);
     return false;
   }
-  if (!data?.visit_id) return false;
-
-  const visit = await admin
-    .from("appointments")
-    .select("id, customer_id, pet_id, status, service_ended_at, pets ( name, sex )")
-    .eq("visit_id", data.visit_id)
-    .neq("status", "cancelled");
-  if (visit.error) {
-    console.error("sendCheckoutReadySms visit lookup failed:", visit.error.message);
-    return false;
+  if (!data) return false;
+  const anchorPet = firstRelation<{ name: string | null; sex: string | null }>(data.pets);
+  let described: Array<{
+    appointmentId: string;
+    petId: string;
+    status: string;
+    serviceEndedAt: string | null;
+    petName: string | null;
+    sex: string | null;
+  }>;
+  if (!data.visit_id) {
+    described = [
+      {
+        appointmentId: data.id as string,
+        petId: (data.pet_id as string | null) ?? "",
+        status: (data.status as string | null) ?? "confirmed",
+        serviceEndedAt:
+          (data.service_ended_at as string | null) ?? new Date().toISOString(),
+        petName: anchorPet?.name ?? null,
+        sex: anchorPet?.sex ?? null,
+      },
+    ];
+  } else {
+    const visit = await admin
+      .from("appointments")
+      .select("id, customer_id, pet_id, status, service_ended_at, pets ( name, sex )")
+      .eq("visit_id", data.visit_id)
+      .neq("status", "cancelled");
+    if (visit.error) {
+      console.error("sendCheckoutReadySms visit lookup failed:", visit.error.message);
+      return false;
+    }
+    const rows = (visit.data ?? []) as unknown as CheckoutDogRow[];
+    described = rows.map((row) => {
+      const pet = firstRelation<{ name: string | null; sex: string | null }>(row.pets);
+      return {
+        appointmentId: row.id,
+        petId: row.pet_id ?? "",
+        status: row.status,
+        serviceEndedAt: row.service_ended_at,
+        petName: pet?.name ?? null,
+        sex: pet?.sex ?? null,
+      };
+    });
   }
-
-  const rows = (visit.data ?? []) as unknown as CheckoutDogRow[];
-  const described = rows.map((row) => {
-    const pet = firstRelation<{ name: string | null; sex: string | null }>(row.pets);
-    return {
-      appointmentId: row.id,
-      petId: row.pet_id ?? "",
-      status: row.status,
-      serviceEndedAt: row.service_ended_at,
-      petName: pet?.name ?? null,
-      sex: pet?.sex ?? null,
-    };
-  });
   const dogs: VisitDogFact[] = described.map((dog) => ({
     appointmentId: dog.appointmentId,
     status: dog.status,
@@ -93,9 +118,13 @@ export async function sendCheckoutReadySms(appointmentId: string) {
   if (!to) return false;
 
   const body = checkoutBody(described);
+  const visitId = (data.visit_id as string | null) ?? null;
   const outcome = await deliverVisitLogisticsSms({
     event: "checkout_ready",
-    visitId: data.visit_id as string,
+    visitId,
+    scope: visitId
+      ? communicationVisitScope(visitId)
+      : communicationAppointmentScope(data.id as string),
     dogs,
     customerId: (data.customer_id as string | null) ?? null,
     petIds: described.map((dog) => dog.petId).filter(Boolean),

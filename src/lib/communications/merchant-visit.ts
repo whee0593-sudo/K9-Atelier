@@ -5,6 +5,7 @@ import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import { createSupabaseClaimStore } from "@/lib/communications/supabase-store";
 import { deliverTrackedNotice, type DeliveryOutcome } from "@/lib/communications/deliver";
 import {
+  communicationAppointmentScope,
   communicationIdempotencyKey,
   communicationVisitScope,
 } from "@/lib/communications/keys";
@@ -21,11 +22,19 @@ import {
   joinPetNames,
   merchantVisitIsConfirmed,
 } from "@/lib/communications/visit-readiness";
-import { buildStaffNotificationEmail } from "@/lib/email/layout";
+import { buildStaffNotificationEmail, escapeHtml } from "@/lib/email/layout";
 import { siteUrl } from "@/lib/email/resend";
 import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
 
 export const MERCHANT_VISIT_CONFIRMED = "merchant_visit_confirmed";
+export const MERCHANT_CUSTOMER_REPLY_C = "merchant_customer_reply_c";
+export const MERCHANT_VISIT_PET_ADDED = "merchant_visit_pet_added";
+
+const MERCHANT_REPLAY_TYPES = [
+  MERCHANT_VISIT_CONFIRMED,
+  MERCHANT_CUSTOMER_REPLY_C,
+  MERCHANT_VISIT_PET_ADDED,
+];
 
 export type MerchantPetLine = {
   appointmentId: string;
@@ -36,7 +45,7 @@ export type MerchantPetLine = {
 };
 
 export type MerchantVisitFacts = {
-  visitId: string;
+  visitId: string | null;
   customerId: string | null;
   customerName: string | null;
   replyTo: string | null;
@@ -58,8 +67,16 @@ export function factsFromAppointments(
   appointments: AppointmentRecord[],
   extra?: { customerName?: string | null; replyTo?: string | null },
 ): MerchantVisitFacts | null {
-  const visitId = appointments.find((row) => row.visitId)?.visitId ?? null;
-  if (!visitId) return null;
+  const visitIds = [
+    ...new Set(
+      appointments
+        .map((row) => row.visitId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  if (visitIds.length > 1) return null;
+  const visitId = visitIds[0] ?? null;
+  if (!visitId && appointments.length !== 1) return null;
   const ordered = [...appointments].sort(
     (left, right) => (left.scheduledStart ?? 0) - (right.scheduledStart ?? 0),
   );
@@ -126,12 +143,20 @@ export function buildMerchantVisitConfirmedCopy(facts: MerchantVisitFacts) {
   };
 }
 
+function noticeScope(visitId: string | null, appointmentId: string) {
+  return visitId
+    ? communicationVisitScope(visitId)
+    : communicationAppointmentScope(appointmentId);
+}
+
 function channelKey(facts: MerchantVisitFacts, channel: "email" | "sms") {
+  const appointmentId = activePets(facts.pets)[0]?.appointmentId ?? facts.pets[0]?.appointmentId;
+  if (!appointmentId) return null;
   return communicationIdempotencyKey({
     channel,
     notificationType: MERCHANT_VISIT_CONFIRMED,
     audience: "staff",
-    scope: communicationVisitScope(facts.visitId),
+    scope: noticeScope(facts.visitId, appointmentId),
     fingerprint: "-",
   });
 }
@@ -150,6 +175,8 @@ async function sendChannel(input: {
   now?: number;
 }) {
   const pets = activePets(input.facts.pets);
+  const idempotencyKey = channelKey(input.facts, input.channel);
+  if (!idempotencyKey) return "unrecorded" as const;
   return deliverTrackedNotice({
     store: input.store,
     now: input.now,
@@ -168,7 +195,7 @@ async function sendChannel(input: {
       bodyText: input.bodyText,
       bodyHtml: input.bodyHtml,
       replyTo: input.replyTo,
-      idempotencyKey: channelKey(input.facts, input.channel),
+      idempotencyKey,
     },
     send: input.skip ? undefined : input.send,
   });
@@ -294,9 +321,9 @@ const SELF_BOOK_SELECT = `
 `;
 
 /**
- * Customer self-booking only. Loads every dog on the visit and sends nothing
- * until every non-cancelled dog is confirmed. Does not call
- * notifyStaffNewAppointment.
+ * One owner notice after every non-cancelled dog is confirmed.
+ * A historical appointment with no visit uses its own appointment key.
+ * Does not call notifyStaffNewAppointment.
  */
 export async function notifyMerchantSelfBooking(appointmentId: string) {
   if (!hasSupabaseAdminConfig()) {
@@ -308,7 +335,7 @@ export async function notifyMerchantSelfBooking(appointmentId: string) {
     .select("visit_id")
     .eq("id", appointmentId)
     .maybeSingle();
-  if (seed.error || !seed.data?.visit_id) {
+  if (seed.error || !seed.data) {
     console.error(
       "merchant self-booking visit missing:",
       appointmentId,
@@ -316,10 +343,9 @@ export async function notifyMerchantSelfBooking(appointmentId: string) {
     );
     return { email: "unrecorded" as const, sms: "unrecorded" as const };
   }
-  const loaded = await admin
-    .from("appointments")
-    .select(SELF_BOOK_SELECT)
-    .eq("visit_id", seed.data.visit_id);
+  const loaded = seed.data.visit_id
+    ? await admin.from("appointments").select(SELF_BOOK_SELECT).eq("visit_id", seed.data.visit_id)
+    : await admin.from("appointments").select(SELF_BOOK_SELECT).eq("id", appointmentId);
   if (loaded.error) {
     console.error("merchant self-booking visit load failed:", loaded.error.message);
     return { email: "unrecorded" as const, sms: "unrecorded" as const };
@@ -359,6 +385,285 @@ export async function notifyMerchantVisitConfirmedFromAppointments(
   return notifyMerchantVisitConfirmed(facts, deps);
 }
 
+export type MerchantAppointmentNotice = {
+  visitId: string | null;
+  appointmentId: string;
+  customerId: string | null;
+  petId: string | null;
+  customerName: string | null;
+  replyTo: string | null;
+  petName: string;
+  serviceName: string;
+  whenLabel: string;
+  addressLabel: string;
+  replyText?: string | null;
+};
+
+type MerchantSendDeps = {
+  store: CommunicationClaimStore;
+  now?: number;
+  env?: MerchantEnv;
+  sendEmail?: Parameters<typeof notifyMerchantVisitConfirmed>[1]["sendEmail"];
+  sendSms?: Parameters<typeof notifyMerchantVisitConfirmed>[1]["sendSms"];
+};
+
+function staffLetter(input: {
+  subject: string;
+  intro: string;
+  rows: Array<{ label: string; value: string }>;
+  note?: string;
+}) {
+  const text = [
+    input.intro,
+    "",
+    ...input.rows.map((row) => `${row.label}: ${row.value}`),
+    "",
+    input.note ?? `Calendar: ${siteUrl("/admin/appointments")}`,
+  ].join("\n");
+  const letter = buildStaffNotificationEmail(
+    {
+      subject: input.subject,
+      introHtml: `<p style="margin:0 0 16px; font-size:15px;">${escapeHtml(input.intro)}</p>`,
+      rows: input.rows,
+      cta: { href: siteUrl("/admin/appointments"), label: "VIEW CALENDAR" },
+    },
+    text,
+  );
+  return { text: letter.text, html: letter.html };
+}
+
+async function deliverStaffChannel(input: {
+  deps: MerchantSendDeps;
+  channel: "email" | "sms";
+  notificationType: string;
+  notice: MerchantAppointmentNotice;
+  fingerprint: string;
+  recipient: string;
+  subject: string | null;
+  bodyText: string;
+  bodyHtml: string | null;
+  skip: "missing_config" | "invalid_recipient" | null;
+  send?: () => Promise<ProviderAttempt>;
+}) {
+  return deliverTrackedNotice({
+    store: input.deps.store,
+    now: input.deps.now,
+    skip: input.skip,
+    snapshot: {
+      channel: input.channel,
+      provider: input.channel === "email" ? "resend" : "twilio",
+      notificationType: input.notificationType,
+      audience: "staff",
+      customerId: input.notice.customerId,
+      visitId: input.notice.visitId,
+      appointmentIds: [input.notice.appointmentId],
+      petIds: input.notice.petId ? [input.notice.petId] : [],
+      recipient: input.recipient,
+      subject: input.subject,
+      bodyText: input.bodyText,
+      bodyHtml: input.bodyHtml,
+      replyTo: input.notice.replyTo,
+      idempotencyKey: communicationIdempotencyKey({
+        channel: input.channel,
+        notificationType: input.notificationType,
+        audience: "staff",
+        scope: noticeScope(input.notice.visitId, input.notice.appointmentId),
+        fingerprint: input.fingerprint,
+      }),
+    },
+    send: input.skip ? undefined : input.send,
+  });
+}
+
+function merchantEmailSend(
+  deps: MerchantSendDeps,
+  from: string,
+  message: {
+    subject: string;
+    text: string;
+    html: string;
+    replyTo: string | null;
+  },
+) {
+  return () =>
+    deps.sendEmail
+      ? deps.sendEmail({
+          from,
+          to: MERCHANT_NOTIFY_EMAIL,
+          subject: message.subject,
+          text: message.text,
+          html: message.html,
+          replyTo: message.replyTo,
+        })
+      : sendTrackedEmail({
+          from,
+          to: MERCHANT_NOTIFY_EMAIL,
+          subject: message.subject,
+          text: message.text,
+          html: message.html,
+          replyTo: message.replyTo,
+        }).then((result) => {
+          if (result.outcome === "skipped") {
+            return { outcome: "uncertain" as const, error: "missing_config" };
+          }
+          return result;
+        });
+}
+
+function merchantSmsSend(deps: MerchantSendDeps, phone: string, body: string) {
+  return () =>
+    deps.sendSms
+      ? deps.sendSms({ to: phone, body })
+      : sendTrackedSms({ to: phone, body }).then((result) => {
+          if (result.outcome === "skipped") {
+            return { outcome: "uncertain" as const, error: "missing_config" };
+          }
+          return result;
+        });
+}
+
+/**
+ * The customer's first C / YES. Email only, once per appointment.
+ * This replaces the untracked owner email. It is not merchant_visit_confirmed.
+ */
+export async function notifyMerchantCustomerReplyC(
+  notice: MerchantAppointmentNotice,
+  deps: MerchantSendDeps,
+): Promise<DeliveryOutcome> {
+  const subject = `Customer confirmed — ${notice.petName}`;
+  const intro = `${notice.customerName || "A customer"} replied ${notice.replyText?.trim() || "C"} to confirm.`;
+  const letter = staffLetter({
+    subject,
+    intro,
+    rows: [
+      { label: "Pet", value: notice.petName },
+      { label: "Service", value: notice.serviceName },
+      { label: "When", value: notice.whenLabel },
+      { label: "Address", value: notice.addressLabel || "—" },
+    ],
+    note: "This is the customer SMS confirmation. It does not change staff booking status.",
+  });
+  const from = readMerchantFromAddress(deps.env);
+  return deliverStaffChannel({
+    deps,
+    channel: "email",
+    notificationType: MERCHANT_CUSTOMER_REPLY_C,
+    notice,
+    fingerprint: notice.appointmentId,
+    recipient: MERCHANT_NOTIFY_EMAIL,
+    subject,
+    bodyText: letter.text,
+    bodyHtml: letter.html,
+    skip: from.ok ? null : from.reason,
+    send: from.ok
+      ? merchantEmailSend(deps, from.from, {
+          subject,
+          text: letter.text,
+          html: letter.html,
+          replyTo: notice.replyTo,
+        })
+      : undefined,
+  });
+}
+
+/**
+ * One owner notice for the dog just added. Distinct from the visit-confirmed key,
+ * so the original booking notice is not sent again and this add is not dropped.
+ */
+export async function notifyMerchantPetAdded(
+  notice: MerchantAppointmentNotice,
+  deps: MerchantSendDeps,
+): Promise<MerchantNotifySummary> {
+  const subject = "Dog added to a visit";
+  const intro = `${notice.petName} was added to a visit.`;
+  const letter = staffLetter({
+    subject,
+    intro,
+    rows: [
+      { label: "Customer", value: notice.customerName || "Customer" },
+      { label: "Dog", value: `${notice.petName} · ${notice.serviceName}` },
+      { label: "When", value: notice.whenLabel },
+      { label: "Address", value: notice.addressLabel || "—" },
+    ],
+  });
+  const sms = `K9 Atelier: ${notice.petName} was added to the visit on ${notice.whenLabel}. ${notice.addressLabel}`.trim();
+  const from = readMerchantFromAddress(deps.env);
+  const phone = readMerchantNotifyPhone(deps.env);
+  const email = await deliverStaffChannel({
+    deps,
+    channel: "email",
+    notificationType: MERCHANT_VISIT_PET_ADDED,
+    notice,
+    fingerprint: notice.appointmentId,
+    recipient: MERCHANT_NOTIFY_EMAIL,
+    subject,
+    bodyText: letter.text,
+    bodyHtml: letter.html,
+    skip: from.ok ? null : from.reason,
+    send: from.ok
+      ? merchantEmailSend(deps, from.from, {
+          subject,
+          text: letter.text,
+          html: letter.html,
+          replyTo: notice.replyTo,
+        })
+      : undefined,
+  });
+  const smsOutcome = await deliverStaffChannel({
+    deps,
+    channel: "sms",
+    notificationType: MERCHANT_VISIT_PET_ADDED,
+    notice,
+    fingerprint: notice.appointmentId,
+    recipient: phone ?? "missing",
+    subject: null,
+    bodyText: sms,
+    bodyHtml: null,
+    skip: phone ? null : "missing_config",
+    send: phone ? merchantSmsSend(deps, phone, sms) : undefined,
+  });
+  return { email, sms: smsOutcome };
+}
+
+export function merchantNoticeFromAppointment(
+  appointment: AppointmentRecord,
+  customer: { name?: string | null; email?: string | null },
+  replyText?: string | null,
+): MerchantAppointmentNotice {
+  return {
+    visitId: appointment.visitId ?? null,
+    appointmentId: appointment.id,
+    customerId: appointment.customerId,
+    petId: appointment.petId,
+    customerName: customer.name ?? null,
+    replyTo: customer.email ?? null,
+    petName: appointment.petName,
+    serviceName: appointment.serviceName,
+    whenLabel: `${formatAppointmentDateLabel(appointment.appointmentDate)}, ${appointment.appointmentTime ?? ""}`.trim(),
+    addressLabel: [
+      appointment.addressStreet,
+      appointment.addressCity,
+      appointment.addressState,
+      appointment.addressZip,
+    ]
+      .filter(Boolean)
+      .join(", "),
+    replyText,
+  };
+}
+
+export async function notifyMerchantPetAddedForAppointment(
+  appointment: AppointmentRecord,
+  customer: { name?: string | null; email?: string | null },
+) {
+  if (!hasSupabaseAdminConfig()) {
+    return { email: "unrecorded" as const, sms: "unrecorded" as const };
+  }
+  return notifyMerchantPetAdded(merchantNoticeFromAppointment(appointment, customer), {
+    store: createSupabaseClaimStore(createAdminClient()),
+  });
+}
+
 /**
  * Replay only rows decideClaim still allows: failed, or skipped missing_config.
  * Uncertain, pending, and accepted rows are not listed and are not sent again.
@@ -371,7 +676,10 @@ export async function replayMerchantVisitConfirmed(deps: {
   sendEmail?: Parameters<typeof notifyMerchantVisitConfirmed>[1]["sendEmail"];
   sendSms?: Parameters<typeof notifyMerchantVisitConfirmed>[1]["sendSms"];
 }) {
-  const rows = await deps.store.listRetryable(MERCHANT_VISIT_CONFIRMED);
+  const listed = await Promise.all(
+    MERCHANT_REPLAY_TYPES.map((notificationType) => deps.store.listRetryable(notificationType)),
+  );
+  const rows = listed.flat();
   const from = readMerchantFromAddress(deps.env);
   const phone = readMerchantNotifyPhone(deps.env);
   let retried = 0;

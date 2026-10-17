@@ -29,6 +29,11 @@ export function communicationVisitScope(visitId: string) {
   return `visit:${visitId.trim().toLowerCase()}`;
 }
 
+/** Historical appointments that were saved before visits existed. */
+export function communicationAppointmentScope(appointmentId: string) {
+  return `appointment:${appointmentId.trim().toLowerCase()}`;
+}
+
 export function visitLogisticsKey(
   visitId: string,
   notificationType: "en_route" | "checkout_ready",
