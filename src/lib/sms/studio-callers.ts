@@ -12,6 +12,7 @@ import {
   buildStudioCallerSms,
   type StudioUnknownCaller,
 } from "@/lib/sms/staff-compose-copy";
+import { isCommunicationAccepted } from "@/lib/communications/result";
 import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
 
 export type { StudioUnknownCaller };
@@ -160,7 +161,7 @@ export async function deliverStudioCallerSms(input: {
   const body = buildStudioCallerSms(customer);
 
   try {
-    const sent = await sendSms({ to, body });
+    const sent = isCommunicationAccepted(await sendSms({ to, body }));
     if (!sent) return { error: "server" };
   } catch (error) {
     console.error("deliverStudioCallerSms failed:", error);

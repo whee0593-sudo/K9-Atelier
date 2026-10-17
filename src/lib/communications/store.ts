@@ -1,73 +1,68 @@
-export type CommunicationChannel = "email" | "sms";
+import type {
+  CommunicationSkipReason,
+  CommunicationSnapshot,
+  StoredCommunicationLog,
+} from "@/lib/communications/types";
 
-export type CommunicationLogStatus =
-  | "pending"
-  | "skipped"
-  | "accepted"
-  | "failed"
-  | "uncertain"
-  | "delivered"
-  | "undelivered"
-  | "bounced";
-
-export type SkipReason = "missing_config" | "invalid_recipient";
-
-export type CommunicationSnapshot = {
-  channel: CommunicationChannel;
-  notificationType: string;
-  customerId: string | null;
-  visitId: string | null;
-  appointmentIds: string[];
-  petIds: string[];
-  recipient: string;
-  subject: string | null;
-  bodyText: string;
-  bodyHtml: string | null;
-  replyTo: string | null;
-  provider: "resend" | "twilio" | null;
-  idempotencyKey: string;
-  intendedStatus: "pending" | "skipped";
-  skipReason: SkipReason | null;
+export type ClaimSend = {
+  action: "send";
+  logId: string;
+  claimToken: string;
+  /** Snapshot that must be sent. On retry this is the stored row, not a new template. */
+  snapshot: CommunicationSnapshot;
 };
 
 export type ClaimResult =
-  | { action: "send"; id: string; claimToken: string }
-  | { action: "recorded" }
-  | { action: "duplicate" }
-  | { action: "unresolved" };
+  | ClaimSend
+  | {
+      action: "duplicate_accepted";
+      logId: string;
+      providerMessageId: string | null;
+    }
+  | { action: "in_flight"; logId: string }
+  | {
+      action: "hold";
+      logId: string;
+      hold: "uncertain" | "stale_pending";
+    }
+  | {
+      action: "terminal_skip";
+      logId: string;
+      skipReason: CommunicationSkipReason | null;
+    }
+  | { action: "log_failed"; error: string };
 
-export type CommunicationStore = {
-  claim(snapshot: CommunicationSnapshot): Promise<ClaimResult>;
-  complete(input: {
-    id: string;
-    claimToken: string;
-    status: "accepted" | "failed" | "uncertain";
-    providerMessageId: string | null;
+export type CommunicationLogStore = {
+  claim(input: {
+    snapshot: CommunicationSnapshot;
+    status: "pending" | "skipped";
+    skipReason: CommunicationSkipReason | null;
     errorMessage: string | null;
-  }): Promise<boolean>;
+    now: Date;
+  }): Promise<ClaimResult>;
+  markAccepted(input: {
+    logId: string;
+    claimToken: string;
+    providerMessageId: string | null;
+    now: Date;
+  }): Promise<{ ok: true } | { ok: false; error: string }>;
+  markFailed(input: {
+    logId: string;
+    claimToken: string;
+    errorMessage: string;
+    now: Date;
+  }): Promise<{ ok: true } | { ok: false; error: string }>;
+  markUncertain(input: {
+    logId: string;
+    claimToken: string;
+    errorMessage: string;
+    now: Date;
+  }): Promise<{ ok: true } | { ok: false; error: string }>;
   recordAlert(input: {
     code: string;
     message: string;
-    idempotencyKeyHash: string;
-    logId?: string | null;
-  }): Promise<boolean>;
-  listAlerts(
-    code: string,
-    options?: { excludeIds?: string[] },
-  ): Promise<Array<{ id: string; message: string }>>;
-  deleteAlert(id: string): Promise<void>;
+    logId: string | null;
+    idempotencyKey: string | null;
+  }): Promise<{ ok: true } | { ok: false; error: string }>;
+  read(logId: string): Promise<StoredCommunicationLog | null>;
 };
-
-export type ProviderSendResult =
-  | { outcome: "accepted"; providerMessageId: string }
-  | { outcome: "failed"; error: string }
-  | { outcome: "uncertain"; error: string };
-
-export type DispatchOutcome =
-  | "accepted"
-  | "failed"
-  | "uncertain"
-  | "skipped"
-  | "duplicate"
-  | "deferred"
-  | "unrecorded";

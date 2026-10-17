@@ -27,7 +27,7 @@ export async function GET(request: Request) {
   };
   try {
     // Backup pass. The hourly /api/cron/merchant-notice-replay job is the timely path.
-    // A second pass cannot send again after provider_called_at is set.
+    // Accepted, in-flight, and uncertain claims are not sent again.
     merchantReplay = await replayDeferredMerchantAlerts();
   } catch (error) {
     console.error("appointment reminders merchant replay failed:", error);

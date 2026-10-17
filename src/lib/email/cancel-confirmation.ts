@@ -4,7 +4,7 @@ import type { AppointmentRecord } from "@/lib/appointments/types";
 import type { CustomerContact } from "@/lib/email/appointment-context";
 import { formatAppointmentTimeRange } from "@/lib/appointments/time-label";
 import { escapeHtml, emailLogoImg } from "@/lib/email/layout";
-import { siteUrl } from "@/lib/email/resend";
+import { siteUrl } from "@/lib/email/site-url";
 
 export function formatAppointmentDateLabel(date: string) {
   const parsed = new Date(date.includes("T") ? date : `${date}T12:00:00`);

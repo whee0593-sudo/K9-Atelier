@@ -3,7 +3,10 @@ import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import {
   buildRebookReminderEmail,
 } from "@/lib/email/rebook-reminder";
-import { isEmailConfigured, sendEmail } from "@/lib/email/resend";
+import { buildCommunicationContext } from "@/lib/communications/context";
+import { isEmailConfigured, sendEmailDelivery } from "@/lib/email/resend";
+import { formatVisitPetNames } from "@/lib/visits/pet-names";
+import { recordVisitNotificationSent } from "@/lib/visits/notification-ledger";
 import {
   addDaysToIsoDate,
   businessDayUtcRange,
@@ -37,7 +40,11 @@ export type RebookReminderCandidate = {
   petName: string | null;
   customerEmail: string | null;
   customerFirstName: string | null;
+  visitId?: string | null;
+  petId?: string | null;
 };
+
+export type RebookReminderSendOutcome = boolean | "uncertain";
 
 export type FutureAppointmentSnapshot = {
   id: string;
@@ -49,6 +56,8 @@ export type FutureAppointmentSnapshot = {
 type DueRow = {
   id: string;
   customer_id: string;
+  pet_id?: string | null;
+  visit_id?: string | null;
   status: string;
   service_ended_at: string | null;
   rebook_reminder_status: string | null;
@@ -62,6 +71,8 @@ type DueRow = {
 const DUE_SELECT = `
   id,
   customer_id,
+  pet_id,
+  visit_id,
   status,
   service_ended_at,
   rebook_reminder_status,
@@ -152,8 +163,50 @@ export type RebookReminderJobDeps = {
     subject: string;
     text: string;
     html: string;
-  }) => Promise<boolean>;
+    visitId: string | null;
+    customerId: string;
+    appointmentIds: string[];
+    petIds: string[];
+  }) => Promise<RebookReminderSendOutcome>;
 };
+
+function groupHasOpenFuture(
+  appointments: FutureAppointmentSnapshot[],
+  today: string,
+  sourceIds: string[],
+) {
+  const excluded = new Set(sourceIds);
+  return appointments.some(
+    (appointment) =>
+      !excluded.has(appointment.id) &&
+      isOpenFutureAppointment(appointment, today, sourceIds[0] ?? ""),
+  );
+}
+
+/** Dogs with no visit stay separate. Dogs on one visit share one email. */
+export function groupRebookReminderCandidates(
+  due: RebookReminderCandidate[],
+  today: string,
+) {
+  const groups: RebookReminderCandidate[][] = [];
+  const visitIndex = new Map<string, number>();
+  for (const candidate of due) {
+    if (!isRebookReminderDue(candidate, today)) continue;
+    const visitId = candidate.visitId?.trim();
+    if (!visitId) {
+      groups.push([candidate]);
+      continue;
+    }
+    const index = visitIndex.get(visitId);
+    if (index == null) {
+      visitIndex.set(visitId, groups.length);
+      groups.push([candidate]);
+    } else {
+      groups[index]!.push(candidate);
+    }
+  }
+  return groups;
+}
 
 function emptyResult(reason: string): RebookReminderRunResult {
   return { sent: 0, skipped: 0, failed: 0, reason };
@@ -180,76 +233,107 @@ export async function runRebookReminderJob(
   let skipped = 0;
   let failed = 0;
 
-  for (const candidate of due) {
-    if (!isRebookReminderDue(candidate, today)) continue;
-    if (!candidate.customerEmail?.trim()) {
-      skipped += 1;
+  for (const group of groupRebookReminderCandidates(due, today)) {
+    const ready = group.filter((candidate) => candidate.customerEmail?.trim());
+    if (ready.length === 0) {
+      skipped += group.length;
       continue;
     }
 
-    const beforeSend = await deps.loadFuture(candidate.customerId, today);
+    const anchor = ready[0]!;
+    const readyIds = ready.map((candidate) => candidate.id);
+    const beforeSend = await deps.loadFuture(anchor.customerId, today);
     if (!beforeSend) {
-      failed += 1;
+      failed += ready.length;
       continue;
     }
-    if (hasOpenFutureAppointment(beforeSend, today, candidate.id)) {
-      const marked = await deps.markSkipped(candidate.id);
-      if (marked) skipped += 1;
-      else failed += 1;
-      continue;
-    }
-
-    const claimed = await deps.claim(candidate.id);
-    if (!claimed) {
-      skipped += 1;
+    if (groupHasOpenFuture(beforeSend, today, readyIds)) {
+      for (const candidate of ready) {
+        const marked = await deps.markSkipped(candidate.id);
+        if (marked) skipped += 1;
+        else failed += 1;
+      }
       continue;
     }
 
+    const claimed: RebookReminderCandidate[] = [];
+    for (const candidate of ready) {
+      const ok = await deps.claim(candidate.id);
+      if (ok) claimed.push(candidate);
+      else skipped += 1;
+    }
+    if (claimed.length === 0) continue;
+
+    const claimedIds = claimed.map((candidate) => candidate.id);
     const immediatelyBeforeSend = await deps.loadFuture(
-      candidate.customerId,
+      anchor.customerId,
       today,
     );
     if (!immediatelyBeforeSend) {
-      await deps.release(candidate.id);
-      failed += 1;
+      for (const id of claimedIds) await deps.release(id);
+      failed += claimed.length;
       continue;
     }
-    if (hasOpenFutureAppointment(immediatelyBeforeSend, today, candidate.id)) {
-      const marked = await deps.markSkipped(candidate.id);
-      if (marked) skipped += 1;
-      else failed += 1;
+    if (groupHasOpenFuture(immediatelyBeforeSend, today, claimedIds)) {
+      for (const id of claimedIds) {
+        const marked = await deps.markSkipped(id);
+        if (marked) skipped += 1;
+        else failed += 1;
+      }
       continue;
     }
 
     const email = buildRebookReminderEmail({
-      firstName: candidate.customerFirstName,
-      petName: candidate.petName,
+      firstName: anchor.customerFirstName,
+      petName: formatVisitPetNames(
+        claimed.map((candidate) => candidate.petName),
+      ),
     });
-    let delivered = false;
+    let delivered: RebookReminderSendOutcome = false;
     try {
       delivered = await deps.send({
-        to: candidate.customerEmail,
+        to: anchor.customerEmail!.trim(),
         subject: email.subject,
         text: email.text,
         html: email.html,
+        visitId: anchor.visitId?.trim() || null,
+        customerId: anchor.customerId,
+        appointmentIds: claimedIds,
+        petIds: claimed
+          .map((candidate) => candidate.petId)
+          .filter((id): id is string => Boolean(id)),
       });
     } catch (error) {
-      console.error("rebook reminder send threw:", candidate.id, error);
-      delivered = false;
+      console.error(
+        "rebook reminder send threw:",
+        claimedIds.join(","),
+        error,
+      );
+      delivered = "uncertain";
     }
 
+    if (delivered === "uncertain") {
+      failed += claimed.length;
+      continue;
+    }
     if (!delivered) {
-      await deps.release(candidate.id);
-      failed += 1;
+      for (const id of claimedIds) await deps.release(id);
+      failed += claimed.length;
       continue;
     }
 
-    const marked = await deps.markSent(candidate.id, new Date().toISOString());
-    if (!marked) {
-      console.error(
-        "rebook reminder was sent but the sent timestamp was not saved:",
-        candidate.id,
-      );
+    let markedAll = true;
+    for (const id of claimedIds) {
+      const marked = await deps.markSent(id, new Date().toISOString());
+      if (!marked) {
+        markedAll = false;
+        console.error(
+          "rebook reminder was sent but the sent timestamp was not saved:",
+          id,
+        );
+      }
+    }
+    if (!markedAll) {
       failed += 1;
       continue;
     }
@@ -265,6 +349,8 @@ function mapDueRow(row: DueRow): RebookReminderCandidate {
   return {
     id: row.id,
     customerId: row.customer_id,
+    visitId: row.visit_id ?? null,
+    petId: row.pet_id ?? null,
     appointmentStatus: row.status,
     serviceEndedAt: row.service_ended_at,
     reminderStatus: row.rebook_reminder_status,
@@ -407,6 +493,49 @@ export async function sendThreeWeekRebookReminders(
         );
       }
     },
-    send: (message) => sendEmail(message),
+    send: async (message) => {
+      const fingerprint = [...message.appointmentIds].sort().join(",");
+      let delivery: "delivered" | "rejected" | "uncertain";
+      try {
+        delivery = await sendEmailDelivery({
+          to: message.to,
+          subject: message.subject,
+          text: message.text,
+          html: message.html,
+          communication: buildCommunicationContext({
+            notificationType: "rebook_reminder_21_day",
+            recipient: message.to,
+            customerId: message.customerId,
+            visitId: message.visitId,
+            appointmentIds: message.appointmentIds,
+            petIds: message.petIds,
+            dedupe: message.visitId ? "visit" : "appointment",
+            fingerprint,
+          }),
+        });
+      } catch (error) {
+        console.error("rebook reminder provider threw:", fingerprint, error);
+        return "uncertain";
+      }
+      if (delivery === "delivered") {
+        if (message.visitId) {
+          try {
+            await recordVisitNotificationSent(
+              message.visitId,
+              `rebook_reminder_21_day:${fingerprint}`,
+            );
+          } catch (error) {
+            console.error(
+              "rebook reminder visit record failed:",
+              message.visitId,
+              error,
+            );
+          }
+        }
+        return true;
+      }
+      if (delivery === "uncertain") return "uncertain";
+      return false;
+    },
   });
 }

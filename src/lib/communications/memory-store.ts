@@ -1,173 +1,222 @@
 import { randomUUID } from "node:crypto";
-import type {
-  ClaimResult,
-  CommunicationLogStatus,
-  CommunicationSnapshot,
-  CommunicationStore,
-} from "@/lib/communications/store";
+import { decideClaim } from "@/lib/communications/claim";
+import type { CommunicationLogStore, ClaimResult } from "@/lib/communications/store";
+import type { StoredCommunicationLog } from "@/lib/communications/types";
 
-type Row = {
-  id: string;
-  claimToken: string;
-  status: CommunicationLogStatus;
-  providerCalledAt: string | null;
-  providerMessageId: string | null;
-  snapshot: CommunicationSnapshot;
-};
-
-type Alert = { id: string; code: string; message: string; idempotencyKeyHash: string };
-
-export type MemoryStoreFaults = {
-  claimFailures: number;
-  alertFailures: number;
-  completeFailures: number;
-};
+type MemoryRow = StoredCommunicationLog;
 
 /**
- * In-memory stand-in for communication_logs. Claims are serialized so two
- * overlapping sends cannot both pass the provider gate.
+ * In-process store used by tests and as the reference claim algorithm.
+ * A per-key queue keeps concurrent claims from both observing "no row".
  */
-export function createMemoryCommunicationStore(
-  faults: MemoryStoreFaults = {
-    claimFailures: 0,
-    alertFailures: 0,
-    completeFailures: 0,
-  },
-): CommunicationStore & { rows: () => Row[]; alerts: () => Alert[] } {
-  const rows = new Map<string, Row>();
-  const alerts: Alert[] = [];
-  let tail: Promise<void> = Promise.resolve();
+export function createMemoryCommunicationLogStore(): CommunicationLogStore & {
+  rows(): MemoryRow[];
+  alerts(): Array<{
+    id: string;
+    code: string;
+    message: string;
+    logId: string | null;
+  }>;
+  listAlerts(
+    code: string,
+  ): Promise<Array<{ id: string; message: string }>>;
+  deleteAlert(id: string): Promise<void>;
+} {
+  const rows = new Map<string, MemoryRow>();
+  const byKey = new Map<string, string>();
+  const alerts: Array<{
+    id: string;
+    code: string;
+    message: string;
+    logId: string | null;
+  }> = [];
+  const alertKeys = new Set<string>();
+  const tails = new Map<string, Promise<unknown>>();
 
-  function exclusive<T>(fn: () => T): Promise<T> {
-    const run = tail.then(() => fn());
-    tail = run.then(
-      () => undefined,
-      () => undefined,
+  function lock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+    const prev = tails.get(key) ?? Promise.resolve();
+    const run = prev.then(fn, fn);
+    tails.set(
+      key,
+      run.then(
+        () => undefined,
+        () => undefined,
+      ),
     );
     return run;
   }
 
-  function terminalDuplicate(row: Row): ClaimResult | null {
-    if (
-      row.status === "accepted" ||
-      row.status === "delivered" ||
-      row.status === "undelivered" ||
-      row.status === "bounced" ||
-      row.status === "skipped"
-    ) {
-      return { action: "duplicate" };
-    }
-    if (row.status === "uncertain" || row.providerCalledAt) {
-      return { action: "unresolved" };
-    }
-    return null;
+  function rowFrom(id: string): MemoryRow | null {
+    return rows.get(id) ?? null;
   }
 
   return {
-    rows: () => [...rows.values()],
-    alerts: () => [...alerts],
-    claim(snapshot) {
-      return exclusive(() => {
-        if (faults.claimFailures > 0) {
-          faults.claimFailures -= 1;
-          throw new Error("communication log claim failed");
+    rows() {
+      return [...rows.values()];
+    },
+    alerts() {
+      return alerts;
+    },
+    async claim(input): Promise<ClaimResult> {
+      return lock(input.snapshot.idempotencyKey, async () => {
+        const existingId = byKey.get(input.snapshot.idempotencyKey);
+        const existing = existingId ? rowFrom(existingId) : null;
+        const decision = decideClaim(existing, input.now.getTime());
+
+        if (decision.type === "duplicate_accepted") {
+          return {
+            action: "duplicate_accepted",
+            logId: decision.log.id,
+            providerMessageId: decision.log.providerMessageId,
+          };
         }
-        const existing = rows.get(snapshot.idempotencyKey);
-        if (existing) {
-          if (
-            existing.providerCalledAt ||
-            existing.status === "uncertain" ||
-            existing.status === "accepted" ||
-            existing.status === "delivered" ||
-            existing.status === "undelivered" ||
-            existing.status === "bounced"
-          ) {
-            return terminalDuplicate(existing) ?? { action: "unresolved" };
-          }
-          if (snapshot.intendedStatus === "skipped") return { action: "recorded" };
-          if (
-            existing.status === "skipped" ||
-            (existing.status === "pending" && !existing.providerCalledAt)
-          ) {
-            existing.status = "pending";
-            existing.providerCalledAt = new Date().toISOString();
-            existing.claimToken = randomUUID();
-            return {
-              action: "send",
-              id: existing.id,
-              claimToken: existing.claimToken,
-            };
-          }
-          return { action: "unresolved" };
+        if (decision.type === "in_flight") {
+          return { action: "in_flight", logId: decision.log.id };
+        }
+        if (decision.type === "hold") {
+          return {
+            action: "hold",
+            logId: decision.log.id,
+            hold: decision.hold,
+          };
+        }
+        if (decision.type === "terminal_skip") {
+          return {
+            action: "terminal_skip",
+            logId: decision.log.id,
+            skipReason: decision.log.skipReason,
+          };
         }
 
-        const row: Row = {
-          id: randomUUID(),
-          claimToken: randomUUID(),
-          status: snapshot.intendedStatus,
-          providerCalledAt:
-            snapshot.intendedStatus === "pending"
-              ? new Date().toISOString()
-              : null,
+        if (decision.type === "send_existing" && input.status === "skipped") {
+          return {
+            action: "terminal_skip",
+            logId: decision.log.id,
+            skipReason: input.skipReason ?? decision.log.skipReason,
+          };
+        }
+
+        if (decision.type === "send_existing") {
+          const nextToken = randomUUID();
+          const current = rowFrom(decision.log.id);
+          if (!current || current.claimToken !== decision.log.claimToken) {
+            return { action: "in_flight", logId: decision.log.id };
+          }
+          if (current.providerMessageId) {
+            return {
+              action: "duplicate_accepted",
+              logId: current.id,
+              providerMessageId: current.providerMessageId,
+            };
+          }
+          const updated: MemoryRow = {
+            ...current,
+            status: "pending",
+            skipReason: null,
+            errorMessage: null,
+            claimToken: nextToken,
+            claimedAt: input.now.toISOString(),
+          };
+          rows.set(updated.id, updated);
+          return {
+            action: "send",
+            logId: updated.id,
+            claimToken: nextToken,
+            snapshot: updated.snapshot,
+          };
+        }
+
+        const id = randomUUID();
+        const created: MemoryRow = {
+          id,
+          snapshot: input.snapshot,
+          status: input.status,
+          skipReason: input.skipReason,
           providerMessageId: null,
-          snapshot,
+          claimToken: randomUUID(),
+          claimedAt: input.now.toISOString(),
+          errorMessage: input.errorMessage,
         };
-        rows.set(snapshot.idempotencyKey, row);
-        if (snapshot.intendedStatus === "skipped") return { action: "recorded" };
-        return { action: "send", id: row.id, claimToken: row.claimToken };
-      });
-    },
-    complete(input) {
-      return exclusive(() => {
-        if (faults.completeFailures > 0) {
-          faults.completeFailures -= 1;
-          return false;
+        rows.set(id, created);
+        byKey.set(input.snapshot.idempotencyKey, id);
+        if (input.status === "skipped") {
+          return {
+            action: "terminal_skip",
+            logId: id,
+            skipReason: input.skipReason,
+          };
         }
-        const row = [...rows.values()].find((entry) => entry.id === input.id);
-        if (!row || row.claimToken !== input.claimToken) return false;
-        row.status = input.status;
-        row.providerMessageId = input.providerMessageId;
-        return true;
+        return {
+          action: "send",
+          logId: id,
+          claimToken: created.claimToken,
+          snapshot: created.snapshot,
+        };
       });
     },
-    recordAlert(input) {
-      return exclusive(() => {
-        if (faults.alertFailures > 0) {
-          faults.alertFailures -= 1;
-          return false;
-        }
-        if (
-          alerts.some(
-            (alert) =>
-              alert.code === input.code &&
-              alert.idempotencyKeyHash === input.idempotencyKeyHash,
-          )
-        ) {
-          return true;
-        }
-        alerts.push({
-          id: randomUUID(),
-          code: input.code,
-          message: input.message,
-          idempotencyKeyHash: input.idempotencyKeyHash,
-        });
-        return true;
+    async markAccepted(input) {
+      const row = rowFrom(input.logId);
+      if (!row || row.claimToken !== input.claimToken) {
+        return { ok: false, error: "claim lost" };
+      }
+      rows.set(row.id, {
+        ...row,
+        status: "accepted",
+        providerMessageId: input.providerMessageId,
+        errorMessage: null,
+        skipReason: null,
       });
+      return { ok: true };
     },
-    listAlerts(code, options) {
-      return exclusive(() => {
-        const excluded = new Set(options?.excludeIds ?? []);
-        return alerts
-          .filter((alert) => alert.code === code && !excluded.has(alert.id))
-          .slice(0, 25)
-          .map((alert) => ({ id: alert.id, message: alert.message }));
+    async markFailed(input) {
+      const row = rowFrom(input.logId);
+      if (!row || row.claimToken !== input.claimToken) {
+        return { ok: false, error: "claim lost" };
+      }
+      rows.set(row.id, {
+        ...row,
+        status: "failed",
+        errorMessage: input.errorMessage,
       });
+      return { ok: true };
     },
-    deleteAlert(id) {
-      return exclusive(() => {
-        const index = alerts.findIndex((alert) => alert.id === id);
-        if (index >= 0) alerts.splice(index, 1);
+    async markUncertain(input) {
+      const row = rowFrom(input.logId);
+      if (!row || row.claimToken !== input.claimToken) {
+        return { ok: false, error: "claim lost" };
+      }
+      rows.set(row.id, {
+        ...row,
+        status: "uncertain",
+        errorMessage: input.errorMessage,
       });
+      return { ok: true };
+    },
+    async recordAlert(input) {
+      if (input.idempotencyKey) {
+        const dedupeKey = `${input.code}\0${input.idempotencyKey}`;
+        if (alertKeys.has(dedupeKey)) return { ok: true };
+        alertKeys.add(dedupeKey);
+      }
+      alerts.push({
+        id: randomUUID(),
+        code: input.code,
+        message: input.message,
+        logId: input.logId,
+      });
+      return { ok: true };
+    },
+    async listAlerts(code) {
+      return alerts
+        .filter((alert) => alert.code === code)
+        .map((alert) => ({ id: alert.id, message: alert.message }));
+    },
+    async deleteAlert(id) {
+      const index = alerts.findIndex((alert) => alert.id === id);
+      if (index >= 0) alerts.splice(index, 1);
+    },
+    async read(logId) {
+      return rowFrom(logId);
     },
   };
 }

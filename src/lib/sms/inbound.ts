@@ -188,13 +188,13 @@ export async function handleInboundCustomerSms(input: {
       await notifyMerchantCustomerReplyC({
         visitId: appointment.visitId ?? null,
         customerId: appointment.customerId,
-        customerName: contact?.name ?? null,
+        customerName: contact?.name ?? contact?.email ?? null,
         replyTo: contact?.email ?? null,
         appointmentId: appointment.id,
         petId: appointment.petId,
         petName: appointment.petName,
         serviceName: appointment.serviceName,
-        whenLabel: `${dateLabel}, ${appointment.appointmentTime}`,
+        whenLabel: `${dateLabel} · ${appointment.appointmentTime}`,
         addressLabel: [
           appointment.addressStreet,
           appointment.addressCity,

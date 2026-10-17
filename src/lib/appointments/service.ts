@@ -26,11 +26,11 @@ import {
   fetchAppointmentAdminRecord,
   fetchCustomerContact,
 } from "@/lib/email/appointment-context";
+import { notifyMerchantVisitConfirmedFromVisit } from "@/lib/communications/merchant-notices";
 import {
   sendAppointmentCreatedEmails,
   sendAppointmentStatusEmails,
 } from "@/lib/email/appointment-mails";
-import { notifyMerchantVisitConfirmedFromAppointments } from "@/lib/communications/merchant-notices";
 import { getCustomerPaymentMethod } from "@/lib/payments/service";
 import { resolveGuestDrivingQuote } from "@/lib/booking-distance";
 import {
@@ -428,7 +428,10 @@ export async function createAppointment(
   }
 
   if (saved.created) {
-    let contact: Awaited<ReturnType<typeof fetchCustomerContact>> = null;
+    let contact:
+      | Awaited<ReturnType<typeof fetchCustomerContact>>
+      | { email: string; name: null }
+      | null = null;
     try {
       contact =
         (await fetchCustomerContact(user.id)) ??
@@ -436,16 +439,16 @@ export async function createAppointment(
       if (contact) {
         await sendAppointmentCreatedEmails(appointment, {
           ...contact,
-          phone: contact.phone ?? input.customerPhone,
+          phone:
+            ("phone" in contact ? contact.phone : null) ?? input.customerPhone,
         });
       }
     } catch (emailError) {
       console.error("createAppointment email failed:", emailError);
     }
-
     try {
       // A provider or log failure is contained here. The committed visit stays.
-      await notifyMerchantVisitConfirmedFromAppointments([appointment], {
+      await notifyMerchantVisitConfirmedFromVisit(appointment.visitId, {
         customerName: contact?.name ?? null,
         replyTo: contact?.email ?? null,
       });
@@ -652,23 +655,34 @@ export async function sendAppointmentEnRouteNotification(
 
   const admin = createAdminClient();
   type EnRouteDog = {
-    appointmentId: string;
+    id: string;
     status: string;
-    serviceEndedAt: null;
-    logisticsSentAt: string | null;
-    petName: string | null;
-    petId: string | null;
+    petId: string;
+    petName: string;
+    enRouteSmsSentAt: string | null;
   };
   let dogs: EnRouteDog[];
   if (!appointment.visitId) {
+    const { data: smsRow, error: smsLookupError } = await admin
+      .from("appointments")
+      .select("id, status, pet_id, en_route_sms_sent_at")
+      .eq("id", appointmentId)
+      .maybeSingle();
+    if (smsLookupError) {
+      console.error(
+        "sendAppointmentEnRouteNotification lookup failed:",
+        smsLookupError.message,
+      );
+      return { error: "server" };
+    }
+    if (!smsRow) return { error: "not_found" };
     dogs = [
       {
-        appointmentId: appointment.id,
-        status: appointment.status,
-        serviceEndedAt: null,
-        logisticsSentAt: appointment.enRouteSmsSentAt,
+        id: smsRow.id as string,
+        status: smsRow.status as string,
+        petId: (smsRow.pet_id as string | null) ?? appointment.petId,
         petName: appointment.petName,
-        petId: appointment.petId,
+        enRouteSmsSentAt: (smsRow.en_route_sms_sent_at as string | null) ?? null,
       },
     ];
   } else {
@@ -676,7 +690,7 @@ export async function sendAppointmentEnRouteNotification(
       .from("appointments")
       .select("id, status, pet_id, en_route_sms_sent_at, pets ( name )")
       .eq("visit_id", appointment.visitId)
-      .neq("status", "cancelled");
+      .order("visit_sequence", { ascending: true });
     if (visit.error) {
       console.error(
         "sendAppointmentEnRouteNotification lookup failed:",
@@ -684,30 +698,28 @@ export async function sendAppointmentEnRouteNotification(
       );
       return { error: "server" };
     }
-
-    const rows = (visit.data ?? []) as Array<{
-      id: string;
-      status: string;
-      pet_id: string | null;
-      en_route_sms_sent_at: string | null;
-      pets?: { name: string | null } | { name: string | null }[] | null;
-    }>;
-    dogs = rows.map((row) => {
+    dogs = (
+      (visit.data ?? []) as Array<{
+        id: string;
+        status: string;
+        pet_id: string | null;
+        en_route_sms_sent_at: string | null;
+        pets?: { name: string | null } | { name: string | null }[] | null;
+      }>
+    ).map((row) => {
       const pet = Array.isArray(row.pets) ? row.pets[0] : row.pets;
       return {
-        appointmentId: row.id,
+        id: row.id,
         status: row.status,
-        serviceEndedAt: null,
-        logisticsSentAt: row.en_route_sms_sent_at,
-        petName: pet?.name ?? appointment.petName,
-        petId: row.pet_id,
+        petId: row.pet_id ?? appointment.petId,
+        petName: pet?.name?.trim() || appointment.petName,
+        enRouteSmsSentAt: row.en_route_sms_sent_at,
       };
     });
   }
-  const { planVisitLogisticsSms, joinPetNames } = await import(
-    "@/lib/communications/visit-readiness"
-  );
-  const plan = planVisitLogisticsSms({ event: "en_route", dogs });
+
+  const { planVisitEnRoute } = await import("@/lib/visits/notification-scope");
+  const plan = planVisitEnRoute(dogs);
   const markSent = async (ids: string[]) => {
     if (ids.length === 0) return;
     const { error: markError } = await admin
@@ -722,60 +734,38 @@ export async function sendAppointmentEnRouteNotification(
       );
     }
   };
+  if (plan.action === "empty") return { error: "not_found" };
   if (plan.action === "already_sent") {
     await markSent(plan.appointmentIds);
     return { error: "conflict" };
   }
-  if (plan.action !== "send") return { error: "conflict" };
 
-  const { bookingDetailsFromAppointment } = await import(
-    "@/lib/email/appointment-mails"
+  const active = dogs.filter((dog) => plan.appointmentIds.includes(dog.id));
+  const { sendAppointmentEnRouteSms } = await import(
+    "@/lib/sms/appointment-sms"
   );
-  const { buildAppointmentEnRouteSms } = await import("@/lib/notifications");
-  const { normalizePhoneToE164 } = await import("@/lib/sms/phone");
-  const to = normalizePhoneToE164(contact.phone);
-  if (!to) return { error: "conflict" };
-  const details = {
-    ...bookingDetailsFromAppointment(appointment, contact),
-    petName: joinPetNames(dogs.map((dog) => dog.petName)),
-  };
-  const body = buildAppointmentEnRouteSms(details);
-  const { deliverVisitLogisticsSms } = await import(
-    "@/lib/communications/visit-sms"
+  const { runVisitNotification } = await import(
+    "@/lib/visits/notification-ledger"
   );
-  const { communicationAppointmentScope, communicationVisitScope } = await import(
-    "@/lib/communications/keys"
-  );
-  const { createSupabaseClaimStore } = await import(
-    "@/lib/communications/customer-supabase-store"
-  );
-  const { sendTrackedSms } = await import("@/lib/sms/twilio");
-  const outcome = await deliverVisitLogisticsSms({
+  const outcome = await runVisitNotification({
+    visitId: appointment.visitId,
     event: "en_route",
-    visitId: appointment.visitId ?? null,
-    scope: appointment.visitId
-      ? communicationVisitScope(appointment.visitId)
-      : communicationAppointmentScope(appointment.id),
-    dogs,
-    customerId: appointment.customerId,
-    petIds: dogs.map((dog) => dog.petId).filter((id): id is string => Boolean(id)),
-    recipient: to,
-    body,
-    store: createSupabaseClaimStore(admin),
-    send: async () => {
-      const result = await sendTrackedSms({ to, body });
-      if (result.outcome === "failed" && /not configured/i.test(result.error)) {
-        return { outcome: "failed" as const, error: "missing_config" };
-      }
-      return result;
-    },
+    send: () =>
+      sendAppointmentEnRouteSms(
+        appointment,
+        contact,
+        active.map((dog) => dog.petName),
+        {
+          appointmentIds: active.map((dog) => dog.id),
+          petIds: active.map((dog) => dog.petId).filter(Boolean),
+        },
+      ),
   });
-  if (outcome === "accepted" || outcome === "duplicate") {
+  if (outcome === "sent" || outcome === "skipped") {
     await markSent(plan.appointmentIds);
-    return { ok: true };
+    return outcome === "sent" ? { ok: true } : { error: "conflict" };
   }
-  if (outcome === "failed" || outcome === "unrecorded") return { error: "server" };
-  return { error: "conflict" };
+  return { error: "server" };
 }
 
 export async function setAppointmentVisitTiming(

@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { replayDeferredMerchantAlerts } from "@/lib/communications/merchant-notices";
+import {
+  factsFromAppointments,
+  loadVisitAppointments,
+  replayDeferredMerchantAlerts,
+} from "@/lib/communications/merchant-notices";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +18,8 @@ function isAuthorizedCron(request: Request) {
  * Replays merchant notices whose claim could not be saved.
  * Separate from the customer reminder cron so an hourly pass cannot
  * run the 10:00 customer jobs a second time.
- * uncertain rows are not sent again.
+ * Accepted, in-flight, and uncertain rows are not sent again.
+ * A pets-changed alert stays queued for a person to review.
  */
 export async function GET(request: Request) {
   if (!isAuthorizedCron(request)) {
@@ -22,8 +27,14 @@ export async function GET(request: Request) {
   }
 
   try {
-    const merchantReplay = await replayDeferredMerchantAlerts();
-    return NextResponse.json({ merchantReplay });
+    const result = await replayDeferredMerchantAlerts({
+      loadVisit: async (visitId) => {
+        const appointments = await loadVisitAppointments(visitId);
+        if (!appointments) return null;
+        return factsFromAppointments(appointments);
+      },
+    });
+    return NextResponse.json(result);
   } catch (error) {
     console.error("merchant notice replay failed:", error);
     return NextResponse.json({ error: "merchant_replay_failed" }, { status: 500 });

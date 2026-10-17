@@ -11,7 +11,7 @@ import {
   type CancelFeeStatus,
 } from "@/lib/email/cancel-confirmation";
 import { escapeHtml, emailLogoImg } from "@/lib/email/layout";
-import { siteUrl } from "@/lib/email/resend";
+import { siteUrl } from "@/lib/email/site-url";
 
 export type CancelPaymentFailureKind =
   | "declined"

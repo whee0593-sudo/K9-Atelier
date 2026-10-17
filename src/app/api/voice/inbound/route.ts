@@ -1,5 +1,5 @@
 import { after, NextResponse } from "next/server";
-import { siteUrl } from "@/lib/email/resend";
+import { siteUrl } from "@/lib/email/site-url";
 import { lookupCustomerByPhone } from "@/lib/sms/customer-by-phone";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
 import { isValidTwilioSignature } from "@/lib/sms/twilio-signature";

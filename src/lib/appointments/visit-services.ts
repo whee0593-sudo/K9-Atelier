@@ -18,6 +18,11 @@ import {
 } from "@/lib/charges/visit-line-items";
 import { recordCustomerSms } from "@/lib/sms/inbox";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
+import {
+  buildCommunicationContext,
+  communicationFingerprint,
+} from "@/lib/communications/context";
+import { isCommunicationAccepted } from "@/lib/communications/result";
 import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
 import { buildVisitServicesUpdatedSms } from "@/lib/sms/visit-update-copy";
 import type { ChargeLineItem } from "@/lib/charges/types";
@@ -147,6 +152,8 @@ export async function updateAppointmentVisitServices(input: {
   }
 
   const smsSent = await sendVisitServicesUpdatedSms({
+    visitId: (row.visit_id as string | null) ?? null,
+    appointmentId: row.id as string,
     customerId: row.customer_id as string,
     profile: firstRelation<{
       first_name: string | null;
@@ -301,6 +308,8 @@ function firstRelation<T>(value: unknown): T | null {
 }
 
 async function sendVisitServicesUpdatedSms(input: {
+  visitId: string | null;
+  appointmentId: string;
   customerId: string;
   profile: {
     first_name: string | null;
@@ -318,7 +327,21 @@ async function sendVisitServicesUpdatedSms(input: {
     estimatedTotal: input.estimatedTotal,
   });
   try {
-    const sent = await sendSms({ to, body });
+    const sent = isCommunicationAccepted(
+      await sendSms({
+        to,
+        body,
+        communication: buildCommunicationContext({
+          notificationType: "visit_services_updated",
+          recipient: to,
+          customerId: input.customerId,
+          visitId: input.visitId,
+          appointmentIds: [input.appointmentId],
+          dedupe: input.visitId ? "visit" : "appointment",
+          fingerprint: communicationFingerprint(body),
+        }),
+      }),
+    );
     if (!sent) return false;
     const customerName = [input.profile?.first_name, input.profile?.last_name]
       .filter(Boolean)

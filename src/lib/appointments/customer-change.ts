@@ -546,7 +546,11 @@ export async function applyAppointmentChange(
       cardLast4: charged.cardLast4,
     });
     if (previousWhenLabel) {
-      await notifyMerchantRescheduleCompleted(moved.appointments, previousWhenLabel, contact);
+      await notifyMerchantRescheduleCompleted(
+        moved.appointments,
+        previousWhenLabel,
+        contact,
+      );
     }
     return { ok: true, quote };
   }
@@ -595,12 +599,6 @@ export async function applyAppointmentChange(
     );
   }
   return { ok: true, quote };
-}
-
-function recordsFromRows(rows: ChangeRow[]): AppointmentRecord[] {
-  return rows.map((row) =>
-    mapAppointmentRowToRecord(row as unknown as AppointmentRow),
-  );
 }
 
 function earliestChangeWhen(rows: ChangeRow[]) {
@@ -658,6 +656,12 @@ async function notifyMerchantPetsChanged(
   } catch (error) {
     console.error("appointment pets changed merchant notify failed:", error);
   }
+}
+
+function recordsFromRows(rows: ChangeRow[]): AppointmentRecord[] {
+  return rows.map((row) =>
+    mapAppointmentRowToRecord(row as unknown as AppointmentRow),
+  );
 }
 
 async function sendChangeConfirmationEmail({

@@ -1,53 +1,63 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
-import { deliverTrackedNotice, type DeliveryOutcome } from "@/lib/communications/deliver";
-import {
-  communicationAppointmentScope,
-  communicationIdempotencyKey,
-  communicationVisitScope,
-} from "@/lib/communications/keys";
-import { createSupabaseClaimStore } from "@/lib/communications/customer-supabase-store";
-import type { CommunicationClaimStore } from "@/lib/communications/customer-log-store";
-import type { ProviderAttempt } from "@/lib/communications/types";
-import {
-  joinPetNames,
-  planNextDayFollowUp,
-  type VisitDogFact,
-} from "@/lib/communications/visit-readiness";
+import { mapAppointmentRowToAdminRecord } from "@/lib/appointments/map";
+import type { AppointmentRow } from "@/lib/appointments/types";
+import { buildCommunicationContext } from "@/lib/communications/context";
+import { isEmailConfigured, sendEmailDelivery } from "@/lib/email/resend";
 import {
   buildNextDayFollowUpEmail,
   buildNextDayFollowUpSms,
 } from "@/lib/followup/copy";
+import {
+  followUpDecision,
+  type FollowUpPet,
+} from "@/lib/followup/visit-ready";
 import { recordCustomerSms } from "@/lib/sms/inbox";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
 import {
-  addDaysToIsoDate,
   businessDayUtcRange,
   hourInBusinessTimezone,
-  todayInBusinessTimezone,
+  yesterdayInBusinessTimezone,
 } from "@/lib/sms/schedule";
-import { business } from "@/lib/business";
-import { isEmailConfigured, sendTrackedEmail } from "@/lib/email/resend";
-import { isSmsConfigured, sendTrackedSms } from "@/lib/sms/twilio";
+import { isSmsConfigured, sendSmsDelivery } from "@/lib/sms/twilio";
+import { deliverVisitChannels } from "@/lib/visits/channel-delivery";
+import { formatVisitPetNames } from "@/lib/visits/pet-names";
+import { recordVisitNotificationSent } from "@/lib/visits/notification-ledger";
+import { groupByVisit } from "@/lib/visits/notification-scope";
 
-function customerFromAddress() {
-  return (
-    process.env.SUPPORT_FROM_EMAIL?.trim() ||
-    `K9 Atelier <${business.brand.email}>`
-  );
-}
-
-const FOLLOW_UP_LOOKBACK_DAYS = 21;
-
-export type FollowUpDog = VisitDogFact & {
-  visitId: string | null;
-  scope: string;
-  customerId: string;
-  customerEmail: string;
-  customerPhone: string | null;
-  customerFirstName: string | null;
-  petName: string | null;
-};
+const FOLLOW_UP_SELECT = `
+  id,
+  customer_id,
+  pet_id,
+  service_id,
+  service_name,
+  add_on_ids,
+  add_on_options,
+  address_street,
+  address_city,
+  address_state,
+  address_zip,
+  travel_distance_miles,
+  travel_fee,
+  appointment_date,
+  appointment_time,
+  timezone,
+  estimated_total,
+  new_client_deposit,
+  vaccination_status_at_booking,
+  status,
+  confirmed_at,
+  customer_confirmed_at,
+  created_at,
+  visit_id,
+  reminder_sms_sent_at,
+  en_route_sms_sent_at,
+  service_started_at,
+  service_ended_at,
+  followup_sent_at,
+  pets ( name, breed ),
+  profiles ( email, first_name, last_name, phone )
+`;
 
 export type FollowUpRunResult = {
   sent: number;
@@ -56,41 +66,13 @@ export type FollowUpRunResult = {
   reason?: string;
 };
 
-export type FollowUpJobDeps = {
-  now: Date;
-  emailConfigured: boolean;
-  smsConfigured: boolean;
-  loadVisits: () => Promise<FollowUpDog[][] | null>;
-  deliver: (input: {
-    visitId: string | null;
-    scope: string;
-    channel: "email" | "sms";
-    dogs: FollowUpDog[];
-    recipient: string;
-    subject: string | null;
-    bodyText: string;
-    bodyHtml: string | null;
-  }) => Promise<DeliveryOutcome>;
-  markSent: (appointmentIds: string[], sentAt: string) => Promise<boolean>;
-};
-
-function terminal(outcome: DeliveryOutcome) {
-  return (
-    outcome === "accepted" ||
-    outcome === "duplicate" ||
-    outcome === "held" ||
-    outcome === "uncertain" ||
-    outcome === "skipped"
-  );
-}
-
-export async function runNextDayFollowUpJob(
-  deps: FollowUpJobDeps,
+export async function sendNextDayFollowUp(
+  now = new Date(),
 ): Promise<FollowUpRunResult> {
-  if (hourInBusinessTimezone(deps.now) !== 10) {
+  if (hourInBusinessTimezone(now) !== 10) {
     return { sent: 0, skipped: 0, failed: 0, reason: "outside_10am_window" };
   }
-  if (!deps.emailConfigured && !deps.smsConfigured) {
+  if (!isEmailConfigured() && !isSmsConfigured()) {
     return {
       sent: 0,
       skipped: 0,
@@ -98,314 +80,185 @@ export async function runNextDayFollowUpJob(
       reason: "notifications_not_configured",
     };
   }
+  if (!hasSupabaseAdminConfig()) {
+    return { sent: 0, skipped: 0, failed: 0, reason: "supabase_admin_missing" };
+  }
 
-  const visits = await deps.loadVisits();
-  if (!visits) return { sent: 0, skipped: 0, failed: 0, reason: "lookup_failed" };
+  const admin = createAdminClient();
+  const completionDay = businessDayUtcRange(yesterdayInBusinessTimezone(now));
+  const { data, error } = await admin
+    .from("appointments")
+    .select(FOLLOW_UP_SELECT)
+    .gte("service_ended_at", completionDay.start)
+    .lt("service_ended_at", completionDay.end)
+    .is("followup_sent_at", null)
+    .neq("status", "cancelled");
+
+  if (error) {
+    console.error("sendNextDayFollowUp lookup failed:", error.message);
+    return { sent: 0, skipped: 0, failed: 0, reason: "lookup_failed" };
+  }
 
   let sent = 0;
   let skipped = 0;
   let failed = 0;
 
-  for (const dogs of visits) {
-    const plan = planNextDayFollowUp({ dogs, now: deps.now });
-    if (plan.action === "already_sent") {
-      const unmarked = dogs.filter((dog) => !dog.followupSentAt);
-      if (unmarked.length > 0) {
-        const marked = await deps.markSent(
-          unmarked.map((dog) => dog.appointmentId),
-          new Date().toISOString(),
-        );
-        if (!marked) failed += 1;
-        else skipped += 1;
-      } else {
-        skipped += 1;
-      }
+  const appointments = ((data ?? []) as unknown as AppointmentRow[]).map(
+    mapAppointmentRowToAdminRecord,
+  );
+
+  for (const group of groupByVisit(appointments)) {
+    const anchor = group[0]!;
+    const pets = anchor.visitId
+      ? await loadVisitFollowUpPets(anchor.visitId)
+      : group.map(petFromAppointment);
+    if (!pets) {
+      failed += 1;
       continue;
     }
-    if (plan.action !== "send") {
+    const plan = followUpDecision(pets, now);
+    if (plan !== "send") {
       skipped += 1;
       continue;
     }
 
-    const anchor = dogs.find((dog) => dog.status !== "cancelled") ?? dogs[0];
-    if (!anchor) {
-      skipped += 1;
-      continue;
-    }
+    const petNames = pets
+      .filter((pet) => pet.status !== "cancelled")
+      .map((pet) => pet.name);
     const names = {
       firstName: anchor.customerFirstName,
-      petName: joinPetNames(
-        dogs.filter((dog) => dog.status !== "cancelled").map((dog) => dog.petName),
-      ),
+      petName: formatVisitPetNames(petNames, anchor.petName),
     };
     const email = anchor.customerEmail.trim();
     const phone = normalizePhoneToE164(anchor.customerPhone ?? "");
-    const canEmail = Boolean(email) && deps.emailConfigured;
-    const canSms = Boolean(phone) && deps.smsConfigured;
+    const canEmail = Boolean(email) && isEmailConfigured();
+    const canSms = Boolean(phone) && isSmsConfigured();
     if (!canEmail && !canSms) {
       skipped += 1;
       continue;
     }
 
-    const outcomes: DeliveryOutcome[] = [];
-    if (canEmail) {
-      const letter = buildNextDayFollowUpEmail(names);
-      outcomes.push(
-        await deps.deliver({
-          visitId: anchor.visitId,
-          scope: anchor.scope,
-          channel: "email",
-          dogs,
-          recipient: email,
-          subject: letter.subject,
-          bodyText: letter.text,
-          bodyHtml: letter.html,
-        }),
-      );
-    }
-    if (canSms && phone) {
-      outcomes.push(
-        await deps.deliver({
-          visitId: anchor.visitId,
-          scope: anchor.scope,
-          channel: "sms",
-          dogs,
-          recipient: phone,
-          subject: null,
-          bodyText: buildNextDayFollowUpSms(names),
-          bodyHtml: null,
-        }),
-      );
-    }
+    const appointmentIds = pets
+      .filter((pet) => pet.status !== "cancelled")
+      .map((pet) => pet.id);
+    const contextFor = (recipient: string) =>
+      buildCommunicationContext({
+        notificationType: "next_day_followup",
+        recipient,
+        customerId: anchor.customerId,
+        visitId: anchor.visitId,
+        appointmentIds,
+        petIds: group.map((row) => row.petId),
+        dedupe: anchor.visitId ? "visit" : "appointment",
+      });
 
-    const retryable = outcomes.some(
-      (outcome) => outcome === "failed" || outcome === "unrecorded",
+    const letter = buildNextDayFollowUpEmail(names);
+    const smsBody = buildNextDayFollowUpSms(names);
+    const channels = await deliverVisitChannels({
+      visitId: anchor.visitId,
+      event: "next_day_followup",
+      email: canEmail
+        ? () =>
+            sendEmailDelivery({
+              to: email,
+              subject: letter.subject,
+              text: letter.text,
+              html: letter.html,
+              communication: contextFor(email),
+            })
+        : undefined,
+      sms:
+        canSms && phone
+          ? async () => {
+              const smsOutcome = await sendSmsDelivery({
+                to: phone,
+                body: smsBody,
+                communication: contextFor(phone),
+              });
+              if (smsOutcome === "delivered") {
+                await recordCustomerSms({
+                  direction: "outbound",
+                  phone,
+                  body: smsBody,
+                  customerId: anchor.customerId,
+                  customerName: anchor.customerName,
+                  petNames,
+                });
+              }
+              return smsOutcome;
+            }
+          : undefined,
+    });
+
+    const attempted = [channels.email, channels.sms].filter(
+      (result) => result !== "absent",
     );
-    const accepted = outcomes.some(
-      (outcome) => outcome === "accepted" || outcome === "duplicate",
+    const newlySent = attempted.some((result) => result === "sent");
+    if (newlySent) {
+      await recordVisitNotificationSent(anchor.visitId, "google_review_request");
+    }
+    const settled = attempted.every(
+      (result) => result === "sent" || result === "skipped",
     );
-    if (retryable || !accepted) {
+    if (!settled) {
       failed += 1;
       continue;
     }
-    if (!outcomes.every(terminal)) {
-      failed += 1;
-      continue;
+    if (newlySent) sent += 1;
+    else skipped += 1;
+
+    const { error: markError } = await admin
+      .from("appointments")
+      .update({ followup_sent_at: new Date().toISOString() })
+      .in("id", appointmentIds)
+      .is("followup_sent_at", null);
+    if (markError) {
+      console.error(
+        "sendNextDayFollowUp mark failed:",
+        anchor.id,
+        markError.message,
+      );
     }
-    const marked = await deps.markSent(plan.appointmentIds, new Date().toISOString());
-    if (!marked) {
-      failed += 1;
-      continue;
-    }
-    sent += 1;
   }
 
   return { sent, skipped, failed };
 }
 
-type FollowUpRow = {
+function petFromAppointment(row: {
   id: string;
-  customer_id: string;
-  visit_id: string | null;
-  pet_id: string;
   status: string;
-  service_ended_at: string | null;
-  followup_sent_at: string | null;
-  pets?: { name: string | null } | { name: string | null }[] | null;
-  profiles?:
-    | {
-        email: string | null;
-        first_name: string | null;
-        phone: string | null;
-      }
-    | {
-        email: string | null;
-        first_name: string | null;
-        phone: string | null;
-      }[]
-    | null;
-};
-
-function firstRelation<T>(value: T | T[] | null | undefined): T | null {
-  if (value == null) return null;
-  return Array.isArray(value) ? (value[0] ?? null) : value;
-}
-
-function mapDog(row: FollowUpRow): FollowUpDog {
-  const profile = firstRelation(row.profiles);
-  const pet = firstRelation(row.pets);
-  const visitId = row.visit_id?.trim() || null;
+  serviceEndedAt: string | null;
+  petName: string;
+}): FollowUpPet & { name: string } {
   return {
-    appointmentId: row.id,
-    visitId,
-    scope: visitId
-      ? communicationVisitScope(visitId)
-      : communicationAppointmentScope(row.id),
+    id: row.id,
     status: row.status,
-    serviceEndedAt: row.service_ended_at,
-    followupSentAt: row.followup_sent_at,
-    petName: pet?.name ?? null,
-    customerId: row.customer_id,
-    customerEmail: profile?.email ?? "",
-    customerPhone: profile?.phone ?? null,
-    customerFirstName: profile?.first_name ?? null,
+    serviceEndedAt: row.serviceEndedAt,
+    followupSentAt: null,
+    name: row.petName,
   };
 }
 
-const DOG_SELECT = `
-  id,
-  customer_id,
-  visit_id,
-  pet_id,
-  status,
-  service_ended_at,
-  followup_sent_at,
-  pets ( name ),
-  profiles ( email, first_name, phone )
-`;
-
-export async function sendNextDayFollowUp(
-  now = new Date(),
-): Promise<FollowUpRunResult> {
-  const canQuery =
-    hourInBusinessTimezone(now) === 10 &&
-    (isEmailConfigured() || isSmsConfigured()) &&
-    hasSupabaseAdminConfig();
-  const admin = canQuery ? createAdminClient() : null;
-  const store: CommunicationClaimStore | null = admin
-    ? createSupabaseClaimStore(admin)
-    : null;
-
-  return runNextDayFollowUpJob({
-    now,
-    emailConfigured: isEmailConfigured(),
-    smsConfigured: isSmsConfigured(),
-    loadVisits: async () => {
-      if (!admin) return null;
-      const today = todayInBusinessTimezone(now);
-      const earliest = addDaysToIsoDate(today, -FOLLOW_UP_LOOKBACK_DAYS);
-      const { data, error } = await admin
-        .from("appointments")
-        .select("id, visit_id, service_ended_at, followup_sent_at, status")
-        .neq("status", "cancelled")
-        .is("followup_sent_at", null)
-        .not("service_ended_at", "is", null)
-        .gte("service_ended_at", businessDayUtcRange(earliest).start);
-      if (error) {
-        console.error("sendNextDayFollowUp lookup failed:", error.message);
-        return null;
-      }
-      const seeds = (data ?? []) as Array<{ id: string; visit_id?: string | null }>;
-      const visitIds = [
-        ...new Set(
-          seeds
-            .map((row) => row.visit_id)
-            .filter((id): id is string => Boolean(id)),
-        ),
-      ];
-      const orphanIds = seeds.filter((row) => !row.visit_id).map((row) => row.id);
-      const visits: FollowUpDog[][] = [];
-      for (const visitId of visitIds) {
-        const loaded = await admin
-          .from("appointments")
-          .select(DOG_SELECT)
-          .eq("visit_id", visitId)
-          .neq("status", "cancelled");
-        if (loaded.error) {
-          console.error(
-            "sendNextDayFollowUp visit lookup failed:",
-            visitId,
-            loaded.error.message,
-          );
-          return null;
-        }
-        const dogs = ((loaded.data ?? []) as unknown as FollowUpRow[]).map(mapDog);
-        if (dogs.length > 0) visits.push(dogs);
-      }
-      if (orphanIds.length > 0) {
-        const loaded = await admin
-          .from("appointments")
-          .select(DOG_SELECT)
-          .in("id", orphanIds)
-          .neq("status", "cancelled");
-        if (loaded.error) {
-          console.error("sendNextDayFollowUp appointment lookup failed:", loaded.error.message);
-          return null;
-        }
-        for (const row of (loaded.data ?? []) as unknown as FollowUpRow[]) {
-          visits.push([mapDog(row)]);
-        }
-      }
-      return visits;
-    },
-    deliver: async (input) => {
-      if (!store) return "unrecorded";
-      const active = input.dogs.filter((dog) => dog.status !== "cancelled");
-      const snapshotBase = {
-        notificationType: "next_day_followup",
-        audience: "customer" as const,
-        customerId: active[0]?.customerId ?? null,
-        visitId: input.visitId,
-        appointmentIds: active.map((dog) => dog.appointmentId),
-        petIds: [],
-        recipient: input.recipient,
-        subject: input.subject,
-        bodyText: input.bodyText,
-        bodyHtml: input.bodyHtml,
-        replyTo: null,
-        idempotencyKey: communicationIdempotencyKey({
-          channel: input.channel,
-          notificationType: "next_day_followup",
-          audience: "customer",
-          scope: input.scope,
-          fingerprint: "-",
-        }),
-      };
-      return deliverTrackedNotice({
-        store,
-        snapshot:
-          input.channel === "email"
-            ? { ...snapshotBase, channel: "email", provider: "resend" }
-            : { ...snapshotBase, channel: "sms", provider: "twilio" },
-        send: async () => {
-          const result =
-            input.channel === "email"
-              ? await sendTrackedEmail({
-                  from: customerFromAddress(),
-                  to: input.recipient,
-                  subject: input.subject ?? "Checking in",
-                  text: input.bodyText,
-                  html: input.bodyHtml ?? undefined,
-                })
-              : await sendTrackedSms({ to: input.recipient, body: input.bodyText });
-          if (result.outcome === "failed" && /not configured/i.test(result.error)) {
-            return { outcome: "failed", error: "missing_config" } satisfies ProviderAttempt;
-          }
-          if (result.outcome === "accepted" && input.channel === "sms") {
-            await recordCustomerSms({
-              direction: "outbound",
-              phone: input.recipient,
-              body: input.bodyText,
-              customerId: active[0]?.customerId ?? null,
-              customerName: active[0]?.customerFirstName ?? null,
-              petNames: active.map((dog) => dog.petName ?? "").filter(Boolean),
-            });
-          }
-          return result;
-        },
-      });
-    },
-    markSent: async (appointmentIds, sentAt) => {
-      if (!admin || appointmentIds.length === 0) return false;
-      const { error } = await admin
-        .from("appointments")
-        .update({ followup_sent_at: sentAt })
-        .in("id", appointmentIds);
-      if (error) {
-        console.error("sendNextDayFollowUp mark failed:", error.message);
-        return false;
-      }
-      return true;
-    },
+async function loadVisitFollowUpPets(
+  visitId: string,
+): Promise<Array<FollowUpPet & { name: string }> | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("appointments")
+    .select("id, status, service_ended_at, followup_sent_at, pets ( name )")
+    .eq("visit_id", visitId);
+  if (error) {
+    console.error("sendNextDayFollowUp visit load failed:", error.message);
+    return null;
+  }
+  return (data ?? []).map((row) => {
+    const pet = Array.isArray(row.pets) ? row.pets[0] : row.pets;
+    return {
+      id: row.id as string,
+      status: row.status as string,
+      serviceEndedAt: (row.service_ended_at as string | null) ?? null,
+      followupSentAt: (row.followup_sent_at as string | null) ?? null,
+      name: pet?.name?.trim() || "your dog",
+    };
   });
 }

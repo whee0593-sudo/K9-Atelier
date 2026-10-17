@@ -7,8 +7,8 @@ import type {
 } from "@/lib/appointments/types";
 import { isFrozenAuthUser } from "@/lib/auth/frozen-account";
 import { fetchCustomerContact } from "@/lib/email/appointment-context";
+import { notifyMerchantVisitConfirmedFromVisit } from "@/lib/communications/merchant-notices";
 import { notifyCustomerAppointmentConfirmed } from "@/lib/email/appointment-mails";
-import { notifyMerchantVisitConfirmedFromAppointments } from "@/lib/communications/merchant-notices";
 import {
   issueOffSessionSetupIntent,
   listPaymentMethodsForCustomer,
@@ -268,8 +268,10 @@ export async function confirmStaffCreatedBooking(input: {
   );
   const appointment = appointments[0];
   if (!appointment) return { error: "not_found" };
-
-  let contact: Awaited<ReturnType<typeof fetchCustomerContact>> = null;
+  let contact: Awaited<ReturnType<typeof fetchCustomerContact>> | {
+    email: string;
+    name: string | null;
+  } | null = null;
   try {
     contact =
       (await fetchCustomerContact(result.user.id)) ??
@@ -282,9 +284,8 @@ export async function confirmStaffCreatedBooking(input: {
   } catch (emailError) {
     console.error("confirmStaffCreatedBooking email failed:", emailError);
   }
-
   try {
-    await notifyMerchantVisitConfirmedFromAppointments(appointments, {
+    await notifyMerchantVisitConfirmedFromVisit(appointment.visitId, {
       customerName: contact?.name ?? (result.firstName || null),
       replyTo: contact?.email ?? result.email ?? null,
     });
