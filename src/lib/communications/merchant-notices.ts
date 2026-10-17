@@ -2,6 +2,7 @@ import { mapAppointmentRowToRecord } from "@/lib/appointments/map";
 import type { AppointmentRecord, AppointmentRow } from "@/lib/appointments/types";
 import { dispatchMerchantChannel } from "@/lib/communications/dispatch";
 import {
+  merchantAppointmentScope,
   merchantIdempotencyKey,
   merchantVisitScope,
 } from "@/lib/communications/idempotency";
@@ -36,7 +37,7 @@ export type MerchantPetLine = {
 };
 
 export type MerchantVisitFacts = {
-  visitId: string;
+  visitId: string | null;
   customerId: string | null;
   customerName?: string | null;
   replyTo?: string | null;
@@ -86,8 +87,17 @@ export function factsFromAppointments(
   appointments: AppointmentRecord[],
   extra?: { customerName?: string | null; replyTo?: string | null },
 ): MerchantVisitFacts | null {
-  const visitId = appointments.find((row) => row.visitId)?.visitId ?? null;
-  if (!visitId) return null;
+  const visitIds = [
+    ...new Set(
+      appointments
+        .map((row) => row.visitId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  if (visitIds.length > 1) return null;
+  const visitId = visitIds[0] ?? null;
+  if (visitId && appointments.some((row) => row.visitId !== visitId)) return null;
+  if (!visitId && appointments.length !== 1) return null;
   const ordered = [...appointments].sort(
     (left, right) => (left.scheduledStart ?? 0) - (right.scheduledStart ?? 0),
   );
@@ -347,7 +357,9 @@ function snapshotBase(
     idempotencyKey: merchantIdempotencyKey({
       channel,
       notificationType,
-      scope: merchantVisitScope(facts.visitId),
+      scope: facts.visitId
+        ? merchantVisitScope(facts.visitId)
+        : merchantAppointmentScope(facts.pets[0]?.appointmentId ?? ""),
       fingerprint,
     }),
   };
@@ -565,10 +577,6 @@ export async function notifyMerchantCustomerReplyC(
   },
   deps?: MerchantNotifyDeps,
 ): Promise<MerchantNotifySummary> {
-  if (!input.visitId) {
-    console.error("MERCHANT_NOTIFY_UNRECORDED", "missing-visit", CUSTOMER_REPLY_C);
-    return { email: "unrecorded", sms: "skipped" };
-  }
   const facts: MerchantVisitFacts = {
     visitId: input.visitId,
     customerId: input.customerId,
@@ -610,12 +618,36 @@ export async function notifyMerchantVisitConfirmedFromAppointments(
   extra?: { customerName?: string | null; replyTo?: string | null },
   deps?: MerchantNotifyDeps,
 ) {
-  const facts = factsFromAppointments(appointments, extra);
-  if (!facts) {
+  const visitIds = [
+    ...new Set(
+      appointments
+        .map((row) => row.visitId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  if (visitIds.length > 1) {
     console.error("MERCHANT_NOTIFY_UNRECORDED", "missing-visit");
     return { email: "unrecorded" as const, sms: "unrecorded" as const };
   }
-  return notifyMerchantVisitConfirmed(facts, deps);
+  const grouped = visitIds.length === 1
+    ? appointments.filter((row) => row.visitId === visitIds[0])
+    : [];
+  const historical = appointments.filter((row) => !row.visitId);
+  const summaries: MerchantNotifySummary[] = [];
+  if (grouped.length > 0) {
+    const facts = factsFromAppointments(grouped, extra);
+    if (facts) summaries.push(await notifyMerchantVisitConfirmed(facts, deps));
+  }
+  for (const appointment of historical) {
+    const facts = factsFromAppointments([appointment], extra);
+    if (!facts) continue;
+    summaries.push(await notifyMerchantVisitConfirmed(facts, deps));
+  }
+  if (summaries.length === 0) {
+    console.error("MERCHANT_NOTIFY_UNRECORDED", "missing-visit");
+    return { email: "unrecorded" as const, sms: "unrecorded" as const };
+  }
+  return summaries[summaries.length - 1]!;
 }
 
 const ALERT_PATTERN = /^v=(\S+) t=(\S+) c=(email|sms) fp=([\s\S]*)$/;
@@ -638,6 +670,28 @@ function channelSettled(outcome: DispatchOutcome | "not_confirmed") {
     outcome === "uncertain" ||
     outcome === "duplicate"
   );
+}
+
+async function loadAppointmentFacts(appointmentId: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("appointments")
+    .select(
+      `
+      id, customer_id, pet_id, visit_id, service_id, service_name,
+      add_on_ids, add_on_options, address_street, address_city, address_state, address_zip,
+      travel_distance_miles, travel_fee, appointment_date, appointment_time, scheduled_start,
+      time_preference, timezone, estimated_total, new_client_deposit,
+      vaccination_status_at_booking, status, confirmed_at, created_at,
+      pets ( name, breed )
+    `,
+    )
+    .eq("id", appointmentId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return factsFromAppointments([
+    mapAppointmentRowToRecord(data as unknown as AppointmentRow),
+  ]);
 }
 
 async function loadVisitFacts(visitId: string) {
@@ -756,7 +810,11 @@ export async function replayDeferredMerchantAlerts(deps?: MerchantNotifyDeps & {
     let progress = 0;
     for (const alert of alerts) {
       const parsed = parseMerchantAlert(alert.message);
-      const facts = parsed ? await loadVisit(parsed.visitId) : null;
+      const facts = parsed
+        ? parsed.visitId.startsWith("appointment:")
+          ? await loadAppointmentFacts(parsed.visitId.slice("appointment:".length))
+          : await loadVisit(parsed.visitId)
+        : null;
       const summary =
         parsed && facts ? await replayOneAlert(parsed, facts, deps) : null;
       if (!parsed || !facts || !summary || !channelSettled(summary[parsed.channel])) {

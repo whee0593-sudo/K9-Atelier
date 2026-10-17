@@ -612,8 +612,23 @@ describe("merchant visit notices", () => {
       { ...input, visitId: null },
       box.deps,
     );
-    assert.equal(missing.email, "unrecorded");
-    assert.equal(box.emailCalls.length, 1);
+    assert.equal(missing.email, "accepted");
+    assert.equal(missing.sms, "skipped");
+    assert.equal(box.emailCalls.length, 2);
+    const historical = box.store.rows().find((row) =>
+      row.snapshot.idempotencyKey.includes("appointment:appt-1"),
+    );
+    assert.equal(
+      historical?.snapshot.idempotencyKey,
+      "email|merchant_customer_reply_c|staff|appointment:appt-1|appt-1",
+    );
+    assert.equal(historical?.snapshot.visitId, null);
+    const again = await notifyMerchantCustomerReplyC(
+      { ...input, visitId: null },
+      box.deps,
+    );
+    assert.equal(again.email, "duplicate");
+    assert.equal(box.emailCalls.length, 2);
   });
 
   it("keeps a skipped replay queued and does not resend an uncertain outcome", async () => {

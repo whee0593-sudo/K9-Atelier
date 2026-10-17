@@ -17,10 +17,16 @@ export type DispatchMerchantChannelInput = {
   send?: () => Promise<ProviderSendResult>;
 };
 
+function alertLocator(snapshot: CommunicationSnapshot) {
+  if (snapshot.visitId) return snapshot.visitId;
+  const appointmentId = snapshot.appointmentIds[0]?.trim();
+  return appointmentId ? `appointment:${appointmentId}` : "missing";
+}
+
 function alertMessage(snapshot: CommunicationSnapshot) {
   const parts = snapshot.idempotencyKey.split("|");
   const fingerprint = parts.length >= 5 ? parts.slice(4).join("|") : "-";
-  return `v=${snapshot.visitId} t=${snapshot.notificationType} c=${snapshot.channel} fp=${fingerprint}`;
+  return `v=${alertLocator(snapshot)} t=${snapshot.notificationType} c=${snapshot.channel} fp=${fingerprint}`;
 }
 
 async function claimWithOneRetry(

@@ -16,7 +16,7 @@ export type CommunicationSnapshot = {
   channel: CommunicationChannel;
   notificationType: string;
   customerId: string | null;
-  visitId: string;
+  visitId: string | null;
   appointmentIds: string[];
   petIds: string[];
   recipient: string;

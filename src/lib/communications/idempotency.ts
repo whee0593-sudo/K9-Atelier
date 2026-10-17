@@ -25,6 +25,11 @@ export function merchantVisitScope(visitId: string) {
   return `visit:${visitId}`;
 }
 
+/** Historical appointment that was saved before it had a visit. */
+export function merchantAppointmentScope(appointmentId: string) {
+  return `appointment:${appointmentId.trim().toLowerCase()}`;
+}
+
 /** Short hash stored on alerts. The raw recipient and body stay out of that table. */
 export function idempotencyKeyHash(key: string) {
   return createHash("sha256").update(key).digest("hex").slice(0, 24);
