@@ -93,16 +93,48 @@ describe("LocalBusiness entity fields", () => {
     assert.equal(hours[0].opens, "09:00");
     assert.equal(hours[0].closes, "17:00");
 
+    assert.equal(
+      entity.description,
+      "A private mobile pet spa for small breeds, providing gentle, personalized one-on-one dog grooming throughout Palm Beach, Palm Beach Gardens, Jupiter, Jupiter Island, Tequesta and West Palm Beach.",
+    );
+
     const areas = entity.areaServed as JsonLdNode[];
     assert.deepEqual(
       areas.map((area) => area.name),
-      ["Jupiter", "Palm Beach Gardens", "West Palm Beach"],
+      [
+        "Palm Beach",
+        "Palm Beach Gardens",
+        "Jupiter",
+        "Jupiter Island",
+        "Tequesta",
+        "West Palm Beach",
+      ],
     );
     for (const area of areas) {
       assert.equal(area["@type"], "City");
       const state = area.containedInPlace as JsonLdNode;
       assert.equal(state["@type"], "State");
       assert.equal(state.name, "Florida");
+      const country = state.containedInPlace as JsonLdNode;
+      assert.equal(country["@type"], "Country");
+      assert.equal(country.name, "United States");
+      assert.equal(country.alternateName, "US");
     }
+
+    assert.deepEqual(entity.knowsAbout, [
+      "Mobile Dog Grooming",
+      "Full Grooming",
+      "Hand Stripping",
+      "Show-Level Long-Coat Care",
+      "Extra-Gentle Senior Grooming",
+    ]);
+
+    const address = entity.address as JsonLdNode;
+    assert.equal(address.streetAddress, undefined);
+    assert.equal(address.postalCode, undefined);
+
+    const services = graph.filter((node) => typesOf(node).includes("Service"));
+    assert.equal(services.length, 0);
+    assert.equal(JSON.stringify(data).includes('"Service"'), false);
   });
 });
