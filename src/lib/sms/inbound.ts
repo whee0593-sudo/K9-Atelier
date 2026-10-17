@@ -4,8 +4,7 @@ import { mapAppointmentRowToAdminRecord } from "@/lib/appointments/map";
 import type { AppointmentRow } from "@/lib/appointments/types";
 import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
 import { contactFromAdminAppointment } from "@/lib/email/appointment-context";
-import { business } from "@/lib/business";
-import { sendEmail } from "@/lib/email/resend";
+import { notifyMerchantCustomerReplyC } from "@/lib/communications/merchant-notices";
 import { phonesMatch } from "@/lib/sms/phone";
 import { sendSms } from "@/lib/sms/twilio";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
@@ -21,6 +20,7 @@ import { handleStaffPhoneReply } from "@/lib/sms/staff-reply";
 const INBOUND_SELECT = `
   id,
   customer_id,
+  visit_id,
   pet_id,
   service_id,
   service_name,
@@ -184,19 +184,29 @@ export async function handleInboundCustomerSms(input: {
   await sendSms({ to: input.from, body: reply });
 
   if (!already) {
-    await sendEmail({
-      to: business.brand.email,
-      subject: `[K9 Atelier] Customer confirmed — ${appointment.petName}`,
-      text: [
-        `${contact?.name ?? contact?.email ?? "A customer"} replied ${input.body.trim()} to confirm.`,
-        "",
-        `Pet: ${appointment.petName}`,
-        `Service: ${appointment.serviceName}`,
-        `Date: ${dateLabel} · ${appointment.appointmentTime}`,
-        "",
-        "This is the customer SMS confirmation. It does not change staff/vaccination booking status.",
-      ].join("\n"),
-    });
+    try {
+      await notifyMerchantCustomerReplyC({
+        visitId: appointment.visitId ?? null,
+        customerId: appointment.customerId,
+        customerName: contact?.name ?? null,
+        replyTo: contact?.email ?? null,
+        appointmentId: appointment.id,
+        petId: appointment.petId,
+        petName: appointment.petName,
+        serviceName: appointment.serviceName,
+        whenLabel: `${dateLabel}, ${appointment.appointmentTime}`,
+        addressLabel: [
+          appointment.addressStreet,
+          appointment.addressCity,
+          appointment.addressState,
+          appointment.addressZip,
+        ]
+          .filter(Boolean)
+          .join(", "),
+      });
+    } catch (error) {
+      console.error("customer reply C merchant notify failed:", error);
+    }
   }
 
   return { handled: "yes", already, appointmentId: appointment.id };

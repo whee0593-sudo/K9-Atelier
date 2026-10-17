@@ -8,6 +8,7 @@ import type {
 import { isFrozenAuthUser } from "@/lib/auth/frozen-account";
 import { fetchCustomerContact } from "@/lib/email/appointment-context";
 import { notifyCustomerAppointmentConfirmed } from "@/lib/email/appointment-mails";
+import { notifyMerchantVisitConfirmedFromAppointments } from "@/lib/communications/merchant-notices";
 import {
   issueOffSessionSetupIntent,
   listPaymentMethodsForCustomer,
@@ -30,6 +31,7 @@ const APPOINTMENT_SELECT = `
   id,
   customer_id,
   pet_id,
+  visit_id,
   service_id,
   service_name,
   add_on_ids,
@@ -261,9 +263,15 @@ export async function confirmStaffCreatedBooking(input: {
     return { error: "not_found" };
   }
 
-  const appointment = mapAppointmentRowToRecord(data[0] as AppointmentRow);
+  const appointments = (data as unknown as AppointmentRow[]).map(
+    mapAppointmentRowToRecord,
+  );
+  const appointment = appointments[0];
+  if (!appointment) return { error: "not_found" };
+
+  let contact: Awaited<ReturnType<typeof fetchCustomerContact>> = null;
   try {
-    const contact =
+    contact =
       (await fetchCustomerContact(result.user.id)) ??
       (result.email
         ? { email: result.email, name: result.firstName || null }
@@ -273,6 +281,18 @@ export async function confirmStaffCreatedBooking(input: {
     }
   } catch (emailError) {
     console.error("confirmStaffCreatedBooking email failed:", emailError);
+  }
+
+  try {
+    await notifyMerchantVisitConfirmedFromAppointments(appointments, {
+      customerName: contact?.name ?? (result.firstName || null),
+      replyTo: contact?.email ?? result.email ?? null,
+    });
+  } catch (merchantError) {
+    console.error(
+      "confirmStaffCreatedBooking merchant notify failed:",
+      merchantError,
+    );
   }
 
   return {
