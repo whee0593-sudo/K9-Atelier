@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { siteUrl } from "@/lib/email/resend";
+import { siteUrl } from "@/lib/email/site-url";
 import type { CustomerByPhone } from "@/lib/sms/customer-by-phone";
 import { formatPetAndOwnerLabel } from "@/lib/sms/inbox-copy";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";

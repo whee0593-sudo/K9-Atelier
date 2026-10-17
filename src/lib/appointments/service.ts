@@ -26,6 +26,7 @@ import {
   fetchAppointmentAdminRecord,
   fetchCustomerContact,
 } from "@/lib/email/appointment-context";
+import { notifyMerchantVisitConfirmedFromVisit } from "@/lib/communications/merchant-notices";
 import {
   sendAppointmentCreatedEmails,
   sendAppointmentStatusEmails,
@@ -371,18 +372,31 @@ export async function createAppointment(
   }
 
   if (saved.created) {
+    let contact:
+      | Awaited<ReturnType<typeof fetchCustomerContact>>
+      | { email: string; name: null }
+      | null = null;
     try {
-      const contact =
+      contact =
         (await fetchCustomerContact(user.id)) ??
         (user.email ? { email: user.email, name: null } : null);
       if (contact) {
         await sendAppointmentCreatedEmails(appointment, {
           ...contact,
-          phone: contact.phone ?? input.customerPhone,
+          phone:
+            ("phone" in contact ? contact.phone : null) ?? input.customerPhone,
         });
       }
     } catch (emailError) {
       console.error("createAppointment email failed:", emailError);
+    }
+    try {
+      await notifyMerchantVisitConfirmedFromVisit(appointment.visitId, {
+        customerName: contact?.name ?? null,
+        replyTo: contact?.email ?? null,
+      });
+    } catch (merchantError) {
+      console.error("createAppointment merchant notify failed:", merchantError);
     }
   }
 
@@ -602,7 +616,7 @@ export async function sendAppointmentEnRouteNotification(
     "@/lib/sms/appointment-sms"
   );
   const sent = await sendAppointmentEnRouteSms(appointment, contact);
-  if (!sent) return { error: "server" };
+  if (sent !== "delivered") return { error: "server" };
 
   const { error: markError } = await admin
     .from("appointments")

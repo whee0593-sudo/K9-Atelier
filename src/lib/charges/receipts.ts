@@ -1,5 +1,7 @@
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import { getBookAgainUrl, getGoogleWriteReviewUrl } from "@/lib/business";
+import { buildCommunicationContext } from "@/lib/communications/context";
+import { isCommunicationAccepted } from "@/lib/communications/result";
 import { isEmailConfigured, sendEmail, siteUrl } from "@/lib/email/resend";
 import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
@@ -47,12 +49,24 @@ export async function sendChargeReceiptEmail(
     charge,
     paymentMethodLabel ?? charge.billSnapshot?.paymentMethodLabel,
   );
-  return sendEmail({
-    to: appointment.customerEmail,
-    subject: letter.subject,
-    text: letter.text,
-    html: letter.html,
-  });
+  return isCommunicationAccepted(
+    await sendEmail({
+      to: appointment.customerEmail,
+      subject: letter.subject,
+      text: letter.text,
+      html: letter.html,
+      communication: buildCommunicationContext({
+        notificationType: "payment_receipt",
+        recipient: appointment.customerEmail,
+        customerId: appointment.customerId,
+        visitId: appointment.visitId,
+        appointmentIds: [appointment.id],
+        petIds: [appointment.petId],
+        dedupe: appointment.visitId ? "visit" : "appointment",
+        fingerprint: charge.id,
+      }),
+    }),
+  );
 }
 
 export async function sendChargeReceiptSms(
@@ -62,7 +76,22 @@ export async function sendChargeReceiptSms(
   if (!appointment.customerPhone || !isSmsConfigured()) return false;
   const to = normalizePhoneToE164(appointment.customerPhone);
   if (!to) return false;
-  return sendSms({ to, body: buildChargeReceiptSmsText(appointment, charge) });
+  return isCommunicationAccepted(
+    await sendSms({
+      to,
+      body: buildChargeReceiptSmsText(appointment, charge),
+      communication: buildCommunicationContext({
+        notificationType: "payment_receipt",
+        recipient: to,
+        customerId: appointment.customerId,
+        visitId: appointment.visitId,
+        appointmentIds: [appointment.id],
+        petIds: [appointment.petId],
+        dedupe: appointment.visitId ? "visit" : "appointment",
+        fingerprint: charge.id,
+      }),
+    }),
+  );
 }
 
 export function buildAfterVisitThankYouSms(appointment: AdminAppointmentRecord) {
@@ -90,5 +119,19 @@ export async function sendAfterVisitThankYouSms(
   if (!appointment.customerPhone || !isSmsConfigured()) return false;
   const to = normalizePhoneToE164(appointment.customerPhone);
   if (!to) return false;
-  return sendSms({ to, body: buildAfterVisitThankYouSms(appointment) });
+  return isCommunicationAccepted(
+    await sendSms({
+      to,
+      body: buildAfterVisitThankYouSms(appointment),
+      communication: buildCommunicationContext({
+        notificationType: "payment_thank_you",
+        recipient: to,
+        customerId: appointment.customerId,
+        visitId: appointment.visitId,
+        appointmentIds: [appointment.id],
+        petIds: [appointment.petId],
+        dedupe: appointment.visitId ? "visit" : "appointment",
+      }),
+    }),
+  );
 }

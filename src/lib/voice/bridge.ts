@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { siteUrl } from "@/lib/email/resend";
+import { siteUrl } from "@/lib/email/site-url";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
 
 const TOKEN_TTL_MS = 3 * 60 * 1000;

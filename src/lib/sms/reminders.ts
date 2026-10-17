@@ -4,6 +4,7 @@ import { mapAppointmentRowToAdminRecord } from "@/lib/appointments/map";
 import type { AppointmentRow } from "@/lib/appointments/types";
 import { contactFromAdminAppointment } from "@/lib/email/appointment-context";
 import { sendAppointmentConfirmRequestSms } from "@/lib/sms/appointment-sms";
+import { groupByVisit } from "@/lib/visits/notification-scope";
 import {
   addDaysToIsoDate,
   hourInBusinessTimezone,
@@ -35,6 +36,7 @@ const REMINDER_SELECT = `
   confirmed_at,
   customer_confirmed_at,
   created_at,
+  visit_id,
   reminder_sms_sent_at,
   en_route_sms_sent_at,
   pets ( name, breed ),
@@ -82,24 +84,39 @@ export async function sendThreeDayConfirmRequestSms(): Promise<ReminderRunResult
   let skipped = 0;
   let failed = 0;
 
-  for (const row of (data ?? []) as unknown as AppointmentRow[]) {
-    const appointment = mapAppointmentRowToAdminRecord(row);
+  const appointments = ((data ?? []) as unknown as AppointmentRow[]).map(
+    mapAppointmentRowToAdminRecord,
+  );
+  for (const group of groupByVisit(appointments)) {
+    const appointment = group[0]!;
     const contact = contactFromAdminAppointment(appointment);
     if (!contact?.phone) {
       skipped += 1;
       continue;
     }
 
-    const ok = await sendAppointmentConfirmRequestSms(appointment, contact);
-    if (!ok) {
-      failed += 1;
+    const outcome = await sendAppointmentConfirmRequestSms(
+      appointment,
+      contact,
+      group.map((row) => row.petName),
+      {
+        appointmentIds: group.map((row) => row.id),
+        petIds: group.map((row) => row.petId),
+      },
+    );
+    if (outcome !== "delivered") {
+      if (outcome === "rejected") failed += 1;
+      else skipped += 1;
       continue;
     }
 
     const { error: markError } = await admin
       .from("appointments")
       .update({ reminder_sms_sent_at: new Date().toISOString() })
-      .eq("id", appointment.id);
+      .in(
+        "id",
+        group.map((row) => row.id),
+      );
 
     if (markError) {
       console.error(

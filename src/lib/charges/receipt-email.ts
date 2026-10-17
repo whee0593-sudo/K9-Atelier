@@ -19,7 +19,7 @@ import type { AppointmentChargeRecord } from "@/lib/charges/types";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import { escapeHtml, emailLogoImg } from "@/lib/email/layout";
 import { getCatalogItemDisplayLabel } from "@/lib/service-display";
-import { siteUrl } from "@/lib/email/resend";
+import { siteUrl } from "@/lib/email/site-url";
 
 const PAGE = "#F8F4ED";
 const CARD = "#FFFDFC";

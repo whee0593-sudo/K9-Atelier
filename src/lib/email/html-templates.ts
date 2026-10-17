@@ -23,7 +23,7 @@ import {
   buildBookingConfirmationEmail,
   type BookingConfirmationDetails,
 } from "@/lib/notifications";
-import { siteUrl } from "@/lib/email/resend";
+import { siteUrl } from "@/lib/email/site-url";
 import { confirmationEstimateLabel } from "@/lib/booking-price";
 import { allBookableServices } from "@/lib/services";
 

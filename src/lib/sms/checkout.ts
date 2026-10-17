@@ -1,8 +1,13 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordCustomerSms } from "@/lib/sms/inbox";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
-import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
+import { isSmsConfigured, sendSmsDelivery } from "@/lib/sms/twilio";
 import { buildCheckoutReadySms } from "@/lib/sms/checkout-copy";
+import { buildCommunicationContext } from "@/lib/communications/context";
+import { loadVisitNoticePets } from "@/lib/visits/notification-context";
+import { runVisitNotification } from "@/lib/visits/notification-ledger";
+import { petsReadyForCheckout } from "@/lib/visits/notification-scope";
+import { formatVisitPetNames } from "@/lib/visits/pet-names";
 
 function firstRelation<T>(value: unknown): T | null {
   if (value == null) return null;
@@ -17,7 +22,7 @@ export async function sendCheckoutReadySms(appointmentId: string) {
   const { data, error } = await admin
     .from("appointments")
     .select(
-      "id, customer_id, pets ( name, sex ), profiles ( first_name, last_name, phone )",
+      "id, customer_id, pet_id, visit_id, pets ( name, sex ), profiles ( first_name, last_name, phone )",
     )
     .eq("id", appointmentId)
     .maybeSingle();
@@ -39,15 +44,40 @@ export async function sendCheckoutReadySms(appointmentId: string) {
   const to = normalizePhoneToE164(profile?.phone ?? "");
   if (!to) return false;
 
-  const petName = pet?.name?.trim() || "your pet";
+  const visitId = (data.visit_id as string | null) ?? null;
+  const siblings = visitId ? await loadVisitNoticePets(visitId) : null;
+  const ready = siblings ? petsReadyForCheckout(siblings) : null;
+  if (visitId && !ready) return false;
+
+  const petNames = ready?.map((row) => row.petName) ?? [
+    pet?.name?.trim() || "your pet",
+  ];
+  const petName = formatVisitPetNames(petNames, "your pet");
   const body = buildCheckoutReadySms({
     petName,
-    sex: pet?.sex,
+    sex: ready && ready.length > 1 ? null : pet?.sex,
   });
 
   try {
-    const sent = await sendSms({ to, body });
-    if (!sent) return false;
+    const outcome = await runVisitNotification({
+      visitId,
+      event: "checkout_ready",
+      send: () =>
+        sendSmsDelivery({
+          to,
+          body,
+          communication: buildCommunicationContext({
+            notificationType: "checkout_ready",
+            recipient: to,
+            customerId: (data.customer_id as string | null) ?? null,
+            visitId,
+            appointmentIds: ready?.map((row) => row.id) ?? [appointmentId],
+            petIds: [(data.pet_id as string) ?? ""].filter(Boolean),
+            dedupe: visitId ? "visit" : "appointment",
+          }),
+        }),
+    });
+    if (outcome !== "sent") return outcome === "skipped";
     const customerName = [profile?.first_name, profile?.last_name]
       .filter(Boolean)
       .join(" ")
@@ -58,7 +88,7 @@ export async function sendCheckoutReadySms(appointmentId: string) {
       body,
       customerId: (data.customer_id as string | null) ?? null,
       customerName: customerName || null,
-      petNames: [petName],
+      petNames,
     });
     return true;
   } catch (sendError) {

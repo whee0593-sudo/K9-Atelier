@@ -1,7 +1,7 @@
 import { business } from "@/lib/business";
 import { COLORS } from "@/lib/email/cancel-confirmation";
 import { escapeHtml, emailLogoImg } from "@/lib/email/layout";
-import { siteUrl } from "@/lib/email/resend";
+import { siteUrl } from "@/lib/email/site-url";
 
 const APOSTROPHE = "\u2019";
 const EN_DASH = "\u2013";

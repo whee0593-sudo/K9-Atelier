@@ -10,6 +10,7 @@ import {
 } from "@/lib/sms/staff-compose-copy";
 import { lookupCustomerByPhone } from "@/lib/sms/customer-by-phone";
 import { recordCustomerSms } from "@/lib/sms/inbox";
+import { isCommunicationAccepted } from "@/lib/communications/result";
 import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
 
 export { STAFF_SMS_MAX_CHARS, buildStaffCustomerSms };
@@ -151,10 +152,12 @@ export async function sendStaffCustomerSms(input: {
   if (!to) return { error: "no_phone" };
 
   try {
-    const sent = await sendSms({
-      to,
-      body: buildStaffCustomerSms(message),
-    });
+    const sent = isCommunicationAccepted(
+      await sendSms({
+        to,
+        body: buildStaffCustomerSms(message),
+      }),
+    );
     if (!sent) return { error: "server" };
     const customer = await lookupCustomerByPhone(to);
     await recordCustomerSms({

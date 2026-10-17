@@ -11,6 +11,7 @@ import {
   splitStaffReply,
 } from "@/lib/sms/staff-reply-copy";
 import { readStaffReplyTarget } from "@/lib/sms/staff-reply-target";
+import { isCommunicationAccepted } from "@/lib/communications/result";
 import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
 import { getStaffVoicePhone } from "@/lib/voice/config";
 
@@ -40,13 +41,15 @@ export async function handleStaffPhoneReply(input: {
   }
 
   const customer = await lookupCustomerByPhone(to);
-  const sent = await sendSms({
-    to,
-    body:
-      message ||
-      inboundReplyTextForStaff({ body: "", mediaCount: mediaUrls.length }),
-    mediaUrls,
-  });
+  const sent = isCommunicationAccepted(
+    await sendSms({
+      to,
+      body:
+        message ||
+        inboundReplyTextForStaff({ body: "", mediaCount: mediaUrls.length }),
+      mediaUrls,
+    }),
+  );
   if (!sent) {
     await sendSms({ to: staffPhone, body: buildStaffReplyFailedSms() });
     return "failed";

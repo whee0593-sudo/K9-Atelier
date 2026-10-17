@@ -48,9 +48,12 @@ function harness(options: {
   due?: RebookReminderCandidate[];
   futureChecks?: FutureAppointmentSnapshot[][];
   claim?: boolean;
-  send?: boolean;
+  send?: boolean | "uncertain";
+  throwOnSend?: boolean;
 }) {
   const calls: string[] = [];
+  const marked: string[] = [];
+  const released: string[] = [];
   const sent: Array<{ to: string; subject: string; html: string }> = [];
   let futureIndex = 0;
   const futureChecks = options.futureChecks ?? [[]];
@@ -76,20 +79,23 @@ function harness(options: {
       calls.push("skip");
       return true;
     },
-    markSent: async (_id, sentAt) => {
+    markSent: async (id, sentAt) => {
       calls.push(`sent:${sentAt}`);
+      marked.push(id);
       return true;
     },
-    release: async () => {
+    release: async (id) => {
       calls.push("release");
+      released.push(id);
     },
     send: async (message) => {
       calls.push("send");
+      if (options.throwOnSend) throw new Error("provider timeout");
       sent.push(message);
       return options.send ?? true;
     },
   };
-  return { deps, calls, sent };
+  return { deps, calls, sent, marked, released };
 }
 
 describe("rebook reminder timing", () => {
@@ -328,5 +334,88 @@ describe("rebook reminder job", () => {
       "email_not_configured",
     );
     assert.deepEqual(unconfigured.calls, []);
+  });
+
+  it("holds the claim when the provider times out or throws", async () => {
+    const timeout = harness({
+      futureChecks: [[], []],
+      send: "uncertain",
+    });
+    const timeoutResult = await runRebookReminderJob(timeout.deps);
+    assert.deepEqual(timeoutResult, { sent: 0, skipped: 0, failed: 1 });
+    assert.equal(timeout.calls.includes("release"), false);
+    assert.deepEqual(timeout.marked, []);
+
+    const thrown = harness({
+      futureChecks: [[], []],
+      throwOnSend: true,
+    });
+    const thrownResult = await runRebookReminderJob(thrown.deps);
+    assert.deepEqual(thrownResult, { sent: 0, skipped: 0, failed: 1 });
+    assert.equal(thrown.calls.includes("release"), false);
+    assert.equal(thrown.sent.length, 0);
+  });
+
+  it("sends one email for every due dog on the same visit", async () => {
+    const { deps, sent, marked } = harness({
+      due: [
+        candidate({ visitId: "visit-1", petId: "pet-1" }),
+        candidate({
+          id: "apt-2",
+          visitId: "visit-1",
+          petId: "pet-2",
+          petName: "Otto",
+          serviceEndedAt: "2026-09-02T18:00:00.000Z",
+        }),
+      ],
+      futureChecks: [[], []],
+    });
+    const result = await runRebookReminderJob(deps);
+
+    assert.deepEqual(result, { sent: 1, skipped: 0, failed: 0 });
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0]?.subject, "Time for Lychee and Otto’s next spa visit?");
+    assert.deepEqual(marked, ["apt-1", "apt-2"]);
+  });
+
+  it("names only the finished dog when a sibling is not due yet", async () => {
+    const { deps, sent, marked, calls } = harness({
+      due: [
+        candidate({ visitId: "visit-1", petName: "Lychee" }),
+        candidate({
+          id: "apt-2",
+          visitId: "visit-1",
+          petName: "Otto",
+          serviceEndedAt: null,
+        }),
+      ],
+      futureChecks: [[], []],
+    });
+    const result = await runRebookReminderJob(deps);
+
+    assert.deepEqual(result, { sent: 1, skipped: 0, failed: 0 });
+    assert.equal(sent[0]?.subject, "Time for Lychee’s next spa visit?");
+    assert.deepEqual(marked, ["apt-1"]);
+    assert.equal(calls.filter((call) => call === "claim").length, 1);
+  });
+
+  it("releases every claimed dog when the provider rejects the visit email", async () => {
+    const { deps, released, marked } = harness({
+      due: [
+        candidate({ visitId: "visit-1" }),
+        candidate({
+          id: "apt-2",
+          visitId: "visit-1",
+          petName: "Otto",
+        }),
+      ],
+      futureChecks: [[], []],
+      send: false,
+    });
+    const result = await runRebookReminderJob(deps);
+
+    assert.deepEqual(result, { sent: 0, skipped: 0, failed: 2 });
+    assert.deepEqual(released, ["apt-1", "apt-2"]);
+    assert.deepEqual(marked, []);
   });
 });

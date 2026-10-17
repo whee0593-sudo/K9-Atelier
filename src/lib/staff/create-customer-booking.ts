@@ -40,6 +40,11 @@ import { describeStaffScheduleConflict } from "@/lib/staff/schedule-conflict";
 import { parseStaffServiceSelection } from "@/lib/staff/service-choice";
 import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { isFrozenAuthUser } from "@/lib/auth/frozen-account";
+import {
+  buildCommunicationContext,
+  communicationFingerprint,
+} from "@/lib/communications/context";
+import { isCommunicationAccepted } from "@/lib/communications/result";
 import { isEmailConfigured, sendEmail, siteUrl } from "@/lib/email/resend";
 import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
 import { digitsOnly } from "@/lib/sms/phone";
@@ -279,18 +284,32 @@ async function sendInviteMessages(
       bookUrl,
       createdAccount,
     });
-    emailed = await sendEmail({
-      to: input.email,
-      subject: email.subject,
-      text: email.text,
-      html: email.html,
-    });
+    emailed = isCommunicationAccepted(
+      await sendEmail({
+        to: input.email,
+        subject: email.subject,
+        text: email.text,
+        html: email.html,
+        communication: buildCommunicationContext({
+          notificationType: "staff_booking_invite",
+          recipient: input.email,
+          fingerprint: communicationFingerprint(bookUrl),
+        }),
+      }),
+    );
   }
   if (input.notifySms && input.phone && isSmsConfigured()) {
-    texted = await sendSms({
-      to: input.phone,
-      body: buildStaffBookingInviteSms(bookUrl),
-    });
+    texted = isCommunicationAccepted(
+      await sendSms({
+        to: input.phone,
+        body: buildStaffBookingInviteSms(bookUrl),
+        communication: buildCommunicationContext({
+          notificationType: "staff_booking_invite",
+          recipient: input.phone,
+          fingerprint: communicationFingerprint(bookUrl),
+        }),
+      }),
+    );
   }
   return { emailed, texted };
 }
@@ -806,18 +825,40 @@ export async function createStaffCustomerBooking(
         confirmUrl,
         createdAccount,
       });
-      emailed = await sendEmail({
-        to: input.email,
-        subject: email.subject,
-        text: email.text,
-        html: email.html,
-      });
+      emailed = isCommunicationAccepted(
+        await sendEmail({
+          to: input.email,
+          subject: email.subject,
+          text: email.text,
+          html: email.html,
+          communication: buildCommunicationContext({
+            notificationType: "staff_created_booking",
+            recipient: input.email,
+            customerId: userId,
+            visitId: created.visitId,
+            appointmentIds: appointments.map((entry) => entry.id),
+            petIds: appointments.map((entry) => entry.petId),
+            dedupe: "visit",
+          }),
+        }),
+      );
     }
     if (input.notifySms && input.phone && isSmsConfigured()) {
-      texted = await sendSms({
-        to: input.phone,
-        body: buildStaffCreatedBookingSms(appointment, confirmUrl, petNames),
-      });
+      texted = isCommunicationAccepted(
+        await sendSms({
+          to: input.phone,
+          body: buildStaffCreatedBookingSms(appointment, confirmUrl, petNames),
+          communication: buildCommunicationContext({
+            notificationType: "staff_created_booking",
+            recipient: input.phone,
+            customerId: userId,
+            visitId: created.visitId,
+            appointmentIds: appointments.map((entry) => entry.id),
+            petIds: appointments.map((entry) => entry.petId),
+            dedupe: "visit",
+          }),
+        }),
+      );
     }
 
     return {

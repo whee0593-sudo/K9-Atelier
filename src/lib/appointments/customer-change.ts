@@ -19,9 +19,12 @@ import {
   type CustomerContact,
 } from "@/lib/email/appointment-context";
 import {
-  notifyCustomerAppointmentChange,
-  notifyStaffNewAppointment,
-} from "@/lib/email/appointment-mails";
+  notifyMerchantRescheduleCompletedFromAppointments,
+  notifyMerchantVisitCancelledFromAppointments,
+  notifyMerchantVisitPetsChangedFromAppointments,
+} from "@/lib/communications/merchant-notices";
+import { notifyCustomerAppointmentChange } from "@/lib/email/appointment-mails";
+import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
 import { getOrCreateStripeCustomerId } from "@/lib/payments/service";
 import { business } from "@/lib/business";
 import { getStripe } from "@/lib/stripe/server";
@@ -536,6 +539,14 @@ export async function applyAppointmentChange(
       cardBrand: charged.cardBrand,
       cardLast4: charged.cardLast4,
     });
+    const previousWhenLabel = earliestChangeWhen(targetRows);
+    if (previousWhenLabel) {
+      await notifyMerchantRescheduleCompleted(
+        moved.appointments,
+        previousWhenLabel,
+        contact,
+      );
+    }
     return { ok: true, quote };
   }
 
@@ -566,7 +577,80 @@ export async function applyAppointmentChange(
     cardBrand: charged.cardBrand,
     cardLast4: charged.cardLast4,
   });
+  if (input.action === "cancel") {
+    await notifyMerchantVisitCancelled(
+      recordsFromRows(targetRows).map((row) => ({
+        ...row,
+        status: "cancelled" as const,
+      })),
+      contact,
+    );
+  }
+  if (input.action === "remove_dog") {
+    await notifyMerchantPetsChanged(
+      recordsFromRows(siblings.rows),
+      remainingAppointments,
+      contact,
+    );
+  }
   return { ok: true, quote };
+}
+
+function earliestChangeWhen(rows: ChangeRow[]) {
+  const ordered = [...rows].sort(
+    (left, right) => (left.scheduled_start ?? 0) - (right.scheduled_start ?? 0),
+  );
+  const row = ordered[0];
+  if (!row?.appointment_date || !row.appointment_time) return null;
+  return `${formatAppointmentDateLabel(row.appointment_date)}, ${row.appointment_time}`;
+}
+
+async function notifyMerchantRescheduleCompleted(
+  appointments: AppointmentRecord[],
+  previousWhenLabel: string,
+  contact: CustomerContact | null,
+) {
+  try {
+    await notifyMerchantRescheduleCompletedFromAppointments(
+      appointments,
+      previousWhenLabel,
+      {
+        customerName: contact?.name ?? null,
+        replyTo: contact?.email ?? null,
+      },
+    );
+  } catch (error) {
+    console.error("appointment reschedule merchant notify failed:", error);
+  }
+}
+
+async function notifyMerchantVisitCancelled(
+  appointments: AppointmentRecord[],
+  contact: CustomerContact | null,
+) {
+  try {
+    await notifyMerchantVisitCancelledFromAppointments(appointments, {
+      customerName: contact?.name ?? null,
+      replyTo: contact?.email ?? null,
+    });
+  } catch (error) {
+    console.error("appointment cancel merchant notify failed:", error);
+  }
+}
+
+async function notifyMerchantPetsChanged(
+  previous: AppointmentRecord[],
+  next: AppointmentRecord[],
+  contact: CustomerContact | null,
+) {
+  try {
+    await notifyMerchantVisitPetsChangedFromAppointments(previous, next, {
+      customerName: contact?.name ?? null,
+      replyTo: contact?.email ?? null,
+    });
+  } catch (error) {
+    console.error("appointment pets changed merchant notify failed:", error);
+  }
 }
 
 function recordsFromRows(rows: ChangeRow[]): AppointmentRecord[] {
@@ -897,15 +981,20 @@ async function addDogToVisit(
   }
 
   const appointment = mapAppointmentRowToRecord(data as unknown as AppointmentRow);
+  let contact: CustomerContact | null = null;
   try {
-    const contact = await fetchCustomerContact(userId);
+    contact = await fetchCustomerContact(userId);
     if (contact) {
-      await notifyStaffNewAppointment(appointment, contact);
       await notifyCustomerAppointmentChange("add_dog", appointment, contact);
     }
   } catch (emailError) {
     console.error("addDogToVisit email failed:", emailError);
   }
+  await notifyMerchantPetsChanged(
+    recordsFromRows(ordered),
+    [...recordsFromRows(ordered), appointment],
+    contact,
+  );
 
   if (visit.visit_id) {
     await compactVisitChildStarts(visit.visit_id);

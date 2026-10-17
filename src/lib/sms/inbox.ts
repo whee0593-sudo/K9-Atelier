@@ -11,6 +11,7 @@ import {
 } from "@/lib/sms/inbox-copy";
 import { normalizePhoneToE164, phonesMatch } from "@/lib/sms/phone";
 import { rememberStaffReplyTarget } from "@/lib/sms/staff-reply-target";
+import { isCommunicationAccepted } from "@/lib/communications/result";
 import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
 import { getStaffVoicePhone } from "@/lib/voice/config";
 
@@ -74,7 +75,7 @@ export async function forwardInboundSmsToStaff(input: {
 
   const customer = input.customer ?? (await lookupCustomerByPhone(input.from));
   const customerPhone = normalizePhoneToE164(input.from) ?? input.from;
-  const sent = await sendSms({
+  const sent = isCommunicationAccepted(await sendSms({
     to: staffPhone,
     body: buildStaffInboundForwardSms({
       ownerName: customer?.name ?? "Unknown",
@@ -84,7 +85,7 @@ export async function forwardInboundSmsToStaff(input: {
       mediaCount: mediaUrls.length,
     }),
     mediaUrls,
-  });
+  }));
   if (sent) {
     await rememberStaffReplyTarget({
       customerPhone,
