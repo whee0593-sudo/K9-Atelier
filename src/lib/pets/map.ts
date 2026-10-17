@@ -1,3 +1,4 @@
+import { readAllergyStatus } from "@/lib/allergies";
 import { bookingWeightLbs, readStoredWeightLbs } from "@/lib/pets/weight";
 import type { PetRecord, PetRow, PetWriteInput } from "@/lib/pets/types";
 import { parsePetRabiesStatus } from "@/lib/pets/types";
@@ -39,6 +40,8 @@ export function mapPetRowToRecord(row: PetRow): PetRecord {
     temperamentNotes: row.temperament_notes,
     healthComfortNotes: row.health_comfort_notes,
     groomingPreferences: row.grooming_preferences,
+    allergyStatus: readAllergyStatus(row.allergy_status ?? null) ?? null,
+    allergyDetails: row.allergy_details ?? null,
     rabiesStatus: parsePetRabiesStatus(row.rabies_status),
     rabiesExpirationDate: dateOnly(row.rabies_expiration_date),
     createdAt: row.created_at,
@@ -60,6 +63,8 @@ export function mapPetRecordToUiProfile(record: PetRecord): PetProfile {
     temperament: record.temperamentNotes ?? undefined,
     medicalNotes: record.healthComfortNotes ?? undefined,
     groomingPreferences: record.groomingPreferences ?? undefined,
+    allergyStatus: readAllergyStatus(record.allergyStatus ?? null) ?? null,
+    allergyDetails: record.allergyDetails ?? undefined,
     rabiesStatus: parsePetRabiesStatus(record.rabiesStatus),
     vaccineExpiration: displayedRabiesExpiration(record),
     vaccinationBookingStatus: record.vaccinationBookingStatus ?? "missing",
@@ -91,6 +96,8 @@ export function mapPetProfileToWriteInput(pet: PetProfile): PetWriteInput {
     temperamentNotes: pet.temperament ?? null,
     healthComfortNotes: pet.medicalNotes ?? null,
     groomingPreferences: pet.groomingPreferences ?? null,
+    allergyStatus: readAllergyStatus(pet.allergyStatus ?? null) ?? null,
+    allergyDetails: pet.allergyDetails ?? null,
     rabiesStatus: parsePetRabiesStatus(pet.rabiesStatus),
     rabiesExpirationDate: dateOnly(pet.vaccineExpiration),
   };
@@ -109,6 +116,9 @@ export function mapValidatedInputToInsertRow(
     temperament_notes: input.temperamentNotes ?? null,
     health_comfort_notes: input.healthComfortNotes ?? null,
     grooming_preferences: input.groomingPreferences ?? null,
+    allergy_status: input.allergyStatus ?? null,
+    allergy_details:
+      input.allergyStatus === "yes" ? input.allergyDetails ?? null : null,
     rabies_status: parsePetRabiesStatus(input.rabiesStatus),
     rabies_expiration_date: dateOnly(input.rabiesExpirationDate),
   };
@@ -135,6 +145,11 @@ export function mapValidatedInputToUpdateRow(
   }
   if (input.groomingPreferences !== undefined) {
     row.grooming_preferences = input.groomingPreferences;
+  }
+  if (input.allergyStatus !== undefined) {
+    row.allergy_status = input.allergyStatus;
+    row.allergy_details =
+      input.allergyStatus === "yes" ? input.allergyDetails ?? null : null;
   }
   if (input.rabiesStatus !== undefined) {
     row.rabies_status = parsePetRabiesStatus(input.rabiesStatus);

@@ -26,8 +26,24 @@ describe("notification migrations", () => {
     assert.match(sql(ORDER[0]!), /CREATE TABLE IF NOT EXISTS public\.visit_notifications/);
     assert.match(sql(ORDER[1]!), /CREATE SCHEMA IF NOT EXISTS private/);
     assert.match(sql(ORDER[1]!), /CREATE TABLE IF NOT EXISTS public\.communication_logs/);
-    assert.equal(/^\s*CREATE TABLE/m.test(sql(ORDER[3]!)), false);
-    assert.match(sql(ORDER[3]!), /ADD COLUMN IF NOT EXISTS provider_called_at/);
+    const compatibility = sql(ORDER[3]!);
+    assert.match(compatibility, /ADD COLUMN IF NOT EXISTS provider_called_at/);
+    assert.match(
+      compatibility,
+      /communication_logs_protect_snapshot[\s\S]*communication_logs_block_provider_retry/,
+    );
+    assert.equal(
+      /CREATE OR REPLACE FUNCTION private\.communication_logs_protect_snapshot/.test(
+        compatibility,
+      ),
+      false,
+    );
+    assert.equal(
+      /CREATE OR REPLACE FUNCTION private\.communication_logs_block_provider_retry/.test(
+        compatibility,
+      ),
+      false,
+    );
 
     const db = new PGlite();
     await db.exec(`
@@ -92,6 +108,15 @@ describe("notification migrations", () => {
       `,
     );
     assert.equal(column.rows[0]?.column_name, "provider_called_at");
+    const block = await db.query<{ count: string }>(
+      `
+        SELECT count(*)::text AS count
+        FROM pg_trigger
+        WHERE tgname = 'communication_logs_block_provider_retry'
+          AND NOT tgisinternal
+      `,
+    );
+    assert.equal(block.rows[0]?.count, "1");
     await db.close();
   });
 });

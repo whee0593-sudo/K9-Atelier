@@ -4,6 +4,7 @@ import {
   allBookableServices,
   getAddOnService,
   getServicePriceEstimate,
+  selectionRepeatsIncludedMiniTrim,
 } from "@/lib/services";
 import { getServiceDisplayName } from "@/lib/service-display";
 import { resolveReferralCategory } from "@/lib/referrals/eligible";
@@ -49,6 +50,9 @@ export function buildDefaultLineItems(
   });
 
   for (const addOnId of appointment.addOnIds) {
+    if (selectionRepeatsIncludedMiniTrim([appointment.serviceId], [addOnId])) {
+      continue;
+    }
     const addOn = getAddOnService(addOnId);
     const optionName = appointment.addOnOptions[addOnId];
     const estimate = addOn

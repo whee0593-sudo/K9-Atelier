@@ -5,7 +5,6 @@ import {
   groupServicesByCategory,
   isCreativeColoringCategory,
   isCustomCreativeDesignOption,
-  isSpaService,
   type BookableService,
 } from "@/lib/services";
 import { coloringOptionPriceLabel } from "@/lib/service-page";
@@ -13,8 +12,8 @@ import type { PetProfile } from "@/lib/pets";
 
 export const BOOKING_STEPS = [
   { id: 1, short: "Your Dog", label: "01 Your Dog" },
-  { id: 2, short: "Date & Time", label: "02 Date & Time" },
-  { id: 3, short: "Care", label: "03 Care" },
+  { id: 2, short: "Service", label: "02 Service" },
+  { id: 3, short: "Date & Time", label: "03 Date & Time" },
   { id: 4, short: "Your Details", label: "04 Your Details" },
   { id: 5, short: "Payment", label: "05 Payment" },
   { id: 6, short: "Confirm", label: "06 Confirm" },
@@ -92,22 +91,7 @@ export type BookingCareRow =
 export function bookingCareRowsForCategory(
   services: BookableService[],
 ): BookingCareRow[] {
-  const rows: BookingCareRow[] = [];
-  const spaServices: BookableService[] = [];
-
-  for (const service of services) {
-    if (isSpaService(service.id)) {
-      spaServices.push(service);
-    } else {
-      rows.push({ kind: "service", service });
-    }
-  }
-
-  if (spaServices.length) {
-    rows.push({ kind: "spa-group", services: spaServices });
-  }
-
-  return rows;
+  return services.map((service) => ({ kind: "service" as const, service }));
 }
 
 export function guestCreativeOptionNotice(optionName?: string | null) {

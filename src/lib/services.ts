@@ -1,4 +1,5 @@
 import { business, formatDuration, formatPrice } from "./business";
+import { canonicalServiceId } from "./service-catalog";
 
 export type BookingPolicyItem = {
   title: string;
@@ -114,6 +115,7 @@ export const CREATIVE_REQUIRED_BASE_IDS = [
 ] as const;
 
 export const SPA_SERVICE_IDS = [
+  "luxury-spa-day",
   "dead-sea-mud-bath",
   "aromatherapy-oil-bath",
   "sensitive-skin-treatment",
@@ -325,24 +327,49 @@ export function formatServicePrice(
 }
 
 export function supportsSeniorAddOn(serviceId: string) {
-  if (serviceId === "hand-stripping") return false;
-  return [
-    "signature-bath-care",
-    "custom-full-haircut",
-    "long-coat-show-care",
-    "dead-sea-mud-bath",
-    "aromatherapy-oil-bath",
-    "sensitive-skin-treatment",
-  ].includes(serviceId);
+  const id = canonicalServiceId(serviceId);
+  if (id === "hand-stripping") return false;
+  return (
+    [
+      "signature-bath-care",
+      "custom-full-haircut",
+      "show-level-coat-care",
+    ].includes(id) || isSpaService(id)
+  );
+}
+
+export const MINI_TRIM_ADD_ON_ID = "mini-trim";
+
+export const MINI_TRIM_ALREADY_INCLUDED_MESSAGE =
+  "Mini Trim is already included with this grooming service. Extra trimming is added only as a separate confirmed adjustment, not by charging Mini Trim again.";
+
+/** Show-Level Coat Care, Luxury Spa Day, and the full groom already include Mini Trim. */
+export function serviceIncludesMiniTrim(serviceId: string) {
+  const id = canonicalServiceId(serviceId);
+  return (
+    id === "show-level-coat-care" ||
+    id === "luxury-spa-day" ||
+    id === "custom-full-haircut"
+  );
+}
+
+export function selectionRepeatsIncludedMiniTrim(
+  serviceIds: readonly string[],
+  addOnIds: readonly string[] = [],
+) {
+  const services = serviceIds.map((id) => canonicalServiceId(id));
+  const addOns = addOnIds.map((id) => canonicalServiceId(id));
+  const included = services.some((id) => serviceIncludesMiniTrim(id));
+  const chargesMiniTrim =
+    services.includes(MINI_TRIM_ADD_ON_ID) ||
+    addOns.includes(MINI_TRIM_ADD_ON_ID);
+  return included && chargesMiniTrim;
 }
 
 export function supportsMiniTrimAddOn(serviceId: string) {
-  if (serviceId === "custom-full-haircut" || isSpaService(serviceId)) {
-    return false;
-  }
-  if (serviceId === "hand-stripping" || serviceId === "end-of-life-care") {
-    return false;
-  }
+  const id = canonicalServiceId(serviceId);
+  if (serviceIncludesMiniTrim(id) || isSpaService(id)) return false;
+  if (id === "hand-stripping" || id === "end-of-life-care") return false;
   return true;
 }
 
@@ -385,7 +412,32 @@ export function getRequiredBaseServicesForCreative() {
 }
 
 export function isSpaService(serviceId: string) {
-  return (SPA_SERVICE_IDS as readonly string[]).includes(serviceId);
+  return (SPA_SERVICE_IDS as readonly string[]).includes(
+    canonicalServiceId(serviceId),
+  );
+}
+
+export function retiredCatalogServices(): BookableService[] {
+  return business.retiredServices.map((service) => ({
+    id: service.id,
+    name: service.name,
+    description: service.description,
+    categoryId: "retired",
+    categoryName: "Retired",
+    pricingType: service.pricingType,
+    tiers: service.tiers,
+    bookableAsPrimary: false,
+  }));
+}
+
+/** Bookable catalog first, then retired care plans. Aliases share one service. */
+export function findCatalogService(serviceId: string) {
+  const id = canonicalServiceId(serviceId);
+  return (
+    allBookableServices().find((service) => service.id === id) ??
+    retiredCatalogServices().find((service) => service.id === id) ??
+    null
+  );
 }
 
 export function isCreativeColoringCategory(categoryId: string) {
@@ -468,7 +520,7 @@ export function estimateServiceDurationMinutes(
   weightLbs: number,
   addOnIds: string[] = [],
 ) {
-  const service = allBookableServices().find((item) => item.id === serviceId);
+  const service = findCatalogService(serviceId);
   const tier = service ? getTierForPet(service, weightLbs) : null;
   const min =
     tier?.durationMin ?? service?.durationMin ?? service?.durationMax ?? 60;

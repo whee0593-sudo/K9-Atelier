@@ -5,7 +5,9 @@ import { normalizePhoneToE164 } from "@/lib/sms/phone";
 import {
   allBookableServices,
   isCustomCreativeDesignSelection,
+  MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
   parseEnteredServicePrice,
+  selectionRepeatsIncludedMiniTrim,
 } from "@/lib/services";
 import {
   parseStaffServiceSelection,
@@ -371,6 +373,16 @@ export function validateStaffCustomerBookingInput(
         }
         return chosen;
       });
+      if (
+        selectionRepeatsIncludedMiniTrim(
+          selections.map((selection) => selection.serviceId),
+        )
+      ) {
+        throw new StaffBookingValidationError(
+          MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
+          `pets[${index}].serviceIds`,
+        );
+      }
       const servicePrices = selections.map((selection, serviceIndex) =>
         isCustomCreativeDesignSelection(
           selection.serviceId,
@@ -474,6 +486,23 @@ export function validateStaffCustomerBookingInput(
   const addOnIds = Array.isArray(record.addOnIds)
     ? record.addOnIds.filter((id): id is string => typeof id === "string")
     : [];
+  if (
+    pets.some((pet) =>
+      selectionRepeatsIncludedMiniTrim(
+        pet.serviceIds.length > 0
+          ? pet.serviceIds
+          : pet.serviceId
+            ? [pet.serviceId]
+            : [],
+        addOnIds,
+      ),
+    )
+  ) {
+    throw new StaffBookingValidationError(
+      MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
+      "addOnIds",
+    );
+  }
 
   const hasCompleteBooking = Boolean(
     pets.length > 0 &&

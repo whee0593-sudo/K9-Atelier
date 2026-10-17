@@ -14,6 +14,7 @@ import {
   type BookableService,
 } from "@/lib/services";
 import { getServiceDisplayName } from "@/lib/service-display";
+import { canonicalServiceId } from "@/lib/service-catalog";
 
 export const BOOKING_PRICE_DISCLAIMER =
   "Your estimated total is based on the selected services and available pet information. Final pricing may vary depending on coat condition, time required, or additional care. Any additional charges will be discussed before proceeding.";
@@ -104,7 +105,9 @@ function bookingCents(amount: number) {
 export function guestBookingSelectionError(
   input: SelectionInput,
 ): { code: "invalid_service" | "invalid_addon"; message: string } | null {
-  const service = allBookableServices().find((item) => item.id === input.serviceId);
+  const service = allBookableServices().find(
+    (item) => item.id === canonicalServiceId(input.serviceId),
+  );
   if (
     !service ||
     !service.bookableAsPrimary ||
@@ -196,7 +199,9 @@ export function quoteGuestBooking(input: {
   const selection = guestBookingSelectionError(input);
   if (selection) return { ok: false, ...selection };
 
-  const service = allBookableServices().find((item) => item.id === input.serviceId);
+  const service = allBookableServices().find(
+    (item) => item.id === canonicalServiceId(input.serviceId),
+  );
   if (!service) {
     return { ok: false, code: "invalid_service", message: "That service cannot be booked." };
   }

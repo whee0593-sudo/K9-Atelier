@@ -254,6 +254,8 @@ describe("mapValidatedInputToInsertRow", () => {
       temperament_notes: null,
       health_comfort_notes: null,
       grooming_preferences: null,
+      allergy_status: null,
+      allergy_details: null,
       rabies_status: "medical_exemption",
       rabies_expiration_date: null,
     });

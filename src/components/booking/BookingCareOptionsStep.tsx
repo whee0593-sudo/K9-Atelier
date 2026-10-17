@@ -17,6 +17,15 @@ import {
 import { petMayBenefitFromGentleCare, type PetProfile } from "@/lib/pets";
 import { bookingWeightLbs } from "@/lib/pets/weight";
 import { guestCreativeOptionNotice } from "@/lib/booking-flow";
+import { isLuxurySpaDay } from "@/lib/service-catalog";
+import {
+  ESSENTIAL_OILS_BODY,
+  ESSENTIAL_OILS_HEADING,
+  SPA_GOALS,
+  SPA_GOAL_HEADING,
+  SPA_GOAL_NOTE,
+  type SpaGoalId,
+} from "@/lib/spa-goals";
 import {
   bookingBackLinkClass,
   bookingCardClass,
@@ -35,6 +44,8 @@ type Props = {
   onOptionChange: (addOnId: string, optionName: string) => void;
   onContinue: () => void;
   onBack: () => void;
+  spaGoals?: SpaGoalId[];
+  onSpaGoalsChange?: (goals: SpaGoalId[]) => void;
 };
 
 function CareOptionCard({
@@ -85,6 +96,8 @@ export function BookingCareOptionsStep({
   onOptionChange,
   onContinue,
   onBack,
+  spaGoals = [],
+  onSpaGoalsChange,
 }: Props) {
   const [showCreativeOptions, setShowCreativeOptions] = useState(false);
   const [creativeNotice, setCreativeNotice] = useState<string | null>(null);
@@ -116,12 +129,64 @@ export function BookingCareOptionsStep({
       </button>
 
       <p className="font-body mt-8 text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
-        Care Options
+        Personalize Your Visit
       </p>
       <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
-        Personalize the Experience
+        Personalize Your Visit
       </h2>
-      <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
+      {isLuxurySpaDay(primaryService.id) ? (
+        <div className="mt-8 space-y-4">
+          <h3 className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+            {SPA_GOAL_HEADING}
+          </h3>
+          <p className="font-body text-sm leading-relaxed text-taupe">{SPA_GOAL_NOTE}</p>
+          <div className="space-y-3">
+            {SPA_GOALS.map((goal) => {
+              const selected = spaGoals.includes(goal.id);
+              return (
+                <label
+                  key={goal.id}
+                  className={`${bookingCardClass} flex cursor-pointer items-start gap-3 ${
+                    selected ? bookingCardSelectedClass : ""
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={selected}
+                    onChange={() => {
+                      const next = selected
+                        ? spaGoals.filter((id) => id !== goal.id)
+                        : [...spaGoals, goal.id];
+                      onSpaGoalsChange?.(next);
+                    }}
+                  />
+                  <span>
+                    <span className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+                      {goal.title}
+                    </span>
+                    <span className="font-body mt-2 block text-sm leading-relaxed text-taupe">
+                      {goal.description}
+                    </span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          <div className={bookingNoticeClass}>
+            <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+              {ESSENTIAL_OILS_HEADING}
+            </p>
+            <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
+              {ESSENTIAL_OILS_BODY}
+            </p>
+          </div>
+        </div>
+      ) : null}
+      <h3 className="font-body mt-10 text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+        Optional Add-On Care
+      </h3>
+      <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
         Optional finishing and coat-care services available for {pet.name}.
       </p>
 

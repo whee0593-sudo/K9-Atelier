@@ -42,6 +42,7 @@ import {
   insertGuestBooking,
 } from "@/lib/appointments/guest-booking";
 import { estimateServiceDurationMinutes } from "@/lib/services";
+import { allergySnapshotFromProfileRead } from "@/lib/allergies";
 import { snapshotServicePrice, visitArrivalFields } from "@/lib/visits/visit";
 import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
 import {
@@ -49,6 +50,45 @@ import {
   claimDayPlan,
   getBaseGeoPoint,
 } from "@/lib/appointments/schedule";
+
+export async function loadBookingAllergySnapshot(
+  customerId: string,
+  petId: string,
+  fallbackPetName: string,
+) {
+  try {
+    const admin = createAdminClient();
+    const [petResult, profileResult] = await Promise.all([
+      admin
+        .from("pets")
+        .select("name, allergy_status, allergy_details")
+        .eq("id", petId)
+        .maybeSingle(),
+      admin
+        .from("profiles")
+        .select("household_allergy_status, household_allergy_details")
+        .eq("id", customerId)
+        .maybeSingle(),
+    ]);
+    const loaded = allergySnapshotFromProfileRead({
+      petError: Boolean(petResult.error),
+      profileError: Boolean(profileResult.error),
+      pet: petResult.data,
+      profile: profileResult.data,
+      fallbackPetName,
+    });
+    if (!loaded.ok) {
+      console.error(
+        "loadBookingAllergySnapshot failed:",
+        petResult.error?.message ?? profileResult.error?.message ?? "unreadable",
+      );
+    }
+    return loaded;
+  } catch (error) {
+    console.error("loadBookingAllergySnapshot failed:", error);
+    return { ok: false as const, error: "unavailable" as const };
+  }
+}
 
 const APPOINTMENT_SELECT = `
   id,
@@ -58,6 +98,8 @@ const APPOINTMENT_SELECT = `
   service_name,
   add_on_ids,
   add_on_options,
+  spa_goals,
+  allergy_snapshot,
   address_street,
   address_city,
   address_state,
@@ -118,6 +160,7 @@ export async function createAppointment(
         | "price_changed"
         | "address_unverified"
         | "idempotency_mismatch"
+        | "allergy_unavailable"
         | "server";
       message?: string;
       quote?: BookingPriceQuote;
@@ -271,14 +314,25 @@ export async function createAppointment(
   const arrival = visitArrivalFields(schedule.scheduledStart);
   const payloadHash = guestBookingIntentHash({
     petId: input.petId,
-    serviceId: input.serviceId,
+    serviceId: quote.serviceId,
     addOnIds: input.addOnIds,
     addOnOptions: input.addOnOptions,
+    spaGoals: input.spaGoals ?? [],
     address: input.address,
     appointmentDate: input.appointmentDate,
     slotStartMinutes: input.slotStartMinutes,
     paymentMethodId: input.paymentMethodId,
   });
+  const allergy = await loadBookingAllergySnapshot(
+    user.id,
+    input.petId,
+    quote.serviceName,
+  );
+  if (!allergy.ok) {
+    console.error("createAppointment allergy profile could not be read");
+    return { error: "allergy_unavailable" };
+  }
+  const allergySnapshot = allergy.snapshot;
   const admin = createAdminClient();
   const saved = await insertGuestBooking(
     {
@@ -311,10 +365,12 @@ export async function createAppointment(
       appointment: {
         customer_id: user.id,
         pet_id: input.petId,
-        service_id: input.serviceId,
+        service_id: quote.serviceId,
         service_name: quote.serviceName,
         add_on_ids: input.addOnIds,
         add_on_options: input.addOnOptions,
+        spa_goals: input.spaGoals ?? [],
+        allergy_snapshot: allergySnapshot,
         address_street: input.address.street,
         address_city: input.address.city,
         address_state: input.address.state,
@@ -391,6 +447,7 @@ export async function createAppointment(
       console.error("createAppointment email failed:", emailError);
     }
     try {
+      // A provider or log failure is contained here. The committed visit stays.
       await notifyMerchantVisitConfirmedFromVisit(appointment.visitId, {
         customerName: contact?.name ?? null,
         replyTo: contact?.email ?? null,

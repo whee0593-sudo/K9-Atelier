@@ -79,6 +79,7 @@ export async function listStaffCustomers(): Promise<
         `
       id, email, first_name, last_name, phone, preferred_contact,
       emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
+      household_allergy_status, household_allergy_details,
       pets (
         ${PET_SELECT},
         pet_admin_notes ( notes )
@@ -694,7 +695,7 @@ export async function setStaffCustomerPassword(
 }
 
 const CREATED_PROFILE_SELECT =
-  "id, email, first_name, last_name, phone, preferred_contact, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship";
+  "id, email, first_name, last_name, phone, preferred_contact, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship, household_allergy_status, household_allergy_details";
 
 function isDuplicateAuthEmail(message: string) {
   return /already been registered|already exists|email address is already/i.test(

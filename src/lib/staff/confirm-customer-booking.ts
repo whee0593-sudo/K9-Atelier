@@ -31,6 +31,7 @@ const APPOINTMENT_SELECT = `
   id,
   customer_id,
   pet_id,
+  visit_id,
   service_id,
   service_name,
   add_on_ids,

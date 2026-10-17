@@ -1,3 +1,4 @@
+import { readAllergyStatus } from "@/lib/allergies";
 import { validateOptionalStaffPetInput, type OptionalStaffPetInput } from "@/lib/pets/validation";
 import {
   EMERGENCY_RELATIONSHIP_OPTIONS,
@@ -206,6 +207,31 @@ export function validateProfileWriteInput(body: unknown): CustomerProfileWriteIn
     );
   }
 
+  const householdAllergyStatus = readAllergyStatus(record.householdAllergyStatus);
+  if (
+    record.householdAllergyStatus !== undefined &&
+    householdAllergyStatus === undefined
+  ) {
+    throw new ProfileValidationError(
+      "Choose Yes, No known allergies, or Not sure.",
+      "householdAllergyStatus",
+    );
+  }
+  const householdAllergyDetails =
+    record.householdAllergyDetails !== undefined
+      ? readOptionalText(record, "householdAllergyDetails", 2000)
+      : undefined;
+  if (
+    householdAllergyStatus &&
+    householdAllergyStatus !== "yes" &&
+    householdAllergyDetails
+  ) {
+    throw new ProfileValidationError(
+      "Allergy details are saved only when you choose Yes.",
+      "householdAllergyDetails",
+    );
+  }
+
   return {
     firstName,
     lastName,
@@ -214,6 +240,15 @@ export function validateProfileWriteInput(body: unknown): CustomerProfileWriteIn
     emergencyContactName: readOptionalText(record, "emergencyContactName", 80),
     emergencyContactPhone: readOptionalText(record, "emergencyContactPhone", 32),
     emergencyContactRelationship,
+    ...(record.householdAllergyStatus !== undefined
+      ? {
+          householdAllergyStatus: householdAllergyStatus ?? null,
+          householdAllergyDetails:
+            householdAllergyStatus === "yes"
+              ? householdAllergyDetails ?? null
+              : null,
+        }
+      : {}),
   };
 }
 

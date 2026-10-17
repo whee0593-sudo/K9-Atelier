@@ -1,3 +1,4 @@
+import { readAllergyStatus } from "@/lib/allergies";
 import { parseDateOfBirth } from "@/lib/pet-age";
 import {
   PET_SEX_OPTIONS,
@@ -26,6 +27,8 @@ const CREATE_FIELDS = [
   "temperamentNotes",
   "healthComfortNotes",
   "groomingPreferences",
+  "allergyStatus",
+  "allergyDetails",
   "rabiesStatus",
   "rabiesExpirationDate",
 ] as const;
@@ -284,6 +287,30 @@ function validateWriteFields(
     body.groomingPreferences !== undefined
       ? normalizeOptionalText(body.groomingPreferences, "groomingPreferences", MAX_NOTES_LENGTH)
       : undefined;
+  const allergyStatus =
+    body.allergyStatus !== undefined
+      ? readAllergyStatus(body.allergyStatus)
+      : undefined;
+  if (body.allergyStatus !== undefined && allergyStatus === undefined) {
+    throw new PetValidationError(
+      "Choose Yes, No known allergies, or Not sure.",
+      "allergyStatus",
+    );
+  }
+  const allergyDetails =
+    body.allergyDetails !== undefined
+      ? normalizeOptionalText(body.allergyDetails, "allergyDetails", MAX_NOTES_LENGTH)
+      : undefined;
+  if (
+    allergyStatus &&
+    allergyStatus !== "yes" &&
+    allergyDetails
+  ) {
+    throw new PetValidationError(
+      "Allergy details are saved only when you choose Yes.",
+      "allergyDetails",
+    );
+  }
   const rabiesStatus =
     body.rabiesStatus !== undefined ? normalizeRabiesStatus(body.rabiesStatus) : undefined;
   const rabiesExpirationDate =
@@ -316,6 +343,8 @@ function validateWriteFields(
       temperamentNotes: temperamentNotes ?? null,
       healthComfortNotes: healthComfortNotes ?? null,
       groomingPreferences: groomingPreferences ?? null,
+      allergyStatus: allergyStatus ?? null,
+      allergyDetails: allergyStatus === "yes" ? allergyDetails ?? null : null,
       rabiesStatus: rabiesStatus ?? null,
       rabiesExpirationDate: rabiesExpirationDate ?? null,
     };
@@ -331,6 +360,8 @@ function validateWriteFields(
     temperamentNotes === undefined &&
     healthComfortNotes === undefined &&
     groomingPreferences === undefined &&
+    allergyStatus === undefined &&
+    allergyDetails === undefined &&
     rabiesStatus === undefined &&
     rabiesExpirationDate === undefined
   ) {
@@ -352,6 +383,16 @@ function validateWriteFields(
   }
   if (groomingPreferences !== undefined) {
     partial.groomingPreferences = groomingPreferences;
+  }
+  if (allergyStatus !== undefined) {
+    partial.allergyStatus = allergyStatus;
+    partial.allergyDetails =
+      allergyStatus === "yes" ? allergyDetails ?? null : null;
+  } else if (allergyDetails !== undefined && allergyDetails !== null) {
+    throw new PetValidationError(
+      "Choose Yes before describing allergies.",
+      "allergyStatus",
+    );
   }
   if (rabiesStatus !== undefined) partial.rabiesStatus = rabiesStatus;
   if (rabiesExpirationDate !== undefined) {

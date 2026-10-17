@@ -20,7 +20,7 @@ const SERVICE_LINKS = [
   ["/services/bath-coat-care", "Bath & Coat Care", "Bathing · Coat & skin maintenance"],
   ["/services/full-groom", "Full Grooming", "Haircuts · Styling · Coat care"],
   ["/services/hand-stripping", "Hand Stripping", "Traditional wire-coat maintenance"],
-  ["/services/spa", "Spa Rituals", "Skin · Coat · Wellness"],
+  ["/services/spa", "Luxury Spa Day", "A fully customized spa experience"],
   ["/services/color", "Creative Color", "Pet-safe color artistry"],
   ["/services/specialty-care", "Specialty Care", "Senior · Extra-gentle comfort care"],
   ["/services/add-ons", "Add-On Care", "Finishing · Coat support"],
@@ -116,7 +116,7 @@ describe("services page content", () => {
           .replace(/&amp;/g, "&")
           .replace(/\s+/g, " ");
         assert.match(visible, new RegExp(escaped));
-        assert.equal(link.text.includes("Show-Level Long-Coat Care"), false);
+        assert.equal(link.text.includes("Show-Level Coat Care"), false);
       } else {
         assert.match(link.text, new RegExp(escaped));
       }
@@ -124,9 +124,9 @@ describe("services page content", () => {
       assert.equal(SERVICES_DIRECTORY_DESCRIPTIONS[slug], description);
     }
 
-    const longCoat = links.find((item) => item.href === "/services/long-coat-care");
+    const longCoat = links.find((item) => item.href === "/services/show-level-coat-care");
     assert.ok(longCoat);
-    assert.equal(longCoat.text, "Show-Level Long-Coat Care");
+    assert.equal(longCoat.text, "Show-Level Coat Care");
     assert.equal(links.filter((item) => item.href === "/services/bath-coat-care").length, 1);
     assert.equal(hasNestedAnchor(html), false);
 

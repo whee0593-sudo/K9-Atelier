@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { replayDeferredMerchantAlerts } from "@/lib/communications/merchant-notices";
 import { sendThreeWeekRebookReminders } from "@/lib/email/rebook-reminders";
 import { sendNextDayFollowUp } from "@/lib/followup/send";
 import { sendThreeDayConfirmRequestSms } from "@/lib/sms/reminders";
@@ -20,5 +21,17 @@ export async function GET(request: Request) {
   const reminders = await sendThreeDayConfirmRequestSms();
   const followUp = await sendNextDayFollowUp();
   const rebook = await sendThreeWeekRebookReminders();
-  return NextResponse.json({ reminders, followUp, rebook });
+  let merchantReplay: { replayed: number; kept: number } | { error: string } = {
+    replayed: 0,
+    kept: 0,
+  };
+  try {
+    // Backup pass. The hourly /api/cron/merchant-notice-replay job is the timely path.
+    // Accepted, in-flight, and uncertain claims are not sent again.
+    merchantReplay = await replayDeferredMerchantAlerts();
+  } catch (error) {
+    console.error("appointment reminders merchant replay failed:", error);
+    merchantReplay = { error: "merchant_replay_failed" };
+  }
+  return NextResponse.json({ reminders, followUp, rebook, merchantReplay });
 }

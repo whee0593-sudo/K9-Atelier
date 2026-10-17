@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { AppointmentValidationError } from "@/lib/appointments/validation";
 import type { BookingPriceQuote } from "@/lib/booking-price";
 import { PRICE_CHANGED_MESSAGE } from "@/lib/booking-price";
+import { ALLERGY_PROFILE_UNAVAILABLE_MESSAGE } from "@/lib/allergies";
 import { WEIGHT_REQUIRED_MESSAGE } from "@/lib/pets/weight";
 
 export function appointmentJsonError(
@@ -36,6 +37,7 @@ export function mapAppointmentServiceError(
     | "price_changed"
     | "address_unverified"
     | "idempotency_mismatch"
+    | "allergy_unavailable"
     | "server",
   extra?: { message?: string; quote?: BookingPriceQuote },
 ) {
@@ -101,6 +103,14 @@ export function mapAppointmentServiceError(
           code: "idempotency_mismatch",
         },
         { status: 409 },
+      );
+    case "allergy_unavailable":
+      return NextResponse.json(
+        {
+          error: extra?.message ?? ALLERGY_PROFILE_UNAVAILABLE_MESSAGE,
+          code: "allergy_unavailable",
+        },
+        { status: 503 },
       );
     default:
       return appointmentJsonError("Something went wrong. Please try again.", 500);

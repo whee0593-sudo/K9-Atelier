@@ -158,7 +158,7 @@ describe("service page helpers", () => {
       BATH_COAT_PATH,
     );
     assert.equal(
-      SERVICES_NAV.find((item) => item.label === "Spa Rituals")?.href,
+      SERVICES_NAV.find((item) => item.label === "Luxury Spa Day")?.href,
       SPA_PATH,
     );
   });
@@ -220,11 +220,7 @@ describe("service page helpers", () => {
       false,
     );
     assert.deepEqual([...HAND_STRIPPING_IDS], ["hand-stripping"]);
-    assert.deepEqual([...SPA_IDS], [
-      "dead-sea-mud-bath",
-      "aromatherapy-oil-bath",
-      "sensitive-skin-treatment",
-    ]);
+    assert.deepEqual([...SPA_IDS], ["luxury-spa-day"]);
     assert.deepEqual([...COLOR_IDS], ["creative-accent-coloring"]);
     assert.deepEqual([...SPECIALTY_IDS], [
       "senior-comfort-care",

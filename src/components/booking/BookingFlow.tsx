@@ -38,6 +38,8 @@ import { CreativePairingModal } from "@/components/booking/CreativePairingModal"
 import { bookingBackLinkClass } from "@/components/booking/booking-ui";
 import { trackGoogleAdsBookingConversion } from "@/lib/google-ads";
 import { createDraftBookingPet, isPersistedPetId } from "@/lib/booking-flow";
+import { isLuxurySpaDay } from "@/lib/service-catalog";
+import type { SpaGoalId } from "@/lib/spa-goals";
 import { createCustomerPet } from "@/lib/pets/client";
 import { mapPetProfileToWriteInput } from "@/lib/pets/map";
 import { createClient } from "@/lib/supabase/client";
@@ -109,6 +111,7 @@ export function BookingFlow({
   const [showCreativePairing, setShowCreativePairing] = useState(false);
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
   const [addOnOptions, setAddOnOptions] = useState<Record<string, string>>({});
+  const [spaGoals, setSpaGoals] = useState<SpaGoalId[]>([]);
   const [address, setAddress] = useState<ServiceAddress | null>(null);
   const [travelQuote, setTravelQuote] = useState<TravelQuote | null>(null);
   const [appointmentDate, setAppointmentDate] = useState<string | null>(null);
@@ -126,7 +129,6 @@ export function BookingFlow({
     intent: string;
     key: string;
   } | null>(null);
-  const [careSlotError, setCareSlotError] = useState<string | null>(null);
   const [reserved, setReserved] = useState(false);
   const [createdAppointment, setCreatedAppointment] =
     useState<AppointmentRecord | null>(null);
@@ -162,6 +164,7 @@ export function BookingFlow({
     setCareOptionsConfirmed(false);
     setSelectedAddOnIds([]);
     setAddOnOptions({});
+    setSpaGoals([]);
     setAddress(null);
     setTravelQuote(null);
     setAppointmentDate(null);
@@ -172,7 +175,6 @@ export function BookingFlow({
     setPaymentMethod(null);
     setAcceptedPriceKey(null);
     setShowCreativePairing(false);
-    setCareSlotError(null);
   }
 
   async function handleDogContinue(pet: PetProfile) {
@@ -201,6 +203,7 @@ export function BookingFlow({
     setServiceConfirmed(false);
     setCareOptionsConfirmed(false);
     setSelectedAddOnIds([]);
+    setSpaGoals([]);
     setAddOnOptions(
       optionName ? { [service.id]: optionName } : {},
     );
@@ -217,6 +220,7 @@ export function BookingFlow({
       setCareOptionsConfirmed(false);
       setSelectedAddOnIds([]);
       setAddOnOptions({});
+      if (!isLuxurySpaDay(service.id)) setSpaGoals([]);
     }
     if (isCreativeServiceSelection(nextService)) {
       setShowCreativePairing(true);
@@ -266,61 +270,6 @@ export function BookingFlow({
     }
   }
 
-  async function confirmCareSlot() {
-    if (
-      !selectedPet ||
-      !selectedService ||
-      !travelQuote?.lat ||
-      travelQuote.lon == null ||
-      !address ||
-      !appointmentDate ||
-      slotStartMinutes == null
-    ) {
-      return false;
-    }
-    setCareSlotError(null);
-    const res = await fetch("/api/booking/availability", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        lat: travelQuote.lat,
-        lon: travelQuote.lon,
-        zip: address.zip,
-        serviceId: selectedService.id,
-        weightLbs: selectedPet.weightLbs,
-        addOnIds: selectedAddOnIds,
-        date: appointmentDate,
-        slotStartMinutes,
-      }),
-    });
-    const data = (await res.json()) as {
-      error?: string;
-      appointmentTime?: string;
-      usedPreference?: TimePreference;
-      slotStartMinutes?: number;
-    };
-    if (!res.ok) {
-      setCareSlotError(
-        data.error ??
-          "That time is no longer available for this service. Please choose another date or time.",
-      );
-      setAppointmentDate(null);
-      setAppointmentTime(null);
-      setTimePreference(null);
-      setSlotStartMinutes(null);
-      setCareOptionsConfirmed(false);
-      return false;
-    }
-    setAppointmentTime(
-      data.appointmentTime?.trim() || ARRIVAL_WINDOW_PENDING_LABEL,
-    );
-    setTimePreference(data.usedPreference ?? timePreference);
-    setSlotStartMinutes(data.slotStartMinutes ?? slotStartMinutes);
-    setCareOptionsConfirmed(true);
-    return true;
-  }
-
   const priceKey =
     selectedPet && selectedService && travelQuote
       ? [
@@ -356,6 +305,7 @@ export function BookingFlow({
           appointmentDate,
           slotStartMinutes,
           paymentMethod.id,
+          [...spaGoals].sort().join(","),
         ].join("|")
       : "";
 
@@ -377,9 +327,9 @@ export function BookingFlow({
     ? 6
     : !selectedPet
       ? 1
-      : !address || !travelQuote || !appointmentDate || slotStartMinutes == null
+      : !serviceConfirmed || !careOptionsConfirmed
         ? 2
-        : !serviceConfirmed || !careOptionsConfirmed
+        : !address || !travelQuote || !appointmentDate || slotStartMinutes == null
           ? 3
           : !owner
             ? 4
@@ -432,30 +382,7 @@ export function BookingFlow({
         />
       )}
 
-      {currentStep === 2 && selectedPet && (
-        <BookingLocationTimeStep
-          pet={selectedPet}
-          initialAddress={address}
-          initialQuote={travelQuote}
-          initialDate={appointmentDate}
-          initialSlotStartMinutes={slotStartMinutes}
-          onBack={() => {
-            setSelectedPet(null);
-            resetFromDog();
-          }}
-          onComplete={(addr, quote, date, time, preference, slotStart) => {
-            setAddress(addr);
-            setTravelQuote(quote);
-            setAppointmentDate(date);
-            setAppointmentTime(time);
-            setTimePreference(preference);
-            setSlotStartMinutes(slotStart);
-            setCareSlotError(null);
-          }}
-        />
-      )}
-
-      {currentStep === 3 && selectedPet && !serviceConfirmed && (
+      {currentStep === 2 && selectedPet && !serviceConfirmed && (
         <BookingExperienceStep
           pet={selectedPet}
           selectedServiceId={selectedService?.id ?? null}
@@ -467,10 +394,8 @@ export function BookingFlow({
           onSelect={handleServiceSelect}
           onContinue={handleExperienceContinue}
           onBack={() => {
-            setAppointmentDate(null);
-            setAppointmentTime(null);
-            setTimePreference(null);
-            setSlotStartMinutes(null);
+            setSelectedPet(null);
+            resetFromDog();
           }}
         />
       )}
@@ -485,7 +410,7 @@ export function BookingFlow({
         />
       )}
 
-      {currentStep === 3 &&
+      {currentStep === 2 &&
         selectedPet &&
         selectedService &&
         serviceConfirmed &&
@@ -495,27 +420,46 @@ export function BookingFlow({
             primaryService={selectedService}
             selectedIds={selectedAddOnIds}
             addOnOptions={addOnOptions}
+            spaGoals={spaGoals}
+            onSpaGoalsChange={setSpaGoals}
             onToggle={toggleAddOn}
             onOptionChange={handleAddOnOptionChange}
-            onContinue={() => {
-              void confirmCareSlot();
-            }}
+            onContinue={() => setCareOptionsConfirmed(true)}
             onBack={() => {
               setServiceConfirmed(false);
               setSelectedAddOnIds([]);
               setAddOnOptions({});
+              setSpaGoals([]);
             }}
           />
         )}
 
-      {careSlotError && currentStep === 2 ? (
-        <p
-          className="font-body rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
-          role="alert"
-        >
-          {careSlotError}
-        </p>
-      ) : null}
+      {currentStep === 3 && selectedPet && selectedService && (
+        <BookingLocationTimeStep
+          pet={selectedPet}
+          serviceId={selectedService.id}
+          addOnIds={selectedAddOnIds}
+          initialAddress={address}
+          initialQuote={travelQuote}
+          initialDate={appointmentDate}
+          initialSlotStartMinutes={slotStartMinutes}
+          onBack={() => {
+            setCareOptionsConfirmed(false);
+            setAppointmentDate(null);
+            setAppointmentTime(null);
+            setTimePreference(null);
+            setSlotStartMinutes(null);
+          }}
+          onComplete={(addr, quote, date, time, preference, slotStart) => {
+            setAddress(addr);
+            setTravelQuote(quote);
+            setAppointmentDate(date);
+            setAppointmentTime(time);
+            setTimePreference(preference);
+            setSlotStartMinutes(slotStart);
+          }}
+        />
+      )}
 
       {currentStep === 4 && selectedPet && (
         <BookingOwnerStep
@@ -528,9 +472,16 @@ export function BookingFlow({
               smsConsent: false,
               photoMarketingConsent: false,
               servicePoliciesConsent: false,
+              householdAllergyStatus: null,
+              householdAllergyDetails: "",
             }
           }
-          onBack={() => setCareOptionsConfirmed(false)}
+          onBack={() => {
+            setAppointmentDate(null);
+            setAppointmentTime(null);
+            setTimePreference(null);
+            setSlotStartMinutes(null);
+          }}
           onOpenPolicy={openPolicies}
           onComplete={setOwner}
         />
@@ -574,6 +525,7 @@ export function BookingFlow({
             service={selectedService}
             addOnIds={selectedAddOnIds}
             addOnOptions={addOnOptions}
+            spaGoals={spaGoals}
             address={address}
             travelQuote={travelQuote}
             appointmentDate={appointmentDate}

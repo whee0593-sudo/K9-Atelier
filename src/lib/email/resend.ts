@@ -133,6 +133,62 @@ export function emailWasAccepted(result: CommunicationSendResult) {
   return isCommunicationAccepted(result);
 }
 
+export type TrackedEmailResult =
+  | { outcome: "accepted"; providerMessageId: string }
+  | { outcome: "failed"; error: string }
+  | { outcome: "uncertain"; error: string };
+
+/** Merchant path. `from` is required so the merchant inbox is never the sender. */
+export async function sendTrackedEmail(
+  input: SendEmailInput & { from: string },
+): Promise<TrackedEmailResult> {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) {
+    return { outcome: "failed", error: "RESEND_API_KEY is not configured" };
+  }
+
+  const recipients = Array.isArray(input.to) ? input.to : [input.to];
+  const payload: Record<string, unknown> = {
+    from: input.from,
+    to: recipients,
+    subject: input.subject,
+    text: input.text,
+  };
+  if (input.html) payload.html = input.html;
+  if (input.replyTo) payload.reply_to = input.replyTo;
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    const body = await response.text();
+    if (!response.ok) {
+      const error = `Resend ${response.status}`;
+      return response.status >= 500
+        ? { outcome: "uncertain", error }
+        : { outcome: "failed", error };
+    }
+    let providerMessageId = "";
+    try {
+      const parsed = JSON.parse(body) as { id?: unknown };
+      if (typeof parsed.id === "string") providerMessageId = parsed.id;
+    } catch {
+      providerMessageId = "";
+    }
+    if (!providerMessageId) {
+      return { outcome: "uncertain", error: "Resend response did not include an id" };
+    }
+    return { outcome: "accepted", providerMessageId };
+  } catch {
+    return { outcome: "uncertain", error: "Resend request did not finish" };
+  }
+}
+
 export function siteUrl(path: string) {
   return buildSiteUrl(path);
 }

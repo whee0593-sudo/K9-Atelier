@@ -43,7 +43,7 @@ describe("booking price summary", () => {
       />,
     );
     assert.match(html, /Selected Service/);
-    assert.match(html, /The Signature Bath/);
+    assert.match(html, /Signature Bath/);
     assert.match(html, /Estimated Service Price/);
     assert.match(html, /From \$90/);
     assert.match(html, /Add-On Care/);
@@ -189,7 +189,7 @@ describe("booking confirm step", () => {
     assert.match(html, /Pet/);
     assert.match(html, /Bella/);
     assert.match(html, /Selected Service/);
-    assert.match(html, /The Signature Bath/);
+    assert.match(html, /Signature Bath/);
     assert.match(html, /Add-On Care/);
     assert.match(html, /Appointment Date/);
     assert.match(html, /October 20, 2026/);

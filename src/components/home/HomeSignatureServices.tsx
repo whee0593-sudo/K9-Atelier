@@ -4,8 +4,8 @@ import { SectionIntro } from "@/components/luxury/SectionIntro";
 
 const services = [
   {
-    title: "The Signature Bath",
-    body: "Coat-specific cleansing, conditioning, hand drying and meticulous finishing.",
+    title: "Signature Bath",
+    body: "Bath, blow-dry, and brush-out. Nail, ear, and teeth care included.",
     price: "From $90",
     href: "/services/bath-coat-care",
     cta: "Discover",
@@ -18,11 +18,11 @@ const services = [
     cta: "Discover",
   },
   {
-    title: "Spa Rituals",
-    body: "Thoughtfully selected skin, coat and wellness rituals inspired by the quiet luxury of a private hotel spa.",
+    title: "Luxury Spa Day",
+    body: "A fully customized, relaxing spa experience for your pup. Nail, ear, and teeth care included. Mini trim included.",
     price: "From $140",
     href: "/services/spa",
-    cta: "Explore Spa Rituals",
+    cta: "Discover",
   },
 ] as const;
 

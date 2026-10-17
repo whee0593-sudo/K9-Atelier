@@ -18,13 +18,13 @@ import {
   fetchCustomerContact,
   type CustomerContact,
 } from "@/lib/email/appointment-context";
+import { notifyCustomerAppointmentChange } from "@/lib/email/appointment-mails";
+import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
 import {
   notifyMerchantRescheduleCompletedFromAppointments,
   notifyMerchantVisitCancelledFromAppointments,
   notifyMerchantVisitPetsChangedFromAppointments,
 } from "@/lib/communications/merchant-notices";
-import { notifyCustomerAppointmentChange } from "@/lib/email/appointment-mails";
-import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
 import { getOrCreateStripeCustomerId } from "@/lib/payments/service";
 import { business } from "@/lib/business";
 import { getStripe } from "@/lib/stripe/server";
@@ -41,6 +41,9 @@ import {
   estimateServiceDurationMinutes,
   getServicePriceEstimate,
 } from "@/lib/services";
+import { canonicalServiceId, isRetiredSpaService } from "@/lib/service-catalog";
+import { spaGoalsForService } from "@/lib/spa-goals";
+import { loadBookingAllergySnapshot } from "@/lib/appointments/service";
 import { resolveAppointmentDuration } from "@/lib/visits/duration";
 import {
   hasVisitSequence,
@@ -119,6 +122,7 @@ export type ApplyAppointmentChangeInput = {
   slotStartMinutes?: number;
   petId?: string;
   serviceId?: string;
+  spaGoals?: string[];
   removeAppointmentId?: string;
 };
 
@@ -477,6 +481,7 @@ export async function applyAppointmentChange(
         | "payment_failed"
         | "misconfigured"
         | "weight_required"
+        | "allergy_unavailable"
         | "server";
     }
 > {
@@ -529,6 +534,7 @@ export async function applyAppointmentChange(
     const slotStartMinutes =
       input.slotStartMinutes ??
       (input.timePreference === "afternoon" ? 12 * 60 : 9 * 60);
+    const previousWhenLabel = earliestChangeWhen(targetRows);
     const moved = await rescheduleRows(targetRows, input.date, slotStartMinutes);
     if ("error" in moved) return moved;
     await sendChangeConfirmationEmail({
@@ -539,7 +545,6 @@ export async function applyAppointmentChange(
       cardBrand: charged.cardBrand,
       cardLast4: charged.cardLast4,
     });
-    const previousWhenLabel = earliestChangeWhen(targetRows);
     if (previousWhenLabel) {
       await notifyMerchantRescheduleCompleted(
         moved.appointments,
@@ -844,7 +849,8 @@ async function addDogToVisit(
         | "not_found"
         | "payment_required"
         | "slot_unavailable"
-        | "weight_required";
+        | "weight_required"
+        | "allergy_unavailable";
     }
 > {
   if (!input.petId || !input.serviceId) return { error: "conflict" as const };
@@ -877,8 +883,22 @@ async function addDogToVisit(
     console.error("addDogToVisit vaccination summary failed:", vaccinationError);
   }
 
-  const service = allBookableServices().find((entry) => entry.id === input.serviceId);
+  const serviceId = canonicalServiceId(input.serviceId);
+  if (isRetiredSpaService(serviceId)) return { error: "conflict" as const };
+  const service = allBookableServices().find((entry) => entry.id === serviceId);
   if (!service) return { error: "conflict" as const };
+  const spaGoals = spaGoalsForService(service.id, input.spaGoals);
+  if (!spaGoals.ok) return { error: "conflict" as const };
+  const allergy = await loadBookingAllergySnapshot(
+    userId,
+    input.petId,
+    service.name,
+  );
+  if (!allergy.ok) {
+    console.error("addDogToVisit allergy profile could not be read");
+    return { error: "allergy_unavailable" as const };
+  }
+  const allergySnapshot = allergy.snapshot;
 
   const estimate = getServicePriceEstimate(service, bookedWeight);
   const paymentMethod = await resolvePaymentMethod(
@@ -948,6 +968,8 @@ async function addDogToVisit(
       service_name: getServiceDisplayName(service.id, service.name),
       add_on_ids: [],
       add_on_options: {},
+      spa_goals: spaGoals.goals,
+      allergy_snapshot: allergySnapshot,
       address_street: visit.address_street,
       address_city: visit.address_city,
       address_state: visit.address_state,

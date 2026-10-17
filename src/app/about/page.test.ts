@@ -89,7 +89,7 @@ describe("about page", () => {
     );
     assert.match(
       html,
-      /<a [^>]*href="\/services\/long-coat-care"[^>]*>full-coat maintenance<\/a>/,
+      /<a [^>]*href="\/services\/show-level-coat-care"[^>]*>full-coat maintenance<\/a>/,
     );
     assert.doesNotMatch(text, /every size|all sizes|dogs of every|any breed we accept/i);
   });

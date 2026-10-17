@@ -17,6 +17,8 @@ import {
   photoMarketingConsentCopy,
   smsConsentCopy,
 } from "@/lib/notifications";
+import { AllergyFields } from "@/components/account/AllergyFields";
+import type { AllergyStatus } from "@/lib/allergies";
 import { REFERRAL_SOURCE_OPTIONS } from "@/lib/profiles/referral-source";
 import {
   MIN_CUSTOMER_PASSWORD_LENGTH,
@@ -32,6 +34,8 @@ export type BookingOwnerDetails = {
   smsConsent: boolean;
   photoMarketingConsent: boolean;
   servicePoliciesConsent: boolean;
+  householdAllergyStatus?: AllergyStatus | null;
+  householdAllergyDetails?: string;
 };
 
 type Props = {
@@ -87,6 +91,11 @@ export function BookingOwnerStep({
   const [servicePoliciesConsent, setServicePoliciesConsent] = useState(
     initial.servicePoliciesConsent,
   );
+  const [householdAllergyStatus, setHouseholdAllergyStatus] =
+    useState<AllergyStatus | null>(initial.householdAllergyStatus ?? null);
+  const [householdAllergyDetails, setHouseholdAllergyDetails] = useState(
+    initial.householdAllergyDetails ?? "",
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -101,12 +110,24 @@ export function BookingOwnerStep({
           setEmail(user.email ?? "");
           const { data } = await supabase
             .from("profiles")
-            .select("phone, first_name, last_name")
+            .select(
+              "phone, first_name, last_name, household_allergy_status, household_allergy_details",
+            )
             .maybeSingle();
           if (cancelled) return;
           if (data?.first_name) setFirstName((current) => current || data.first_name);
           if (data?.last_name) setLastName((current) => current || data.last_name);
           if (data?.phone) setPhone((current) => current || data.phone);
+          if (
+            data?.household_allergy_status === "yes" ||
+            data?.household_allergy_status === "none" ||
+            data?.household_allergy_status === "unsure"
+          ) {
+            setHouseholdAllergyStatus(data.household_allergy_status);
+          }
+          if (typeof data?.household_allergy_details === "string") {
+            setHouseholdAllergyDetails(data.household_allergy_details);
+          }
         }
         setCheckingSession(false);
       }).catch(() => {
@@ -137,6 +158,8 @@ export function BookingOwnerStep({
         emergencyContactName: null,
         emergencyContactPhone: null,
         emergencyContactRelationship: null,
+        householdAllergyStatus,
+        householdAllergyDetails,
       }),
     });
     if (!response.ok) {
@@ -161,11 +184,23 @@ export function BookingOwnerStep({
       }
       const { data } = await supabase
         .from("profiles")
-        .select("phone, first_name, last_name, email")
+        .select(
+          "phone, first_name, last_name, email, household_allergy_status, household_allergy_details",
+        )
         .maybeSingle();
       if (data?.first_name) setFirstName(data.first_name);
       if (data?.last_name) setLastName(data.last_name);
       if (data?.phone) setPhone(data.phone);
+      if (
+        data?.household_allergy_status === "yes" ||
+        data?.household_allergy_status === "none" ||
+        data?.household_allergy_status === "unsure"
+      ) {
+        setHouseholdAllergyStatus(data.household_allergy_status);
+      }
+      if (typeof data?.household_allergy_details === "string") {
+        setHouseholdAllergyDetails(data.household_allergy_details);
+      }
       setLoggedIn(true);
       setShowSignIn(false);
     } catch {
@@ -217,6 +252,8 @@ export function BookingOwnerStep({
             referralSource,
             referralName:
               referralSource === "referral" ? referralName.trim() : null,
+            householdAllergyStatus,
+            householdAllergyDetails,
           }),
         });
         const body = (await response.json().catch(() => ({}))) as {
@@ -245,6 +282,8 @@ export function BookingOwnerStep({
         smsConsent,
         photoMarketingConsent,
         servicePoliciesConsent,
+        householdAllergyStatus,
+        householdAllergyDetails,
       });
     } catch (err) {
       setError(
@@ -501,6 +540,19 @@ export function BookingOwnerStep({
               ) : null}
             </div>
           ) : null}
+
+          <AllergyFields
+            name="booking-household-allergy"
+            status={householdAllergyStatus}
+            details={householdAllergyDetails}
+            onStatusChange={(status) => {
+              setHouseholdAllergyStatus(status);
+              if (status !== "yes") setHouseholdAllergyDetails("");
+            }}
+            onDetailsChange={setHouseholdAllergyDetails}
+            inputClassName={bookingFieldClass}
+            labelClassName={bookingLabelClass}
+          />
 
           {error ? (
             <p

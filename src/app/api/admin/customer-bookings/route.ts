@@ -4,6 +4,7 @@ import {
   StaffBookingValidationError,
   validateStaffCustomerBookingInput,
 } from "@/lib/staff/create-customer-booking-input";
+import { ALLERGY_PROFILE_UNAVAILABLE_MESSAGE } from "@/lib/allergies";
 import { mapStaffServiceError, staffJsonError } from "@/lib/staff/api-errors";
 import { enforceIpRateLimit } from "@/lib/rate-limit";
 
@@ -45,6 +46,12 @@ export async function POST(request: Request) {
         return staffJsonError(
           result.message ?? "This customer cannot be booked this way.",
           409,
+        );
+      }
+      if (result.error === "allergy_unavailable") {
+        return staffJsonError(
+          result.message ?? ALLERGY_PROFILE_UNAVAILABLE_MESSAGE,
+          503,
         );
       }
       return mapStaffServiceError(result.error);

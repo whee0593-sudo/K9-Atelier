@@ -4,6 +4,7 @@ import { mapAppointmentRowToAdminRecord } from "@/lib/appointments/map";
 import type { AppointmentRow } from "@/lib/appointments/types";
 import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
 import { contactFromAdminAppointment } from "@/lib/email/appointment-context";
+import { notifyMerchantCustomerReplyC } from "@/lib/communications/merchant-notices";
 import { phonesMatch } from "@/lib/sms/phone";
 import { sendSms } from "@/lib/sms/twilio";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
@@ -19,6 +20,7 @@ import { handleStaffPhoneReply } from "@/lib/sms/staff-reply";
 const INBOUND_SELECT = `
   id,
   customer_id,
+  visit_id,
   pet_id,
   service_id,
   service_name,
@@ -182,28 +184,29 @@ export async function handleInboundCustomerSms(input: {
   await sendSms({ to: input.from, body: reply });
 
   if (!already && appointment.visitId) {
-    const { notifyMerchantCustomerReplyC } = await import(
-      "@/lib/communications/merchant-notices"
-    );
-    await notifyMerchantCustomerReplyC({
-      visitId: appointment.visitId,
-      customerId: appointment.customerId,
-      customerName: contact?.name ?? contact?.email ?? null,
-      replyTo: contact?.email ?? null,
-      appointmentId: appointment.id,
-      petId: appointment.petId,
-      petName: appointment.petName,
-      serviceName: appointment.serviceName,
-      whenLabel: `${dateLabel} · ${appointment.appointmentTime}`,
-      addressLabel: [
-        appointment.addressStreet,
-        appointment.addressCity,
-        appointment.addressState,
-        appointment.addressZip,
-      ]
-        .filter(Boolean)
-        .join(", "),
-    });
+    try {
+      await notifyMerchantCustomerReplyC({
+        visitId: appointment.visitId,
+        customerId: appointment.customerId,
+        customerName: contact?.name ?? contact?.email ?? null,
+        replyTo: contact?.email ?? null,
+        appointmentId: appointment.id,
+        petId: appointment.petId,
+        petName: appointment.petName,
+        serviceName: appointment.serviceName,
+        whenLabel: `${dateLabel} · ${appointment.appointmentTime}`,
+        addressLabel: [
+          appointment.addressStreet,
+          appointment.addressCity,
+          appointment.addressState,
+          appointment.addressZip,
+        ]
+          .filter(Boolean)
+          .join(", "),
+      });
+    } catch (error) {
+      console.error("customer reply C merchant notify failed:", error);
+    }
   }
 
   return { handled: "yes", already, appointmentId: appointment.id };

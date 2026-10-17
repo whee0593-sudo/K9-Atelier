@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { allBookableServices, getServicePriceEstimate } from "@/lib/services";
+import {
+  allBookableServices,
+  getServicePriceEstimate,
+  MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
+} from "@/lib/services";
 import {
   StaffBookingValidationError,
   staffCreatedAccountBlockReason,
@@ -188,7 +192,54 @@ describe("validateStaffCustomerBookingInput", () => {
     assert.equal(input.pets[1]?.serviceId, "custom-full-haircut");
     assert.deepEqual(input.pets[1]?.serviceIds, ["custom-full-haircut"]);
     assert.equal(input.serviceId, "signature-bath-care");
-    assert.equal(input.serviceName, "Signature Bath & Care");
+    assert.equal(input.serviceName, "Signature Bath");
+  });
+
+  it("rejects a second Mini Trim charge on a service that already includes it", () => {
+    assert.throws(
+      () =>
+        validateStaffCustomerBookingInput(
+          validBody({
+            serviceId: undefined,
+            pet: {
+              name: "Luna",
+              breed: "Poodle",
+              weightLbs: 14,
+              serviceIds: ["show-level-coat-care", "mini-trim"],
+            },
+          }),
+        ),
+      (error: unknown) =>
+        error instanceof StaffBookingValidationError &&
+        error.message === MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
+    );
+    assert.throws(
+      () =>
+        validateStaffCustomerBookingInput(
+          validBody({
+            serviceId: "luxury-spa-day",
+            addOnIds: ["mini-trim"],
+          }),
+        ),
+      (error: unknown) =>
+        error instanceof StaffBookingValidationError &&
+        error.field === "addOnIds",
+    );
+    const bath = validateStaffCustomerBookingInput(
+      validBody({
+        serviceId: undefined,
+        pet: {
+          name: "Luna",
+          breed: "Poodle",
+          weightLbs: 14,
+          serviceIds: ["signature-bath-care", "mini-trim"],
+        },
+      }),
+    );
+    assert.deepEqual(bath.pets[0]?.serviceIds, [
+      "signature-bath-care",
+      "mini-trim",
+    ]);
   });
 
   it("accepts two different services for the same dog", () => {
@@ -216,9 +267,7 @@ describe("validateStaffCustomerBookingInput", () => {
     const serviceIds = [
       "signature-bath-care",
       "long-coat-show-care",
-      "dead-sea-mud-bath",
-      "aromatherapy-oil-bath",
-      "sensitive-skin-treatment",
+      "luxury-spa-day",
       "custom-full-haircut",
     ];
     const input = validateStaffCustomerBookingInput(
@@ -232,7 +281,12 @@ describe("validateStaffCustomerBookingInput", () => {
         },
       }),
     );
-    assert.deepEqual(input.pets[0]?.serviceIds, serviceIds);
+    assert.deepEqual(input.pets[0]?.serviceIds, [
+      "signature-bath-care",
+      "show-level-coat-care",
+      "luxury-spa-day",
+      "custom-full-haircut",
+    ]);
   });
 
   it("keeps every coloring style selectable", () => {
@@ -324,16 +378,16 @@ describe("validateStaffCustomerBookingInput", () => {
           breed: "Poodle",
           weightLbs: 14,
           serviceIds: [
-            "dead-sea-mud-bath",
+            "luxury-spa-day",
             "senior-comfort-care",
             "dematting-brush-out",
           ],
         },
       }),
     );
-    assert.equal(input.serviceName, "SPA/Dead Sea Mud Bath Treatment");
+    assert.equal(input.serviceName, "Luxury Spa Day");
     assert.deepEqual(input.pets[0]?.serviceIds, [
-      "dead-sea-mud-bath",
+      "luxury-spa-day",
       "senior-comfort-care",
       "dematting-brush-out",
     ]);

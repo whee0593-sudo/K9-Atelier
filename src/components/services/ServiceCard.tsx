@@ -178,7 +178,7 @@ export function ServiceCard({
 
 function ServiceNote({ service }: { service: BookableService }) {
   const note = service.note ?? "";
-  const label = "Signature Bath & Care";
+  const label = "Signature Bath";
   const index = service.id === "hand-stripping" ? note.indexOf(label) : -1;
 
   if (index === -1) {

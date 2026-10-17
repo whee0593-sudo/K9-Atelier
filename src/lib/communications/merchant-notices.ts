@@ -809,15 +809,25 @@ function channelSettled(outcome: MerchantChannelOutcome | "not_confirmed") {
   );
 }
 
-async function listProductionAlerts() {
+async function loadVisitFacts(visitId: string): Promise<MerchantVisitFacts | null> {
+  const appointments = await loadVisitAppointments(visitId);
+  if (!appointments) return null;
+  return factsFromAppointments(appointments);
+}
+
+async function listProductionAlerts(excludeIds: string[] = []) {
   if (!hasSupabaseAdminConfig()) return [];
   const admin = createAdminClient();
-  const { data, error } = await admin
+  let query = admin
     .from("communication_log_alerts")
     .select("id, message")
     .eq("code", MERCHANT_REPLAY_ALERT)
     .order("created_at", { ascending: true })
     .limit(25);
+  if (excludeIds.length > 0) {
+    query = query.not("id", "in", `(${excludeIds.join(",")})`);
+  }
+  const { data, error } = await query;
   if (error || !data) return [];
   return data as Array<{ id: string; message: string }>;
 }
@@ -833,16 +843,17 @@ export async function replayDeferredMerchantAlerts(
     loadVisit?: (visitId: string) => Promise<MerchantVisitFacts | null>;
   },
 ): Promise<{ replayed: number; kept: number }> {
-  const list = deps?.listAlerts ?? listProductionAlerts;
+  const list = deps?.listAlerts;
   const remove = deps?.deleteAlert ?? deleteProductionAlert;
-  const loadVisit = deps?.loadVisit;
-  if (!loadVisit && !hasSupabaseAdminConfig()) return { replayed: 0, kept: 0 };
+  const loadVisit = deps?.loadVisit ?? loadVisitFacts;
   let replayed = 0;
   const blocked: string[] = [];
   for (let batch = 0; batch < 8; batch += 1) {
-    const alerts = (await list(MERCHANT_REPLAY_ALERT)).filter(
-      (alert) => !blocked.includes(alert.id),
-    );
+    const alerts = (
+      list
+        ? await list(MERCHANT_REPLAY_ALERT)
+        : await listProductionAlerts(blocked)
+    ).filter((alert) => !blocked.includes(alert.id));
     if (alerts.length === 0) break;
     let progress = 0;
     for (const alert of alerts.slice(0, 25)) {
@@ -863,10 +874,10 @@ export async function replayDeferredMerchantAlerts(
       replayed += 1;
       progress += 1;
     }
-    if (progress === 0) break;
+    if (progress === 0 && alerts.length < 25) break;
   }
-  const remaining = (await list(MERCHANT_REPLAY_ALERT)).filter(
-    (alert) => !blocked.includes(alert.id),
-  );
+  const remaining = (
+    list ? await list(MERCHANT_REPLAY_ALERT) : await listProductionAlerts(blocked)
+  ).filter((alert) => !blocked.includes(alert.id));
   return { replayed, kept: remaining.length + blocked.length };
 }

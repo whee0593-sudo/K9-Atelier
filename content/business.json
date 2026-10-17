@@ -280,7 +280,7 @@
   "serviceCategories": [
     {
       "id": "bath-show-spa",
-      "name": "Bath, Show Care & Spa",
+      "name": "Bath, Coat Care & Spa",
       "spaTreatments": {
         "note": "Spa treatments include a full wellness bath experience paired with a soothing whole-body massage. To avoid over-tiring your pet, we recommend booking Spa treatments separately from full haircut/styling appointments.",
         "includesAll": [
@@ -309,8 +309,8 @@
       "services": [
         {
           "id": "signature-bath-care",
-          "name": "Signature Bath & Care",
-          "description": "Premium full-care bathing package tailored to your pet's specific coat type and hygiene needs.",
+          "name": "Signature Bath",
+          "description": "Bath, blow-dry, and brush-out. Nail, ear, and teeth care included.",
           "includes": [
             "Pre-Groom Brushing: Thorough preliminary coat preparation",
             "Nail Care: Clipping and smooth electric filing with dremel",
@@ -343,9 +343,9 @@
           ]
         },
         {
-          "id": "long-coat-show-care",
-          "name": "Show Care for Long Coats",
-          "description": "A specialized weekly wash-and-care ritual for full-coat breeds — designed to preserve length, prevent matting, and maintain a silky, show-ready finish week after week.\n\nThe longer a dog's coat grows, the harder it becomes for natural oils and nutrients to travel all the way from root to tip. Without that nourishment reaching the ends, hair becomes dry, brittle, and far more prone to tangling and matting. Show Care for Long Coats is built around this exact challenge — a meticulous, multi-step process using coat-specific professional-grade shampoo and conditioner formulated to restore moisture and strength along the full length of the coat, keeping it soft, tangle-resistant, and beautifully maintained.",
+          "id": "show-level-coat-care",
+          "name": "Show-Level Coat Care",
+          "description": "An upgraded bath with show-level coat conditioning. Nail, ear, and teeth care included. Mini trim included.",
           "bestFor": "Full-coat breeds maintained on a weekly grooming schedule, where preserving length and preventing matting is a priority — including Shih Tzu, Yorkshire Terrier, Maltese, Cavalier King Charles Spaniel, or any dog being kept at full coat length.",
           "includes": [
             "Pre-Bath Detangling: Careful line-brushing to prevent matting before washing",
@@ -379,58 +379,9 @@
           ]
         },
         {
-          "id": "dead-sea-mud-bath",
-          "name": "Dead Sea Mud Bath Treatment",
-          "bestFor": "Heavy double coats and high-shedding breeds",
-          "description": "Mineral-rich Dead Sea mud wrap and whole-body massage. Deeply nourishes skin, exfoliates, releases muscle tension, and restores coat shine.",
-          "pricingType": "tiered",
-          "tiers": [
-            {
-              "weightTier": "under15",
-              "priceFrom": 140,
-              "durationMin": 60
-            },
-            {
-              "weightTier": "15to30",
-              "priceFrom": 160,
-              "durationMin": 75
-            },
-            {
-              "weightTier": "31to45",
-              "priceFrom": 180,
-              "durationMin": 90
-            }
-          ]
-        },
-        {
-          "id": "aromatherapy-oil-bath",
-          "name": "Aromatherapy Essential Oil Bath Soak",
-          "bestFor": "Dry, dull, or tangle-prone coats",
-          "description": "Warm-water soak infused with 100% pet-safe organic essential oils (lavender & chamomile) paired with targeted joint-relief massage. Calms anxiety and leaves the coat silky, glossy, and fresh-scented.",
-          "pricingType": "tiered",
-          "tiers": [
-            {
-              "weightTier": "under15",
-              "priceFrom": 140,
-              "durationMin": 60
-            },
-            {
-              "weightTier": "15to30",
-              "priceFrom": 160,
-              "durationMin": 75
-            },
-            {
-              "weightTier": "31to45",
-              "priceFrom": 180,
-              "durationMin": 90
-            }
-          ]
-        },
-        {
-          "id": "sensitive-skin-treatment",
-          "name": "Sensitive Skin & Dander Soothing Treatment",
-          "bestFor": "Sensitive, dry, or red/irritated skin",
-          "description": "Therapeutic bathing session tailored for sensitive skin, flaky dander, or seasonal allergies using hypoallergenic botanical wash and soothing oatmeal/aloe skin treatments. Relieves dryness and reduces coat static.",
+          "id": "luxury-spa-day",
+          "name": "Luxury Spa Day",
+          "description": "A fully customized, relaxing spa experience for your pup. Nail, ear, and teeth care included. Mini trim included.",
           "pricingType": "tiered",
           "tiers": [
             {
@@ -459,7 +410,7 @@
         {
           "id": "custom-full-haircut",
           "name": "Custom Full Haircut & Styling",
-          "description": "Full-service personalized grooming experience. Includes everything in the Signature Bath & Care, followed by a customized whole-body groom styled to your preferences (e.g., teddy bear head, custom length, or breed standard).",
+          "description": "Full-service personalized grooming experience. Includes everything in the Signature Bath, followed by a customized whole-body groom styled to your preferences (e.g., teddy bear head, custom length, or breed standard).",
           "pricingType": "tiered",
           "pricingNote": "Starting prices are based on weight and coat type. Final pricing may vary based on coat density, condition, requested style, temperament, and additional grooming time required.",
           "coatTypeNote": "Coat type reflects length, density, and overall grooming workload — not breed alone.",
@@ -535,7 +486,7 @@
           "id": "hand-stripping",
           "name": "Hand Stripping",
           "description": "Specialized coat preservation for wire-haired breeds (such as Terriers and Schnauzers). Preserves rich coat color, harsh texture, and natural skin protection by manually removing blown coat. Charged at an hourly rate due to the intense precision and time required.",
-          "note": "If a bath is desired immediately after hand stripping, please add a Signature Bath & Care service to your booking.",
+          "note": "If a bath is desired immediately after hand stripping, please add a Signature Bath service to your booking.",
           "pricingType": "hourly",
           "hourlyRate": 160,
           "durationMin": 60,
@@ -605,7 +556,7 @@
           "id": "mini-trim",
           "name": "Mini Trim",
           "description": "Eyes, feet & sanitary areas only.",
-          "note": "Available as an add-on with Signature Bath & Care or Show Care for Long Coats. Full grooming and spa treatments already include this tidy. Does not include a full face, body, or outline trim.",
+          "note": "Available as an add-on with Signature Bath. Show-Level Coat Care, Luxury Spa Day, and full grooming already include this tidy. Does not include a full face, body, or outline trim.",
           "includes": [
             "Eye-area trim",
             "Feet outline and paw pad trim",
@@ -633,13 +584,13 @@
     {
       "id": "creative-accent-coloring",
       "name": "Creative Accent Coloring",
-      "note": "Must be booked together with Signature Bath & Care or Custom Full Haircut & Styling.",
+      "note": "Must be booked together with Signature Bath or Custom Full Haircut & Styling.",
       "services": [
         {
           "id": "creative-accent-coloring",
           "name": "Creative Accent Coloring",
           "description": "Safe, trendy, and fun pop of color for your pet! Uses 100% non-toxic, pet-safe, semi-permanent color products designed specifically for animal coats.",
-          "note": "Must be booked together with Signature Bath & Care or Custom Full Haircut & Styling.",
+          "note": "Must be booked together with Signature Bath or Custom Full Haircut & Styling.",
           "pricingType": "options",
           "options": [
             {
@@ -714,6 +665,50 @@
           "note": "Available to existing K9 Atelier members only, by appointment.",
           "availableOver45Lbs": true
         }
+      ]
+    }
+  ],
+  "retiredServices": [
+    {
+      "id": "dead-sea-mud-bath",
+      "name": "Dead Sea Mud Bath Treatment",
+      "description": "Mineral-rich Dead Sea mud wrap and whole-body massage. Deeply nourishes skin, exfoliates, releases muscle tension, and restores coat shine.",
+      "retired": true,
+      "internalCarePlan": true,
+      "bookable": false,
+      "pricingType": "tiered",
+      "tiers": [
+        { "weightTier": "under15", "priceFrom": 140, "durationMin": 60 },
+        { "weightTier": "15to30", "priceFrom": 160, "durationMin": 75 },
+        { "weightTier": "31to45", "priceFrom": 180, "durationMin": 90 }
+      ]
+    },
+    {
+      "id": "aromatherapy-oil-bath",
+      "name": "Aromatherapy Essential Oil Bath Soak",
+      "description": "Warm-water soak infused with 100% pet-safe organic essential oils (lavender & chamomile) paired with targeted joint-relief massage. Calms anxiety and leaves the coat silky, glossy, and fresh-scented.",
+      "retired": true,
+      "internalCarePlan": true,
+      "bookable": false,
+      "pricingType": "tiered",
+      "tiers": [
+        { "weightTier": "under15", "priceFrom": 140, "durationMin": 60 },
+        { "weightTier": "15to30", "priceFrom": 160, "durationMin": 75 },
+        { "weightTier": "31to45", "priceFrom": 180, "durationMin": 90 }
+      ]
+    },
+    {
+      "id": "sensitive-skin-treatment",
+      "name": "Sensitive Skin & Dander Soothing Treatment",
+      "description": "Therapeutic bathing session tailored for sensitive skin, flaky dander, or seasonal allergies using hypoallergenic botanical wash and soothing oatmeal/aloe skin treatments. Relieves dryness and reduces coat static.",
+      "retired": true,
+      "internalCarePlan": true,
+      "bookable": false,
+      "pricingType": "tiered",
+      "tiers": [
+        { "weightTier": "under15", "priceFrom": 140, "durationMin": 60 },
+        { "weightTier": "15to30", "priceFrom": 160, "durationMin": 75 },
+        { "weightTier": "31to45", "priceFrom": 180, "durationMin": 90 }
       ]
     }
   ]

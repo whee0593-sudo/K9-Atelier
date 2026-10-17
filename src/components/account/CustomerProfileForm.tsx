@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { AllergyFields } from "@/components/account/AllergyFields";
+import type { AllergyStatus } from "@/lib/allergies";
 import type { CustomerProfile } from "@/lib/profiles/types";
 import {
   EMERGENCY_RELATIONSHIP_OPTIONS,
@@ -25,6 +27,8 @@ type Draft = {
   emergencyContactName: string;
   emergencyContactPhone: string;
   emergencyContactRelationship: string;
+  householdAllergyStatus: AllergyStatus | null;
+  householdAllergyDetails: string;
 };
 
 function toDraft(profile: CustomerProfile): Draft {
@@ -38,6 +42,8 @@ function toDraft(profile: CustomerProfile): Draft {
     emergencyContactName: profile.emergencyContactName,
     emergencyContactPhone: profile.emergencyContactPhone,
     emergencyContactRelationship: profile.emergencyContactRelationship,
+    householdAllergyStatus: profile.householdAllergyStatus ?? null,
+    householdAllergyDetails: profile.householdAllergyDetails ?? "",
   };
 }
 
@@ -159,6 +165,8 @@ export function CustomerProfileForm({
         emergencyContactName: draft.emergencyContactName.trim(),
         emergencyContactPhone: draft.emergencyContactPhone.trim(),
         emergencyContactRelationship: draft.emergencyContactRelationship,
+        householdAllergyStatus: draft.householdAllergyStatus,
+        householdAllergyDetails: draft.householdAllergyDetails,
       };
       onSaved?.(nextProfile);
       setDraft(toDraft(nextProfile));
@@ -182,6 +190,8 @@ export function CustomerProfileForm({
                   emergencyContactName: draft.emergencyContactName,
                   emergencyContactPhone: draft.emergencyContactPhone,
                   emergencyContactRelationship: draft.emergencyContactRelationship,
+                  householdAllergyStatus: draft.householdAllergyStatus,
+                  householdAllergyDetails: draft.householdAllergyDetails,
                 }
               : draft,
           ),
@@ -332,6 +342,20 @@ export function CustomerProfileForm({
           {error ?? incompleteMessage}
         </p>
       ) : null}
+      <AllergyFields
+        name="household-allergy-status"
+        status={draft.householdAllergyStatus}
+        details={draft.householdAllergyDetails}
+        onStatusChange={(householdAllergyStatus) => {
+          update("householdAllergyStatus", householdAllergyStatus);
+          if (householdAllergyStatus !== "yes") {
+            update("householdAllergyDetails", "");
+          }
+        }}
+        onDetailsChange={(householdAllergyDetails) =>
+          update("householdAllergyDetails", householdAllergyDetails)
+        }
+      />
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="submit"

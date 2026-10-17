@@ -1,4 +1,5 @@
 import { business } from "@/lib/business";
+import { canonicalServiceId } from "@/lib/service-catalog";
 import { servicePageOrderIndex } from "@/lib/service-page";
 import {
   CREATIVE_ACCENT_COLORING_ID,
@@ -9,9 +10,6 @@ import {
 const OPTION_SEPARATOR = "::";
 
 const STAFF_MENU_PREFIX: Record<string, string> = {
-  "dead-sea-mud-bath": "SPA/",
-  "aromatherapy-oil-bath": "SPA/",
-  "sensitive-skin-treatment": "SPA/",
   "senior-comfort-care": "Specialty care/",
   "end-of-life-care": "Specialty care/",
   "dematting-brush-out": "Add-on care/",
@@ -109,7 +107,9 @@ export function parseStaffServiceSelection(value: string) {
   const serviceId = splitAt === -1 ? trimmed : trimmed.slice(0, splitAt);
   const optionName =
     splitAt === -1 ? null : trimmed.slice(splitAt + OPTION_SEPARATOR.length);
-  const service = allBookableServices().find((entry) => entry.id === serviceId);
+  const service = allBookableServices().find(
+    (entry) => entry.id === canonicalServiceId(serviceId),
+  );
   if (!service) return null;
   return choiceForService(service, optionName);
 }

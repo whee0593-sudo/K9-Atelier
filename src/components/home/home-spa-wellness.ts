@@ -1,33 +1,19 @@
 export const homeSpaWellnessIntro = {
   eyebrow: "Spa & Wellness",
   title: "Care for Skin, Coat & Comfort",
-  body: "Targeted spa treatments selected for your dog’s skin and coat needs.",
-  note: "Spa Rituals are scheduled separately from full haircut appointments.",
-  ctaLabel: "View Spa Services & Pricing",
+  body: "A fully customized, relaxing spa experience for your pup. Nail, ear, and teeth care included. Mini trim included.",
+  note: "Spa goals do not change the Luxury Spa Day price. The groomer chooses the treatments.",
+  ctaLabel: "View Luxury Spa Day",
   ctaHref: "/services/spa",
 } as const;
 
 export const homeSpaWellnessServices = [
   {
-    id: "dead-sea-mineral-ritual",
-    title: "Dead Sea Mineral Ritual",
-    suitability: "For heavy shedding and dense double coats.",
+    id: "luxury-spa-day",
+    title: "Luxury Spa Day",
+    suitability: "From $140",
     details:
-      "Mineral-rich Dead Sea mud care paired with gentle body massage and meticulous coat finishing.",
-  },
-  {
-    id: "lavender-chamomile-bath-ritual",
-    title: "Lavender & Chamomile Bath Ritual",
-    suitability: "For dry, dull or tangle-prone coats.",
-    details:
-      "A warm bathing ritual with pet-appropriate lavender and chamomile care, paired with gentle massage and careful coat finishing.",
-  },
-  {
-    id: "sensitive-skin-botanical-ritual",
-    title: "Sensitive Skin Botanical Ritual",
-    suitability: "For dry or sensitive skin.",
-    details:
-      "Gentle botanical and oatmeal/aloe-based care created for dogs with dry or sensitive skin.",
+      "A fully customized, relaxing spa experience for your pup. Nail, ear, and teeth care included. Mini trim included.",
   },
 ] as const;
 

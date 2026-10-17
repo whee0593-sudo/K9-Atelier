@@ -22,7 +22,7 @@ describe("BookingExperienceStep", () => {
       />,
     );
 
-    assert.match(html, /Bath, Show Care &amp; Spa/);
+    assert.match(html, /Bath, Coat Care &amp; Spa/);
     assert.match(html, /Full Grooming &amp; Hand Stripping/);
     assert.match(html, /Creative Accent Color/);
     assert.match(html, />\+<\/span>/);
@@ -49,7 +49,7 @@ describe("BookingExperienceStep", () => {
       />,
     );
 
-    assert.match(html, /The Signature Bath selected/);
+    assert.match(html, /Signature Bath selected/);
     assert.match(html, /Continue/);
     assert.equal(html.includes("From $90"), false);
   });

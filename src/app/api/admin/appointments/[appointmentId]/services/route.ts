@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { validateAppointmentId } from "@/lib/appointments/validation";
 import { updateAppointmentVisitServices } from "@/lib/appointments/visit-services";
+import { MINI_TRIM_ALREADY_INCLUDED_MESSAGE } from "@/lib/services";
 import { mapStaffServiceError, staffJsonError } from "@/lib/staff/api-errors";
 
 export async function POST(
@@ -25,6 +26,9 @@ export async function POST(
           "Add at least one service, with amounts between $0 and $5,000.",
           409,
         );
+      }
+      if (result.error === "mini_trim_included") {
+        return staffJsonError(MINI_TRIM_ALREADY_INCLUDED_MESSAGE, 409);
       }
       if (result.error === "slot_unavailable") {
         return staffJsonError(
