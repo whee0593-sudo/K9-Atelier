@@ -314,6 +314,60 @@ describe("rebook reminder job", () => {
     );
   });
 
+  it("releases a definite failure and holds a timeout", async () => {
+    const declined = harness({ futureChecks: [[], []], send: false });
+    assert.equal((await runRebookReminderJob(declined.deps)).failed, 1);
+    assert.equal(declined.calls.includes("release"), true);
+
+    const timedOut = harness({ futureChecks: [[], []] });
+    timedOut.deps.send = async () => {
+      timedOut.calls.push("send");
+      throw new Error("timeout");
+    };
+    const timeoutResult = await runRebookReminderJob(timedOut.deps);
+    assert.equal(timeoutResult.failed, 1);
+    assert.equal(timedOut.calls.includes("release"), false);
+
+    const uncertain = harness({ futureChecks: [[], []] });
+    uncertain.deps.send = async () => {
+      uncertain.calls.push("send");
+      return "uncertain";
+    };
+    await runRebookReminderJob(uncertain.deps);
+    assert.equal(uncertain.calls.includes("release"), false);
+  });
+
+  it("does not claim a visit while one dog is still unfinished", async () => {
+    const { deps, calls, sent } = harness({
+      due: [candidate({ visitId: "visit-1" })],
+      futureChecks: [[]],
+    });
+    deps.loadVisitDogs = async () => {
+      calls.push("visit");
+      return [
+        {
+          id: "apt-1",
+          status: "confirmed",
+          serviceEndedAt: "2026-09-02T16:00:00.000Z",
+          reminderStatus: null,
+          petName: "Lychee",
+        },
+        {
+          id: "apt-2",
+          status: "confirmed",
+          serviceEndedAt: null,
+          reminderStatus: null,
+          petName: "Otto",
+        },
+      ];
+    };
+    const result = await runRebookReminderJob(deps);
+    assert.equal(result.sent, 0);
+    assert.equal(calls.includes("claim"), false);
+    assert.equal(calls.includes("send"), false);
+    assert.equal(sent.length, 0);
+  });
+
   it("stays quiet outside the 10am window and when email is not configured", async () => {
     const early = harness({ now: new Date("2026-09-23T13:00:00.000Z") });
     assert.equal(

@@ -175,7 +175,6 @@ export async function sendAppointmentCreatedEmails(
   appointment: AppointmentRecord,
   customer: CustomerContact,
 ) {
-  await notifyStaffNewAppointment(appointment, customer);
   await notifyCustomerAppointmentSubmitted(appointment, customer);
 }
 

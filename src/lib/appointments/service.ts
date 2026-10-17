@@ -384,6 +384,14 @@ export async function createAppointment(
     } catch (emailError) {
       console.error("createAppointment email failed:", emailError);
     }
+    try {
+      const { notifyMerchantSelfBooking } = await import(
+        "@/lib/communications/merchant-visit"
+      );
+      await notifyMerchantSelfBooking(appointment.id);
+    } catch (merchantError) {
+      console.error("createAppointment merchant notice failed:", merchantError);
+    }
   }
 
   return { appointment };
@@ -581,42 +589,106 @@ export async function sendAppointmentEnRouteNotification(
   const { hasSupabaseAdminConfig } = await import("@/lib/supabase/env");
   const { createAdminClient } = await import("@/lib/supabase/admin");
   if (!hasSupabaseAdminConfig()) return { error: "misconfigured" };
+  if (!appointment.visitId) return { error: "conflict" };
 
   const admin = createAdminClient();
-  const { data: smsRow, error: smsLookupError } = await admin
+  const visit = await admin
     .from("appointments")
-    .select("en_route_sms_sent_at")
-    .eq("id", appointmentId)
-    .maybeSingle();
-
-  if (smsLookupError) {
+    .select("id, status, pet_id, en_route_sms_sent_at, pets ( name )")
+    .eq("visit_id", appointment.visitId)
+    .neq("status", "cancelled");
+  if (visit.error) {
     console.error(
       "sendAppointmentEnRouteNotification lookup failed:",
-      smsLookupError.message,
+      visit.error.message,
     );
     return { error: "server" };
   }
-  if (smsRow?.en_route_sms_sent_at) return { error: "conflict" };
 
-  const { sendAppointmentEnRouteSms } = await import(
-    "@/lib/sms/appointment-sms"
+  const rows = (visit.data ?? []) as Array<{
+    id: string;
+    status: string;
+    pet_id: string | null;
+    en_route_sms_sent_at: string | null;
+    pets?: { name: string | null } | { name: string | null }[] | null;
+  }>;
+  const dogs = rows.map((row) => {
+    const pet = Array.isArray(row.pets) ? row.pets[0] : row.pets;
+    return {
+      appointmentId: row.id,
+      status: row.status,
+      serviceEndedAt: null,
+      logisticsSentAt: row.en_route_sms_sent_at,
+      petName: pet?.name ?? appointment.petName,
+      petId: row.pet_id,
+    };
+  });
+  const { planVisitLogisticsSms, joinPetNames } = await import(
+    "@/lib/communications/visit-readiness"
   );
-  const sent = await sendAppointmentEnRouteSms(appointment, contact);
-  if (!sent) return { error: "server" };
-
-  const { error: markError } = await admin
-    .from("appointments")
-    .update({ en_route_sms_sent_at: new Date().toISOString() })
-    .eq("id", appointmentId);
-
-  if (markError) {
-    console.error(
-      "sendAppointmentEnRouteNotification mark failed:",
-      markError.message,
-    );
+  const plan = planVisitLogisticsSms({ event: "en_route", dogs });
+  const markSent = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    const { error: markError } = await admin
+      .from("appointments")
+      .update({ en_route_sms_sent_at: new Date().toISOString() })
+      .in("id", ids)
+      .is("en_route_sms_sent_at", null);
+    if (markError) {
+      console.error(
+        "sendAppointmentEnRouteNotification mark failed:",
+        markError.message,
+      );
+    }
+  };
+  if (plan.action === "already_sent") {
+    await markSent(plan.appointmentIds);
+    return { error: "conflict" };
   }
+  if (plan.action !== "send") return { error: "conflict" };
 
-  return { ok: true };
+  const { bookingDetailsFromAppointment } = await import(
+    "@/lib/email/appointment-mails"
+  );
+  const { buildAppointmentEnRouteSms } = await import("@/lib/notifications");
+  const { normalizePhoneToE164 } = await import("@/lib/sms/phone");
+  const to = normalizePhoneToE164(contact.phone);
+  if (!to) return { error: "conflict" };
+  const details = {
+    ...bookingDetailsFromAppointment(appointment, contact),
+    petName: joinPetNames(dogs.map((dog) => dog.petName)),
+  };
+  const body = buildAppointmentEnRouteSms(details);
+  const { deliverVisitLogisticsSms } = await import(
+    "@/lib/communications/visit-sms"
+  );
+  const { createSupabaseClaimStore } = await import(
+    "@/lib/communications/supabase-store"
+  );
+  const { sendTrackedSms } = await import("@/lib/communications/provider");
+  const outcome = await deliverVisitLogisticsSms({
+    event: "en_route",
+    visitId: appointment.visitId,
+    dogs,
+    customerId: appointment.customerId,
+    petIds: dogs.map((dog) => dog.petId).filter((id): id is string => Boolean(id)),
+    recipient: to,
+    body,
+    store: createSupabaseClaimStore(admin),
+    send: async () => {
+      const result = await sendTrackedSms({ to, body });
+      if (result.outcome === "skipped") {
+        return { outcome: "failed" as const, error: "missing_config" };
+      }
+      return result;
+    },
+  });
+  if (outcome === "accepted" || outcome === "duplicate") {
+    await markSent(plan.appointmentIds);
+    return { ok: true };
+  }
+  if (outcome === "failed" || outcome === "unrecorded") return { error: "server" };
+  return { error: "conflict" };
 }
 
 export async function setAppointmentVisitTiming(
