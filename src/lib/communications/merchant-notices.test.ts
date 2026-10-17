@@ -3,8 +3,10 @@ import { describe, it } from "node:test";
 import { createMemoryCommunicationLogStore } from "@/lib/communications/memory-store";
 import { readMerchantFromAddress } from "@/lib/communications/merchant-config";
 import {
+  MERCHANT_REPLAY_ALERT,
   merchantVisitIsConfirmed,
   notifyMerchantVisitConfirmed,
+  replayDeferredMerchantAlerts,
   type MerchantVisitFacts,
 } from "@/lib/communications/merchant-notices";
 
@@ -226,5 +228,108 @@ describe("merchant visit confirmation", () => {
     });
     assert.equal(ready.email, "accepted");
     assert.equal(emails, 1);
+  });
+
+  it("retries only the rejected channel", async () => {
+    const store = createMemoryCommunicationLogStore();
+    let emails = 0;
+    let texts = 0;
+    const sender = {
+      email: async () => {
+        emails += 1;
+        return { outcome: "accepted" as const, providerMessageId: "re_email" };
+      },
+      sms: async () => {
+        texts += 1;
+        if (texts === 1) {
+          return { outcome: "rejected" as const, errorMessage: "invalid" };
+        }
+        return { outcome: "accepted" as const, providerMessageId: "SM_retry" };
+      },
+    };
+    await notifyMerchantVisitConfirmed(facts(), { store, env: baseEnv, sender });
+    await notifyMerchantVisitConfirmed(facts(), { store, env: baseEnv, sender });
+    assert.equal(emails, 1);
+    assert.equal(texts, 2);
+
+    const flipped = createMemoryCommunicationLogStore();
+    let flippedEmails = 0;
+    let flippedTexts = 0;
+    const flippedSender = {
+      email: async () => {
+        flippedEmails += 1;
+        if (flippedEmails === 1) {
+          return { outcome: "rejected" as const, errorMessage: "invalid" };
+        }
+        return { outcome: "accepted" as const, providerMessageId: "re_retry" };
+      },
+      sms: async () => {
+        flippedTexts += 1;
+        return { outcome: "accepted" as const, providerMessageId: "SM_ok" };
+      },
+    };
+    await notifyMerchantVisitConfirmed(facts(), {
+      store: flipped,
+      env: baseEnv,
+      sender: flippedSender,
+    });
+    await notifyMerchantVisitConfirmed(facts(), {
+      store: flipped,
+      env: baseEnv,
+      sender: flippedSender,
+    });
+    assert.equal(flippedTexts, 1);
+    assert.equal(flippedEmails, 2);
+  });
+
+  it("does not retry a timed-out SMS after the email was accepted", async () => {
+    const store = createMemoryCommunicationLogStore();
+    let emails = 0;
+    let texts = 0;
+    const sender = {
+      email: async () => {
+        emails += 1;
+        return { outcome: "accepted" as const, providerMessageId: "re_held" };
+      },
+      sms: async () => {
+        texts += 1;
+        return { outcome: "uncertain" as const, errorMessage: "timeout" };
+      },
+    };
+    await notifyMerchantVisitConfirmed(facts(), { store, env: baseEnv, sender });
+    await notifyMerchantVisitConfirmed(facts(), { store, env: baseEnv, sender });
+    assert.equal(emails, 1);
+    assert.equal(texts, 1);
+  });
+
+  it("leaves a pets-changed replay paused when the previous roster cannot be rebuilt", async () => {
+    const alerts = [
+      {
+        id: "alert-1",
+        message: "v=visit-1 t=merchant_visit_pets_changed c=email fp=old=>new",
+      },
+    ];
+    let emails = 0;
+    const result = await replayDeferredMerchantAlerts({
+      env: baseEnv,
+      store: createMemoryCommunicationLogStore(),
+      sender: {
+        email: async () => {
+          emails += 1;
+          return { outcome: "accepted", providerMessageId: "re_pets" };
+        },
+        sms: async () => ({ outcome: "accepted", providerMessageId: "SM_pets" }),
+      },
+      listAlerts: async (code) =>
+        code === MERCHANT_REPLAY_ALERT ? alerts : [],
+      deleteAlert: async (id) => {
+        const index = alerts.findIndex((alert) => alert.id === id);
+        if (index >= 0) alerts.splice(index, 1);
+      },
+      loadVisit: async () => facts(),
+    });
+    assert.equal(emails, 0);
+    assert.deepEqual(result, { replayed: 0, kept: 1 });
+    assert.equal(alerts.length, 1);
   });
 });

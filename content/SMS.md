@@ -10,7 +10,7 @@
 1. **确认短信** — 预约确认时（若还在等审核，先发一条“已收到”）。确认邮件仍是原来的长信。短信改成：`狗名's appointment on 日期, 时间, 街道名. Reply C to confirm.` 地点只写街道名，不写门牌号、城市、州、邮编。
 2. **提前三天确认** — 每天纽约时间早上 10 点（周末也发，夏令时/冬令时都是 10 点），短信和上面的确认短信相同，请客人回复 C。这和员工/疫苗通过后的预约成功不是同一件事。
 3. **出发短信** — 后台 **Calendar** 月历正下方的 **Today — drive order**，点 **Text: on the way**。今天还没取消的预约都会出现，包括还在 Pending Review、还没 confirmed 的单，也可以发。每单只发一次。
-4. **美容完成第二天回访** — 同一条早上 10 点 Cron 再发一封邮件和一条短信（问好、征求反馈、请写 Google 好评）。同一次上门里未取消的狗都 checkout（`service_ended_at`）之后才发一条。有狗还没做完时不写入已发送。查找窗口见 `content/VISIT-NOTIFICATIONS.md`（14 天，待确认）。
+4. **美容完成第二天回访** — 早上 10 点（America/New_York）发一封邮件和一条短信（问好、征求反馈、请写 Google 好评）。同一次上门里未取消的狗都完成服务之后，以最后完成日期的次日 10:00 发送。错过这次不补发。邮件和短信各自记成功；明确失败的渠道可以单独重试，超时或不确定的渠道不自动重发。详见 `content/VISIT-NOTIFICATIONS.md`。
 
 店主 Visit 通知的发信地址和短信收件号是 `MERCHANT_NOTIFY_FROM_EMAIL`、`MERCHANT_NOTIFY_PHONE`。说明和校验规则见 `content/VISIT-NOTIFICATIONS.md` 与 `.env.example`。不要把这两个值回退到 `SUPPORT_FROM_EMAIL` 或 Twilio 发信号码。
 

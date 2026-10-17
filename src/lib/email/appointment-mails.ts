@@ -21,6 +21,7 @@ import {
   sendAppointmentStaffCancelledSms,
   sendAppointmentSubmittedSms,
 } from "@/lib/sms/appointment-sms";
+import { deliverVisitChannels } from "@/lib/visits/channel-delivery";
 import { loadVisitNoticePets } from "@/lib/visits/notification-context";
 import { runVisitNotification } from "@/lib/visits/notification-ledger";
 import {
@@ -29,10 +30,7 @@ import {
   type VisitNoticePet,
 } from "@/lib/visits/notification-scope";
 import { formatVisitPetNames } from "@/lib/visits/pet-names";
-import {
-  combineProviderDeliveries,
-  type ProviderDelivery,
-} from "@/lib/visits/provider-delivery";
+import type { ProviderDelivery } from "@/lib/visits/provider-delivery";
 
 export type VisitCustomerCopy = {
   petNames?: string[];
@@ -77,33 +75,32 @@ function emailContext(
 }
 
 async function deliverEmailAndSms(
+  event: string,
   notificationType: string,
   appointment: AppointmentRecord,
   email: { subject: string; text: string; html: string },
   customer: CustomerContact,
   sendText: () => Promise<ProviderDelivery>,
   fingerprint?: string,
-): Promise<ProviderDelivery> {
-  const emailed = await sendEmailDelivery({
-    to: customer.email,
-    subject: email.subject,
-    text: email.text,
-    html: email.html,
-    communication: emailContext(
-      notificationType,
-      appointment,
-      customer.email,
-      fingerprint,
-    ),
+) {
+  await deliverVisitChannels({
+    visitId: appointment.visitId,
+    event,
+    email: () =>
+      sendEmailDelivery({
+        to: customer.email,
+        subject: email.subject,
+        text: email.text,
+        html: email.html,
+        communication: emailContext(
+          notificationType,
+          appointment,
+          customer.email,
+          fingerprint,
+        ),
+      }),
+    sms: sendText,
   });
-  let texted: ProviderDelivery = "rejected";
-  try {
-    texted = await sendText();
-  } catch (error) {
-    console.error("visit customer SMS failed:", error);
-    texted = "uncertain";
-  }
-  return combineProviderDeliveries([emailed, texted]);
 }
 
 export async function notifyCustomerAppointmentSubmitted(
@@ -117,21 +114,17 @@ export async function notifyCustomerAppointmentSubmitted(
       ? buildCustomerAppointmentConfirmedEmail(shown, customer)
       : buildCustomerAppointmentSubmittedEmail(shown, customer);
 
-  await runVisitNotification({
-    visitId: appointment.visitId,
-    event: "booking_confirmation",
-    send: () =>
-      deliverEmailAndSms(
-        "booking_confirmation",
-        appointment,
-        email,
-        customer,
-        () =>
-          appointment.status === "confirmed"
-            ? sendAppointmentConfirmedSms(appointment, customer, copy?.petNames)
-            : sendAppointmentSubmittedSms(appointment, customer, copy?.petNames),
-      ),
-  });
+  await deliverEmailAndSms(
+    "booking_confirmation",
+    "booking_confirmation",
+    appointment,
+    email,
+    customer,
+    () =>
+      appointment.status === "confirmed"
+        ? sendAppointmentConfirmedSms(appointment, customer, copy?.petNames)
+        : sendAppointmentSubmittedSms(appointment, customer, copy?.petNames),
+  );
 }
 
 export async function notifyCustomerAppointmentConfirmed(
@@ -144,18 +137,14 @@ export async function notifyCustomerAppointmentConfirmed(
     customer,
   );
 
-  await runVisitNotification({
-    visitId: appointment.visitId,
-    event: "staff_confirmed",
-    send: () =>
-      deliverEmailAndSms(
-        "staff_confirmed",
-        appointment,
-        email,
-        customer,
-        () => sendAppointmentConfirmedSms(appointment, customer, copy?.petNames),
-      ),
-  });
+  await deliverEmailAndSms(
+    "staff_confirmed",
+    "staff_confirmed",
+    appointment,
+    email,
+    customer,
+    () => sendAppointmentConfirmedSms(appointment, customer, copy?.petNames),
+  );
 }
 
 export async function notifyCustomerAppointmentDeclined(
@@ -165,19 +154,15 @@ export async function notifyCustomerAppointmentDeclined(
   petName?: string,
 ) {
   const email = buildCustomerAppointmentDeclinedEmail(appointment, customer);
-  await runVisitNotification({
-    visitId: appointment.visitId,
-    event: eventKey,
-    send: () =>
-      deliverEmailAndSms(
-        "staff_declined",
-        appointment,
-        email,
-        customer,
-        () => sendAppointmentDeclinedSms(appointment, customer, petName),
-        eventKey,
-      ),
-  });
+  await deliverEmailAndSms(
+    eventKey,
+    "staff_declined",
+    appointment,
+    email,
+    customer,
+    () => sendAppointmentDeclinedSms(appointment, customer, petName),
+    eventKey,
+  );
 }
 
 export async function notifyCustomerAppointmentStaffCancelled(
@@ -191,19 +176,15 @@ export async function notifyCustomerAppointmentStaffCancelled(
     withVisitPetName(appointment, copy?.petNames ?? (petName ? [petName] : undefined)),
     customer,
   );
-  await runVisitNotification({
-    visitId: appointment.visitId,
-    event: eventKey,
-    send: () =>
-      deliverEmailAndSms(
-        "staff_cancelled",
-        appointment,
-        email,
-        customer,
-        () => sendAppointmentStaffCancelledSms(appointment, customer, petName),
-        eventKey,
-      ),
-  });
+  await deliverEmailAndSms(
+    eventKey,
+    "staff_cancelled",
+    appointment,
+    email,
+    customer,
+    () => sendAppointmentStaffCancelledSms(appointment, customer, petName),
+    eventKey,
+  );
 }
 
 export async function notifyCustomerAppointmentChange(

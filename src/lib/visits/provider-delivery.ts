@@ -20,12 +20,3 @@ export function normalizeVisitSendResult(
   if (value === false || value === "rejected") return "rejected";
   return "uncertain";
 }
-
-/** One delivered channel is enough. Any uncertain channel blocks a retry. */
-export function combineProviderDeliveries(
-  outcomes: ProviderDelivery[],
-): ProviderDelivery {
-  if (outcomes.some((outcome) => outcome === "delivered")) return "delivered";
-  if (outcomes.some((outcome) => outcome === "uncertain")) return "uncertain";
-  return "rejected";
-}

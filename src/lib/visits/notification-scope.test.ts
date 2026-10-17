@@ -17,10 +17,7 @@ import {
   rescheduleNotificationEvent,
   type VisitNoticePet,
 } from "@/lib/visits/notification-scope";
-import {
-  classifyProviderHttpStatus,
-  combineProviderDeliveries,
-} from "@/lib/visits/provider-delivery";
+import { classifyProviderHttpStatus } from "@/lib/visits/provider-delivery";
 import { decideExistingVisitClaim } from "@/lib/visits/notification-ledger";
 
 function pet(patch: Partial<VisitNoticePet> & Pick<VisitNoticePet, "id" | "petName">): VisitNoticePet {
@@ -156,6 +153,16 @@ describe("checkout and en route pets", () => {
       pets[2]!,
     ]);
     assert.deepEqual(ready?.map((row) => row.petName), ["Daisy", "Milo"]);
+    assert.deepEqual(
+      petsReadyForCheckout([
+        pet({
+          id: "only",
+          petName: "Lychee",
+          serviceEndedAt: "2026-10-16T18:00:00.000Z",
+        }),
+      ])?.map((row) => row.petName),
+      ["Lychee"],
+    );
     assert.deepEqual(activeVisitPets(pets)?.map((row) => row.petName), ["Daisy", "Milo"]);
   });
 });
@@ -388,15 +395,6 @@ describe("provider delivery outcomes", () => {
     assert.equal(classifyProviderHttpStatus(409), "uncertain");
     assert.equal(classifyProviderHttpStatus(500), "uncertain");
     assert.equal(classifyProviderHttpStatus(503), "uncertain");
-    assert.equal(
-      combineProviderDeliveries(["rejected", "uncertain"]),
-      "uncertain",
-    );
-    assert.equal(
-      combineProviderDeliveries(["uncertain", "delivered"]),
-      "delivered",
-    );
-    assert.equal(combineProviderDeliveries(["rejected", "rejected"]), "rejected");
   });
 
   it("does not resend a row that already attempted delivery", () => {

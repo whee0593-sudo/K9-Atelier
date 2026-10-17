@@ -9,28 +9,21 @@ import {
   buildNextDayFollowUpSms,
 } from "@/lib/followup/copy";
 import {
-  NEXT_DAY_FOLLOWUP_CATCHUP_DAYS,
-  planNextDayFollowUp,
+  followUpDecision,
   type FollowUpPet,
 } from "@/lib/followup/visit-ready";
 import { recordCustomerSms } from "@/lib/sms/inbox";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
 import {
-  addDaysToIsoDate,
+  businessDayUtcRange,
   hourInBusinessTimezone,
   yesterdayInBusinessTimezone,
 } from "@/lib/sms/schedule";
 import { isSmsConfigured, sendSmsDelivery } from "@/lib/sms/twilio";
+import { deliverVisitChannels } from "@/lib/visits/channel-delivery";
 import { formatVisitPetNames } from "@/lib/visits/pet-names";
-import {
-  recordVisitNotificationSent,
-  runVisitNotification,
-} from "@/lib/visits/notification-ledger";
+import { recordVisitNotificationSent } from "@/lib/visits/notification-ledger";
 import { groupByVisit } from "@/lib/visits/notification-scope";
-import {
-  combineProviderDeliveries,
-  type ProviderDelivery,
-} from "@/lib/visits/provider-delivery";
 
 const FOLLOW_UP_SELECT = `
   id,
@@ -92,17 +85,12 @@ export async function sendNextDayFollowUp(
   }
 
   const admin = createAdminClient();
-  const targetDate = yesterdayInBusinessTimezone(now);
-  const catchupStart = addDaysToIsoDate(
-    targetDate,
-    -(NEXT_DAY_FOLLOWUP_CATCHUP_DAYS - 1),
-  );
+  const completionDay = businessDayUtcRange(yesterdayInBusinessTimezone(now));
   const { data, error } = await admin
     .from("appointments")
     .select(FOLLOW_UP_SELECT)
-    .gte("appointment_date", catchupStart)
-    .lte("appointment_date", targetDate)
-    .not("service_ended_at", "is", null)
+    .gte("service_ended_at", completionDay.start)
+    .lt("service_ended_at", completionDay.end)
     .is("followup_sent_at", null)
     .neq("status", "cancelled");
 
@@ -128,7 +116,7 @@ export async function sendNextDayFollowUp(
       failed += 1;
       continue;
     }
-    const plan = planNextDayFollowUp(pets);
+    const plan = followUpDecision(pets, now);
     if (plan !== "send") {
       skipped += 1;
       continue;
@@ -164,56 +152,61 @@ export async function sendNextDayFollowUp(
         dedupe: anchor.visitId ? "visit" : "appointment",
       });
 
-    const outcome = await runVisitNotification({
+    const letter = buildNextDayFollowUpEmail(names);
+    const smsBody = buildNextDayFollowUpSms(names);
+    const channels = await deliverVisitChannels({
       visitId: anchor.visitId,
       event: "next_day_followup",
-      send: async () => {
-        const outcomes: ProviderDelivery[] = [];
-        if (canEmail) {
-          const letter = buildNextDayFollowUpEmail(names);
-          outcomes.push(
-            await sendEmailDelivery({
+      email: canEmail
+        ? () =>
+            sendEmailDelivery({
               to: email,
               subject: letter.subject,
               text: letter.text,
               html: letter.html,
               communication: contextFor(email),
-            }),
-          );
-        }
-        if (canSms && phone) {
-          const body = buildNextDayFollowUpSms(names);
-          const smsOutcome = await sendSmsDelivery({
-            to: phone,
-            body,
-            communication: contextFor(phone),
-          });
-          outcomes.push(smsOutcome);
-          if (smsOutcome === "delivered") {
-            await recordCustomerSms({
-              direction: "outbound",
-              phone,
-              body,
-              customerId: anchor.customerId,
-              customerName: anchor.customerName,
-              petNames,
-            });
-          }
-        }
-        return combineProviderDeliveries(outcomes);
-      },
+            })
+        : undefined,
+      sms:
+        canSms && phone
+          ? async () => {
+              const smsOutcome = await sendSmsDelivery({
+                to: phone,
+                body: smsBody,
+                communication: contextFor(phone),
+              });
+              if (smsOutcome === "delivered") {
+                await recordCustomerSms({
+                  direction: "outbound",
+                  phone,
+                  body: smsBody,
+                  customerId: anchor.customerId,
+                  customerName: anchor.customerName,
+                  petNames,
+                });
+              }
+              return smsOutcome;
+            }
+          : undefined,
     });
 
-    if (outcome === "skipped") {
-      skipped += 1;
-      continue;
+    const attempted = [channels.email, channels.sms].filter(
+      (result) => result !== "absent",
+    );
+    const newlySent = attempted.some((result) => result === "sent");
+    if (newlySent) {
+      await recordVisitNotificationSent(anchor.visitId, "google_review_request");
     }
-    if (outcome !== "sent") {
+    const settled = attempted.every(
+      (result) => result === "sent" || result === "skipped",
+    );
+    if (!settled) {
       failed += 1;
       continue;
     }
+    if (newlySent) sent += 1;
+    else skipped += 1;
 
-    await recordVisitNotificationSent(anchor.visitId, "google_review_request");
     const { error: markError } = await admin
       .from("appointments")
       .update({ followup_sent_at: new Date().toISOString() })
@@ -226,7 +219,6 @@ export async function sendNextDayFollowUp(
         markError.message,
       );
     }
-    sent += 1;
   }
 
   return { sent, skipped, failed };
