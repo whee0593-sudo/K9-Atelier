@@ -1,6 +1,13 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import {
+  APPLICABLE_BOOKING_TOTAL_NOTE,
+  CANCELLATION_POLICY_ROWS,
+  ILLNESS_POLICY_COPY,
+  NO_SHOW_LIMITS_NOTE,
+  POLICY_CALENDAR_NOTE,
+} from "@/lib/appointments/policy-copy";
 import { business, formatPrice } from "@/lib/business";
 import { bookingSecondaryBtnClass } from "@/components/booking/booking-ui";
 
@@ -272,41 +279,16 @@ export function BookingPoliciesModal({
               <p>
                 Because every K9 Atelier appointment is reserved exclusively for
                 one dog, we kindly ask for notice at least two days before the
-                appointment date. Dates are calendar days in Eastern Time.
+                appointment date. {POLICY_CALENDAR_NOTE}
               </p>
               <div>
-                <PolicyRow
-                  label="Two Days Before, or Earlier"
-                  value="Complimentary cancellation"
-                />
-                <PolicyRow
-                  label="The Day Before"
-                  value="50% of the confirmed visit total"
-                />
-                <PolicyRow
-                  label="The Day of the Appointment"
-                  value="100% of the confirmed visit total"
-                />
-                <PolicyRow
-                  label="No-Show"
-                  value="100% of the scheduled service price"
-                />
+                {CANCELLATION_POLICY_ROWS.map(([label, value]) => (
+                  <PolicyRow key={label} label={label} value={value} />
+                ))}
               </div>
-              <p>
-                The percentage applies to confirmed services, priced add-ons,
-                one travel fee, and other charges already saved on the visit.
-                Removing a dog uses that dog&apos;s confirmed charges only. The
-                travel fee stays with the visit.
-              </p>
-              <p>
-                If we arrive and are unable to reach you or access your dog
-                within 15 minutes of the scheduled appointment time, the
-                appointment may be considered a no-show.
-              </p>
-              <p>
-                Genuine health emergencies involving you or your dog will be
-                handled with reasonable flexibility.
-              </p>
+              <p>{APPLICABLE_BOOKING_TOTAL_NOTE}</p>
+              <p>{NO_SHOW_LIMITS_NOTE}</p>
+              <p>{ILLNESS_POLICY_COPY}</p>
             </div>
           </AccordionPanel>
 
@@ -323,27 +305,15 @@ export function BookingPoliciesModal({
                 original appointment, not the new date you choose.
               </p>
               <div>
-                <PolicyRow
-                  label="Two Days Before, or Earlier"
-                  value="Complimentary rescheduling"
-                />
-                <PolicyRow
-                  label="The Day Before"
-                  value="50% of the confirmed visit total"
-                />
-                <PolicyRow
-                  label="The Day of the Appointment"
-                  value="100% of the confirmed visit total"
-                />
+                {CANCELLATION_POLICY_ROWS.slice(0, 3).map(([label, value]) => (
+                  <PolicyRow key={label} label={label} value={value} />
+                ))}
               </div>
               <p>
                 Same-day rescheduling includes moving a visit to another day.
                 The original reserved time cannot be offered to another client.
               </p>
-              <p>
-                Genuine health emergencies involving you or your dog will be
-                handled with reasonable flexibility.
-              </p>
+              <p>{ILLNESS_POLICY_COPY}</p>
             </div>
           </AccordionPanel>
 

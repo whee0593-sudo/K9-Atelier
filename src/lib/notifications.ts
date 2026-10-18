@@ -1,3 +1,7 @@
+import {
+  cancellationPolicySummary,
+  POLICY_CALENDAR_NOTE,
+} from "@/lib/appointments/policy-copy";
 import { business } from "@/lib/business";
 import { streetNameForSms } from "@/lib/sms/street-name";
 
@@ -180,7 +184,7 @@ export function buildBookingConfirmationEmail(
       details.priceLabel ? "" : null,
       details.priceLabel ? estimateNote : null,
       "",
-      "Need to reschedule? We kindly ask for notice at least two days before the appointment date for any changes. Reply to this email or contact us at " +
+      `Need to reschedule? ${cancellationPolicySummary()} ${POLICY_CALENDAR_NOTE} Reply to this email or contact us at ` +
         `${contactMethod()}.`,
       "",
       "Warmly,",
@@ -219,7 +223,7 @@ export function buildBookingConfirmationEmail(
     `- Please let us know in advance about any allergies, sensitivities, medical conditions, or behavioral notes for ${details.petName}`,
     "",
     "Need to Reschedule?",
-    `We kindly ask for notice at least two days before the appointment date for any changes. You can reply directly to this email or contact us at ${contactMethod()}.`,
+    `${cancellationPolicySummary()} ${POLICY_CALENDAR_NOTE} You can reply directly to this email or contact us at ${contactMethod()}.`,
     "",
     "Warmly,",
     details.signoffName ?? business.brand.name,

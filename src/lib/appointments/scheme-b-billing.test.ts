@@ -517,7 +517,7 @@ describe("confirmed visit billing", () => {
     assert.match(review, /quote\.estimatedTotal/);
     assert.match(form, /serverQuote\?\.fee/);
     assert.match(form, /needsPriceReview/);
-    assert.match(form, /priced add-ons/);
+    assert.match(form, /APPLICABLE_BOOKING_TOTAL_NOTE/);
     assert.equal(form.includes("are not part of this fee"), false);
     assert.equal(form.includes("changeFeeAmount(action, estimatedTotal"), false);
   });

@@ -123,8 +123,11 @@ export default function TermsPage() {
           <p>
             A valid payment method is required before you can reserve an
             appointment. You are not charged when you book. Payment is settled after
-            your appointment. Late cancellations and no-shows may be charged
-            according to the cancellation policy on our{" "}
+            your appointment. Two or more calendar days before: No fee. One
+            calendar day before: 50% of the applicable booking total. On the day
+            of the appointment: 100%. No-Show: Groomer arrives, attempts
+            contact, no response within 15 minutes: 100%. The same policy is on
+            our{" "}
             <Link
               href="/faq"
               className="underline decoration-champagne underline-offset-4 hover:text-deep-lavender"

@@ -64,15 +64,25 @@ describe("FAQ page", () => {
     assert.equal(page.includes("more expensive than salon"), false);
     assert.equal(page.includes("Between 24 and 48"), false);
     assert.equal(page.includes("Less than 24 hours"), false);
-    assert.match(page, /Two days before the appointment, or earlier/);
-    assert.match(page, /The day before the appointment/);
-    assert.match(page, /The day of the appointment/);
-    assert.match(page, /confirmed service, priced add-ons, one travel fee/);
+    const policy = readFileSync(
+      new URL("../../lib/appointments/policy-copy.ts", import.meta.url),
+      "utf8",
+    );
+    assert.match(page, /CANCELLATION_POLICY_ROWS/);
+    assert.match(policy, /Two or more calendar days before/);
+    assert.match(policy, /One calendar day before/);
+    assert.match(policy, /50% of the applicable booking total/);
+    assert.match(policy, /On the day of the appointment/);
+    assert.match(policy, /Groomer arrives, attempts contact, no response within 15 minutes: 100%./);
+    assert.match(policy, /If your dog is unwell or an unexpected situation arises, please contact us directly as early as possible./);
+    assert.equal(policy.includes("exempt"), false);
+    assert.equal(policy.includes("flexibility"), false);
     assert.equal(page.includes("48 hours"), false);
+    assert.equal(page.includes("may be exempt"), false);
     assert.match(page, /No-Shows/);
     assert.match(page, /within 15 minutes/);
     assert.match(page, /Delayed Access/);
-    assert.match(page, /Illness or Emergencies/);
+    assert.match(page, /Illness & Special Circumstances/);
     assert.match(page, /Payment Method on File/);
     assert.match(page, /When a Service Cannot Be Completed/);
     assert.match(page, /50% of the scheduled service price/);

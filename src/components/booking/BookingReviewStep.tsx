@@ -3,6 +3,7 @@
 import { Elements } from "@stripe/react-stripe-js";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { cancellationPolicySummary } from "@/lib/appointments/policy-copy";
 import { formatPrice } from "@/lib/business";
 import { trackGoogleAdsBookingConversion } from "@/lib/google-ads";
 import {
@@ -424,8 +425,7 @@ export function BookingReviewStep({
           </div>
           <p className="font-body mt-4 text-xs leading-relaxed text-taupe">
             You will not be charged when you book. Payment is settled after your
-            appointment. Late cancellations and no-shows may be charged to the
-            card you select below.
+            appointment. {cancellationPolicySummary()}
           </p>
         </div>
       </div>

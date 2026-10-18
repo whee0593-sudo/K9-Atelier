@@ -10,6 +10,11 @@ import {
   bookingPrimaryBtnClass,
   bookingSecondaryBtnClass,
 } from "@/components/booking/booking-ui";
+import {
+  APPLICABLE_BOOKING_TOTAL_NOTE,
+  POLICY_CALENDAR_NOTE,
+  cancellationPolicySummary,
+} from "@/lib/appointments/policy-copy";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 import {
   changeFeeAmount,
@@ -507,10 +512,8 @@ export function AppointmentChangeForm({
                 {changeFeeWarning(fee)}
               </p>
               <p className="text-sm text-text-muted">
-                This fee uses the confirmed services, priced add-ons, and other
-                saved charges on this visit, plus one travel fee. Removing a
-                dog uses only that dog&apos;s confirmed charges and does not
-                include the travel fee that stays with the visit.
+                {cancellationPolicySummary()} {POLICY_CALENDAR_NOTE}{" "}
+                {APPLICABLE_BOOKING_TOTAL_NOTE}
               </p>
             </div>
           ) : (

@@ -1,3 +1,10 @@
+import {
+  APPLICABLE_BOOKING_TOTAL_NOTE,
+  CANCELLATION_POLICY_ROWS,
+  ILLNESS_POLICY_COPY,
+  NO_SHOW_LIMITS_NOTE,
+  POLICY_CALENDAR_NOTE,
+} from "@/lib/appointments/policy-copy";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { LuxuryButton } from "@/components/luxury/LuxuryButton";
 import { PageShell } from "@/components/luxury/PageShell";
@@ -16,27 +23,23 @@ const cancellationPolicy = {
   sections: [
     {
       heading: "1. Cancellations & Rescheduling",
-      body: "Notice is counted by calendar date in Eastern Time. Two days before the appointment, or earlier, there is no fee. The day before is 50%. The day of the appointment is 100%, at any time that day.\n\nThe percentage applies to the confirmed service, priced add-ons, one travel fee, and other charges already saved on the visit. Removing one dog uses that dog's confirmed charges only and does not include the travel fee that stays with the visit. An add-on that has not been priced yet is not included.",
+      body: `${POLICY_CALENDAR_NOTE}\n\n${APPLICABLE_BOOKING_TOTAL_NOTE}`,
       table: {
         columns: ["Notice", "Fee"],
-        rows: [
-          ["Two days before the appointment, or earlier", "No fee"],
-          ["The day before the appointment", "50%"],
-          ["The day of the appointment", "100%"],
-        ],
+        rows: CANCELLATION_POLICY_ROWS.map((row) => [...row]),
       },
     },
     {
       heading: "2. No-Shows",
-      body: "If we arrive for your scheduled appointment and cannot reach you, access the property, or receive your dog within 15 minutes of the scheduled time, the appointment will be considered a no-show.\n\nThe full scheduled service price and any applicable travel fee will be charged to the payment method on file.",
+      body: `${CANCELLATION_POLICY_ROWS[3][1]}\n\n${NO_SHOW_LIMITS_NOTE}`,
     },
     {
       heading: "3. Delayed Access at Appointment Time",
-      body: "Please ensure that you, your dog, and the reserved parking space are available at the scheduled appointment time.\n\nIf access is delayed by more than 15 minutes, we may need to shorten or reschedule the service to avoid affecting the next client. Applicable cancellation or rescheduling fees may apply.",
+      body: "Please ensure that you, your dog, and the reserved parking space are available at the scheduled appointment time.\n\nIf access is delayed, we may need to shorten or reschedule the service to avoid affecting the next client. A no-show is considered only after the groomer arrives, attempts contact, and receives no response within 15 minutes.",
     },
     {
-      heading: "4. Illness or Emergencies",
-      body: "We understand that unexpected health concerns involving you or your dog may arise. Please contact us as soon as possible.\n\nGenuine emergencies will be reviewed with compassion on a case-by-case basis and may be exempt from standard cancellation fees.",
+      heading: "4. Illness & Special Circumstances",
+      body: ILLNESS_POLICY_COPY,
     },
     {
       heading: "5. Payment Method on File",

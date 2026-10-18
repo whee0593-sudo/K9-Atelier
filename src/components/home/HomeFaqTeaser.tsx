@@ -1,3 +1,4 @@
+import { cancellationPolicySummary } from "@/lib/appointments/policy-copy";
 import Link from "next/link";
 import { Container } from "@/components/luxury/Container";
 import { getServiceAreaFaqParagraphs } from "@/lib/business";
@@ -20,7 +21,7 @@ const faqPreview: Array<{
   },
   {
     q: "What is your cancellation policy?",
-    a: "Two days before the appointment, or earlier: no fee. The day before: 50%. The day of the appointment: 100% for a cancellation, reschedule, or removing a dog. No-show: 100%.",
+    a: cancellationPolicySummary(),
   },
 ] as const;
 

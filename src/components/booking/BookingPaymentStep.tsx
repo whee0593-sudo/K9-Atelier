@@ -1,5 +1,6 @@
 "use client";
 
+import { cancellationPolicySummary } from "@/lib/appointments/policy-copy";
 import React from "react";
 import { Elements } from "@stripe/react-stripe-js";
 import { useEffect, useMemo, useState } from "react";
@@ -242,7 +243,7 @@ export function BookingPaymentStep({
       ) : null}
 
       <p className="font-body mt-6 text-xs italic leading-relaxed text-taupe">
-        Late cancellation and no-show fees may apply.
+        {cancellationPolicySummary()}
       </p>
       <button
         type="button"
