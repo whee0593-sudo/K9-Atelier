@@ -12,6 +12,7 @@ import {
   HOME_PAGE_TITLE,
 } from "@/lib/home-seo";
 import { business } from "@/lib/business";
+import { getSiteChrome } from "@/lib/site-chrome";
 
 const REMOVED_HOME_SECTIONS = [
   "HomeAboutTeaser",
@@ -254,7 +255,7 @@ describe("homepage SEO", () => {
   });
 
   it("shows the public phone and Palm Beach service-area sentence in the footer", () => {
-    const html = renderToStaticMarkup(<Footer />);
+    const html = renderToStaticMarkup(<Footer chrome={getSiteChrome()} />);
 
     assert.equal(business.brand.phone, "561-593-3335");
     assert.equal(business.brand.phoneDisplay, "561-593-3335");

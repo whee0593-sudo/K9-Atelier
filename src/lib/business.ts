@@ -81,11 +81,7 @@ export function getBrandPublicLinks() {
   };
 }
 
-export function formatPrice(amount: number) {
-  const rounded = Math.round(amount * 100) / 100;
-  if (Number.isInteger(rounded)) return `$${rounded}`;
-  return `$${rounded.toFixed(2)}`;
-}
+export { formatPrice } from "@/lib/format-price";
 
 export function formatDuration(min: number, max?: number) {
   if (max && max !== min) return `${min}–${max} min`;

@@ -4,10 +4,17 @@ import { usePathname } from "next/navigation";
 import { AuthRecoveryRedirect } from "@/components/auth/AuthRecoveryRedirect";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
+import type { SiteChrome } from "@/lib/site-chrome";
 
 const BARE_PATHS = ["/under-construction", "/login/admin"];
 
-export function SiteShell({ children }: { children: React.ReactNode }) {
+export function SiteShell({
+  children,
+  chrome,
+}: {
+  children: React.ReactNode;
+  chrome: SiteChrome;
+}) {
   const pathname = usePathname();
   const bare =
     BARE_PATHS.includes(pathname) ||
@@ -31,9 +38,9 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <AuthRecoveryRedirect />
-      <Header />
+      <Header logo={chrome.logo} name={chrome.name} />
       <main>{children}</main>
-      <Footer />
+      <Footer chrome={chrome} />
     </>
   );
 }
