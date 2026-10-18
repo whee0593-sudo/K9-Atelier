@@ -35,6 +35,7 @@ export function VisitCheckIn({
   const [lineItems, setLineItems] = useState<ChargeLineItem[]>([]);
   const [savingServices, setSavingServices] = useState(false);
   const [servicesNotice, setServicesNotice] = useState<string | null>(null);
+  const [confirmAddOnCharge, setConfirmAddOnCharge] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -123,7 +124,7 @@ export function VisitCheckIn({
     }
   }
 
-  async function saveServices() {
+  async function saveServices(confirmIncompatibleAddOns = false) {
     if (!context || lineItems.length === 0) return;
     setSavingServices(true);
     setError(null);
@@ -155,19 +156,29 @@ export function VisitCheckIn({
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lineItems }),
+          body: JSON.stringify({ lineItems, confirmIncompatibleAddOns }),
         },
       );
       const body = (await response.json()) as {
         error?: string;
+        code?: string;
         serviceName?: string;
         estimatedTotal?: number;
         smsSent?: boolean;
       };
       if (!response.ok) {
+        if (body.code === "addon_confirmation_required") {
+          setConfirmAddOnCharge(
+            body.error ??
+              "That add-on cannot be booked with this service.",
+          );
+          return;
+        }
+        setConfirmAddOnCharge(null);
         setError(body.error ?? "Could not save the services.");
         return;
       }
+      setConfirmAddOnCharge(null);
       setContext({
         ...context,
         lineItems,
@@ -285,9 +296,28 @@ export function VisitCheckIn({
               disabled={busy}
               saving={savingServices}
               notice={servicesNotice}
-              onChange={setLineItems}
-              onSave={() => void saveServices()}
+              onChange={(items) => {
+                setLineItems(items);
+                setConfirmAddOnCharge(null);
+              }}
+              onSave={() => void saveServices(false)}
             />
+            {confirmAddOnCharge ? (
+              <div className="mt-4 rounded-xl border border-champagne bg-cream px-4 py-4 text-left">
+                <p className="font-body text-sm text-ink">{confirmAddOnCharge}</p>
+                <p className="font-body mt-2 text-sm text-taupe">
+                  Saving will add this charge. Continue only if the extra care fee is intentional.
+                </p>
+                <button
+                  type="button"
+                  disabled={busy || savingServices}
+                  onClick={() => void saveServices(true)}
+                  className="mt-4 w-full rounded-sm border border-lavender/50 bg-white px-6 py-3 text-[11px] font-medium uppercase tracking-[0.16em] text-ink disabled:opacity-50"
+                >
+                  {savingServices ? "Saving…" : "Confirm extra charge"}
+                </button>
+              </div>
+            ) : null}
             <CheckoutTextToggle
               checked={sendCheckoutText}
               onChange={setSendCheckoutText}

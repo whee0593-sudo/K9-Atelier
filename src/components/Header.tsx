@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { business } from "@/lib/business";
 import { Container } from "@/components/luxury/Container";
 import { CustomerAuthLink } from "@/components/auth/CustomerAuthLink";
 
@@ -69,7 +68,7 @@ function NavLink({
   );
 }
 
-export function Header() {
+export function Header({ logo, name }: { logo: string; name: string }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const isBooking = pathname === "/book";
@@ -89,8 +88,8 @@ export function Header() {
           onClick={closeMenu}
         >
           <Image
-            src={business.brand.logo}
-            alt={business.brand.name}
+            src={logo}
+            alt={name}
             width={1495}
             height={764}
             sizes={LOGO_SIZES}

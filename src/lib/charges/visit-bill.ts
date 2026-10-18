@@ -10,6 +10,8 @@ export type VisitCheckoutPet = {
   status: string;
   serviceEndedAt: string | null;
   addOns?: Array<{ label: string; amount: number; catalogId?: string }>;
+  /** Saved amount cannot be split into the main service and add-ons. */
+  priceReviewRequired?: boolean;
 };
 
 export type VisitBillInput = {
@@ -83,13 +85,24 @@ export function buildVisitBill(input: VisitBillInput) {
     (pet) => pet.status !== "cancelled" && !pet.serviceEndedAt,
   );
   const eligiblePets = input.pets.filter(isCompletedVisitPet);
-  const blocked = incompletePets.length > 0 || eligiblePets.length === 0;
-  const blockedMessage =
+  const reviewPets = eligiblePets.filter((pet) => pet.priceReviewRequired);
+  const blockReason =
     incompletePets.length > 0
-      ? `Finish service for ${incompletePets.map((pet) => pet.petName).join(", ")} before collecting this visit.`
+      ? "incomplete"
       : eligiblePets.length === 0
+        ? "empty"
+        : reviewPets.length > 0
+          ? "price_review"
+          : null;
+  const blocked = blockReason != null;
+  const blockedMessage =
+    blockReason === "incomplete"
+      ? `Finish service for ${incompletePets.map((pet) => pet.petName).join(", ")} before collecting this visit.`
+      : blockReason === "empty"
         ? "No completed dogs on this visit."
-        : null;
+        : blockReason === "price_review"
+          ? `Review stored charges for ${reviewPets.map((pet) => pet.petName).join(", ")} before collecting this visit. The saved amount could not be split into the main service and add-ons. Save the service lines, then collect. Nothing is charged until then.`
+          : null;
 
   const petLineItems: ChargeLineItem[] = [];
   for (const pet of eligiblePets) {
@@ -146,6 +159,8 @@ export function buildVisitBill(input: VisitBillInput) {
     incompletePets,
     blocked,
     blockedMessage,
+    blockReason,
+    priceReviewRequired: reviewPets.length > 0,
     petLineItems,
     travelLineItem,
     lineItems,
@@ -265,6 +280,33 @@ export function decideVisitServiceCharge(
     return "legacy_paid";
   }
   return "create";
+}
+
+/**
+ * Paid and in-progress bills stay as they were recorded.
+ * A price review blocks a new charge only when nothing has been paid.
+ */
+export function visitChargeGate(input: {
+  decision: VisitChargeDecision;
+  blocked: boolean;
+  blockedMessage: string | null;
+}): { allow: true } | { allow: false; message: string } {
+  if (input.decision === "already_paid" || input.decision === "legacy_paid") {
+    return { allow: false, message: "This visit is already paid." };
+  }
+  if (input.decision === "in_progress") {
+    return {
+      allow: false,
+      message: "A payment is already in progress. Please wait a moment and try again.",
+    };
+  }
+  if (input.blocked) {
+    return {
+      allow: false,
+      message: input.blockedMessage ?? "This visit is not ready to collect.",
+    };
+  }
+  return { allow: true };
 }
 
 export function visitPaymentStatus(

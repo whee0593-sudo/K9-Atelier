@@ -10,6 +10,11 @@ import {
   bookingPrimaryBtnClass,
   bookingSecondaryBtnClass,
 } from "@/components/booking/booking-ui";
+import {
+  APPLICABLE_BOOKING_TOTAL_NOTE,
+  POLICY_CALENDAR_NOTE,
+  cancellationPolicySummary,
+} from "@/lib/appointments/policy-copy";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 import {
   changeFeeAmount,
@@ -17,9 +22,8 @@ import {
   changeNoticeBand,
   type AppointmentChangeAction,
 } from "@/lib/appointments/change-policy";
-import { formatPrice } from "@/lib/business";
 import { useCustomerPets } from "@/lib/pets/use-customer-pets";
-import { allBookableServices, formatServicePrice, getBookableServicesForPet } from "@/lib/services";
+import { allBookableServices, getBookableServicesForPet } from "@/lib/services";
 import { formatServiceAddress } from "@/lib/travel";
 import { petReadyToBook } from "@/lib/pets";
 import { bookingWeightLbs } from "@/lib/pets/weight";
@@ -31,6 +35,11 @@ type VisitContext = {
   zip: string;
   serviceId: string;
   addOnIds: string[];
+};
+
+type ChangeFeeQuote = {
+  fee: number;
+  needsPriceReview: boolean;
 };
 
 function formatShortDate(iso: string): string {
@@ -76,6 +85,8 @@ export function AppointmentChangeForm({
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [policiesOpen, setPoliciesOpen] = useState(false);
+  const [serverQuote, setServerQuote] = useState<ChangeFeeQuote | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
   const policyRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -106,6 +117,7 @@ export function AppointmentChangeForm({
           error?: string;
           appointments?: AppointmentRecord[];
           visit?: VisitContext;
+          quote?: ChangeFeeQuote;
         };
         if (cancelled) return;
         if (!response.ok) {
@@ -114,6 +126,7 @@ export function AppointmentChangeForm({
         }
         setAppointments(body.appointments ?? []);
         setVisit(body.visit ?? null);
+        setServerQuote(body.quote ?? null);
         setRemoveId(appointmentId);
       } catch {
         if (!cancelled) setError("Could not load this appointment.");
@@ -126,6 +139,51 @@ export function AppointmentChangeForm({
       cancelled = true;
     };
   }, [appointmentId, preview]);
+
+  useEffect(() => {
+    if (preview || !action) return;
+    const selectedAction = action;
+    let cancelled = false;
+    async function loadQuote() {
+      setQuoteLoading(true);
+      try {
+        const params = new URLSearchParams({ action: selectedAction });
+        if (selectedAction === "remove_dog" && removeId) {
+          params.set("removeAppointmentId", removeId);
+        }
+        if (selectedAction === "reschedule" && nextDate && nextSlotStartMinutes != null) {
+          params.set("date", nextDate);
+          params.set("slotStartMinutes", String(nextSlotStartMinutes));
+        }
+        const response = await fetch(
+          `/api/appointments/${appointmentId}/change?${params}`,
+          { credentials: "include" },
+        );
+        const body = (await response.json()) as {
+          error?: string;
+          quote?: ChangeFeeQuote;
+        };
+        if (cancelled) return;
+        if (!response.ok || !body.quote) {
+          setServerQuote(null);
+          setError(body.error ?? "Could not load the change fee.");
+          return;
+        }
+        setServerQuote(body.quote);
+      } catch {
+        if (!cancelled) {
+          setServerQuote(null);
+          setError("Could not load the change fee.");
+        }
+      } finally {
+        if (!cancelled) setQuoteLoading(false);
+      }
+    }
+    void loadQuote();
+    return () => {
+      cancelled = true;
+    };
+  }, [action, appointmentId, nextDate, nextSlotStartMinutes, preview, removeId]);
 
   useEffect(() => {
     if (action !== "reschedule" || !visit?.lat || !visit.lon) return;
@@ -190,19 +248,32 @@ export function AppointmentChangeForm({
       : action === "add_dog" || !action
         ? []
         : appointments;
-  const estimatedTotal = feeTargets.reduce(
-    (sum, item) => sum + (item.estimatedTotal ?? 0),
-    0,
-  );
   const band = preview
     ? "late"
     : first
       ? changeNoticeBand(first.appointmentDate, first.scheduledStart)
       : "complimentary";
-  const fee = action ? changeFeeAmount(action, estimatedTotal, band) : 0;
+  const previewHasAddOns = feeTargets.some((item) => item.addOnIds.length > 0);
+  const previewEstimate = feeTargets.reduce(
+    (sum, item) => sum + (item.estimatedTotal ?? 0),
+    0,
+  );
+  const needsPriceReview = preview
+    ? previewHasAddOns
+    : Boolean(serverQuote?.needsPriceReview);
+  const fee = !action
+    ? 0
+    : preview
+      ? previewHasAddOns
+        ? 0
+        : changeFeeAmount(action, previewEstimate, band)
+      : quoteLoading
+        ? 0
+        : (serverQuote?.fee ?? 0);
 
   const canConfirm = useMemo(() => {
-    if (!action) return false;
+    if (!action || needsPriceReview) return false;
+    if (!preview && (quoteLoading || !serverQuote)) return false;
     if (action === "reschedule") return Boolean(nextDate && nextSlotStartMinutes != null);
     if (action === "add_dog") return Boolean(addPetId && addServiceId);
     if (action === "remove_dog") {
@@ -214,9 +285,13 @@ export function AppointmentChangeForm({
     addPetId,
     addServiceId,
     appointments.length,
+    needsPriceReview,
     nextDate,
     nextSlotStartMinutes,
+    preview,
+    quoteLoading,
     removeId,
+    serverQuote,
   ]);
 
   async function confirmChange() {
@@ -241,6 +316,7 @@ export function AppointmentChangeForm({
             petId: addPetId,
             serviceId: addServiceId,
             removeAppointmentId: removeId,
+            expectedAmount: serverQuote?.fee,
           }),
         },
       );
@@ -298,9 +374,6 @@ export function AppointmentChangeForm({
           {appointments.map((item) => (
             <li key={item.id}>
               {item.petName} · {item.serviceName}
-              {item.estimatedTotal != null
-                ? ` · from ${formatPrice(item.estimatedTotal)}`
-                : ""}
             </li>
           ))}
         </ul>
@@ -322,6 +395,8 @@ export function AppointmentChangeForm({
               type="button"
               onClick={() => {
                 setAction(item);
+                setServerQuote(null);
+                setQuoteLoading(!preview);
                 setError(null);
                 setNextDate(null);
                 setNextSlotStartMinutes(null);
@@ -389,9 +464,6 @@ export function AppointmentChangeForm({
               {addServices.map((service) => (
                 <option key={service.id} value={service.id}>
                   {service.name}
-                  {selectedAddWeight != null
-                    ? ` · ${formatServicePrice(service, selectedAddWeight)}`
-                    : ""}
                 </option>
               ))}
             </select>
@@ -405,7 +477,11 @@ export function AppointmentChangeForm({
           <select
             className={bookingFieldClass}
             value={removeId}
-            onChange={(event) => setRemoveId(event.target.value)}
+            onChange={(event) => {
+              setRemoveId(event.target.value);
+              setServerQuote(null);
+              setQuoteLoading(!preview);
+            }}
           >
             {appointments.map((item) => (
               <option key={item.id} value={item.id}>
@@ -428,10 +504,23 @@ export function AppointmentChangeForm({
                 : ""}
             </p>
           ) : null}
-          {fee > 0 ? (
-            <p className="text-sm font-medium text-gold-dark">
-              {changeFeeWarning(fee)}
+          {needsPriceReview ? (
+            <p className="text-sm text-text">
+              We need to review this visit&apos;s saved price before a change fee
+              can be charged. Please contact us. Nothing has been charged.
             </p>
+          ) : quoteLoading && !preview ? (
+            <p className="text-sm text-text-muted">Checking the change fee…</p>
+          ) : fee > 0 ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-gold-dark">
+                {changeFeeWarning(fee)}
+              </p>
+              <p className="text-sm text-text-muted">
+                {cancellationPolicySummary()} {POLICY_CALENDAR_NOTE}{" "}
+                {APPLICABLE_BOOKING_TOTAL_NOTE}
+              </p>
+            </div>
           ) : (
             <p className="text-sm text-text-muted">
               This change does not include a cancellation fee.

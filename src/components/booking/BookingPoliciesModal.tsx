@@ -1,6 +1,13 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import {
+  APPLICABLE_BOOKING_TOTAL_NOTE,
+  CANCELLATION_POLICY_ROWS,
+  ILLNESS_POLICY_COPY,
+  NO_SHOW_LIMITS_NOTE,
+  POLICY_CALENDAR_NOTE,
+} from "@/lib/appointments/policy-copy";
 import { business, formatPrice } from "@/lib/business";
 import { bookingSecondaryBtnClass } from "@/components/booking/booking-ui";
 
@@ -18,6 +25,7 @@ type Props = {
   onClose: () => void;
   returnFocusRef?: RefObject<HTMLElement | null>;
   initialSection?: BookingPolicySectionId;
+  showPrices?: boolean;
 };
 
 const SECTIONS: Array<{
@@ -151,6 +159,7 @@ export function BookingPoliciesModal({
   onClose,
   returnFocusRef,
   initialSection,
+  showPrices = false,
 }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -269,36 +278,17 @@ export function BookingPoliciesModal({
             <div className="space-y-4">
               <p>
                 Because every K9 Atelier appointment is reserved exclusively for
-                one dog, we kindly ask for at least 48 hours&apos; notice to
-                cancel.
+                one dog, we kindly ask for notice at least two days before the
+                appointment date. {POLICY_CALENDAR_NOTE}
               </p>
               <div>
-                <PolicyRow
-                  label="48+ Hours"
-                  value="Complimentary cancellation"
-                />
-                <PolicyRow
-                  label="Less Than 48 Hours"
-                  value="50% of the scheduled service price"
-                />
-                <PolicyRow
-                  label="Same-Day Cancellation"
-                  value="100% of the scheduled service price"
-                />
-                <PolicyRow
-                  label="No-Show"
-                  value="100% of the scheduled service price"
-                />
+                {CANCELLATION_POLICY_ROWS.map(([label, value]) => (
+                  <PolicyRow key={label} label={label} value={value} />
+                ))}
               </div>
-              <p>
-                If we arrive and are unable to reach you or access your dog
-                within 15 minutes of the scheduled appointment time, the
-                appointment may be considered a no-show.
-              </p>
-              <p>
-                Genuine health emergencies involving you or your dog will be
-                handled with reasonable flexibility.
-              </p>
+              <p>{APPLICABLE_BOOKING_TOTAL_NOTE}</p>
+              <p>{NO_SHOW_LIMITS_NOTE}</p>
+              <p>{ILLNESS_POLICY_COPY}</p>
             </div>
           </AccordionPanel>
 
@@ -310,32 +300,20 @@ export function BookingPoliciesModal({
           >
             <div className="space-y-4">
               <p>
-                Changing your appointment date or time uses the same notice
-                windows as cancellation. Fees are based on the original
-                appointment, not the new date you choose.
+                Changing your appointment date or time uses the same Eastern
+                Time calendar dates as cancellation. Fees are based on the
+                original appointment, not the new date you choose.
               </p>
               <div>
-                <PolicyRow
-                  label="48+ Hours"
-                  value="Complimentary rescheduling"
-                />
-                <PolicyRow
-                  label="Less Than 48 Hours"
-                  value="50% of the scheduled service price"
-                />
-                <PolicyRow
-                  label="Same-Day Rescheduling"
-                  value="100% of the scheduled service price"
-                />
+                {CANCELLATION_POLICY_ROWS.slice(0, 3).map(([label, value]) => (
+                  <PolicyRow key={label} label={label} value={value} />
+                ))}
               </div>
               <p>
                 Same-day rescheduling includes moving a visit to another day.
                 The original reserved time cannot be offered to another client.
               </p>
-              <p>
-                Genuine health emergencies involving you or your dog will be
-                handled with reasonable flexibility.
-              </p>
+              <p>{ILLNESS_POLICY_COPY}</p>
             </div>
           </AccordionPanel>
 
@@ -364,28 +342,32 @@ export function BookingPoliciesModal({
                 Gardens, Palm Beach, and West Palm Beach.
               </p>
               <p>
-                Complimentary travel is included within{" "}
-                {business.serviceArea.freeRadiusMiles} driving miles.
+                Travel within {business.serviceArea.freeRadiusMiles} driving
+                miles is included.
               </p>
-              <p>
-                Above {business.serviceArea.freeRadiusMiles} through{" "}
-                {business.serviceArea.maxDistanceMiles} miles, the fee is{" "}
-                {formatPrice(business.serviceArea.travelFeePerMile)} per one-way
-                mile beyond {business.serviceArea.freeRadiusMiles}. Above{" "}
-                {business.serviceArea.maxDistanceMiles} through{" "}
-                {business.serviceArea.standardServiceMiles} miles, the fee is{" "}
-                {formatPrice(
-                  (business.serviceArea.maxDistanceMiles -
-                    business.serviceArea.freeRadiusMiles) *
-                    business.serviceArea.travelFeePerMile,
-                )}{" "}
-                plus {formatPrice(business.serviceArea.extendedTravelFeePerMile)}{" "}
-                per mile beyond {business.serviceArea.maxDistanceMiles}. The
-                amount is rounded to the nearest dollar.
-              </p>
+              {showPrices ? (
+                <p>
+                  Above {business.serviceArea.freeRadiusMiles} through{" "}
+                  {business.serviceArea.maxDistanceMiles} miles, the fee is{" "}
+                  {formatPrice(business.serviceArea.travelFeePerMile)} per one-way
+                  mile beyond {business.serviceArea.freeRadiusMiles}. Above{" "}
+                  {business.serviceArea.maxDistanceMiles} through{" "}
+                  {business.serviceArea.standardServiceMiles} miles, the fee is{" "}
+                  {formatPrice(
+                    (business.serviceArea.maxDistanceMiles -
+                      business.serviceArea.freeRadiusMiles) *
+                      business.serviceArea.travelFeePerMile,
+                  )}{" "}
+                  plus {formatPrice(business.serviceArea.extendedTravelFeePerMile)}{" "}
+                  per mile beyond {business.serviceArea.maxDistanceMiles}. The
+                  amount is rounded to the nearest dollar.
+                </p>
+              ) : (
+                <p>Your travel fee, if any, is shown on Review & Confirm.</p>
+              )}
               <p>
                 Beyond {business.serviceArea.standardServiceMiles} miles, please
-                contact us. Your travel fee, if any, is shown before you confirm.
+                contact us.
               </p>
             </div>
           </AccordionPanel>
@@ -402,16 +384,18 @@ export function BookingPoliciesModal({
                 assessment, treatment and sanitation are required to protect your
                 dog and subsequent clients.
               </p>
-              <div>
-                <PolicyPriceRow
-                  label="Medicated Treatment"
-                  value={`From ${formatPrice(medicatedRate)}`}
-                />
-                <PolicyPriceRow
-                  label="Vehicle Sanitation"
-                  value={`From ${formatPrice(sanitationRate)}`}
-                />
-              </div>
+              {showPrices ? (
+                <div>
+                  <PolicyPriceRow
+                    label="Medicated Treatment"
+                    value={`From ${formatPrice(medicatedRate)}`}
+                  />
+                  <PolicyPriceRow
+                    label="Vehicle Sanitation"
+                    value={`From ${formatPrice(sanitationRate)}`}
+                  />
+                </div>
+              ) : null}
             </div>
           </AccordionPanel>
 
@@ -431,16 +415,18 @@ export function BookingPoliciesModal({
                 to matting, significant anxiety, resistance or aggression, an
                 additional handling fee may apply.
               </p>
-              <div className="mx-auto max-w-sm text-left">
-                <PolicyPriceRow
-                  label="Dematting Fee"
-                  value={`From ${formatPrice(30)}`}
-                />
-                <PolicyPriceRow
-                  label="Special Handling"
-                  value={`From ${formatPrice(behaviorMin)}`}
-                />
-              </div>
+              {showPrices ? (
+                <div className="mx-auto max-w-sm text-left">
+                  <PolicyPriceRow
+                    label="Dematting Fee"
+                    value={`From ${formatPrice(30)}`}
+                  />
+                  <PolicyPriceRow
+                    label="Special Handling"
+                    value={`From ${formatPrice(behaviorMin)}`}
+                  />
+                </div>
+              ) : null}
               <p>
                 Whenever possible, we will communicate any additional care
                 requirements with you.

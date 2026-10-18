@@ -65,7 +65,7 @@ describe("BookingPaymentStep copy", () => {
       "A card on file is required to reserve your appointment. No charge today.",
     );
     const finePrint = html.indexOf(
-      "Late cancellation and no-show fees may apply.",
+      "Two or more calendar days before: No fee.",
     );
     const continueButton = html.indexOf("Continue");
 

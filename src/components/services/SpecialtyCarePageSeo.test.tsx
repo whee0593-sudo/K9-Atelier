@@ -9,6 +9,7 @@ import { generateMetadata } from "@/app/services/[slug]/page";
 import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
 import { SpecialtyCareJsonLd } from "@/components/seo/SpecialtyCareJsonLd";
 import { ServiceCard } from "@/components/services/ServiceCard";
+import { ServicePriceDetails } from "@/components/services/ServicePriceDetails";
 import { ServicesSection } from "@/components/services/ServicesSection";
 import { business, getBrandSearchName } from "@/lib/business";
 import { getServiceDisplayName } from "@/lib/service-display";
@@ -33,6 +34,7 @@ import {
   SPECIALTY_CARE_SERVICE_ID,
   SPECIALTY_CARE_SERVICE_TYPE,
   getServiceById,
+  serviceCardPriceValue,
   getServiceCategory,
   specialtyCareDisplayService,
 } from "@/lib/service-page";
@@ -206,11 +208,32 @@ describe("specialty care page content", () => {
     assert.match(html, /href="\/book"/);
     assert.match(html, /href="\/login"/);
     assert.match(html, /Members only/);
-    assert.match(html, /Complimentary/);
-    assert.match(html, /From \$30/);
-    assert.match(html, /From \$40/);
-    assert.match(html, /From \$50/);
-    assert.match(html, /added to the base service/);
+    assert.equal(html.includes("Complimentary"), false);
+    assert.equal(/\$\d/.test(html), false);
+    assert.equal(html.includes("added to the base service"), false);
+    const priced = renderToStaticMarkup(
+      <>
+        <ServiceCard
+          service={specialtyCareDisplayService(senior)}
+          showPrices
+          priceText={serviceCardPriceValue(senior)}
+          priceDetails={<ServicePriceDetails service={senior} />}
+          headingAs="h2"
+        />
+        <ServiceCard
+          service={specialtyCareDisplayService(endOfLife)}
+          showPrices
+          priceText={serviceCardPriceValue(endOfLife)}
+          priceDetails={<ServicePriceDetails service={endOfLife} />}
+          headingAs="h2"
+        />
+      </>,
+    );
+    assert.match(priced, /Complimentary/);
+    assert.match(priced, /From \$30/);
+    assert.match(priced, /From \$40/);
+    assert.match(priced, /From \$50/);
+    assert.match(priced, /added to the base service/);
     assert.equal(html.includes("Senior &amp; Gentle Comfort Care"), false);
     assert.equal(html.includes("Senior & Gentle Comfort Care"), false);
   });
@@ -230,7 +253,10 @@ describe("specialty care page content", () => {
         ["31to45", 50],
       ],
     );
-    assert.equal(getServiceDisplayName(service.id, service.name), "Gentle Care");
+    assert.equal(
+      getServiceDisplayName(service.id, service.name),
+      "Extra-Gentle Senior Care",
+    );
 
     const endOfLife = getServiceById("end-of-life-care");
     assert.ok(endOfLife);

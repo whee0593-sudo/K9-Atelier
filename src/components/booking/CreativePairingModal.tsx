@@ -13,6 +13,7 @@ type Props = {
   creativeService: BookableService;
   requiredBaseServices: BookableService[];
   initialColorOption?: string | null;
+  showPrices?: boolean;
   onComplete: (baseServiceId: string, colorOption: string) => void;
   onBack: () => void;
 };
@@ -58,6 +59,7 @@ export function CreativePairingModal({
   creativeService,
   requiredBaseServices,
   initialColorOption = null,
+  showPrices = false,
   onComplete,
   onBack,
 }: Props) {
@@ -144,7 +146,11 @@ export function CreativePairingModal({
                             : "border border-gold/50 bg-cream text-text hover:bg-lavender-light"
                         }`}
                       >
-                        <CreativeOptionDetail option={opt} selected={selected} />
+                        <CreativeOptionDetail
+                          option={opt}
+                          selected={selected}
+                          showPrice={showPrices}
+                        />
                       </button>
                     );
                   })}
@@ -200,16 +206,18 @@ export function CreativePairingModal({
                         <span className="text-base font-medium text-text">
                           {selected ? "✓ " : "+ "}
                           {service.name}
-                          <span className="mt-1 block text-sm font-normal text-gold-dark">
-                            {formatServicePriceFrom(service)}
-                          </span>
+                          {showPrices ? (
+                            <span className="mt-1 block text-sm font-normal text-gold-dark">
+                              {formatServicePriceFrom(service)}
+                            </span>
+                          ) : null}
                         </span>
 
                         <p className="mt-3 text-sm leading-relaxed text-text-muted">
                           {service.description}
                         </p>
 
-                        <BaseServicePricing service={service} />
+                        {showPrices ? <BaseServicePricing service={service} /> : null}
                       </button>
                     </div>
                   );

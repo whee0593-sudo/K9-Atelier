@@ -1,3 +1,4 @@
+import { cancellationPolicySummary } from "@/lib/appointments/policy-copy";
 import Link from "next/link";
 import { Container } from "@/components/luxury/Container";
 import { getServiceAreaFaqParagraphs } from "@/lib/business";
@@ -20,7 +21,7 @@ const faqPreview: Array<{
   },
   {
     q: "What is your cancellation policy?",
-    a: "48+ hours: no fee. Under 48 hours: 50%. Same-day cancel or reschedule, or no-show: 100%.",
+    a: cancellationPolicySummary(),
   },
 ] as const;
 

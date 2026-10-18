@@ -27,6 +27,11 @@ import { HourlyVisitTimer } from "@/components/admin/HourlyVisitTimer";
 import { ChargeReceiptActions } from "@/components/admin/ChargeReceiptActions";
 import { ChargeReceiptLetter } from "@/components/admin/ChargeReceiptLetter";
 import { ChargeRefundForm } from "@/components/admin/ChargeRefundForm";
+import { NoShowEvidencePanel } from "@/components/admin/NoShowEvidencePanel";
+import {
+  noShowPaymentNotice,
+  openCardPayment,
+} from "@/lib/policy-fees/stripe-lookup";
 import { collectBillHeading, formatVisitBillDate } from "@/lib/charges/receipt-view";
 import { manualCardWallets } from "@/lib/payments/card-wallets";
 import {
@@ -154,6 +159,9 @@ export function CollectCheckout({
   );
   const [chargedMethodId, setChargedMethodId] = useState<string | null>(null);
   const [receiptSent, setReceiptSent] = useState(false);
+  const [refundPending, setRefundPending] = useState(false);
+  const [noShowConfirmed, setNoShowConfirmed] = useState(false);
+  const [paymentState, setPaymentState] = useState<string | null>(null);
   const [referralMode, setReferralMode] = useState<ReferralApplyMode>("none");
   const [referralCustom, setReferralCustom] = useState("");
   const [referralCode, setReferralCode] = useState("");
@@ -190,7 +198,31 @@ export function CollectCheckout({
       setSelectedMethodId(body.selectedPaymentMethodId);
       setServiceStartedAt(body.appointment.serviceStartedAt);
       setServiceEndedAt(body.appointment.serviceEndedAt);
-      const previewPaid = paidChargeForKind(body.paidCharges, kind);
+      const previewPaid =
+        paidChargeForKind(body.paidCharges, kind) ??
+        (kind === "no_show" && (initialStep === "refund" || initialStep === "receipt")
+          ? {
+              id: "preview-no-show",
+              appointmentId,
+              kind,
+              status: "paid" as const,
+              lineItems: [
+                {
+                  id: "preview-no-show-line",
+                  label: "No-show fee",
+                  amount: body.appointment.estimatedTotal ?? 0,
+                },
+              ],
+              subtotal: body.appointment.estimatedTotal ?? 0,
+              tipAmount: 0,
+              total: body.appointment.estimatedTotal ?? 0,
+              receiptChannel: null,
+              paidAt: "2026-07-08T15:10:00.000Z",
+              refundedAmount: 0,
+              paymentMethodId: body.selectedPaymentMethodId,
+              tender: "cash" as const,
+            }
+          : null);
       setPaidCharge(previewPaid);
       if (previewPaid) setChargeId(previewPaid.id);
       if (previewPaid) {
@@ -246,6 +278,18 @@ export function CollectCheckout({
       setReferralCodeMessage(
         existingCode ? "Referral code already on file for this household." : null,
       );
+      if (kind === "no_show") {
+        const feeResponse = await fetch(
+          `/api/admin/policy-fees?appointmentId=${appointmentId}`,
+          { credentials: "include" },
+        );
+        if (feeResponse.ok) {
+          const feeBody = (await feeResponse.json()) as {
+            payment?: { state?: string | null } | null;
+          };
+          setPaymentState(feeBody.payment?.state ?? null);
+        }
+      }
     } catch {
       setError("Could not load this appointment.");
     } finally {
@@ -297,7 +341,7 @@ export function CollectCheckout({
       kind === "service" && context?.referral?.applyNewClientDiscount,
     ),
   });
-  const total = centsToDollars(referralQuote.dueCents);
+  const total = kind === "no_show" ? subtotal : centsToDollars(referralQuote.dueCents);
   const alreadyPaid = Boolean(paidCharge || context?.paidKinds.includes(kind));
 
   useEffect(() => {
@@ -480,6 +524,11 @@ export function CollectCheckout({
         releasePaymentSubmission(paymentLock);
       }
     }
+    if (kind === "no_show" && useNewCard) {
+      setError("Use the card on file, cash, or Zelle for a no-show fee.");
+      releasePaymentSubmission(paymentLock);
+      return null;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -517,11 +566,18 @@ export function CollectCheckout({
       });
       const body = (await response.json()) as {
         error?: string;
-        charge?: { id: string };
+        charge?: AppointmentChargeRecord;
         clientSecret?: string;
         requiresAction?: boolean;
+        paymentState?: string | null;
       };
       if (!response.ok) {
+        if (body.paymentState && noShowPaymentNotice(body.paymentState)) {
+          setPaymentState(body.paymentState);
+          setError(null);
+          return;
+        }
+        if (body.paymentState) setPaymentState(body.paymentState);
         setError(
           sanitizeCustomerPaymentError(
             body.error,
@@ -530,7 +586,12 @@ export function CollectCheckout({
         );
         return;
       }
-      if (body.charge?.id) setChargeId(body.charge.id);
+      if (body.charge?.id) {
+        setChargeId(body.charge.id);
+        if (body.charge.lineItems && body.charge.total != null) {
+          setPaidCharge(body.charge);
+        }
+      }
       if (useZelle) {
         setChargedTender("zelle");
         setChargedMethodId(null);
@@ -599,6 +660,44 @@ export function CollectCheckout({
     return null;
   }
 
+  async function checkNoShowPayment() {
+    if (preview) {
+      setPaymentState("awaiting_customer");
+      setError(null);
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/admin/policy-fees", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reconcile-no-show", appointmentId }),
+      });
+      const body = (await response.json()) as {
+        error?: string;
+        paymentState?: string | null;
+        charge?: AppointmentChargeRecord;
+      };
+      if (body.charge?.id && body.charge.lineItems) {
+        setChargeId(body.charge.id);
+        setPaidCharge(body.charge);
+        setPaymentState(null);
+        setError(null);
+        setStep("receipt");
+        return;
+      }
+      const nextState = body.paymentState ?? paymentState;
+      setPaymentState(nextState);
+      setError(noShowPaymentNotice(nextState) ? null : (body.error ?? null));
+    } catch {
+      setError("Could not check this payment. Nothing else was charged.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function sendReceiptEmail() {
     if (preview) {
       setReceiptSent(true);
@@ -627,13 +726,17 @@ export function CollectCheckout({
     }
   }
 
-  async function submitRefund(amount: number) {
+  async function submitRefund(input: {
+    amount: number;
+    reason: string;
+    confirmFunds: boolean;
+  }) {
     if (!receiptCharge) return;
     if (preview) {
       setPaidCharge({
         ...receiptCharge,
         refundedAmount: Math.round(
-          ((receiptCharge.refundedAmount ?? 0) + amount) * 100,
+          ((receiptCharge.refundedAmount ?? 0) + input.amount) * 100,
         ) / 100,
       });
       setStep("receipt");
@@ -647,17 +750,23 @@ export function CollectCheckout({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify(input),
       });
       const body = (await response.json()) as {
         error?: string;
         charge?: AppointmentChargeRecord;
+        refundPending?: boolean;
       };
       if (!response.ok || !body.charge) {
         setError(body.error ?? "Could not refund this payment.");
         return;
       }
       setPaidCharge(body.charge);
+      if (body.refundPending) {
+        setRefundPending(true);
+        return;
+      }
+      setRefundPending(false);
       setStep("receipt");
     } catch {
       setError("Could not refund this payment.");
@@ -728,13 +837,32 @@ export function CollectCheckout({
             </p>
           ) : null}
 
+          {kind === "no_show" ? (
+            <ul className="mt-8 space-y-3">
+              {lineItems.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex justify-between gap-4 rounded-2xl border border-lavender/40 bg-cream px-4 py-3 font-body text-sm text-ink"
+                >
+                  <span>{item.label}</span>
+                  <span>{formatChargeMoney(item.amount)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {kind === "no_show" && !noShowConfirmed ? (
+            <p className="font-body mt-3 text-sm text-taupe">
+              The visit estimate is not the no-show fee. Confirm the evidence to use the amount below.
+            </p>
+          ) : null}
+          {kind === "no_show" ? null : (
           <ul className="mt-8 space-y-4">
             {lineItems.map((item, index) => (
               <li
                 key={item.id}
                 className="rounded-2xl border border-lavender/40 bg-cream p-4"
               >
-                {index === 0 && kind !== "no_show" && (context.catalogGroups?.length ?? 0) > 0 ? (
+                {index === 0 && (context.catalogGroups?.length ?? 0) > 0 ? (
                   <ServiceCategoryPicker
                     groups={context.catalogGroups ?? []}
                     selectedId={item.catalogId}
@@ -824,7 +952,9 @@ export function CollectCheckout({
               </li>
             ))}
           </ul>
+          )}
 
+          {kind === "no_show" ? null : (
           <div className="mt-6 flex flex-col gap-3">
             <label className="font-body text-sm text-taupe">
               Add a service
@@ -862,10 +992,30 @@ export function CollectCheckout({
               Add a custom line
             </button>
           </div>
+          )}
 
           <p className="font-display mt-8 text-3xl text-ink">
             {formatChargeMoney(subtotal)}
           </p>
+
+          {kind === "no_show" ? (
+            <NoShowEvidencePanel
+              appointmentId={appointmentId}
+              preview={preview}
+              onReady={(charged) => {
+                setNoShowConfirmed(true);
+                setLineItems([
+                  {
+                    id: lineItems[0]?.id ?? newLineId(),
+                    label: "No-show fee",
+                    amount: charged,
+                    listAmount: charged,
+                    catalogId: "no-show",
+                  },
+                ]);
+              }}
+            />
+          ) : null}
 
           {kind === "no_show" ? (
             <div className="mt-6 space-y-2">
@@ -901,24 +1051,21 @@ export function CollectCheckout({
               busy ||
               lineItems.length === 0 ||
               Boolean(context.visit?.blockedMessage) ||
-              (kind === "no_show" && !selectedMethodId)
+              (kind === "no_show" && !preview && !noShowConfirmed)
             }
             onClick={() => {
-              if (kind === "no_show") {
-                void startPayment();
-                return;
-              }
               setStep("pay");
             }}
             className="mt-6 w-full rounded-sm bg-deep-lavender px-6 py-4 text-[11px] font-medium uppercase tracking-[0.16em] text-ivory disabled:opacity-50"
           >
-            {kind === "no_show" ? "Charge saved card" : "Present to customer"}
+            {kind === "no_show" ? "Continue to payment" : "Present to customer"}
           </button>
         </section>
       ) : null}
 
       {step === "pay" && context ? (
         <PayStep
+          kind={kind}
           context={context}
           lineItems={lineItems}
           subtotal={subtotal}
@@ -976,6 +1123,9 @@ export function CollectCheckout({
           }}
           onBack={() => setStep("review")}
           onPay={() => startPayment()}
+          paymentNotice={kind === "no_show" ? noShowPaymentNotice(paymentState) : null}
+          paymentBlocked={kind === "no_show" && openCardPayment(paymentState)}
+          onCheckPayment={kind === "no_show" ? () => void checkNoShowPayment() : undefined}
           onPaid={() => setStep("receipt")}
           onError={setError}
           onBusy={setBusy}
@@ -1013,8 +1163,10 @@ export function CollectCheckout({
         <ChargeRefundForm
           charge={receiptCharge}
           busy={busy}
+          tender={receiptCharge.tender ?? chargedTender}
+          refundPending={refundPending}
           onBack={() => setStep("receipt")}
-          onRefund={(amount) => void submitRefund(amount)}
+          onRefund={(input) => void submitRefund(input)}
         />
       ) : null}
     </div>
@@ -1022,6 +1174,7 @@ export function CollectCheckout({
 }
 
 function PayStep({
+  kind,
   context,
   lineItems,
   subtotal,
@@ -1058,7 +1211,11 @@ function PayStep({
   onPaid,
   onError,
   onBusy,
+  paymentNotice,
+  paymentBlocked,
+  onCheckPayment,
 }: {
+  kind: ChargeKind;
   context: CollectContext;
   lineItems: ChargeLineItem[];
   subtotal: number;
@@ -1095,6 +1252,9 @@ function PayStep({
   onPaid: () => void;
   onError: (message: string | null) => void;
   onBusy: (value: boolean) => void;
+  paymentNotice?: string | null;
+  paymentBlocked?: boolean;
+  onCheckPayment?: () => void;
 }) {
   const stripePromise = useMemo(
     () => stripePromiseFor(context.stripePublishableKey),
@@ -1145,6 +1305,15 @@ function PayStep({
         <span>{formatChargeMoney(subtotal)}</span>
       </p>
 
+      {kind === "no_show" ? (
+        <>
+          <p className="font-body mt-8 text-sm text-taupe">
+            This is the confirmed no-show fee. It is not changed by a tip or referral credit.
+          </p>
+          <p className="font-display mt-6 text-4xl text-ink">{formatChargeMoney(total)}</p>
+        </>
+      ) : (
+      <>
       <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
         Tip
       </p>
@@ -1326,13 +1495,30 @@ function PayStep({
           View Referral Terms
         </a>
       </p>
+      </>
+      )}
 
       <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
         Payment
       </p>
       <p className="font-body mt-2 text-sm text-taupe">
-        Choose a saved card, a different card, cash, or Zelle.
+        {kind === "no_show"
+          ? "Use the card on file, cash, or Zelle."
+          : "Choose a saved card, a different card, cash, or Zelle."}
       </p>
+      {paymentNotice ? (
+        <p className="font-body mt-3 text-sm text-ink">{paymentNotice}</p>
+      ) : null}
+      {onCheckPayment ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onCheckPayment}
+          className="font-body mt-3 text-sm text-ink underline"
+        >
+          Check payment status
+        </button>
+      ) : null}
       <div className="mt-3 space-y-2">
         {methods.map((method) => (
           <label
@@ -1350,6 +1536,7 @@ function PayStep({
             {formatPaymentMethodLabel(method)}
           </label>
         ))}
+        {kind === "no_show" ? null : (
         <label className="flex items-center gap-3 rounded-2xl border border-lavender/40 bg-cream px-4 py-3 text-sm">
           <input
             type="radio"
@@ -1359,6 +1546,7 @@ function PayStep({
           />
           Use a different card
         </label>
+        )}
         <label className="flex items-center gap-3 rounded-2xl border border-lavender/40 bg-cream px-4 py-3 text-sm">
           <input
             type="radio"
@@ -1409,6 +1597,7 @@ function PayStep({
           type="button"
           disabled={
             busy ||
+            Boolean(paymentBlocked) ||
             Boolean(context.visit?.blockedMessage) ||
             (!useCash && !useZelle && !selectedMethodId)
           }

@@ -1,3 +1,4 @@
+import { cancellationPolicySummary } from "@/lib/appointments/policy-copy";
 import businessData from "../../content/business.json";
 
 export type Business = typeof businessData;
@@ -81,11 +82,7 @@ export function getBrandPublicLinks() {
   };
 }
 
-export function formatPrice(amount: number) {
-  const rounded = Math.round(amount * 100) / 100;
-  if (Number.isInteger(rounded)) return `$${rounded}`;
-  return `$${rounded.toFixed(2)}`;
-}
+export { formatPrice } from "@/lib/format-price";
 
 export function formatDuration(min: number, max?: number) {
   if (max && max !== min) return `${min}–${max} min`;
@@ -141,6 +138,6 @@ export function getPaymentFaqParagraphs() {
   return [
     "A valid payment method is required before you can reserve an appointment.",
     "After you choose your appointment date and time, you will add or select which saved card to use for that visit.",
-    "You are not charged when you book. Payment is settled after your appointment. Late cancellations and no-shows may be charged to the selected card according to our cancellation policy.",
+    `You are not charged when you book. Payment is settled after your appointment. ${cancellationPolicySummary()}`,
   ] as const;
 }

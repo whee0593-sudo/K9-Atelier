@@ -45,8 +45,14 @@ function PriceLine({ price }: { price: string | null }) {
   return <p className={priceClass}>{price}</p>;
 }
 
-function DirectoryCard({ category }: { category: ServiceCategory }) {
-  const price = directoryPriceLabel(category);
+function DirectoryCard({
+  category,
+  showPrices,
+}: {
+  category: ServiceCategory;
+  showPrices: boolean;
+}) {
+  const price = showPrices ? directoryPriceLabel(category) : null;
   const description = SERVICES_DIRECTORY_DESCRIPTIONS[category.slug];
 
   if (category.slug !== "bath-coat-care") {
@@ -83,7 +89,7 @@ function DirectoryCard({ category }: { category: ServiceCategory }) {
   );
 }
 
-export function ServiceDirectory() {
+export function ServiceDirectory({ showPrices = false }: { showPrices?: boolean }) {
   return (
     <section aria-label="Service directory" className="bg-ivory pb-20 pt-2 md:pb-24 md:pt-3 lg:pb-28">
       <Container>
@@ -93,7 +99,7 @@ export function ServiceDirectory() {
               key={category.slug}
               className="min-h-0 w-full md:last:col-span-2 md:last:w-[calc((100%-2rem)/2)] md:last:justify-self-center lg:last:col-span-1 lg:last:col-start-2 lg:last:w-auto lg:last:justify-self-stretch"
             >
-              <DirectoryCard category={category} />
+              <DirectoryCard category={category} showPrices={showPrices} />
             </li>
           ))}
         </ul>

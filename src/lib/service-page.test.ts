@@ -57,7 +57,7 @@ describe("service page helpers", () => {
     const addOn = getServiceById("dematting-brush-out");
     assert.equal(serviceStartingPriceLabel(bath!), "From $90");
     assert.equal(serviceStartingPriceLabel(hourly!), "From $160 / hour");
-    assert.equal(serviceStartingPriceLabel(addOn!), "From $30 / 15 min");
+    assert.equal(serviceStartingPriceLabel(addOn!), "");
     const groom = getServiceById("custom-full-haircut");
     const mini = getServiceById("mini-trim");
     assert.equal(serviceStartingPriceLabel(groom!), "From $140");

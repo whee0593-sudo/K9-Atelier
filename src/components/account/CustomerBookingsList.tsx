@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { formatPrice } from "@/lib/business";
+import { formatPrice } from "@/lib/format-price";
 import {
   appointmentIsUpcoming,
   appointmentStatusLabel,

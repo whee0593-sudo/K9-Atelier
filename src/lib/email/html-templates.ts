@@ -1,3 +1,4 @@
+import { cancellationPolicySummary } from "@/lib/appointments/policy-copy";
 import { allergyWarning } from "@/lib/allergies";
 import { business, formatDuration, formatPrice } from "@/lib/business";
 import { formatChargeMoney } from "@/lib/charges/money";
@@ -442,7 +443,7 @@ export function buildCustomerAppointmentConfirmedEmail(
       detailRows: confirmedAppointmentDetailRows(appointment),
       estimateNote: estimateDisclaimer,
       paymentNote:
-        "You are not charged when you book. Payment is settled after your appointment. Late cancellations and no-shows may be charged to the card you selected, according to our cancellation policy.",
+        `You are not charged when you book. Payment is settled after your appointment. ${cancellationPolicySummary()}`,
     },
     text,
   );

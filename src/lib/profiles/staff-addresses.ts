@@ -1,4 +1,5 @@
 import { getBaseGeoPoint } from "@/lib/appointments/schedule";
+import { addressServicePortion } from "@/lib/appointments/stored-service-price";
 import { drivingDistanceMiles, geocodeAddress } from "@/lib/geo";
 import { getStaffSession } from "@/lib/staff/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -96,15 +97,7 @@ type AddressAppointmentRow = {
 };
 
 function servicePortion(row: AddressAppointmentRow) {
-  if (row.service_price != null && Number.isFinite(Number(row.service_price))) {
-    return Number(row.service_price);
-  }
-  if (row.estimated_total == null) return null;
-  return (
-    Math.round(
-      (Number(row.estimated_total) - Number(row.travel_fee ?? 0)) * 100,
-    ) / 100
-  );
+  return addressServicePortion(row);
 }
 
 /**

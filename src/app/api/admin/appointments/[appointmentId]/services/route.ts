@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { validateAppointmentId } from "@/lib/appointments/validation";
 import { updateAppointmentVisitServices } from "@/lib/appointments/visit-services";
-import { MINI_TRIM_ALREADY_INCLUDED_MESSAGE } from "@/lib/services";
 import { mapStaffServiceError, staffJsonError } from "@/lib/staff/api-errors";
 
 export async function POST(
@@ -13,11 +12,13 @@ export async function POST(
     const appointmentId = validateAppointmentId(rawId);
     const body = (await request.json().catch(() => null)) as {
       lineItems?: unknown;
+      confirmIncompatibleAddOns?: boolean;
     } | null;
 
     const result = await updateAppointmentVisitServices({
       appointmentId,
       lineItems: body?.lineItems,
+      confirmIncompatibleAddOns: body?.confirmIncompatibleAddOns === true,
     });
 
     if ("error" in result) {
@@ -27,8 +28,16 @@ export async function POST(
           409,
         );
       }
-      if (result.error === "mini_trim_included") {
-        return staffJsonError(MINI_TRIM_ALREADY_INCLUDED_MESSAGE, 409);
+      if (result.error === "addon_confirmation_required") {
+        return NextResponse.json(
+          {
+            error:
+              result.message ??
+              "That add-on cannot be booked with this service.",
+            code: "addon_confirmation_required",
+          },
+          { status: 409 },
+        );
       }
       if (result.error === "slot_unavailable") {
         return staffJsonError(
