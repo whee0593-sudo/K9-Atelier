@@ -11,6 +11,7 @@ import { FullGroomJsonLd } from "@/components/seo/FullGroomJsonLd";
 import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
 import { FullGroomEditorial } from "@/components/services/FullGroomEditorial";
 import { ServiceCard } from "@/components/services/ServiceCard";
+import { ServicePriceDetails } from "@/components/services/ServicePriceDetails";
 import { ServicesSection } from "@/components/services/ServicesSection";
 import { business, getBrandSearchName, getCommunitiesServed } from "@/lib/business";
 import {
@@ -156,9 +157,10 @@ describe("full groom page content", () => {
     assert.match(html, new RegExp(FULL_GROOM_STYLING_HEADING));
     assert.match(html, /one-style-fits-all approach/);
 
+    const faqText = html.replaceAll("&#x27;", "'");
     for (const faq of FULL_GROOM_FAQS) {
       assert.match(html, new RegExp(faq.question.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-      assert.match(html, new RegExp(faq.answer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+      assert.match(faqText, new RegExp(faq.answer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
       assert.match(html, new RegExp(`<details[^>]*open[^>]*>[\\s\\S]*${faq.question}`));
     }
     assert.equal((html.match(/<details\b/g) ?? []).length, 3);
@@ -187,7 +189,7 @@ describe("full groom page content", () => {
     assert.equal(serviceDurationLabel(service), "75\u2013120 min");
     assert.equal(
       service.pricingNote,
-      "Starting prices are based on weight and coat type. Final pricing may vary based on coat density, condition, requested style, temperament, and additional grooming time required.",
+      "Starting prices use the lowest coat price for each weight. The price may vary based on the dog's coat situation, which is discussed before the appointment.",
     );
 
     for (const [weightTier, coatType, price] of FULL_GROOM_MATRIX) {
@@ -197,14 +199,25 @@ describe("full groom page content", () => {
       assert.equal(entry?.priceFrom, price, `${weightTier} ${coatType}`);
     }
 
-    const html = renderToStaticMarkup(
+    const guest = renderToStaticMarkup(
       <ServiceCard service={service} headingAs="h2" anchorId="atelier-full-groom" />,
     );
+    assert.equal(/\$\d/.test(guest), false);
+    const html = renderToStaticMarkup(
+      <ServiceCard
+        service={service}
+        headingAs="h2"
+        anchorId="atelier-full-groom"
+        showPrices
+        priceText={serviceCardPriceValue(service)}
+        priceDetails={<ServicePriceDetails service={service} />}
+      />,
+    );
     assert.match(html, />\$140</);
-    assert.match(html, /75\u2013120 min/);
+    assert.match(guest, /75\u2013120 min/);
     assert.match(html, /From \$140/);
     assert.match(html, /From \$210/);
-    assert.match(html, /Final pricing may vary based on coat density/);
+    assert.match(html, /Starting prices use the lowest coat price for each weight/);
     assert.match(html, /href="\/book"/);
     assert.match(html, /Book an Appointment/);
 

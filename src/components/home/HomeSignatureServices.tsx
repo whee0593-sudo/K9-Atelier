@@ -6,21 +6,21 @@ const services = [
   {
     title: "Signature Bath",
     body: "Bath, blow-dry, and brush-out. Nail, ear, and teeth care included.",
-    price: "From $90",
+    price: "",
     href: "/services/bath-coat-care",
     cta: "Discover",
   },
   {
     title: "The Atelier Groom",
     body: "A complete grooming experience finished with a bespoke haircut tailored to your dog's coat, lifestyle and individual expression.",
-    price: "From $140",
+    price: "",
     href: "/services/full-groom",
     cta: "Discover",
   },
   {
     title: "Luxury Spa Day",
     body: "A fully customized, relaxing spa experience for your pup. Nail, ear, and teeth care included. Mini trim included.",
-    price: "From $140",
+    price: "",
     href: "/services/spa",
     cta: "Discover",
   },
@@ -51,9 +51,11 @@ export function HomeSignatureServices() {
               <p className="font-body mt-4 flex-1 text-sm leading-relaxed text-taupe">
                 {service.body}
               </p>
-              <p className="font-body mt-6 text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
-                {service.price}
-              </p>
+              {service.price ? (
+                <p className="font-body mt-6 text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
+                  {service.price}
+                </p>
+              ) : null}
               <Link
                 href={service.href}
                 className="font-body mt-6 inline-flex min-h-[48px] items-center text-[11px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink"

@@ -6,6 +6,7 @@ import { ServiceNotes } from "@/components/services/ServiceNotes";
 import { ServicesHashRedirect } from "@/components/services/ServicesHashRedirect";
 import { ServicesHero } from "@/components/services/ServicesHero";
 import { ServicesIntroduction } from "@/components/services/ServicesIntroduction";
+import { viewerCanViewServicePrices } from "@/lib/pricing-access";
 import {
   SERVICES_PAGE_CANONICAL,
   SERVICES_PAGE_DESCRIPTION,
@@ -29,13 +30,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ServicesPage() {
+export default async function ServicesPage() {
+  const showPrices = await viewerCanViewServicePrices();
   return (
     <div>
       <ServicesJsonLd />
       <ServicesHashRedirect />
       <ServicesHero />
-      <ServiceDirectory />
+      <ServiceDirectory showPrices={showPrices} />
       <ServicesIntroduction />
       <ConsultationPrompt />
       <ServiceNotes />

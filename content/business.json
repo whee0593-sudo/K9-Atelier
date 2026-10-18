@@ -412,7 +412,7 @@
           "name": "Custom Full Haircut & Styling",
           "description": "Full-service personalized grooming experience. Includes everything in the Signature Bath, followed by a customized whole-body groom styled to your preferences (e.g., teddy bear head, custom length, or breed standard).",
           "pricingType": "tiered",
-          "pricingNote": "Starting prices are based on weight and coat type. Final pricing may vary based on coat density, condition, requested style, temperament, and additional grooming time required.",
+          "pricingNote": "Starting prices use the lowest coat price for each weight. The price may vary based on the dog's coat situation, which is discussed before the appointment.",
           "coatTypeNote": "Coat type reflects length, density, and overall grooming workload — not breed alone.",
           "tiers": [
             {
@@ -504,12 +504,11 @@
       "services": [
         {
           "id": "dematting-brush-out",
-          "name": "DeMatting & Gentle Brush-Out",
-          "description": "Safe and patient mat removal for light to moderate tangles using specialized dematting sprays and tools. We prioritize your dog's comfort and skin safety at all times.",
+          "name": "Gentle DeMatting",
+          "description": "Gentle removal of light to moderate tangles, with your dog's comfort and coat health as the priority.",
+          "assessmentNote": "Pricing will be assessed by your groomer on-site, based on your dog's coat condition.",
           "policyNote": "To protect your pet's skin and ensure a stress-free experience, dematting is limited to a maximum of 15–30 minutes. If matting is severe or close to the skin, we will kindly recommend a smooth, safe shave-down for your pet's comfort and health.",
-          "pricingType": "add_on",
-          "flatRate": 30,
-          "durationMin": 15
+          "pricingType": "assessed"
         },
         {
           "id": "deshedding-treatment",
@@ -563,21 +562,7 @@
             "Sanitary trim"
           ],
           "pricingType": "add_on",
-          "flatRate": 30,
-          "tiers": [
-            {
-              "weightTier": "under15",
-              "priceFrom": 30
-            },
-            {
-              "weightTier": "15to30",
-              "priceFrom": 35
-            },
-            {
-              "weightTier": "31to45",
-              "priceFrom": 40
-            }
-          ]
+          "flatRate": 30
         }
       ]
     },

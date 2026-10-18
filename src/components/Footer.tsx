@@ -2,14 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import {
-  business,
-  getBrandInstagramUrl,
-  getBrandPhoneTelHref,
-  getBrandSearchName,
-  getGoogleWriteReviewUrl,
-} from "@/lib/business";
 import { Container } from "@/components/luxury/Container";
+import type { SiteChrome } from "@/lib/site-chrome";
 
 const footerLinks = [
   { href: "/", label: "The Atelier" },
@@ -22,33 +16,8 @@ const footerLinks = [
   { href: "/contact", label: "Contact" },
 ] as const;
 
-function capitalize(value: string) {
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-function formatTime(value: string) {
-  const [hStr, mStr] = value.split(":");
-  const hour = Number(hStr);
-  const minute = mStr ?? "00";
-  const period = hour >= 12 ? "PM" : "AM";
-  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
-  return `${hour12}:${minute} ${period}`;
-}
-
-export function Footer() {
-  const { brand, booking } = business;
-  const phoneHref = getBrandPhoneTelHref();
-  const instagram =
-    getBrandInstagramUrl() ?? "https://instagram.com/k9atelierfl";
+export function Footer({ chrome }: { chrome: SiteChrome }) {
   const instagramHandle = "K9AtelierFL";
-  const days = booking.availableDays;
-  const daysLabel =
-    days.length > 1
-      ? `${capitalize(days[0])}–${capitalize(days[days.length - 1])}`
-      : capitalize(days[0] ?? "");
-  const hoursLabel = `${formatTime(booking.hoursStart)}–${formatTime(
-    booking.hoursEnd,
-  )}`;
 
   return (
     <footer className="border-t border-gray-line bg-dusty-lavender/35">
@@ -56,7 +25,7 @@ export function Footer() {
         <div className="grid gap-12 md:grid-cols-[1.2fr_1fr]">
           <div>
             <p className="font-body text-[12px] font-semibold uppercase tracking-[0.14em] text-ink">
-              {getBrandSearchName()}
+              {chrome.searchName}
             </p>
             <p className="font-body mt-3 text-[12px] font-medium leading-relaxed text-taupe">
               Private, cage-free mobile dog grooming for dogs up to 45 lbs.
@@ -70,16 +39,16 @@ export function Footer() {
               <span className="whitespace-nowrap">Palm Beach Gardens &</span>{" "}
               <span className="whitespace-nowrap">Palm Beach.</span>
             </p>
-            {brand.phone && phoneHref ? (
+            {chrome.phone && chrome.phoneHref ? (
               <a
-                href={phoneHref}
+                href={chrome.phoneHref}
                 className="font-body mt-5 block text-sm text-ink transition hover:text-deep-lavender"
               >
-                {brand.phoneDisplay || brand.phone}
+                {chrome.phoneDisplay}
               </a>
             ) : null}
             <a
-              href={instagram}
+              href={chrome.instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`Instagram @${instagramHandle}`}
@@ -88,18 +57,18 @@ export function Footer() {
               <span className="text-taupe">Instagram · </span>@{instagramHandle}
             </a>
             <a
-              href={brand.social.facebookUrl}
+              href={chrome.facebookUrl}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={`Facebook ${brand.social.facebook}`}
+              aria-label={`Facebook ${chrome.facebookLabel}`}
               className="font-body mt-3 block text-sm text-ink transition hover:text-deep-lavender"
             >
               <span className="text-taupe">Facebook · </span>
-              {brand.social.facebook}
+              {chrome.facebookLabel}
             </a>
-            {getGoogleWriteReviewUrl() ? (
+            {chrome.googleReviewUrl ? (
               <a
-                href={getGoogleWriteReviewUrl() ?? undefined}
+                href={chrome.googleReviewUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Review K9 Atelier on Google"
@@ -110,7 +79,7 @@ export function Footer() {
               </a>
             ) : null}
             <p className="font-body mt-5 text-sm text-ink">
-              {daysLabel} · {hoursLabel} Eastern
+              {chrome.daysLabel} · {chrome.hoursLabel} Eastern
             </p>
           </div>
 
@@ -135,7 +104,7 @@ export function Footer() {
 
         <div className="mt-14 border-t border-gray-line/80 pt-8">
           <p className="font-body text-center text-xs text-taupe">
-            © {new Date().getFullYear()} {brand.name}. All rights reserved.
+            © {new Date().getFullYear()} {chrome.name}. All rights reserved.
             {" · "}
             <Link
               href="/privacy"

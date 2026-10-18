@@ -14,6 +14,7 @@ import {
   DateTimeStep,
   type AvailabilityDay,
 } from "@/components/booking/DateTimeStep";
+import { bookingTravelAreaCopy } from "@/lib/booking-price";
 import { ARRIVAL_WINDOW_PENDING_LABEL } from "@/lib/appointments/arrival-window";
 import type { TimePreference } from "@/lib/booking-schedule";
 import {
@@ -35,6 +36,7 @@ type Props = {
   initialQuote?: TravelQuote | null;
   initialDate?: string | null;
   initialSlotStartMinutes?: number | null;
+  showPrices?: boolean;
   onBack: () => void;
   onComplete: (
     address: ServiceAddress,
@@ -54,6 +56,7 @@ export function BookingLocationTimeStep({
   initialQuote,
   initialDate,
   initialSlotStartMinutes,
+  showPrices = false,
   onBack,
   onComplete,
 }: Props) {
@@ -251,9 +254,10 @@ export function BookingLocationTimeStep({
         Where shall we visit {pet.name}?
       </h2>
       <p className="font-body mt-4 max-w-2xl text-sm leading-relaxed text-taupe">
-        Enter the appointment address so we can open the calendar. Complimentary
-        travel is included within {freeRadiusMiles} miles; visits up to{" "}
-        {standardServiceMiles} miles may include a travel fee.
+        Enter the appointment address so we can open the calendar.{" "}
+        {showPrices
+          ? `Complimentary travel is included within ${freeRadiusMiles} miles; visits up to ${standardServiceMiles} miles may include a travel fee.`
+          : "Your travel fee, if any, is shown on Review & Confirm."}
       </p>
 
       <form onSubmit={handleCheckArea} className="mt-8 space-y-5">
@@ -330,47 +334,30 @@ export function BookingLocationTimeStep({
 
       {quote && quote.withinServiceArea && (
         <div className={`${bookingNoticeClass} mt-8`}>
-          {quote.zone === "complimentary" ? (
+          {(() => {
+            const area = bookingTravelAreaCopy(quote.zone, showPrices);
+            return (
             <>
               <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
-                Your Address Is Within Our Complimentary Service Area
+                {area.heading}
               </p>
-              <p className="font-display mt-3 text-2xl text-ink">{city}</p>
-              <p className="font-body mt-4 text-sm text-taupe">
-                Complimentary travel
-              </p>
+              {quote.zone === "complimentary" ? (
+                <p className="font-display mt-3 text-2xl text-ink">{city}</p>
+              ) : null}
+              <p className="font-body mt-4 text-sm text-taupe">{area.body}</p>
+              {area.showFee ? (
+                <>
+                  <p className="font-body mt-4 text-sm text-ink">
+                    Distance · {formatTravelMiles(quote.distanceMiles)} miles
+                  </p>
+                  <p className="font-body mt-2 text-sm text-ink">
+                    Extended Travel · +{formatPrice(quote.fee)}
+                  </p>
+                </>
+              ) : null}
             </>
-          ) : quote.zone === "extended" ? (
-            <>
-              <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
-                Extended Service Area
-              </p>
-              <p className="font-body mt-3 text-sm text-taupe">
-                An extended travel fee applies to this location.
-              </p>
-              <p className="font-body mt-4 text-sm text-ink">
-                Distance · {formatTravelMiles(quote.distanceMiles)} miles
-              </p>
-              <p className="font-body mt-2 text-sm text-ink">
-                Extended Travel · +{formatPrice(quote.fee)}
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
-                Extended Service Area
-              </p>
-              <p className="font-body mt-3 text-sm text-taupe">
-                We would be delighted to come to you.
-              </p>
-              <p className="font-body mt-4 text-sm text-ink">
-                Distance · {formatTravelMiles(quote.distanceMiles)} miles
-              </p>
-              <p className="font-body mt-2 text-sm text-ink">
-                Extended Travel · +{formatPrice(quote.fee)}
-              </p>
-            </>
-          )}
+            );
+          })()}
           <p className="font-body mt-4 text-xs text-taupe">
             {formatServiceAddress({
               street: street.trim(),

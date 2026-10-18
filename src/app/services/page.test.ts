@@ -7,7 +7,7 @@ const servicesPage = readFileSync(new URL("./page.tsx", import.meta.url), "utf8"
 describe("services directory page", () => {
   it("keeps the page to hero, directory, introduction, consultation, and notes", () => {
     const hero = servicesPage.indexOf("<ServicesHero />");
-    const directory = servicesPage.indexOf("<ServiceDirectory />");
+    const directory = servicesPage.indexOf("<ServiceDirectory showPrices={showPrices} />");
     const introduction = servicesPage.indexOf("<ServicesIntroduction />");
     const consultation = servicesPage.indexOf("<ConsultationPrompt />");
     const notes = servicesPage.indexOf("<ServiceNotes />");

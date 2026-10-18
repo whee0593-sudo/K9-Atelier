@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LongCoatCareJsonLd } from "@/components/seo/LongCoatCareJsonLd";
 import { LongCoatCareView } from "@/components/services/LongCoatCareView";
+import { viewerCanViewServicePrices } from "@/lib/pricing-access";
 import { ServicesNav } from "@/components/services/ServicesNav";
 import {
   LONG_COAT_CARE_CANONICAL,
@@ -23,12 +24,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function LongCoatCarePage() {
+export default async function LongCoatCarePage() {
+  const showPrices = await viewerCanViewServicePrices();
   return (
     <>
       <LongCoatCareJsonLd />
       <ServicesNav />
-      <LongCoatCareView />
+      <LongCoatCareView showPrices={showPrices} />
     </>
   );
 }

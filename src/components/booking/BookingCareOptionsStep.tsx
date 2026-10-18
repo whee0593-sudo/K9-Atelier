@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { formatPrice } from "@/lib/business";
 import {
   CREATIVE_ACCENT_COLORING_ID,
+  GENTLE_DEMATTING_ASSESSMENT_NOTE,
   formatServicePriceFrom,
-  getAddOnService,
   getAvailableAddOns,
   getServicePriceEstimate,
+  isAssessedOnSiteService,
   type BookableService,
 } from "@/lib/services";
 import {
@@ -40,6 +41,7 @@ type Props = {
   primaryService: BookableService;
   selectedIds: string[];
   addOnOptions: Record<string, string>;
+  showPrices?: boolean;
   onToggle: (id: string) => void;
   onOptionChange: (addOnId: string, optionName: string) => void;
   onContinue: () => void;
@@ -52,13 +54,15 @@ function CareOptionCard({
   title,
   description,
   priceLabel,
+  note,
   selected,
   actionLabel,
   onAction,
 }: {
   title: string;
   description: string;
-  priceLabel: string;
+  priceLabel?: string;
+  note?: string;
   selected: boolean;
   actionLabel: string;
   onAction: () => void;
@@ -73,9 +77,14 @@ function CareOptionCard({
       <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
         {description}
       </p>
-      <p className="font-body mt-4 text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
-        {priceLabel}
-      </p>
+      {note ? (
+        <p className="font-body mt-3 text-sm leading-relaxed text-taupe">{note}</p>
+      ) : null}
+      {priceLabel ? (
+        <p className="font-body mt-4 text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
+          {priceLabel}
+        </p>
+      ) : null}
       <button
         type="button"
         onClick={onAction}
@@ -92,6 +101,7 @@ export function BookingCareOptionsStep({
   primaryService,
   selectedIds,
   addOnOptions,
+  showPrices = false,
   onToggle,
   onOptionChange,
   onContinue,
@@ -103,23 +113,23 @@ export function BookingCareOptionsStep({
   const [creativeNotice, setCreativeNotice] = useState<string | null>(null);
   const addOns = getAvailableAddOns(primaryService.categoryId, primaryService.id);
 
-  const standardAddOns = addOns.filter(
-    (a) =>
-      a.id !== "dematting-brush-out" &&
-      a.id !== "senior-comfort-care" &&
-      a.id !== CREATIVE_ACCENT_COLORING_ID,
-  );
-  const dematting = addOns.find((a) => a.id === "dematting-brush-out");
-  const senior = addOns.find((a) => a.id === "senior-comfort-care");
-  const creative = addOns.find((a) => a.id === CREATIVE_ACCENT_COLORING_ID);
-  const showGentleNotice = senior && petMayBenefitFromGentleCare(pet);
+  const standardAddOns = addOns.filter((item) => item.id !== CREATIVE_ACCENT_COLORING_ID);
+  const senior = addOns.find((item) => item.id === "senior-comfort-care");
+  const creative = addOns.find((item) => item.id === CREATIVE_ACCENT_COLORING_ID);
+  const showGentleNotice = Boolean(senior && petMayBenefitFromGentleCare(pet));
 
   function addOnPriceLabel(addOn: BookableService) {
+    if (!showPrices || isAssessedOnSiteService(addOn)) return "";
     const weightLbs = bookingWeightLbs(pet.weightLbs);
     const estimate =
       weightLbs == null ? null : getServicePriceEstimate(addOn, weightLbs);
     if (estimate) return `From ${formatPrice(estimate.from)}`;
     return formatServicePriceFrom(addOn);
+  }
+
+  function addOnNote(addOn: BookableService) {
+    if (!isAssessedOnSiteService(addOn)) return undefined;
+    return addOn.assessmentNote?.trim() || GENTLE_DEMATTING_ASSESSMENT_NOTE;
   }
 
   return (
@@ -190,32 +200,18 @@ export function BookingCareOptionsStep({
         Optional finishing and coat-care services available for {pet.name}.
       </p>
 
-      {showGentleNotice && senior && (
+      {showGentleNotice ? (
         <div className={`${bookingNoticeClass} mt-8`}>
           <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
             A Little Extra Time for {pet.name}
           </p>
           <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
-            Based on {pet.name}&apos;s profile, we may recommend additional
-            Gentle Care time so the appointment can remain comfortable and
-            unhurried.
+            Based on {pet.name}&apos;s profile, Extra-Gentle Senior Care can be
+            added if you would like a slower, more comfortable appointment. It
+            is optional and is never added automatically.
           </p>
-          <p className="font-body mt-4 text-sm text-ink">
-            Gentle Care · {addOnPriceLabel(senior)}
-          </p>
-          <button
-            type="button"
-            onClick={() => onToggle(senior.id)}
-            className={`${
-              selectedIds.includes(senior.id)
-                ? bookingSecondaryBtnClass
-                : bookingPrimaryBtnClass
-            } mt-5`}
-          >
-            {selectedIds.includes(senior.id) ? "Added" : "Add Gentle Care"}
-          </button>
         </div>
-      )}
+      ) : null}
 
       <div className="mt-8 space-y-4">
         {standardAddOns.map((addOn) => (
@@ -226,6 +222,7 @@ export function BookingCareOptionsStep({
               addOn.id,
               addOn.description,
             )}
+            note={addOnNote(addOn)}
             priceLabel={addOnPriceLabel(addOn)}
             selected={selectedIds.includes(addOn.id)}
             actionLabel={selectedIds.includes(addOn.id) ? "Remove" : "Add"}
@@ -241,9 +238,11 @@ export function BookingCareOptionsStep({
             <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
               {getServiceDisplayDescription(creative.id, creative.description)}
             </p>
-            <p className="font-body mt-4 text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
-              From {formatPrice(100)}
-            </p>
+            {showPrices ? (
+              <p className="font-body mt-4 text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
+                From {formatPrice(100)}
+              </p>
+            ) : null}
             <button
               type="button"
               onClick={() => {
@@ -277,12 +276,14 @@ export function BookingCareOptionsStep({
                     }`}
                   >
                     <span className="font-medium text-ink">{opt.name}</span>
-                    {opt.priceFrom != null && (
+                    {showPrices && opt.priceFrom != null ? (
                       <span className="mt-1 block text-xs">
                         From {formatPrice(opt.priceFrom)}
                         {opt.consultationRequired ? " · Consultation required" : ""}
                       </span>
-                    )}
+                    ) : opt.consultationRequired ? (
+                      <span className="mt-1 block text-xs">Consultation required</span>
+                    ) : null}
                     {guestNotice && creativeNotice === guestNotice ? (
                       <span className="mt-2 block text-sm text-ink" role="status">
                         {creativeNotice}
@@ -296,23 +297,6 @@ export function BookingCareOptionsStep({
           </article>
         )}
       </div>
-
-      {dematting && (
-        <div className={`${bookingNoticeClass} mt-8`}>
-          <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
-            Coat Condition
-          </p>
-          <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
-            If we discover matting that requires additional time, we will
-            discuss the safest and most comfortable approach with you before
-            proceeding.
-          </p>
-          <p className="font-body mt-4 text-sm text-ink">
-            Gentle DeMatting · {formatPrice(dematting.flatRate ?? 30)} / 15
-            minutes where appropriate
-          </p>
-        </div>
-      )}
 
       <button
         type="button"

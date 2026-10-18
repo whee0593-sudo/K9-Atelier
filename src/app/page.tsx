@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { HomePageContent } from "@/components/home/HomePageContent";
+import { viewerCanViewServicePrices } from "@/lib/pricing-access";
 import {
   HOME_PAGE_CANONICAL,
   HOME_PAGE_DESCRIPTION,
@@ -19,13 +20,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const showPrices = await viewerCanViewServicePrices();
   return (
     <>
       {/* Next resolves a root URL to the origin and drops the trailing slash. */}
       <link rel="canonical" href={HOME_PAGE_CANONICAL} />
       <meta property="og:url" content={HOME_PAGE_CANONICAL} />
-      <HomePageContent />
+      <HomePageContent showPrices={showPrices} />
     </>
   );
 }
