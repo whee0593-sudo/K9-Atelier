@@ -2,8 +2,16 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { applyFixedCollectCap } from "@/lib/policy-fees/amounts";
 import type { ActiveCoverage } from "@/lib/policy-fees/coverage";
 import { legacyChargeNeedsReview } from "@/lib/policy-fees/coverage";
+import {
+  changePhaseFrom,
+  type CalendarWriteResult,
+  type ChangeMarkResult,
+  type ChangePhase,
+  type RecoveryClaim,
+} from "@/lib/policy-fees/change-recovery";
 import type {
   PolicyClaimSnapshot,
+  PolicyClaimStatus,
   PolicyPaymentState,
   PolicyReserveResult,
 } from "@/lib/policy-fees/execute";
@@ -298,8 +306,18 @@ export async function acquirePolicyFeeChange(claimId: string) {
   });
   if (error) throw new Error(error.message);
   const outcome = String(asRecord(data).outcome ?? "");
-  if (outcome === "apply" || outcome === "already" || outcome === "busy") return outcome;
-  return "busy" as const;
+  if (
+    outcome === "apply" ||
+    outcome === "resume" ||
+    outcome === "already" ||
+    outcome === "busy" ||
+    outcome === "review" ||
+    outcome === "not_ready" ||
+    outcome === "missing"
+  ) {
+    return outcome;
+  }
+  return "not_ready" as const;
 }
 
 export async function releasePolicyFeeChange(claimId: string) {
@@ -346,10 +364,144 @@ export async function failPolicyFeeClaim(claimId: string, reason: string) {
   }
 }
 
-export async function markPolicyFeeChangeApplied(claimId: string) {
+export async function markPolicyFeeChangeApplied(claimId: string): Promise<ChangeMarkResult> {
   const admin = createAdminClient();
-  const { error } = await admin.rpc("mark_policy_fee_change_applied", {
+  const { data, error } = await admin.rpc("mark_policy_fee_change_applied", {
     p_claim_id: claimId,
   });
   if (error) throw new Error(error.message);
+  const outcome = String(asRecord(data).outcome ?? "");
+  if (
+    outcome === "applied" ||
+    outcome === "already_applied" ||
+    outcome === "not_written" ||
+    outcome === "not_ready"
+  ) {
+    return outcome;
+  }
+  return "not_ready";
+}
+
+export async function applyPolicyFeeCalendar(
+  claimId: string,
+  plan: unknown,
+): Promise<CalendarWriteResult> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("apply_policy_fee_calendar", {
+    p_claim_id: claimId,
+    p_plan: plan ?? null,
+  });
+  if (error) {
+    if (error.code === "23505" || /duplicate key|slot/i.test(error.message ?? "")) {
+      return "slot_unavailable";
+    }
+    throw new Error(error.message);
+  }
+  const outcome = String(asRecord(data).outcome ?? "");
+  if (
+    outcome === "written" ||
+    outcome === "already_written" ||
+    outcome === "already" ||
+    outcome === "review" ||
+    outcome === "not_ready" ||
+    outcome === "not_acquired" ||
+    outcome === "plan_required" ||
+    outcome === "missing"
+  ) {
+    return outcome;
+  }
+  return "not_ready";
+}
+
+export async function loadPolicyFeeChangeRecovery(claimId: string): Promise<RecoveryClaim | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("policy_fee_claims")
+    .select(
+      "id, status, action, visit_id, idempotency_key, charged_amount, appointment_change_applied, change_phase, calendar_written_at, change_payload, payment_state",
+    )
+    .eq("id", claimId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  return recoveryFromRow(data as Record<string, unknown>);
+}
+
+export async function loadUnfinishedPolicyChange(visitId: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("policy_fee_claims")
+    .select("id, status, payment_state, change_phase, action, charged_amount")
+    .eq("visit_id", visitId)
+    .eq("appointment_change_applied", false)
+    .in("action", ["cancel", "reschedule", "remove_dog"])
+    .neq("status", "failed")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  const status = data.status as PolicyClaimStatus;
+  return {
+    claimId: data.id as string,
+    status,
+    paymentState: paymentStateFrom(data.payment_state),
+    phase: changePhaseFrom(data.change_phase) as ChangePhase,
+    action: data.action as string,
+    chargedAmount: Number(data.charged_amount ?? 0),
+  };
+}
+
+export async function loadLatestAppliedReschedule(visitId: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("policy_fee_claims")
+    .select("id, charged_amount, change_payload")
+    .eq("visit_id", visitId)
+    .eq("action", "reschedule")
+    .eq("appointment_change_applied", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  const payload =
+    data.change_payload && typeof data.change_payload === "object"
+      ? (data.change_payload as Record<string, unknown>)
+      : {};
+  const target =
+    payload.rescheduleTo && typeof payload.rescheduleTo === "object"
+      ? (payload.rescheduleTo as Record<string, unknown>)
+      : null;
+  return {
+    claimId: data.id as string,
+    chargedAmount: Number(data.charged_amount ?? 0),
+    date: typeof target?.date === "string" ? target.date : null,
+    slotStartMinutes:
+      typeof target?.slotStartMinutes === "number" ? target.slotStartMinutes : null,
+  };
+}
+
+function recoveryFromRow(row: Record<string, unknown>): RecoveryClaim {
+  const status = row.status;
+  return {
+    id: String(row.id),
+    status:
+      status === "charging" ||
+      status === "charged" ||
+      status === "waived" ||
+      status === "failed" ||
+      status === "no_fee"
+        ? status
+        : "charging",
+    paymentState: paymentStateFrom(row.payment_state),
+    phase: changePhaseFrom(row.change_phase),
+    calendarWritten: Boolean(row.calendar_written_at),
+    applied: Boolean(row.appointment_change_applied),
+    action: String(row.action ?? ""),
+    chargedAmount: Number(row.charged_amount ?? 0),
+    idempotencyKey: String(row.idempotency_key ?? ""),
+    visitId: String(row.visit_id ?? ""),
+    payload: row.change_payload,
+  };
 }

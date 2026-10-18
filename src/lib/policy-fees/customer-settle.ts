@@ -3,6 +3,7 @@ import type { AppointmentChangeAction } from "@/lib/appointments/change-policy";
 import { changeNoticeBand } from "@/lib/appointments/change-policy";
 import { dollarsToCents } from "@/lib/charges/money";
 import type { ChargeLineItem } from "@/lib/charges/types";
+import { buildChangeRecoveryPayload } from "@/lib/policy-fees/change-recovery";
 import { executePolicyFee } from "@/lib/policy-fees/execute";
 import { policyFeeFromRows, type PolicyPriceRow } from "@/lib/policy-fees/coverage";
 import {
@@ -40,6 +41,10 @@ type SettleRow = PolicyPriceRow & {
   appointment_date: string;
   scheduled_start?: number | null;
   payment_method_id?: string | null;
+  status?: string | null;
+  appointment_time?: string | null;
+  time_preference?: string | null;
+  visit_sequence?: number | null;
 };
 
 export type CustomerPolicySettlement =
@@ -248,11 +253,14 @@ export async function settleCustomerPolicyFee(input: {
       waiver: net.waiver,
       tender: net.charged > 0 ? "card" : null,
       actorId: input.customerId,
-      changePayload: {
+      changePayload: buildChangeRecoveryPayload({
+        operationId: key,
         action: input.action,
-        appointmentIds: input.rows.map((row) => row.id),
+        visitId: input.visitId,
+        confirmedFee: net.charged,
+        rows: input.rows,
         rescheduleTo: input.rescheduleTo ?? null,
-      },
+      }),
       expectedAmount: input.expectedAmount,
     });
   } catch (error) {

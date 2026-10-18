@@ -160,6 +160,12 @@ export async function POST(
           409,
         );
       }
+      if (result.error === "change_review") {
+        return appointmentJsonError(
+          "This visit changed before the update could be saved. The confirmed fee was charged once, and the appointment was not changed again. Please contact us so we can review it.",
+          409,
+        );
+      }
       if (result.error === "conflict") {
         return appointmentJsonError(
           "This appointment can no longer be changed that way.",

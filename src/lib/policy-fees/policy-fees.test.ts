@@ -13,6 +13,11 @@ import {
   noShowConfirmDecision,
   noShowInstantToBusinessInput,
 } from "@/lib/policy-fees/no-show-evidence";
+import {
+  buildChangeRecoveryPayload,
+  resumeAppointmentChange,
+  type RecoveryClaim,
+} from "@/lib/policy-fees/change-recovery";
 import { executePolicyFee, nextPolicyFeeStep } from "@/lib/policy-fees/execute";
 import type {
   PolicyClaimSnapshot,
@@ -447,6 +452,7 @@ describe("stripe recovery", () => {
     const saved = store();
     const normal = await executePolicyFee(saved.deps, { settlePaymentOnly: true });
     assert.equal(normal.outcome, "ready_to_change");
+    assert.equal(saved.current.appointmentChangeApplied, false);
     assert.equal(saved.counts().creates, 1);
     const repeat = await executePolicyFee(saved.deps);
     assert.equal(repeat.changeApplications, 1);
@@ -500,9 +506,158 @@ describe("migration safety", () => {
     const sql = [
       readFileSync("supabase/migrations/20261018190000_policy_fee_controls.sql", "utf8"),
       readFileSync("supabase/migrations/20261018210000_policy_fee_payment_recovery.sql", "utf8"),
+      readFileSync("supabase/migrations/20261018220000_policy_fee_change_recovery.sql", "utf8"),
     ].join("\n");
     assert.equal(/\bUPDATE\s+public\.appointment_charges\b/i.test(sql), false);
     assert.match(sql, /claim_id IS NULL/);
     assert.match(sql, /mark_policy_fee_payment_unknown/);
+  });
+});
+
+describe("appointment change recovery", () => {
+  function payload(action: "cancel" | "reschedule" | "remove_dog" = "cancel") {
+    return buildChangeRecoveryPayload({
+      operationId: "op-1",
+      action,
+      visitId: "visit-1",
+      confirmedFee: 18,
+      rows: [
+        {
+          id: "apt-1",
+          status: "confirmed",
+          appointment_date: "2026-10-20",
+          scheduled_start: 540,
+          appointment_time: "9:00 AM",
+          time_preference: "morning",
+          visit_sequence: 1,
+        },
+      ],
+      rescheduleTo: action === "reschedule" ? { date: "2026-10-22", slotStartMinutes: 600 } : null,
+    });
+  }
+
+  function world(options?: {
+    phase?: RecoveryClaim["phase"];
+    calendarWritten?: boolean;
+    paymentState?: RecoveryClaim["paymentState"];
+    status?: RecoveryClaim["status"];
+    liveStatus?: string;
+  }) {
+    const saved = payload();
+    const state: RecoveryClaim = {
+      id: "claim-1",
+      status: options?.status ?? "charged",
+      paymentState: options?.paymentState ?? "succeeded",
+      phase: options?.phase ?? "pending",
+      calendarWritten: options?.calendarWritten ?? false,
+      applied: false,
+      action: "cancel",
+      chargedAmount: 18,
+      idempotencyKey: "op-1",
+      visitId: "visit-1",
+      payload: saved,
+    };
+    const live = {
+      id: "apt-1",
+      status: options?.liveStatus ?? "confirmed",
+      appointmentDate: "2026-10-20",
+      scheduledStart: 540,
+    };
+    let writes = 0;
+    let marks = 0;
+    let notices = 0;
+    let releases = 0;
+    let charges = 0;
+    let chain = Promise.resolve();
+    const lock = <T>(run: () => Promise<T> | T) => {
+      const next = chain.then(run, run);
+      chain = next.then(
+        () => undefined,
+        () => undefined,
+      );
+      return next;
+    };
+    return {
+      counts: () => ({ writes, marks, notices, releases, charges }),
+      resume: () =>
+        resumeAppointmentChange({
+          load: async () => ({ ...state, payload: saved }),
+          acquire: () =>
+            lock(async () => {
+              charges += 0;
+              if (state.applied || state.phase === "applied") return "already" as const;
+              if (state.phase === "review") return "review" as const;
+              if (state.status !== "charged") return "not_ready" as const;
+              if (state.calendarWritten) return "resume" as const;
+              if (state.phase === "applying") return "busy" as const;
+              state.phase = "applying";
+              return "apply" as const;
+            }),
+          release: async () => {
+            releases += 1;
+          },
+          loadLive: async () => [{ ...live }],
+          apply: (plan) =>
+            lock(async () => {
+              if (plan) charges += 0;
+              if (state.phase !== "applying") return "not_acquired" as const;
+              if (state.calendarWritten) return "already_written" as const;
+              if (live.status !== "confirmed") {
+                state.phase = "review";
+                return "review" as const;
+              }
+              writes += 1;
+              state.calendarWritten = true;
+              live.status = "cancelled";
+              return "written" as const;
+            }),
+          mark: () =>
+            lock(async () => {
+              if (!state.calendarWritten) return "not_written" as const;
+              if (state.applied) return "already_applied" as const;
+              state.applied = true;
+              state.phase = "applied";
+              marks += 1;
+              return "applied" as const;
+            }),
+          afterWrite: async () => {
+            notices += 1;
+          },
+        }),
+    };
+  }
+
+  it("finishes one unpaid-again change after each interrupt and does not repeat it", async () => {
+    const beforeLease = world();
+    const first = await beforeLease.resume();
+    assert.equal(first.outcome, "applied");
+    assert.equal(first.outcome === "applied" && first.wrote, true);
+    assert.deepEqual(beforeLease.counts(), { writes: 1, marks: 1, notices: 1, releases: 0, charges: 0 });
+    const again = await beforeLease.resume();
+    assert.equal(again.outcome, "already");
+    assert.equal(beforeLease.counts().writes, 1);
+    assert.equal(beforeLease.counts().notices, 1);
+
+    const afterLease = world({ phase: "applying" });
+    assert.equal((await afterLease.resume()).outcome, "not_ready");
+    assert.equal(afterLease.counts().writes, 0);
+
+    const afterWrite = world({ phase: "applying", calendarWritten: true });
+    const marked = await afterWrite.resume();
+    assert.equal(marked.outcome, "applied");
+    assert.equal(marked.outcome === "applied" && marked.wrote, false);
+    assert.equal(afterWrite.counts().writes, 0);
+    assert.equal(afterWrite.counts().notices, 0);
+    assert.equal(afterWrite.counts().marks, 1);
+
+    const conflict = world({ liveStatus: "completed" });
+    assert.equal((await conflict.resume()).outcome, "review");
+    assert.equal(conflict.counts().writes, 0);
+    assert.equal(conflict.counts().notices, 0);
+
+    const unknown = world({ status: "charging", paymentState: "unknown" });
+    assert.equal((await unknown.resume()).outcome, "payment_locked");
+    assert.equal(unknown.counts().releases, 0);
+    assert.equal(unknown.counts().writes, 0);
   });
 });

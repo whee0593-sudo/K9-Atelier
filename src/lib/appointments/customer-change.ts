@@ -40,15 +40,17 @@ import { spaGoalsForService } from "@/lib/spa-goals";
 import { loadBookingAllergySnapshot } from "@/lib/appointments/service";
 import { resolveAppointmentDuration } from "@/lib/visits/duration";
 import { changeFeeBase } from "@/lib/appointments/stored-service-price";
+import type { ChangeRecoveryPayload } from "@/lib/policy-fees/change-recovery";
+import type { ResumeResult } from "@/lib/policy-fees/change-recovery";
 import {
-  acquirePolicyFeeChange,
-  releasePolicyFeeChange,
+  loadLatestAppliedReschedule,
+  loadUnfinishedPolicyChange,
 } from "@/lib/policy-fees/db";
 import {
-  finishCustomerPolicyChange,
   previewCustomerPolicyFee,
   settleCustomerPolicyFee,
 } from "@/lib/policy-fees/customer-settle";
+import { resumeSavedAppointmentChange } from "@/lib/policy-fees/resume-change";
 import { attachBookingPriceSnapshot } from "@/lib/charges/visit-line-items";
 import {
   hasVisitSequence,
@@ -57,7 +59,6 @@ import {
   snapshotServicePrice,
 } from "@/lib/visits/visit";
 import { compactVisitChildStarts } from "@/lib/visits/compact";
-import { replaceVisitSchedule } from "@/lib/visits/persist";
 import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
 import { getServiceDisplayName } from "@/lib/service-display";
 import type { TimePreference } from "@/lib/booking-schedule";
@@ -143,10 +144,10 @@ function asChangeRow(row: ChangeRow): AppointmentRecord {
   return mapAppointmentRowToRecord(row);
 }
 
-async function loadOwnedAppointment(
+async function loadOwnedAppointmentRecord(
   userId: string,
   appointmentId: string,
-): Promise<{ row: ChangeRow } | { error: "server" | "not_found" | "conflict" }> {
+): Promise<{ row: ChangeRow } | { error: "server" | "not_found" }> {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("appointments")
@@ -160,9 +161,17 @@ async function loadOwnedAppointment(
     return { error: "server" as const };
   }
   if (!data) return { error: "not_found" as const };
-  const row = data as unknown as ChangeRow;
-  if (row.status === "cancelled") return { error: "conflict" as const };
-  return { row };
+  return { row: data as unknown as ChangeRow };
+}
+
+async function loadOwnedAppointment(
+  userId: string,
+  appointmentId: string,
+): Promise<{ row: ChangeRow } | { error: "server" | "not_found" | "conflict" }> {
+  const loaded = await loadOwnedAppointmentRecord(userId, appointmentId);
+  if ("error" in loaded) return loaded;
+  if (loaded.row.status === "cancelled") return { error: "conflict" as const };
+  return loaded;
 }
 
 async function loadVisitSiblings(
@@ -332,26 +341,158 @@ export async function quoteAppointmentChange(
 }
 
 
-async function cancelRows(
-  rows: ChangeRow[],
-): Promise<{ ok: true } | { error: "server" }> {
-  const admin = createAdminClient();
-  const { error } = await admin
-    .from("appointments")
-    .update({
-      status: "cancelled",
-      cancelled_at: new Date().toISOString(),
-    })
-    .in(
-      "id",
-      rows.map((row) => row.id),
-    );
+function quoteFromRecovery(payload: ChangeRecoveryPayload): ChangeQuote {
+  const first = [...payload.appointments].sort(
+    (left, right) => (left.scheduledStart ?? 0) - (right.scheduledStart ?? 0),
+  )[0];
+  const band = first
+    ? changeNoticeBand(first.appointmentDate, first.scheduledStart)
+    : "complimentary";
+  return {
+    action: payload.action,
+    band,
+    estimatedTotal: 0,
+    feeBase: null,
+    fee: payload.confirmedFee,
+    needsPriceReview: false,
+  };
+}
 
+function previousWhenFromPayload(payload: ChangeRecoveryPayload) {
+  const row = [...payload.appointments].sort(
+    (left, right) => (left.scheduledStart ?? 0) - (right.scheduledStart ?? 0),
+  )[0];
+  if (!row?.appointmentDate || !row.appointmentTime) return null;
+  return `${formatAppointmentDateLabel(row.appointmentDate)}, ${row.appointmentTime}`;
+}
+
+async function loadChangeRowsByIds(ids: string[]) {
+  if (ids.length === 0) return [] as ChangeRow[];
+  const admin = createAdminClient();
+  const { data, error } = await admin.from("appointments").select(CHANGE_SELECT).in("id", ids);
   if (error) {
-    console.error("cancelRows failed:", error.message);
-    return { error: "server" as const };
+    console.error("loadChangeRowsByIds failed:", error.message);
+    return [] as ChangeRow[];
   }
-  return { ok: true as const };
+  return (data ?? []) as unknown as ChangeRow[];
+}
+
+async function loadActiveVisitRows(userId: string, visitId: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("appointments")
+    .select(CHANGE_SELECT)
+    .eq("customer_id", userId)
+    .eq("visit_id", visitId)
+    .neq("status", "cancelled")
+    .order("visit_sequence", { ascending: true });
+  if (error) {
+    console.error("loadActiveVisitRows failed:", error.message);
+    return [] as ChangeRow[];
+  }
+  return (data ?? []) as unknown as ChangeRow[];
+}
+
+function liveFromRows(rows: ChangeRow[]) {
+  return rows.map((row) => ({
+    id: row.id,
+    status: row.status,
+    appointmentDate: row.appointment_date,
+    scheduledStart: row.scheduled_start ?? null,
+  }));
+}
+
+async function notifyRecoveredChange(input: {
+  userId: string;
+  payload: ChangeRecoveryPayload;
+  contact: CustomerContact | null;
+  cardBrand?: string;
+  cardLast4?: string;
+}) {
+  const rows = await loadChangeRowsByIds(input.payload.appointmentIds);
+  const appointments = recordsFromRows(rows);
+  const remaining =
+    input.payload.action === "remove_dog"
+      ? recordsFromRows(
+          (await loadActiveVisitRows(input.userId, input.payload.visitId)).filter(
+            (row) => !input.payload.appointmentIds.includes(row.id),
+          ),
+        )
+      : [];
+  await sendChangeConfirmationEmail({
+    action: input.payload.action,
+    appointments,
+    remainingAppointments: remaining,
+    contact: input.contact,
+    fee: input.payload.confirmedFee,
+    cardBrand: input.cardBrand,
+    cardLast4: input.cardLast4,
+  });
+  if (input.payload.action === "reschedule") {
+    const previous = previousWhenFromPayload(input.payload);
+    if (previous) {
+      await notifyMerchantRescheduleCompleted(appointments, previous, input.contact);
+    }
+  }
+  if (input.payload.action === "cancel") {
+    await notifyMerchantVisitCancelled(appointments, input.contact);
+  }
+  if (input.payload.action === "remove_dog") {
+    await notifyMerchantPetsChanged(appointments, remaining, input.contact);
+  }
+}
+
+function resumeError(
+  resumed: ResumeResult,
+): { error: "change_review" | "slot_unavailable" | "payment_unknown" | "visit_busy" | "server" } | null {
+  if (resumed.outcome === "review") return { error: "change_review" };
+  if (resumed.outcome === "slot_unavailable") return { error: "slot_unavailable" };
+  if (resumed.outcome === "payment_locked") return { error: "payment_unknown" };
+  if (resumed.outcome === "not_ready") return { error: "visit_busy" };
+  return null;
+}
+
+async function resumeVisitChange(
+  userId: string,
+  claimId: string,
+  contact: CustomerContact | null,
+  card?: { brand?: string; last4?: string },
+) {
+  return resumeSavedAppointmentChange({
+    claimId,
+    loadLive: async (ids) => liveFromRows(await loadChangeRowsByIds(ids)),
+    planReschedule: async (payload) => {
+      if (!payload.rescheduleTo) return { error: "server" };
+      const rows = await loadChangeRowsByIds(payload.appointmentIds);
+      if (rows.length !== payload.appointmentIds.length) return { error: "server" };
+      return planReschedule(
+        rows,
+        payload.rescheduleTo.date,
+        payload.rescheduleTo.slotStartMinutes,
+      );
+    },
+    afterWrite: async (payload) => {
+      if (payload.action === "cancel" || payload.action === "remove_dog") {
+        const mirrored = await syncVisitTravelFeeMirror(payload.visitId);
+        if ("error" in mirrored) {
+          console.error("travel mirror after policy change failed");
+        }
+      }
+      if (payload.action === "remove_dog") {
+        const compacted = await compactVisitChildStarts(payload.visitId);
+        if ("error" in compacted) {
+          console.error("compact after policy change failed");
+        }
+      }
+      await notifyRecoveredChange({
+        userId,
+        payload,
+        contact,
+        cardBrand: card?.brand,
+        cardLast4: card?.last4,
+      });
+    },
+  });
 }
 
 export async function applyAppointmentChange(
@@ -375,14 +516,57 @@ export async function applyAppointmentChange(
         | "visit_busy"
         | "payment_pending"
         | "payment_unknown"
+        | "change_review"
         | "server";
     }
 > {
   const user = await requireAuthenticatedUser();
   if (!user) return { error: "unauthenticated" };
 
-  const loaded = await loadOwnedAppointment(user.id, input.appointmentId);
+  const loaded = await loadOwnedAppointmentRecord(user.id, input.appointmentId);
   if ("error" in loaded) return loaded;
+
+  if (loaded.row.visit_id && input.action !== "add_dog") {
+    const open = await loadUnfinishedPolicyChange(loaded.row.visit_id);
+    if (open?.phase === "review") return { error: "change_review" };
+    if (
+      open &&
+      (open.status === "charged" || open.status === "waived" || open.status === "no_fee")
+    ) {
+      const contact = await fetchCustomerContact(user.id);
+      const resumed = await resumeVisitChange(user.id, open.claimId, contact);
+      const failed = resumeError(resumed);
+      if (failed) return failed;
+      const payload = "payload" in resumed ? resumed.payload : null;
+      return {
+        ok: true,
+        quote: payload ? quoteFromRecovery(payload) : quoteForRows(input.action, [loaded.row]),
+      };
+    }
+    if (
+      input.action === "reschedule" &&
+      input.date &&
+      input.slotStartMinutes != null
+    ) {
+      const latest = await loadLatestAppliedReschedule(loaded.row.visit_id);
+      if (
+        latest &&
+        latest.date === input.date &&
+        latest.slotStartMinutes === input.slotStartMinutes
+      ) {
+        return {
+          ok: true,
+          quote: {
+            ...quoteForRows("reschedule", [loaded.row]),
+            fee: latest.chargedAmount,
+            needsPriceReview: false,
+          },
+        };
+      }
+    }
+  }
+
+  if (loaded.row.status === "cancelled") return { error: "conflict" };
 
   const siblings = await loadVisitSiblings(user.id, loaded.row);
   if ("error" in siblings) return siblings;
@@ -435,105 +619,13 @@ export async function applyAppointmentChange(
   if ("error" in charged) return charged;
   const billedQuote = { ...quote, fee: charged.fee };
   if (!charged.performChange) return { ok: true, quote: billedQuote };
-  const changeGate = await acquirePolicyFeeChange(charged.claimId);
-  if (changeGate === "already") return { ok: true, quote: billedQuote };
-  if (changeGate !== "apply") return { error: "visit_busy" };
-
-  if (input.action === "reschedule") {
-    if (
-      !input.date ||
-      (input.slotStartMinutes == null && !input.timePreference)
-    ) {
-      await releasePolicyFeeChange(charged.claimId);
-      return { error: "conflict" };
-    }
-    const slotStartMinutes =
-      input.slotStartMinutes ??
-      (input.timePreference === "afternoon" ? 12 * 60 : 9 * 60);
-    const previousWhenLabel = earliestChangeWhen(targetRows);
-    const moved = await rescheduleRows(targetRows, input.date, slotStartMinutes);
-    if ("error" in moved) {
-      if (moved.error === "slot_unavailable") {
-        await releasePolicyFeeChange(charged.claimId);
-      }
-      return moved;
-    }
-    await sendChangeConfirmationEmail({
-      action: "reschedule",
-      appointments: moved.appointments,
-      contact,
-      fee: billedQuote.fee,
-      cardBrand: charged.cardBrand,
-      cardLast4: charged.cardLast4,
-    });
-    await finishCustomerPolicyChange(charged.claimId);
-    if (previousWhenLabel) {
-      await notifyMerchantRescheduleCompleted(
-        moved.appointments,
-        previousWhenLabel,
-        contact,
-      );
-    }
-    return { ok: true, quote: billedQuote };
-  }
-
-  const remainingAppointments =
-    input.action === "remove_dog"
-      ? recordsFromRows(
-          siblings.rows.filter(
-            (row) => !targetRows.some((target) => target.id === row.id),
-          ),
-        )
-      : [];
-  const cancelled = await cancelRows(targetRows);
-  if ("error" in cancelled) {
-    await releasePolicyFeeChange(charged.claimId);
-    return cancelled;
-  }
-  if (loaded.row.visit_id) {
-    const mirrored = await syncVisitTravelFeeMirror(loaded.row.visit_id);
-    if ("error" in mirrored) return mirrored;
-  }
-  if (input.action === "remove_dog" && loaded.row.visit_id) {
-    const compacted = await compactVisitChildStarts(loaded.row.visit_id);
-    if ("error" in compacted) return compacted;
-  }
-  await sendChangeConfirmationEmail({
-    action: input.action === "remove_dog" ? "remove_dog" : "cancel",
-    appointments: recordsFromRows(targetRows),
-    remainingAppointments,
-    contact,
-    fee: billedQuote.fee,
-    cardBrand: charged.cardBrand,
-    cardLast4: charged.cardLast4,
+  const resumed = await resumeVisitChange(user.id, charged.claimId, contact, {
+    brand: charged.cardBrand,
+    last4: charged.cardLast4,
   });
-  await finishCustomerPolicyChange(charged.claimId);
-  if (input.action === "cancel") {
-    await notifyMerchantVisitCancelled(
-      recordsFromRows(targetRows).map((row) => ({
-        ...row,
-        status: "cancelled" as const,
-      })),
-      contact,
-    );
-  }
-  if (input.action === "remove_dog") {
-    await notifyMerchantPetsChanged(
-      recordsFromRows(siblings.rows),
-      remainingAppointments,
-      contact,
-    );
-  }
+  const failed = resumeError(resumed);
+  if (failed) return failed;
   return { ok: true, quote: billedQuote };
-}
-
-function earliestChangeWhen(rows: ChangeRow[]) {
-  const ordered = [...rows].sort(
-    (left, right) => (left.scheduled_start ?? 0) - (right.scheduled_start ?? 0),
-  );
-  const row = ordered[0];
-  if (!row?.appointment_date || !row.appointment_time) return null;
-  return `${formatAppointmentDateLabel(row.appointment_date)}, ${row.appointment_time}`;
 }
 
 async function notifyMerchantRescheduleCompleted(
@@ -643,40 +735,22 @@ function durationDecisionForRow(row: ChangeRow) {
   });
 }
 
-async function writeVisitSchedule(
-  visitId: string | null,
-  rows: Array<{
-    id: string;
-    appointmentTime: string | null;
-    scheduledStart: number;
-    timePreference: "morning" | "afternoon" | null;
-    date: string;
-    durationMinutes: number;
-  }>,
-): Promise<{ ok: true } | { error: "server" | "slot_unavailable" }> {
-  const first = rows[0];
-  if (!visitId || !first) return { error: "server" };
-  return replaceVisitSchedule({
-    visitId,
-    serviceDate: first.date,
-    visitStartMinutes: first.scheduledStart,
-    timePreference: first.timePreference,
-    children: rows.map((row) => ({
-      id: row.id,
-      scheduledStart: row.scheduledStart,
-      durationMinutes: row.durationMinutes,
-      appointmentTime: row.appointmentTime,
-      timePreference: row.timePreference,
-    })),
-  });
-}
-
-async function rescheduleRows(
+async function planReschedule(
   rows: ChangeRow[],
   date: string,
   slotStartMinutes: number,
 ): Promise<
-  | { appointments: AppointmentRecord[] }
+  | {
+      ok: true;
+      plan: {
+        appointments: Array<{
+          id: string;
+          appointmentTime: string | null;
+          scheduledStart: number;
+          timePreference: "morning" | "afternoon" | null;
+        }>;
+      };
+    }
   | { error: "server" | "slot_unavailable" }
 > {
   const ordered = [...rows].sort(
@@ -728,37 +802,16 @@ async function rescheduleRows(
     durations,
   });
   if (!planned.ok) return { error: "slot_unavailable" as const };
-  const chained = ordered.map((row, index) => ({
-    id: row.id,
-    appointmentTime: planned.slots[index]!.appointmentTime,
-    scheduledStart: planned.slots[index]!.scheduledStart,
-    timePreference: planned.slots[index]!.usedPreference,
-    date,
-    durationMinutes: planned.slots[index]!.durationMinutes,
-  }));
-
-  const written = await writeVisitSchedule(first.visit_id ?? null, chained);
-  if ("error" in written) return written;
-
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("appointments")
-    .select(CHANGE_SELECT)
-    .in(
-      "id",
-      chained.map((row) => row.id),
-    );
-  if (error || !data) {
-    console.error("rescheduleRows reload failed:", error?.message);
-    return { error: "server" };
-  }
-  const byId = new Map(
-    (data as unknown as ChangeRow[]).map((row) => [row.id, row]),
-  );
   return {
-    appointments: chained.map((row) =>
-      mapAppointmentRowToRecord(byId.get(row.id) as AppointmentRow),
-    ),
+    ok: true,
+    plan: {
+      appointments: ordered.map((row, index) => ({
+        id: row.id,
+        appointmentTime: planned.slots[index]!.appointmentTime,
+        scheduledStart: planned.slots[index]!.scheduledStart,
+        timePreference: planned.slots[index]!.usedPreference,
+      })),
+    },
   };
 }
 

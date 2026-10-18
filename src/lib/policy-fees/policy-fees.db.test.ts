@@ -30,6 +30,7 @@ const CUSTOMER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const CONTROLS = "supabase/migrations/20261018190000_policy_fee_controls.sql";
 const FUNCTIONS = "supabase/migrations/20261018190100_policy_fee_functions.sql";
 const RECOVERY = "supabase/migrations/20261018210000_policy_fee_payment_recovery.sql";
+const CHANGE_RECOVERY = "supabase/migrations/20261018220000_policy_fee_change_recovery.sql";
 
 function pgBinary(name: string) {
   for (const version of ["18", "17", "16", "15", "14"]) {
@@ -85,13 +86,26 @@ function fixtureSql() {
 
     CREATE TABLE public.visits (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      customer_id uuid
+      customer_id uuid,
+      service_date date,
+      scheduled_start integer,
+      appointment_time text,
+      time_preference text,
+      travel_fee numeric
     );
     CREATE TABLE public.appointments (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       visit_id uuid REFERENCES public.visits (id),
       customer_id uuid,
-      status text
+      status text,
+      appointment_date date,
+      appointment_time text,
+      scheduled_start integer,
+      time_preference text,
+      service_price numeric,
+      travel_fee numeric,
+      estimated_total numeric,
+      cancelled_at timestamptz
     );
     CREATE TABLE public.appointment_charges (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -117,7 +131,7 @@ function fixtureSql() {
   `;
 }
 
-describe("policy fee postgres controls", () => {
+describe("policy fee postgres controls", { concurrency: false }, () => {
   const port = 55441;
   let dataDir = "";
   let socketDir = "";
@@ -167,6 +181,7 @@ describe("policy fee postgres controls", () => {
     await left.query(sqlFile(CONTROLS));
     await left.query(sqlFile(FUNCTIONS));
     await left.query(sqlFile(RECOVERY));
+    await left.query(sqlFile(CHANGE_RECOVERY));
   });
 
   after(async () => {
@@ -230,6 +245,45 @@ describe("policy fee postgres controls", () => {
     return asJson(result.rows[0]?.result);
   }
 
+  async function finishNoFeeRemoval(
+    claimId: string,
+    made: { visitId: string; appointmentIds: string[] },
+    index: number,
+  ) {
+    const id = made.appointmentIds[index]!;
+    await stampSchedule([id]);
+    await left!.query(
+      "UPDATE public.policy_fee_claims SET change_payload = $2::jsonb WHERE id = $1",
+      [
+        claimId,
+        JSON.stringify(
+          recoveryPayload({
+            key: `remove_dog:appointment:${id}`,
+            action: "remove_dog",
+            visitId: made.visitId,
+            ids: [id],
+            charged: 0,
+          }),
+        ),
+      ],
+    );
+    const acquired = await left!.query<{ result: unknown }>(
+      "SELECT public.acquire_policy_fee_change($1::uuid) AS result",
+      [claimId],
+    );
+    assert.equal(asJson(acquired.rows[0]?.result).outcome, "apply");
+    const written = await left!.query<{ result: unknown }>(
+      "SELECT public.apply_policy_fee_calendar($1::uuid, NULL) AS result",
+      [claimId],
+    );
+    assert.equal(asJson(written.rows[0]?.result).outcome, "written");
+    const marked = await left!.query<{ result: unknown }>(
+      "SELECT public.mark_policy_fee_change_applied($1::uuid) AS result",
+      [claimId],
+    );
+    assert.equal(asJson(marked.rows[0]?.result).outcome, "applied");
+  }
+
   async function call(name: string, payload: Record<string, unknown>) {
     const result = await left!.query<{ result: unknown }>(
       `SELECT public.${name}($1::jsonb) AS result`,
@@ -250,6 +304,7 @@ describe("policy fee postgres controls", () => {
     await left!.query(sqlFile(CONTROLS));
     await left!.query(sqlFile(FUNCTIONS));
     await left!.query(sqlFile(RECOVERY));
+    await left!.query(sqlFile(CHANGE_RECOVERY));
     const row = await left!.query<{ total: string; stripe_payment_intent_id: string; claim_id: string | null }>(
       "SELECT total, stripe_payment_intent_id, claim_id FROM public.appointment_charges WHERE id = $1",
       [inserted.rows[0]!.id],
@@ -330,11 +385,7 @@ describe("policy fee postgres controls", () => {
     const made = await makeVisit(2);
     const first = await begin(left!, removeInput(made, 0, { computed: 0, charged: 0, waiver: 0 }));
     assert.equal(first.outcome, "created");
-    const marked = await left!.query<{ result: unknown }>(
-      "SELECT public.mark_policy_fee_change_applied($1::uuid) AS result",
-      [first.claim_id],
-    );
-    assert.equal(asJson(marked.rows[0]?.result).outcome, "applied");
+    await finishNoFeeRemoval(String(first.claim_id), made, 0);
     const second = await begin(left!, removeInput(made, 1, { computed: 0, charged: 0, waiver: 0 }));
     assert.equal(second.outcome, "created");
     const coverage = await left!.query<{ count: string }>(
@@ -639,7 +690,7 @@ describe("policy fee postgres controls", () => {
   it("requires an admin reopen before a refunded service can be charged again", async () => {
     const made = await makeVisit(1);
     const first = await begin(left!, removeInput(made, 0, { computed: 0, charged: 0, waiver: 0 }));
-    await left!.query("SELECT public.mark_policy_fee_change_applied($1::uuid)", [first.claim_id]);
+    await finishNoFeeRemoval(String(first.claim_id), made, 0);
     const coverage = await left!.query<{ id: string }>(
       "SELECT id FROM public.policy_fee_coverage WHERE claim_id = $1",
       [first.claim_id],
@@ -865,9 +916,75 @@ describe("policy fee postgres controls", () => {
     assert.equal(asJson(refused.rows[0]?.result).outcome, "unconfirmed");
   });
 
-  it("lets only one recovery acquire the appointment change", async () => {
+  function recoveryPayload(input: {
+    key: string;
+    action: "cancel" | "reschedule" | "remove_dog";
+    visitId: string;
+    ids: string[];
+    charged: number;
+    rescheduleTo?: { date: string; slotStartMinutes: number } | null;
+    status?: string;
+    date?: string;
+    start?: number;
+  }) {
+    return {
+      operationId: input.key,
+      action: input.action,
+      visitId: input.visitId,
+      confirmedFee: input.charged,
+      appointmentIds: input.ids,
+      appointments: input.ids.map((id, index) => ({
+        id,
+        status: input.status ?? "confirmed",
+        appointmentDate: input.date ?? "2026-10-20",
+        scheduledStart: input.start ?? 540,
+        appointmentTime: "9:00 AM",
+        timePreference: "morning",
+        visitSequence: index + 1,
+      })),
+      rescheduleTo: input.rescheduleTo ?? null,
+    };
+  }
+
+  async function stampSchedule(ids: string[], date = "2026-10-20", start = 540) {
+    for (const id of ids) {
+      await left!.query(
+        `UPDATE public.appointments
+         SET status = 'confirmed',
+             appointment_date = $2::date,
+             scheduled_start = $3,
+             appointment_time = '9:00 AM',
+             time_preference = 'morning',
+             service_price = 40,
+             travel_fee = 12,
+             estimated_total = 52
+         WHERE id = $1`,
+        [id, date, start],
+      );
+    }
+  }
+
+  async function prices(id: string) {
+    const row = await left!.query<{
+      status: string;
+      service_price: string;
+      travel_fee: string;
+      estimated_total: string;
+      appointment_date: string;
+      scheduled_start: number;
+    }>(
+      `SELECT status, service_price::text, travel_fee::text, estimated_total::text,
+              appointment_date::text, scheduled_start
+       FROM public.appointments WHERE id = $1`,
+      [id],
+    );
+    return row.rows[0];
+  }
+
+  it("lets a second recovery resume and still writes the appointment once", async () => {
     const made = await makeVisit(1);
     const key = `remove_dog:appointment:${made.appointmentIds[0]}`;
+    await stampSchedule(made.appointmentIds);
     await call("authorize_policy_fee_waiver", {
       idempotency_key: key,
       visit_id: made.visitId,
@@ -877,10 +994,16 @@ describe("policy fee postgres controls", () => {
       reason: "Owner waived this removed dog",
       actor_id: ACTOR,
     });
-    const created = await begin(
-      left!,
-      removeInput(made, 0, { computed: 8, charged: 0, waiver: 8 }),
-    );
+    const created = await begin(left!, {
+      ...removeInput(made, 0, { computed: 8, charged: 0, waiver: 8 }),
+      change_payload: recoveryPayload({
+        key,
+        action: "remove_dog",
+        visitId: made.visitId,
+        ids: [made.appointmentIds[0]!],
+        charged: 0,
+      }),
+    });
     assert.equal(created.status, "waived");
     const [first, second] = await Promise.all([
       left!.query<{ result: unknown }>(
@@ -896,13 +1019,456 @@ describe("policy fee postgres controls", () => {
       [asJson(first.rows[0]?.result).outcome, asJson(second.rows[0]?.result).outcome].sort(),
       ["apply", "busy"],
     );
-    await left!.query("SELECT public.mark_policy_fee_change_applied($1::uuid)", [
-      created.claim_id,
+    await left!.query(
+      `UPDATE public.policy_fee_claims
+       SET change_started_at = now() - interval '5 minutes'
+       WHERE id = $1`,
+      [created.claim_id],
+    );
+    const [expiredFirst, expiredSecond] = await Promise.all([
+      left!.query<{ result: unknown }>(
+        "SELECT public.acquire_policy_fee_change($1::uuid) AS result",
+        [created.claim_id],
+      ),
+      right!.query<{ result: unknown }>(
+        "SELECT public.acquire_policy_fee_change($1::uuid) AS result",
+        [created.claim_id],
+      ),
     ]);
-    const replay = await left!.query<{ result: unknown }>(
+    assert.deepEqual(
+      [
+        asJson(expiredFirst.rows[0]?.result).outcome,
+        asJson(expiredSecond.rows[0]?.result).outcome,
+      ].sort(),
+      ["apply", "busy"],
+    );
+    const [written, again] = await Promise.all([
+      left!.query<{ result: unknown }>(
+        "SELECT public.apply_policy_fee_calendar($1::uuid, NULL) AS result",
+        [created.claim_id],
+      ),
+      right!.query<{ result: unknown }>(
+        "SELECT public.apply_policy_fee_calendar($1::uuid, NULL) AS result",
+        [created.claim_id],
+      ),
+    ]);
+    assert.deepEqual(
+      [asJson(written.rows[0]?.result).outcome, asJson(again.rows[0]?.result).outcome].sort(),
+      ["already_written", "written"],
+    );
+    const pet = await prices(made.appointmentIds[0]!);
+    assert.equal(pet?.status, "cancelled");
+    assert.equal(pet?.service_price, "40");
+    assert.equal(pet?.travel_fee, "12");
+    assert.equal(pet?.estimated_total, "52");
+    assert.equal(pet?.scheduled_start, 540);
+    const marked = await left!.query<{ result: unknown }>(
+      "SELECT public.mark_policy_fee_change_applied($1::uuid) AS result",
+      [created.claim_id],
+    );
+    const replay = await right!.query<{ result: unknown }>(
+      "SELECT public.mark_policy_fee_change_applied($1::uuid) AS result",
+      [created.claim_id],
+    );
+    assert.deepEqual(
+      [asJson(marked.rows[0]?.result).outcome, asJson(replay.rows[0]?.result).outcome].sort(),
+      ["already_applied", "applied"],
+    );
+    const done = await left!.query<{ result: unknown }>(
       "SELECT public.acquire_policy_fee_change($1::uuid) AS result",
       [created.claim_id],
     );
-    assert.equal(asJson(replay.rows[0]?.result).outcome, "already");
+    assert.equal(asJson(done.rows[0]?.result).outcome, "already");
+    const fee = await left!.query<{ charged_amount: string }>(
+      "SELECT charged_amount::text FROM public.policy_fee_claims WHERE id = $1",
+      [created.claim_id],
+    );
+    assert.equal(fee.rows[0]?.charged_amount, "0.00");
+  });
+
+  it("does not mark a paid claim applied before the calendar write", async () => {
+    const made = await makeVisit(1);
+    const key = `cancel:visit:${made.visitId}`;
+    await stampSchedule(made.appointmentIds);
+    const created = await begin(left!, {
+      idempotency_key: key,
+      visit_id: made.visitId,
+      action: "cancel",
+      appointment_id: made.appointmentIds[0],
+      affected_appointment_ids: made.appointmentIds,
+      includes_travel: true,
+      forfeit: true,
+      computed: 18,
+      charged: 18,
+      waiver: 0,
+      tender: "card",
+      actor_id: ACTOR,
+      change_payload: recoveryPayload({
+        key,
+        action: "cancel",
+        visitId: made.visitId,
+        ids: made.appointmentIds,
+        charged: 18,
+      }),
+    });
+    const charge = await left!.query<{ id: string }>(
+      `INSERT INTO public.appointment_charges (
+         appointment_id, visit_id, kind, status, subtotal, total, stripe_payment_intent_id, tender
+       ) VALUES ($1, $2, 'cancellation', 'paid', 18, 18, 'pi_once', 'card')
+       RETURNING id`,
+      [made.appointmentIds[0], made.visitId],
+    );
+    const paid = await left!.query<{ result: unknown }>(
+      "SELECT public.complete_policy_fee_claim($1::uuid, $2::uuid) AS result",
+      [created.claim_id, charge.rows[0]!.id],
+    );
+    assert.equal(asJson(paid.rows[0]?.result).outcome, "charged");
+    const before = await left!.query<{
+      applied: boolean;
+      phase: string;
+      written: string | null;
+      charged_amount: string;
+    }>(
+      `SELECT appointment_change_applied AS applied, change_phase AS phase,
+              calendar_written_at::text AS written, charged_amount::text
+       FROM public.policy_fee_claims WHERE id = $1`,
+      [created.claim_id],
+    );
+    assert.equal(before.rows[0]?.applied, false);
+    assert.equal(before.rows[0]?.phase, "pending");
+    assert.equal(before.rows[0]?.written, null);
+    const early = await left!.query<{ result: unknown }>(
+      "SELECT public.mark_policy_fee_change_applied($1::uuid) AS result",
+      [created.claim_id],
+    );
+    assert.equal(asJson(early.rows[0]?.result).outcome, "not_ready");
+    const notYet = await left!.query<{ result: unknown }>(
+      "SELECT public.apply_policy_fee_calendar($1::uuid, NULL) AS result",
+      [created.claim_id],
+    );
+    assert.equal(asJson(notYet.rows[0]?.result).outcome, "not_acquired");
+    assert.equal((await prices(made.appointmentIds[0]!))?.status, "confirmed");
+
+    const acquired = await left!.query<{ result: unknown }>(
+      "SELECT public.acquire_policy_fee_change($1::uuid) AS result",
+      [created.claim_id],
+    );
+    assert.equal(asJson(acquired.rows[0]?.result).outcome, "apply");
+    const premature = await left!.query<{ result: unknown }>(
+      "SELECT public.mark_policy_fee_change_applied($1::uuid) AS result",
+      [created.claim_id],
+    );
+    assert.equal(asJson(premature.rows[0]?.result).outcome, "not_written");
+    const written = await right!.query<{ result: unknown }>(
+      "SELECT public.apply_policy_fee_calendar($1::uuid, NULL) AS result",
+      [created.claim_id],
+    );
+    assert.equal(asJson(written.rows[0]?.result).outcome, "written");
+    const repeat = await left!.query<{ result: unknown }>(
+      "SELECT public.apply_policy_fee_calendar($1::uuid, NULL) AS result",
+      [created.claim_id],
+    );
+    assert.equal(asJson(repeat.rows[0]?.result).outcome, "already_written");
+    const marked = await left!.query<{ result: unknown }>(
+      "SELECT public.mark_policy_fee_change_applied($1::uuid) AS result",
+      [created.claim_id],
+    );
+    assert.equal(asJson(marked.rows[0]?.result).outcome, "applied");
+    const charges = await left!.query<{ count: string; total: string; intent: string }>(
+      `SELECT count(*)::text AS count, max(total)::text AS total,
+              max(stripe_payment_intent_id) AS intent
+       FROM public.appointment_charges WHERE appointment_id = $1`,
+      [made.appointmentIds[0]],
+    );
+    assert.equal(charges.rows[0]?.count, "1");
+    assert.equal(charges.rows[0]?.total, "18");
+    assert.equal(charges.rows[0]?.intent, "pi_once");
+    assert.equal(before.rows[0]?.charged_amount, "18.00");
+  });
+
+  it("recovers cancel, reschedule, and remove-dog after each crash point", async () => {
+    async function settled(action: "cancel" | "reschedule" | "remove_dog", dogs: number) {
+      const made = await makeVisit(dogs);
+      await stampSchedule(made.appointmentIds);
+      await left!.query(
+        `UPDATE public.visits
+         SET service_date = '2026-10-20', scheduled_start = 540, travel_fee = 12
+         WHERE id = $1`,
+        [made.visitId],
+      );
+      const ids = action === "remove_dog" ? [made.appointmentIds[0]!] : made.appointmentIds;
+      const key =
+        action === "remove_dog"
+          ? `remove_dog:appointment:${ids[0]}`
+          : action === "cancel"
+            ? `cancel:visit:${made.visitId}`
+            : `reschedule:visit:${made.visitId}:from:2026-10-20:540:to:2026-10-22:600`;
+      const charged = action === "reschedule" ? 0 : 8;
+      const created = await begin(left!, {
+        idempotency_key: key,
+        visit_id: made.visitId,
+        action,
+        appointment_id: ids[0],
+        affected_appointment_ids: ids,
+        includes_travel: action !== "remove_dog",
+        forfeit: action !== "reschedule",
+        computed: charged,
+        charged,
+        waiver: 0,
+        tender: charged > 0 ? "card" : null,
+        actor_id: ACTOR,
+        change_payload: recoveryPayload({
+          key,
+          action,
+          visitId: made.visitId,
+          ids,
+          charged,
+          rescheduleTo:
+            action === "reschedule" ? { date: "2026-10-22", slotStartMinutes: 600 } : null,
+        }),
+      });
+      if (charged > 0) {
+        const charge = await left!.query<{ id: string }>(
+          `INSERT INTO public.appointment_charges (
+             appointment_id, visit_id, kind, status, subtotal, total, tender
+           ) VALUES ($1, $2, 'cancellation', 'paid', $3, $3, 'card')
+           RETURNING id`,
+          [ids[0], made.visitId, charged],
+        );
+        await left!.query("SELECT public.complete_policy_fee_claim($1::uuid, $2::uuid)", [
+          created.claim_id,
+          charge.rows[0]!.id,
+        ]);
+      }
+      return { made, ids, claimId: String(created.claim_id) };
+    }
+
+    const cancel = await settled("cancel", 1);
+    const resumed = await left!.query<{ result: unknown }>(
+      "SELECT public.acquire_policy_fee_change($1::uuid) AS result",
+      [cancel.claimId],
+    );
+    assert.equal(asJson(resumed.rows[0]?.result).outcome, "apply");
+    const cancelWrite = await right!.query<{ result: unknown }>(
+      "SELECT public.apply_policy_fee_calendar($1::uuid, NULL) AS result",
+      [cancel.claimId],
+    );
+    assert.equal(asJson(cancelWrite.rows[0]?.result).outcome, "written");
+    assert.equal((await prices(cancel.ids[0]!))?.status, "cancelled");
+    await left!.query("SELECT public.mark_policy_fee_change_applied($1::uuid)", [cancel.claimId]);
+
+    const moved = await settled("reschedule", 1);
+    await left!.query("SELECT public.acquire_policy_fee_change($1::uuid)", [moved.claimId]);
+    const plan = {
+      appointments: [
+        {
+          id: moved.ids[0],
+          scheduledStart: 630,
+          appointmentTime: "10:30 AM",
+          timePreference: "morning",
+        },
+      ],
+    };
+    const moveWrite = await left!.query<{ result: unknown }>(
+      "SELECT public.apply_policy_fee_calendar($1::uuid, $2::jsonb) AS result",
+      [moved.claimId, JSON.stringify(plan)],
+    );
+    assert.equal(asJson(moveWrite.rows[0]?.result).outcome, "written");
+    const movedPet = await prices(moved.ids[0]!);
+    assert.equal(movedPet?.appointment_date, "2026-10-22");
+    assert.equal(movedPet?.scheduled_start, 630);
+    assert.equal(movedPet?.travel_fee, "12");
+    assert.equal(movedPet?.service_price, "40");
+    const visit = await left!.query<{ service_date: string; travel_fee: string; start: number }>(
+      `SELECT service_date::text, travel_fee::text, scheduled_start AS start
+       FROM public.visits WHERE id = $1`,
+      [moved.made.visitId],
+    );
+    assert.equal(visit.rows[0]?.service_date, "2026-10-22");
+    assert.equal(visit.rows[0]?.travel_fee, "12");
+    assert.equal(visit.rows[0]?.start, 630);
+    const moveAgain = await right!.query<{ result: unknown }>(
+      "SELECT public.apply_policy_fee_calendar($1::uuid, $2::jsonb) AS result",
+      [moved.claimId, JSON.stringify(plan)],
+    );
+    assert.equal(asJson(moveAgain.rows[0]?.result).outcome, "already_written");
+    assert.equal((await prices(moved.ids[0]!))?.scheduled_start, 630);
+
+    const removed = await settled("remove_dog", 2);
+    await left!.query("SELECT public.acquire_policy_fee_change($1::uuid)", [removed.claimId]);
+    const removeWrite = await left!.query<{ result: unknown }>(
+      "SELECT public.apply_policy_fee_calendar($1::uuid, NULL) AS result",
+      [removed.claimId],
+    );
+    assert.equal(asJson(removeWrite.rows[0]?.result).outcome, "written");
+    assert.equal((await prices(removed.ids[0]!))?.status, "cancelled");
+    assert.equal((await prices(removed.made.appointmentIds[1]!))?.status, "confirmed");
+    assert.equal((await prices(removed.made.appointmentIds[1]!))?.scheduled_start, 540);
+  });
+
+  it("keeps a crashed change resumable and refuses a diverged appointment", async () => {
+    const made = await makeVisit(1);
+    const key = `cancel:visit:${made.visitId}`;
+    await stampSchedule(made.appointmentIds);
+    const created = await begin(left!, {
+      idempotency_key: key,
+      visit_id: made.visitId,
+      action: "cancel",
+      appointment_id: made.appointmentIds[0],
+      affected_appointment_ids: made.appointmentIds,
+      includes_travel: true,
+      forfeit: true,
+      computed: 0,
+      charged: 0,
+      waiver: 0,
+      tender: null,
+      actor_id: ACTOR,
+      change_payload: recoveryPayload({
+        key,
+        action: "cancel",
+        visitId: made.visitId,
+        ids: made.appointmentIds,
+        charged: 0,
+      }),
+    });
+    const acquired = await left!.query<{ result: unknown }>(
+      "SELECT public.acquire_policy_fee_change($1::uuid) AS result",
+      [created.claim_id],
+    );
+    assert.equal(asJson(acquired.rows[0]?.result).outcome, "apply");
+    const held = await left!.query<{ phase: string; written: string | null }>(
+      `SELECT change_phase AS phase, calendar_written_at::text AS written
+       FROM public.policy_fee_claims WHERE id = $1`,
+      [created.claim_id],
+    );
+    assert.equal(held.rows[0]?.phase, "applying");
+    assert.equal(held.rows[0]?.written, null);
+    const continued = await right!.query<{ result: unknown }>(
+      "SELECT public.apply_policy_fee_calendar($1::uuid, NULL) AS result",
+      [created.claim_id],
+    );
+    assert.equal(asJson(continued.rows[0]?.result).outcome, "written");
+    const phase = await left!.query<{ phase: string; applied: boolean }>(
+      `SELECT change_phase AS phase, appointment_change_applied AS applied
+       FROM public.policy_fee_claims WHERE id = $1`,
+      [created.claim_id],
+    );
+    assert.equal(phase.rows[0]?.phase, "applying");
+    assert.equal(phase.rows[0]?.applied, false);
+    const finished = await right!.query<{ result: unknown }>(
+      "SELECT public.mark_policy_fee_change_applied($1::uuid) AS result",
+      [created.claim_id],
+    );
+    assert.equal(asJson(finished.rows[0]?.result).outcome, "applied");
+
+    const other = await makeVisit(1);
+    const otherKey = `cancel:visit:${other.visitId}`;
+    await stampSchedule(other.appointmentIds);
+    const diverged = await begin(left!, {
+      idempotency_key: otherKey,
+      visit_id: other.visitId,
+      action: "cancel",
+      appointment_id: other.appointmentIds[0],
+      affected_appointment_ids: other.appointmentIds,
+      includes_travel: true,
+      forfeit: true,
+      computed: 0,
+      charged: 0,
+      waiver: 0,
+      tender: null,
+      actor_id: ACTOR,
+      change_payload: recoveryPayload({
+        key: otherKey,
+        action: "cancel",
+        visitId: other.visitId,
+        ids: other.appointmentIds,
+        charged: 0,
+      }),
+    });
+    await left!.query("SELECT public.acquire_policy_fee_change($1::uuid)", [diverged.claim_id]);
+    await left!.query("UPDATE public.appointments SET status = 'completed' WHERE id = $1", [
+      other.appointmentIds[0],
+    ]);
+    const review = await right!.query<{ result: unknown }>(
+      "SELECT public.apply_policy_fee_calendar($1::uuid, NULL) AS result",
+      [diverged.claim_id],
+    );
+    assert.equal(asJson(review.rows[0]?.result).outcome, "review");
+    const stayed = await prices(other.appointmentIds[0]!);
+    assert.equal(stayed?.status, "completed");
+    assert.equal(stayed?.service_price, "40");
+    assert.equal(stayed?.travel_fee, "12");
+    const flagged = await left!.query<{ phase: string; applied: boolean; written: string | null }>(
+      `SELECT change_phase AS phase, appointment_change_applied AS applied,
+              calendar_written_at::text AS written
+       FROM public.policy_fee_claims WHERE id = $1`,
+      [diverged.claim_id],
+    );
+    assert.equal(flagged.rows[0]?.phase, "review");
+    assert.equal(flagged.rows[0]?.applied, false);
+    assert.equal(flagged.rows[0]?.written, null);
+  });
+
+  it("does not release or rewrite a claim whose Stripe result is unknown", async () => {
+    const made = await makeVisit(1);
+    await stampSchedule(made.appointmentIds);
+    const key = `cancel:visit:${made.visitId}`;
+    const created = await begin(left!, {
+      idempotency_key: key,
+      visit_id: made.visitId,
+      action: "cancel",
+      appointment_id: made.appointmentIds[0],
+      affected_appointment_ids: made.appointmentIds,
+      includes_travel: true,
+      forfeit: true,
+      computed: 15,
+      charged: 15,
+      waiver: 0,
+      tender: "card",
+      actor_id: ACTOR,
+      change_payload: recoveryPayload({
+        key,
+        action: "cancel",
+        visitId: made.visitId,
+        ids: made.appointmentIds,
+        charged: 15,
+      }),
+    });
+    await left!.query("SELECT public.reserve_policy_fee_stripe_submit($1::uuid)", [
+      created.claim_id,
+    ]);
+    const unknown = await left!.query<{ result: unknown }>(
+      "SELECT public.mark_policy_fee_payment_unknown($1::uuid) AS result",
+      [created.claim_id],
+    );
+    assert.equal(asJson(unknown.rows[0]?.result).outcome, "unknown");
+    const acquired = await left!.query<{ result: unknown }>(
+      "SELECT public.acquire_policy_fee_change($1::uuid) AS result",
+      [created.claim_id],
+    );
+    assert.equal(asJson(acquired.rows[0]?.result).outcome, "not_ready");
+    const released = await left!.query<{ result: unknown }>(
+      "SELECT public.release_policy_fee_change($1::uuid) AS result",
+      [created.claim_id],
+    );
+    assert.equal(asJson(released.rows[0]?.result).outcome, "kept");
+    const held = await left!.query<{
+      status: string;
+      payment_state: string;
+      phase: string;
+      lock_id: string;
+    }>(
+      `SELECT claims.status, claims.payment_state, claims.change_phase AS phase,
+              locks.claim_id AS lock_id
+       FROM public.policy_fee_claims claims
+       JOIN public.visit_policy_locks locks ON locks.visit_id = claims.visit_id
+       WHERE claims.id = $1`,
+      [created.claim_id],
+    );
+    assert.equal(held.rows[0]?.status, "charging");
+    assert.equal(held.rows[0]?.payment_state, "unknown");
+    assert.equal(held.rows[0]?.phase, "pending");
+    assert.equal(held.rows[0]?.lock_id, created.claim_id);
+    assert.equal((await prices(made.appointmentIds[0]!))?.status, "confirmed");
   });
 });

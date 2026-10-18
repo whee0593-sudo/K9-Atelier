@@ -125,7 +125,9 @@ export type PolicyFeeExecutorDeps = {
   }) => Promise<{ chargeId: string }>;
   completeClaim: (claimId: string, chargeId: string | null) => Promise<void>;
   failClaim: (claimId: string, paymentIntentId: string | null) => Promise<void>;
-  claimAppointmentChange: (claimId: string) => Promise<"apply" | "already" | "busy">;
+  claimAppointmentChange: (
+    claimId: string,
+  ) => Promise<"apply" | "resume" | "already" | "busy" | "review" | "not_ready" | "missing">;
   applyAppointmentChange: (claimId: string) => Promise<void>;
   markChangeApplied: (claimId: string) => Promise<boolean>;
 };
@@ -171,7 +173,7 @@ export async function executePolicyFee(
         changeApplications,
       };
     }
-    if (gate === "busy") {
+    if (gate !== "apply" && gate !== "resume") {
       return {
         outcome: "change_pending" as const,
         paymentIntentIds: seenIntents,
