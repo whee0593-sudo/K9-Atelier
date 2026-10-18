@@ -151,6 +151,10 @@ export function AppointmentChangeForm({
         if (selectedAction === "remove_dog" && removeId) {
           params.set("removeAppointmentId", removeId);
         }
+        if (selectedAction === "reschedule" && nextDate && nextSlotStartMinutes != null) {
+          params.set("date", nextDate);
+          params.set("slotStartMinutes", String(nextSlotStartMinutes));
+        }
         const response = await fetch(
           `/api/appointments/${appointmentId}/change?${params}`,
           { credentials: "include" },
@@ -179,7 +183,7 @@ export function AppointmentChangeForm({
     return () => {
       cancelled = true;
     };
-  }, [action, appointmentId, preview, removeId]);
+  }, [action, appointmentId, nextDate, nextSlotStartMinutes, preview, removeId]);
 
   useEffect(() => {
     if (action !== "reschedule" || !visit?.lat || !visit.lon) return;
@@ -312,6 +316,7 @@ export function AppointmentChangeForm({
             petId: addPetId,
             serviceId: addServiceId,
             removeAppointmentId: removeId,
+            expectedAmount: serverQuote?.fee,
           }),
         },
       );

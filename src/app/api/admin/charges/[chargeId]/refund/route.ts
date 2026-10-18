@@ -7,7 +7,7 @@ export async function POST(
   context: { params: Promise<{ chargeId: string }> },
 ) {
   const { chargeId } = await context.params;
-  let body: { amount?: number };
+  let body: { amount?: number; reason?: string; confirmFunds?: boolean };
 
   try {
     body = (await request.json()) as typeof body;
@@ -15,7 +15,10 @@ export async function POST(
     return staffJsonError("Invalid request.", 400);
   }
 
-  const result = await refundAppointmentCharge(chargeId, Number(body.amount ?? 0));
+  const result = await refundAppointmentCharge(chargeId, Number(body.amount ?? 0), {
+    reason: body.reason,
+    confirmFunds: Boolean(body.confirmFunds),
+  });
   if ("error" in result) {
     if (result.error === "conflict" && result.message) {
       return staffJsonError(result.message, 409);

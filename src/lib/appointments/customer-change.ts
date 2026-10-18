@@ -1,4 +1,3 @@
-import { randomUUID } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuthenticatedUser } from "@/lib/pets/auth";
 import { mapAppointmentRowToRecord } from "@/lib/appointments/map";
@@ -25,12 +24,7 @@ import {
   notifyMerchantVisitCancelledFromAppointments,
   notifyMerchantVisitPetsChangedFromAppointments,
 } from "@/lib/communications/merchant-notices";
-import { getOrCreateStripeCustomerId } from "@/lib/payments/service";
 import { business } from "@/lib/business";
-import { getStripe } from "@/lib/stripe/server";
-import { isStripeConfigured } from "@/lib/stripe/config";
-import { dollarsToCents } from "@/lib/charges/money";
-import type { ChargeKind, ChargeLineItem } from "@/lib/charges/types";
 import { mapPetRowToRecord } from "@/lib/pets/map";
 import { PET_SELECT, type PetRow } from "@/lib/pets/types";
 import { bookingWeightLbs, liveServiceDurationMinutes } from "@/lib/pets/weight";
@@ -46,6 +40,11 @@ import { spaGoalsForService } from "@/lib/spa-goals";
 import { loadBookingAllergySnapshot } from "@/lib/appointments/service";
 import { resolveAppointmentDuration } from "@/lib/visits/duration";
 import { changeFeeBase } from "@/lib/appointments/stored-service-price";
+import {
+  finishCustomerPolicyChange,
+  previewCustomerPolicyFee,
+  settleCustomerPolicyFee,
+} from "@/lib/policy-fees/customer-settle";
 import { attachBookingPriceSnapshot } from "@/lib/charges/visit-line-items";
 import {
   hasVisitSequence,
@@ -109,6 +108,9 @@ export type ChangeQuote = {
   feeBase: number | null;
   fee: number;
   needsPriceReview: boolean;
+  /** Fixed dollar cap when an admin authorized one. Null when the full fee is charged. */
+  collectCap?: number | null;
+  waiverAmount?: number;
 };
 
 export type ChangeVisitContext = {
@@ -129,6 +131,8 @@ export type ApplyAppointmentChangeInput = {
   serviceId?: string;
   spaGoals?: string[];
   removeAppointmentId?: string;
+  /** Amount the customer just reviewed. The server still calculates the fee. */
+  expectedAmount?: number;
 };
 
 function asChangeRow(row: ChangeRow): AppointmentRecord {
@@ -255,6 +259,7 @@ export async function quoteAppointmentChange(
   appointmentId: string,
   action: AppointmentChangeAction,
   removeAppointmentId?: string,
+  rescheduleTo?: { date: string; slotStartMinutes: number },
 ): Promise<
   | {
       quote: ChangeQuote;
@@ -283,8 +288,34 @@ export async function quoteAppointmentChange(
 
   if (targetRows.length === 0) return { error: "not_found" };
 
+  const baseQuote = quoteForRows(action, action === "add_dog" ? [] : targetRows);
+  let quote: ChangeQuote = baseQuote;
+  if (action !== "add_dog" && !baseQuote.needsPriceReview) {
+    try {
+      const preview = await previewCustomerPolicyFee({
+        action,
+        rows: targetRows.map((row) => ({
+          ...row,
+          scheduled_start: row.scheduled_start ?? null,
+        })),
+        visitId: loaded.row.visit_id ?? null,
+        rescheduleTo,
+      });
+      quote = {
+        ...baseQuote,
+        fee: preview.fee,
+        needsPriceReview: preview.needsPriceReview || baseQuote.needsPriceReview,
+        collectCap: preview.collectCap,
+        waiverAmount: preview.waiver,
+      };
+    } catch (error) {
+      console.error("previewCustomerPolicyFee failed:", error);
+      return { error: "server" };
+    }
+  }
+
   return {
-    quote: quoteForRows(action, action === "add_dog" ? [] : targetRows),
+    quote,
     appointments: siblings.rows.map(asChangeRow),
     visit: {
       lat: loaded.row.address_lat ?? null,
@@ -296,168 +327,6 @@ export async function quoteAppointmentChange(
   };
 }
 
-async function resolvePaymentMethod(
-  customerId: string,
-  appointmentMethodId: string | null,
-): Promise<{
-  id: string;
-  stripePaymentMethodId: string;
-  brand?: string;
-  last4?: string;
-} | null> {
-  const admin = createAdminClient();
-  const query = admin
-    .from("payment_methods")
-    .select("id, stripe_payment_method_id, brand, last4")
-    .eq("customer_id", customerId);
-
-  const { data } = appointmentMethodId
-    ? await query.eq("id", appointmentMethodId).maybeSingle()
-    : await query.order("is_default", { ascending: false }).limit(1).maybeSingle();
-
-  if (data?.id && data.stripe_payment_method_id) {
-    return {
-      id: data.id as string,
-      stripePaymentMethodId: data.stripe_payment_method_id as string,
-      brand: (data.brand as string | null) ?? undefined,
-      last4: (data.last4 as string | null) ?? undefined,
-    };
-  }
-
-  if (appointmentMethodId) {
-    const { data: fallback } = await admin
-      .from("payment_methods")
-      .select("id, stripe_payment_method_id, brand, last4")
-      .eq("customer_id", customerId)
-      .order("is_default", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (fallback?.id && fallback.stripe_payment_method_id) {
-      return {
-        id: fallback.id as string,
-        stripePaymentMethodId: fallback.stripe_payment_method_id as string,
-        brand: (fallback.brand as string | null) ?? undefined,
-        last4: (fallback.last4 as string | null) ?? undefined,
-      };
-    }
-  }
-
-  return null;
-}
-
-async function chargeChangeFee(options: {
-  appointment: ChangeRow;
-  customerId: string;
-  customerEmail: string | undefined;
-  fee: number;
-  action: AppointmentChangeAction;
-}): Promise<
-  | { ok: true; cardBrand?: string; cardLast4?: string }
-  | {
-      error:
-        | "payment_required"
-        | "misconfigured"
-        | "server"
-        | "payment_failed";
-    }
-> {
-  if (options.fee <= 0) {
-    return { ok: true as const, cardBrand: undefined, cardLast4: undefined };
-  }
-
-  const method = await resolvePaymentMethod(
-    options.customerId,
-    options.appointment.payment_method_id,
-  );
-  if (!method) return { error: "payment_required" as const };
-
-  const stripe = getStripe();
-  if (!stripe || !isStripeConfigured()) return { error: "misconfigured" as const };
-
-  const stripeCustomerId = await getOrCreateStripeCustomerId(
-    options.customerId,
-    options.customerEmail,
-  );
-  if (!stripeCustomerId) return { error: "server" as const };
-
-  const lineItems: ChargeLineItem[] = [
-    {
-      id: randomUUID(),
-      label:
-        options.action === "reschedule"
-          ? "Late reschedule fee"
-          : "Cancellation fee",
-      amount: options.fee,
-    },
-  ];
-
-  const admin = createAdminClient();
-  const { data: inserted, error: insertError } = await admin
-    .from("appointment_charges")
-    .insert({
-      appointment_id: options.appointment.id,
-      kind: "cancellation" as ChargeKind,
-      status: "pending",
-      line_items: lineItems,
-      subtotal: options.fee,
-      tip_amount: 0,
-      total: options.fee,
-      created_by: options.customerId,
-      payment_method_id: method.id,
-    })
-    .select("id")
-    .single();
-
-  if (insertError || !inserted) {
-    console.error("chargeChangeFee insert failed:", insertError?.message);
-    return { error: "server" as const };
-  }
-
-  try {
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: dollarsToCents(options.fee),
-      currency: "usd",
-      customer: stripeCustomerId,
-      payment_method: method.stripePaymentMethodId,
-      confirm: true,
-      off_session: true,
-      description: `K9 Atelier ${options.action.replace("_", " ")} fee`,
-      metadata: {
-        appointment_id: options.appointment.id,
-        charge_id: inserted.id,
-        kind: "cancellation",
-      },
-    });
-
-    await admin
-      .from("appointment_charges")
-      .update({
-        stripe_payment_intent_id: paymentIntent.id,
-        status: paymentIntent.status === "succeeded" ? "paid" : "failed",
-        paid_at:
-          paymentIntent.status === "succeeded"
-            ? new Date().toISOString()
-            : null,
-      })
-      .eq("id", inserted.id);
-
-    if (paymentIntent.status !== "succeeded") {
-      return { error: "payment_failed" as const };
-    }
-    return {
-      ok: true as const,
-      cardBrand: method.brand,
-      cardLast4: method.last4,
-    };
-  } catch (error) {
-    console.error("chargeChangeFee stripe failed:", error);
-    await admin
-      .from("appointment_charges")
-      .update({ status: "failed" })
-      .eq("id", inserted.id);
-    return { error: "payment_failed" as const };
-  }
-}
 
 async function cancelRows(
   rows: ChangeRow[],
@@ -497,6 +366,9 @@ export async function applyAppointmentChange(
         | "weight_required"
         | "allergy_unavailable"
         | "price_review_required"
+        | "coverage_review_required"
+        | "fee_changed"
+        | "visit_busy"
         | "server";
     }
 > {
@@ -527,18 +399,36 @@ export async function applyAppointmentChange(
   if (input.action === "remove_dog" && siblings.rows.length < 2) {
     return { error: "conflict" };
   }
+  if (
+    input.action === "reschedule" &&
+    (!input.date || (input.slotStartMinutes == null && !input.timePreference))
+  ) {
+    return { error: "conflict" };
+  }
 
   const quote = quoteForRows(input.action, targetRows);
   if (quote.needsPriceReview) return { error: "price_review_required" };
   const contact = await fetchCustomerContact(user.id);
-  const charged = await chargeChangeFee({
-    appointment: targetRows[0],
+  const charged = await settleCustomerPolicyFee({
+    action: input.action,
+    rows: targetRows.map((row) => ({
+      ...row,
+      scheduled_start: row.scheduled_start ?? null,
+    })),
+    visitId: loaded.row.visit_id ?? null,
     customerId: user.id,
     customerEmail: contact?.email ?? user.email,
-    fee: quote.fee,
-    action: input.action,
+    expectedAmount: input.expectedAmount,
+    rescheduleTo:
+      input.action === "reschedule" &&
+      input.date &&
+      input.slotStartMinutes != null
+        ? { date: input.date, slotStartMinutes: input.slotStartMinutes }
+        : undefined,
   });
   if ("error" in charged) return charged;
+  const billedQuote = { ...quote, fee: charged.fee };
+  if (!charged.performChange) return { ok: true, quote: billedQuote };
 
   if (input.action === "reschedule") {
     if (
@@ -557,10 +447,11 @@ export async function applyAppointmentChange(
       action: "reschedule",
       appointments: moved.appointments,
       contact,
-      fee: quote.fee,
+      fee: billedQuote.fee,
       cardBrand: charged.cardBrand,
       cardLast4: charged.cardLast4,
     });
+    await finishCustomerPolicyChange(charged.claimId);
     if (previousWhenLabel) {
       await notifyMerchantRescheduleCompleted(
         moved.appointments,
@@ -568,7 +459,7 @@ export async function applyAppointmentChange(
         contact,
       );
     }
-    return { ok: true, quote };
+    return { ok: true, quote: billedQuote };
   }
 
   const remainingAppointments =
@@ -594,10 +485,11 @@ export async function applyAppointmentChange(
     appointments: recordsFromRows(targetRows),
     remainingAppointments,
     contact,
-    fee: quote.fee,
+    fee: billedQuote.fee,
     cardBrand: charged.cardBrand,
     cardLast4: charged.cardLast4,
   });
+  await finishCustomerPolicyChange(charged.claimId);
   if (input.action === "cancel") {
     await notifyMerchantVisitCancelled(
       recordsFromRows(targetRows).map((row) => ({
@@ -614,7 +506,7 @@ export async function applyAppointmentChange(
       contact,
     );
   }
-  return { ok: true, quote };
+  return { ok: true, quote: billedQuote };
 }
 
 function earliestChangeWhen(rows: ChangeRow[]) {
@@ -850,6 +742,55 @@ async function rescheduleRows(
       mapAppointmentRowToRecord(byId.get(row.id) as AppointmentRow),
     ),
   };
+}
+
+async function resolvePaymentMethod(
+  customerId: string,
+  appointmentMethodId: string | null,
+): Promise<{
+  id: string;
+  stripePaymentMethodId: string;
+  brand?: string;
+  last4?: string;
+} | null> {
+  const admin = createAdminClient();
+  const query = admin
+    .from("payment_methods")
+    .select("id, stripe_payment_method_id, brand, last4")
+    .eq("customer_id", customerId);
+
+  const { data } = appointmentMethodId
+    ? await query.eq("id", appointmentMethodId).maybeSingle()
+    : await query.order("is_default", { ascending: false }).limit(1).maybeSingle();
+
+  if (data?.id && data.stripe_payment_method_id) {
+    return {
+      id: data.id as string,
+      stripePaymentMethodId: data.stripe_payment_method_id as string,
+      brand: (data.brand as string | null) ?? undefined,
+      last4: (data.last4 as string | null) ?? undefined,
+    };
+  }
+
+  if (appointmentMethodId) {
+    const { data: fallback } = await admin
+      .from("payment_methods")
+      .select("id, stripe_payment_method_id, brand, last4")
+      .eq("customer_id", customerId)
+      .order("is_default", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (fallback?.id && fallback.stripe_payment_method_id) {
+      return {
+        id: fallback.id as string,
+        stripePaymentMethodId: fallback.stripe_payment_method_id as string,
+        brand: (fallback.brand as string | null) ?? undefined,
+        last4: (fallback.last4 as string | null) ?? undefined,
+      };
+    }
+  }
+
+  return null;
 }
 
 async function addDogToVisit(

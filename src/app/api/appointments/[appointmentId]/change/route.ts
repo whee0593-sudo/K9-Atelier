@@ -36,10 +36,19 @@ export async function GET(
     return appointmentJsonError("Choose a change to preview.", 400);
   }
 
+  const slotParam = url.searchParams.get("slotStartMinutes");
+  const slotStartMinutes =
+    slotParam != null && Number.isFinite(Number(slotParam))
+      ? Number(slotParam)
+      : undefined;
+  const date = url.searchParams.get("date") ?? undefined;
   const result = await quoteAppointmentChange(
     appointmentId,
     action,
     url.searchParams.get("removeAppointmentId") ?? undefined,
+    date && slotStartMinutes != null
+      ? { date, slotStartMinutes }
+      : undefined,
   );
 
   if ("error" in result) {
@@ -69,6 +78,7 @@ export async function POST(
       petId?: unknown;
       serviceId?: unknown;
       removeAppointmentId?: unknown;
+      expectedAmount?: unknown;
     };
     const action = readAction(body.action);
     if (!action) {
@@ -96,6 +106,8 @@ export async function POST(
         typeof body.removeAppointmentId === "string"
           ? body.removeAppointmentId
           : undefined,
+      expectedAmount:
+        typeof body.expectedAmount === "number" ? body.expectedAmount : undefined,
     });
 
     if ("error" in result) {
@@ -118,9 +130,21 @@ export async function POST(
           "weightLbs",
         );
       }
-      if (result.error === "price_review_required") {
+      if (result.error === "price_review_required" || result.error === "coverage_review_required") {
         return appointmentJsonError(
           "We need to review this visit's saved price before a change fee can be charged. Please contact us. Nothing has been charged.",
+          409,
+        );
+      }
+      if (result.error === "fee_changed") {
+        return appointmentJsonError(
+          "The fee changed. Review the amount and confirm again. Nothing new has been charged.",
+          409,
+        );
+      }
+      if (result.error === "visit_busy") {
+        return appointmentJsonError(
+          "Another change for this visit is still finishing. Please wait a moment and try again.",
           409,
         );
       }

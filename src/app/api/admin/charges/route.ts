@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { mapStaffServiceError, staffJsonError } from "@/lib/staff/api-errors";
 import { createAppointmentCharge } from "@/lib/charges/service";
+import { chargeNoShow } from "@/lib/policy-fees/no-show-charge";
 import type { ChargeKind, ChargeTender } from "@/lib/charges/types";
 import { readChargeTender } from "@/lib/charges/tender";
 
@@ -26,6 +27,35 @@ export async function POST(request: Request) {
 
   if (!body.appointmentId || (body.kind !== "service" && body.kind !== "no_show")) {
     return staffJsonError("Choose an appointment and charge type.", 400);
+  }
+
+  if (body.kind === "no_show") {
+    const noShow = await chargeNoShow({
+      appointmentId: body.appointmentId,
+      tender: readChargeTender(body.tender),
+      paymentMethodId: body.paymentMethodId,
+      useNewCard: Boolean(body.useNewCard),
+    });
+    if ("error" in noShow) {
+      if (noShow.error === "declined" || noShow.error === "pending") {
+        return staffJsonError(
+          "message" in noShow ? noShow.message : "This card could not be charged.",
+          409,
+        );
+      }
+      if (noShow.error === "conflict" && "message" in noShow && noShow.message) {
+        return staffJsonError(noShow.message, 409);
+      }
+      if (
+        noShow.error === "unauthenticated" ||
+        noShow.error === "forbidden" ||
+        noShow.error === "misconfigured"
+      ) {
+        return mapStaffServiceError(noShow.error);
+      }
+      return mapStaffServiceError("server");
+    }
+    return NextResponse.json(noShow);
   }
 
   const result = await createAppointmentCharge({

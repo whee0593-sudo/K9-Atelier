@@ -1312,8 +1312,9 @@ export function noShowLineItemsFor(appointment: CollectContext["appointment"]) {
 export async function refundAppointmentCharge(
   chargeId: string,
   amount: number,
+  options?: { reason?: string; confirmFunds?: boolean },
 ): Promise<
-  | { charge: AppointmentChargeRecord }
+  | { charge: AppointmentChargeRecord; refundPending?: boolean }
   | {
       error:
         | "unauthenticated"
@@ -1353,6 +1354,10 @@ export async function refundAppointmentCharge(
   if (!manualRefund && !row.stripe_payment_intent_id) {
     return { error: "conflict", message: "This payment cannot be refunded." };
   }
+  const reason = options?.reason?.trim() ?? "";
+  if (reason.length < 3) {
+    return { error: "conflict", message: "Enter a reason for this refund." };
+  }
 
   const alreadyRefunded = Number(row.refunded_amount ?? 0);
   const remaining = Math.round((Number(row.total) - alreadyRefunded) * 100) / 100;
@@ -1363,34 +1368,92 @@ export async function refundAppointmentCharge(
     };
   }
 
+  const { data: refundStart, error: refundError } = await admin.rpc(
+    "begin_policy_fee_refund",
+    {
+      p_input: {
+        charge_id: chargeId,
+        amount: refundAmount,
+        expected_refunded: alreadyRefunded,
+        actor_id: session.user.id,
+        reason,
+      },
+    },
+  );
+  if (refundError) {
+    console.error("begin_policy_fee_refund failed:", refundError.message);
+    return { error: "server" };
+  }
+  const refundRow = (refundStart ?? {}) as {
+    outcome?: string;
+    adjustment_id?: string;
+    message?: string;
+    remaining?: number;
+  };
+  if (refundRow.outcome === "exceeds_remaining") {
+    return {
+      error: "conflict",
+      message: `At most ${Number(refundRow.remaining ?? remaining).toFixed(2)} can be refunded.`,
+    };
+  }
+  if (refundRow.outcome === "invalid" || refundRow.outcome === "not_refundable") {
+    return { error: "conflict", message: "This payment cannot be refunded." };
+  }
+  if (!refundRow.adjustment_id || (refundRow.outcome !== "pending" && refundRow.outcome !== "in_progress")) {
+    return { error: "conflict", message: "This refund could not be started." };
+  }
+  if (manualRefund && !options?.confirmFunds) {
+    return {
+      charge: mapCharge(row as ChargeRow),
+      refundPending: true,
+    };
+  }
+
+  let stripeRefundId: string | null = null;
   if (!manualRefund) {
     const stripe = getStripe();
     if (!stripe) return { error: "misconfigured" };
     try {
-      await stripe.refunds.create({
-        payment_intent: row.stripe_payment_intent_id as string,
-        amount: dollarsToCents(refundAmount),
+      const stripeRefund = await stripe.refunds.create(
+        {
+          payment_intent: row.stripe_payment_intent_id as string,
+          amount: dollarsToCents(refundAmount),
+        },
+        { idempotencyKey: refundRow.adjustment_id },
+      );
+      stripeRefundId = stripeRefund.id;
+    } catch (refundFailure) {
+      await admin.rpc("fail_policy_fee_refund", {
+        p_adjustment_id: refundRow.adjustment_id,
       });
-    } catch (refundError) {
-      console.error("refundAppointmentCharge stripe failed:", refundError);
+      console.error("refundAppointmentCharge stripe failed:", refundFailure);
       return { error: "conflict", message: "Stripe could not process this refund." };
     }
   }
 
-  const nextRefunded = Math.round((alreadyRefunded + refundAmount) * 100) / 100;
-  const { data: updated, error: updateError } = await admin
-    .from("appointment_charges")
-    .update({
-      refunded_amount: nextRefunded,
-      refunded_at: new Date().toISOString(),
-    })
-    .eq("id", chargeId)
-    .select(CHARGE_SELECT)
-    .single();
-
-  if (updateError) {
-    console.error("refundAppointmentCharge save failed:", updateError.message);
+  const { data: refundDone, error: completeError } = await admin.rpc(
+    "complete_policy_fee_refund",
+    {
+      p_adjustment_id: refundRow.adjustment_id,
+      p_stripe_refund_id: stripeRefundId,
+      p_funds_confirmed_by: manualRefund ? session.user.id : null,
+    },
+  );
+  if (completeError) {
+    console.error("complete_policy_fee_refund failed:", completeError.message);
+    return { error: "server" };
   }
+  const doneOutcome = String((refundDone as { outcome?: string } | null)?.outcome ?? "");
+  if (doneOutcome === "amount_conflict" || doneOutcome === "hold_missing") {
+    return { error: "conflict", message: "This refund could not be completed." };
+  }
+
+  const nextRefunded = Math.round((alreadyRefunded + refundAmount) * 100) / 100;
+  const { data: updated } = await admin
+    .from("appointment_charges")
+    .select(CHARGE_SELECT)
+    .eq("id", chargeId)
+    .maybeSingle();
 
   const { data: appointment } = await admin
     .from("appointments")

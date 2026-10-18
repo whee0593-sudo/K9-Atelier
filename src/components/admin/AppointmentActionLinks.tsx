@@ -59,9 +59,15 @@ export function AppointmentActionLinks({
           >
             {paidService ? "View payment" : "Collect payment"}
           </Link>
-          {paidService ? (
+          {paidService || paidNoShow || paidKinds.includes("cancellation") ? (
             <Link
-              href={`${collectBase}?view=refund`}
+              href={
+                paidNoShow
+                  ? `${collectBase}?kind=no_show&view=refund`
+                  : paidKinds.includes("cancellation") && !paidService
+                    ? `${collectBase}?kind=cancellation&view=refund`
+                    : `${collectBase}?view=refund`
+              }
               className="rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text"
             >
               Refund

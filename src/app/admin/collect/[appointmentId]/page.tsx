@@ -11,7 +11,10 @@ export default async function CollectPage({
 }) {
   const { appointmentId } = await params;
   const query = await searchParams;
-  const kind: ChargeKind = query.kind === "no_show" ? "no_show" : "service";
+  const kind: ChargeKind =
+    query.kind === "no_show" || query.kind === "cancellation"
+      ? query.kind
+      : "service";
   const initialStep =
     query.view === "refund"
       ? "refund"

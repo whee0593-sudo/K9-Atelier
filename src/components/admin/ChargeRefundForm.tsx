@@ -11,11 +11,15 @@ export function ChargeRefundForm({
   busy,
   onBack,
   onRefund,
+  tender = "card",
+  refundPending = false,
 }: {
   charge: AppointmentChargeRecord;
   busy: boolean;
   onBack: () => void;
-  onRefund: (amount: number) => void;
+  onRefund: (input: { amount: number; reason: string; confirmFunds: boolean }) => void;
+  tender?: "card" | "cash" | "zelle" | null;
+  refundPending?: boolean;
 }) {
   const remaining =
     Math.round((charge.total - (charge.refundedAmount ?? 0)) * 100) / 100;
@@ -23,6 +27,8 @@ export function ChargeRefundForm({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [includeTip, setIncludeTip] = useState(false);
   const [customAmount, setCustomAmount] = useState("");
+  const [reason, setReason] = useState("");
+  const manual = tender === "cash" || tender === "zelle";
 
   const itemTotal = useMemo(() => {
     const lines = charge.lineItems
@@ -137,16 +143,43 @@ export function ChargeRefundForm({
         </label>
       ) : null}
 
+      <label className="mt-6 block">
+        <span className="font-body text-xs uppercase tracking-[0.14em] text-taupe">
+          Reason
+        </span>
+        <textarea
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          className="mt-2 min-h-24 w-full rounded-xl border border-lavender/40 bg-white px-4 py-3 text-sm"
+        />
+      </label>
+      <p className="font-body mt-4 text-sm text-taupe">
+        {manual
+          ? "Cash and Zelle are not refunded in Stripe. Request the refund, then confirm after the money has been returned."
+          : "Card refunds are sent to Stripe."}
+      </p>
       <p className="font-body mt-8 text-lg text-ink">
         Refund {formatChargeMoney(amount)}
       </p>
       <button
         type="button"
-        disabled={busy || amount <= 0}
-        onClick={() => onRefund(amount)}
+        disabled={busy || amount <= 0 || reason.trim().length < 3}
+        onClick={() =>
+          onRefund({
+            amount,
+            reason: reason.trim(),
+            confirmFunds: manual && refundPending,
+          })
+        }
         className="mt-4 w-full rounded-sm bg-deep-lavender px-6 py-4 text-[11px] font-medium uppercase tracking-[0.16em] text-ivory disabled:opacity-50"
       >
-        {busy ? "Refunding…" : "Confirm refund"}
+        {busy
+          ? "Refunding…"
+          : manual && refundPending
+            ? "Confirm funds returned"
+            : manual
+              ? "Request refund"
+              : "Confirm refund"}
       </button>
       <button
         type="button"
