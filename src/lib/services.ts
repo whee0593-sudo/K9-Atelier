@@ -1,5 +1,6 @@
 import { business, formatDuration, formatPrice } from "./business";
 import { canonicalServiceId } from "./service-catalog";
+import { getServiceDisplayName } from "./service-display";
 
 export type BookingPolicyItem = {
   title: string;
@@ -43,6 +44,7 @@ export type BookableService = {
   coatTypePrices?: CoatTypePrice[];
   pricingNote?: string;
   coatTypeNote?: string;
+  assessmentNote?: string;
   hourlyRate?: number;
   durationMin?: number;
   durationMax?: number;
@@ -156,6 +158,10 @@ export function allBookableServices(): BookableService[] {
       coatTypePrices:
         "coatTypePrices" in service ? service.coatTypePrices : undefined,
       pricingNote: "pricingNote" in service ? service.pricingNote : undefined,
+      assessmentNote:
+        "assessmentNote" in service
+          ? (service.assessmentNote as string | undefined)
+          : undefined,
       coatTypeNote: "coatTypeNote" in service ? service.coatTypeNote : undefined,
       hourlyRate: "hourlyRate" in service ? service.hourlyRate : undefined,
       durationMin: "durationMin" in service ? service.durationMin : undefined,
@@ -267,6 +273,7 @@ export function formatServicePrice(
   weightLbs: number,
   optionName?: string,
 ) {
+  if (isAssessedOnSiteService(service)) return "";
   if (service.pricingType === "tiered") {
     const coatPrice = hasCoatTypePricing(service)
       ? getCoatTypePriceForPet(service, weightLbs)
@@ -326,16 +333,95 @@ export function formatServicePrice(
   return "";
 }
 
-export function supportsSeniorAddOn(serviceId: string) {
-  const id = canonicalServiceId(serviceId);
-  if (id === "hand-stripping") return false;
+export const GENTLE_DEMATTING_ID = "dematting-brush-out";
+export const DESHEDDING_ADD_ON_ID = "deshedding-treatment";
+export const SENIOR_CARE_ADD_ON_ID = "senior-comfort-care";
+
+export const GENTLE_DEMATTING_DESCRIPTION =
+  "Gentle removal of light to moderate tangles, with your dog's comfort and coat health as the priority.";
+
+export const GENTLE_DEMATTING_ASSESSMENT_NOTE =
+  "Pricing will be assessed by your groomer on-site, based on your dog's coat condition.";
+
+export const GENTLE_DEMATTING_EXCLUSION_NOTE =
+  "Excludes the on-site assessment fee for Gentle DeMatting.";
+
+/**
+ * Staff billing floor for Gentle DeMatting. Not a guest price and not an
+ * automatic charge. Extra time is quoted by the groomer before it is collected.
+ */
+export const GENTLE_DEMATTING_INTERNAL_START = {
+  minutes: 15,
+  amount: 30,
+} as const;
+
+const SCHEDULE_NEUTRAL_ADD_ON_IDS = new Set([
+  GENTLE_DEMATTING_ID,
+  DESHEDDING_ADD_ON_ID,
+  SENIOR_CARE_ADD_ON_ID,
+  "mini-trim",
+]);
+
+export function isAssessedOnSiteService(service: {
+  id: string;
+  pricingType?: string;
+}) {
   return (
-    [
-      "signature-bath-care",
-      "custom-full-haircut",
-      "show-level-coat-care",
-    ].includes(id) || isSpaService(id)
+    canonicalServiceId(service.id) === GENTLE_DEMATTING_ID ||
+    service.pricingType === "assessed"
   );
+}
+
+export type AddOnAvailability = "selectable" | "included" | "unavailable";
+
+const ADD_ON_MATRIX: Record<string, Record<string, AddOnAvailability>> = {
+  "signature-bath-care": {
+    [GENTLE_DEMATTING_ID]: "selectable",
+    [DESHEDDING_ADD_ON_ID]: "selectable",
+    [SENIOR_CARE_ADD_ON_ID]: "selectable",
+    "mini-trim": "selectable",
+  },
+  "show-level-coat-care": {
+    [GENTLE_DEMATTING_ID]: "selectable",
+    [DESHEDDING_ADD_ON_ID]: "selectable",
+    [SENIOR_CARE_ADD_ON_ID]: "selectable",
+    "mini-trim": "included",
+  },
+  "luxury-spa-day": {
+    [GENTLE_DEMATTING_ID]: "selectable",
+    [DESHEDDING_ADD_ON_ID]: "included",
+    [SENIOR_CARE_ADD_ON_ID]: "selectable",
+    "mini-trim": "included",
+  },
+  "custom-full-haircut": {
+    [GENTLE_DEMATTING_ID]: "selectable",
+    [DESHEDDING_ADD_ON_ID]: "selectable",
+    [SENIOR_CARE_ADD_ON_ID]: "selectable",
+    "mini-trim": "included",
+  },
+  "hand-stripping": {
+    [GENTLE_DEMATTING_ID]: "selectable",
+    [DESHEDDING_ADD_ON_ID]: "unavailable",
+    [SENIOR_CARE_ADD_ON_ID]: "selectable",
+    "mini-trim": "unavailable",
+  },
+};
+
+export function addOnAvailability(
+  primaryServiceId: string,
+  addOnId: string,
+): AddOnAvailability {
+  const primary = canonicalServiceId(primaryServiceId);
+  const addOn = canonicalServiceId(addOnId);
+  if (primary === "end-of-life-care") return "unavailable";
+  if (addOn === CREATIVE_ACCENT_COLORING_ID) {
+    return supportsCreativeColoringAddOn(primary) ? "selectable" : "unavailable";
+  }
+  return ADD_ON_MATRIX[primary]?.[addOn] ?? "unavailable";
+}
+
+export function supportsSeniorAddOn(serviceId: string) {
+  return addOnAvailability(serviceId, SENIOR_CARE_ADD_ON_ID) === "selectable";
 }
 
 export const MINI_TRIM_ADD_ON_ID = "mini-trim";
@@ -367,10 +453,59 @@ export function selectionRepeatsIncludedMiniTrim(
 }
 
 export function supportsMiniTrimAddOn(serviceId: string) {
-  const id = canonicalServiceId(serviceId);
-  if (serviceIncludesMiniTrim(id) || isSpaService(id)) return false;
-  if (id === "hand-stripping" || id === "end-of-life-care") return false;
-  return true;
+  return addOnAvailability(serviceId, MINI_TRIM_ADD_ON_ID) === "selectable";
+}
+
+export function serviceIncludesDeShedding(serviceId: string) {
+  return (
+    addOnAvailability(serviceId, DESHEDDING_ADD_ON_ID) === "included"
+  );
+}
+
+const KNOWN_ADD_ON_IDS = new Set<string>([
+  GENTLE_DEMATTING_ID,
+  DESHEDDING_ADD_ON_ID,
+  SENIOR_CARE_ADD_ON_ID,
+  MINI_TRIM_ADD_ON_ID,
+  CREATIVE_ACCENT_COLORING_ID,
+]);
+
+export const DESHEDDING_ALREADY_INCLUDED_MESSAGE =
+  "DeShedding Care is already included with Luxury Spa Day.";
+
+/** Rejects included, unavailable, and duplicated add-ons for staff and guests. */
+export function addOnSelectionMessage(
+  serviceIds: readonly string[],
+  addOnIds: readonly string[] = [],
+) {
+  const services = serviceIds.map((id) => canonicalServiceId(id));
+  const extras = [
+    ...services.filter((id) => KNOWN_ADD_ON_IDS.has(id)),
+    ...addOnIds.map((id) => canonicalServiceId(id)),
+  ];
+  const pricedExtras = extras.filter((id) => id !== CREATIVE_ACCENT_COLORING_ID);
+  if (new Set(pricedExtras).size !== pricedExtras.length) {
+    return "That add-on cannot be booked with this service.";
+  }
+  const uniqueExtras = [...new Set(extras)];
+  const primaries = services.filter((id) => !KNOWN_ADD_ON_IDS.has(id));
+  for (const primary of primaries) {
+    for (const extra of uniqueExtras) {
+      const availability = addOnAvailability(primary, extra);
+      if (availability === "selectable") continue;
+      if (availability === "included" && extra === MINI_TRIM_ADD_ON_ID) {
+        return MINI_TRIM_ALREADY_INCLUDED_MESSAGE;
+      }
+      if (availability === "included" && extra === DESHEDDING_ADD_ON_ID) {
+        return DESHEDDING_ALREADY_INCLUDED_MESSAGE;
+      }
+      if (availability === "included") {
+        return "That add-on is already included with this service.";
+      }
+      return "That add-on cannot be booked with this service.";
+    }
+  }
+  return null;
 }
 
 export function supportsCreativeColoringAddOn(serviceId: string) {
@@ -482,36 +617,83 @@ export function getAvailableAddOns(
   _categoryId: string,
   primaryServiceId: string,
 ) {
-  const addOns = allBookableServices().filter((service) => !service.bookableAsPrimary);
+  const primary = canonicalServiceId(primaryServiceId);
+  const addOns = allBookableServices().filter(
+    (service) =>
+      !service.bookableAsPrimary &&
+      addOnAvailability(primary, service.id) === "selectable",
+  );
 
-  const filtered = addOns.filter((addOn) => {
-    if (primaryServiceId === "end-of-life-care") return false;
-    if (primaryServiceId === "hand-stripping") {
-      return addOn.id === "dematting-brush-out";
-    }
-    if (addOn.id === "senior-comfort-care") {
-      return supportsSeniorAddOn(primaryServiceId);
-    }
-    if (addOn.id === "mini-trim") {
-      return supportsMiniTrimAddOn(primaryServiceId);
-    }
-    return true;
-  });
-
-  let result = filtered;
-
-  if (supportsCreativeColoringAddOn(primaryServiceId)) {
-    const creative = getCreativeColoringService();
-    if (creative && !result.some((item) => item.id === creative.id)) {
-      result = [...result, creative];
-    }
+  if (addOnAvailability(primary, CREATIVE_ACCENT_COLORING_ID) !== "selectable") {
+    return addOns;
   }
 
-  return result;
+  const creative = getCreativeColoringService();
+  if (creative && !addOns.some((item) => item.id === creative.id)) {
+    return [...addOns, creative];
+  }
+  return addOns;
 }
 
 export function getAddOnService(id: string) {
-  return allBookableServices().find((s) => s.id === id);
+  return allBookableServices().find((s) => s.id === canonicalServiceId(id));
+}
+
+export type ResolvedAddOnCharge =
+  | { id: string; name: string; kind: "priced"; amount: number }
+  | { id: string; name: string; kind: "assessed"; note: string }
+  | { id: string; name: string; kind: "unpriced" };
+
+function catalogAddOnAmount(
+  addOn: BookableService,
+  weightLbs: number,
+  optionName?: string,
+) {
+  if (addOn.options?.length) {
+    const option = addOn.options.find((item) => item.name === optionName);
+    if (!option || option.priceFrom == null) return null;
+    return option.priceFrom;
+  }
+  return getServicePriceEstimate(addOn, weightLbs, optionName)?.from ?? null;
+}
+
+/**
+ * Priced add-ons keep their catalog amount. Gentle DeMatting stays assessed
+ * and is never turned into $0. Included, unavailable, and duplicate ids drop out.
+ */
+export function resolveAddOnCharges(
+  primaryServiceId: string,
+  addOnIds: readonly string[],
+  weightLbs: number,
+  addOnOptions: Record<string, string> = {},
+): ResolvedAddOnCharge[] {
+  const seen = new Set<string>();
+  const charges: ResolvedAddOnCharge[] = [];
+  for (const rawId of addOnIds) {
+    const id = canonicalServiceId(rawId);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    if (addOnAvailability(primaryServiceId, id) !== "selectable") continue;
+    const addOn = getAddOnService(id);
+    if (!addOn) continue;
+    const name = getServiceDisplayName(addOn.id, addOn.name);
+    if (isAssessedOnSiteService(addOn)) {
+      charges.push({
+        id,
+        name,
+        kind: "assessed",
+        note: addOn.assessmentNote?.trim() || GENTLE_DEMATTING_ASSESSMENT_NOTE,
+      });
+      continue;
+    }
+    const amount = catalogAddOnAmount(addOn, weightLbs, addOnOptions[id]);
+    if (amount == null) {
+      charges.push({ id, name, kind: "unpriced" });
+      continue;
+    }
+    charges.push({ id, name, kind: "priced", amount });
+  }
+  return charges;
 }
 
 /** Minutes blocked on the van for a primary service plus selected add-ons. */
@@ -529,6 +711,7 @@ export function estimateServiceDurationMinutes(
   let minutes = Math.round((min + max) / 2);
 
   for (const addOnId of addOnIds) {
+    if (SCHEDULE_NEUTRAL_ADD_ON_IDS.has(canonicalServiceId(addOnId))) continue;
     const addOn = getAddOnService(addOnId);
     if (!addOn) continue;
     const addOnTier = getTierForPet(addOn, weightLbs);
@@ -543,6 +726,7 @@ export function estimateServiceDurationMinutes(
 }
 
 export function formatServicePriceFrom(service: BookableService) {
+  if (isAssessedOnSiteService(service)) return "";
   if (service.pricingType === "tiered" && service.coatTypePrices?.length) {
     const min = Math.min(...service.coatTypePrices.map((t) => t.priceFrom));
     return `From ${formatPrice(min)}`;
@@ -595,6 +779,10 @@ export function getServicePriceEstimate(
   optionName?: string,
   coatType?: string | null,
 ) {
+  if (isAssessedOnSiteService(service)) return null;
+  if (canonicalServiceId(service.id) === MINI_TRIM_ADD_ON_ID) {
+    return { from: service.flatRate ?? 30, durationLabel: undefined };
+  }
   if (service.pricingType === "tiered") {
     const tier = getTierForPet(service, weightLbs);
     if (hasCoatTypePricing(service)) {

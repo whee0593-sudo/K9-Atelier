@@ -398,7 +398,7 @@ const CARD_SUMMARIES: Record<string, string> = {
   "luxury-spa-day":
     "A fully customized, relaxing spa experience for your pup. Nail, ear, and teeth care included. Mini trim included.",
   "dematting-brush-out":
-    "Patient, skin-safe mat removal for light to moderate tangles, always prioritizing your dog’s comfort.",
+    "Gentle removal of light to moderate tangles, with your dog's comfort and coat health as the priority.",
   "deshedding-treatment":
     "A deep undercoat treatment to release trapped hair and reduce shedding after the bath.",
   "senior-comfort-care": SPECIALTY_CARE_SENIOR_SUMMARY,
@@ -491,6 +491,7 @@ export function serviceCardPriceValue(service: BookableService) {
 }
 
 export function serviceStartingPriceAmount(service: BookableService) {
+  if (service.pricingType === "assessed") return null;
   if (service.pricingType === "hourly" && service.hourlyRate != null) {
     return service.hourlyRate;
   }
@@ -515,6 +516,7 @@ export function serviceStartingPriceAmount(service: BookableService) {
 }
 
 export function serviceStartingPriceLabel(service: BookableService) {
+  if (service.pricingType === "assessed") return "";
   if (service.pricingType === "free") return "Complimentary";
   if (service.pricingType === "consultation") return "By consultation";
   if (service.pricingType === "hourly" && service.hourlyRate) {

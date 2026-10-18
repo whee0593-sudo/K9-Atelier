@@ -2,9 +2,8 @@ import { randomUUID } from "crypto";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 import {
   allBookableServices,
-  getAddOnService,
   getServicePriceEstimate,
-  selectionRepeatsIncludedMiniTrim,
+  resolveAddOnCharges,
 } from "@/lib/services";
 import { getServiceDisplayName } from "@/lib/service-display";
 import { resolveReferralCategory } from "@/lib/referrals/eligible";
@@ -49,24 +48,19 @@ export function buildDefaultLineItems(
     referralCategory: "eligible_service",
   });
 
-  for (const addOnId of appointment.addOnIds) {
-    if (selectionRepeatsIncludedMiniTrim([appointment.serviceId], [addOnId])) {
-      continue;
-    }
-    const addOn = getAddOnService(addOnId);
-    const optionName = appointment.addOnOptions[addOnId];
-    const estimate = addOn
-      ? getServicePriceEstimate(addOn, pricedWeight, optionName)
-      : null;
-    const addOnAmount = Number(estimate?.from ?? 0);
+  for (const charge of resolveAddOnCharges(
+    appointment.serviceId,
+    appointment.addOnIds,
+    pricedWeight,
+    appointment.addOnOptions,
+  )) {
+    if (charge.kind !== "priced") continue;
     items.push({
       id: randomUUID(),
-      label: addOn
-        ? getServiceDisplayName(addOn.id, addOn.name)
-        : addOnId,
-      amount: addOnAmount,
-      listAmount: listAmountForCatalog(addOnId, addOnAmount),
-      catalogId: addOnId,
+      label: charge.name,
+      amount: charge.amount,
+      listAmount: listAmountForCatalog(charge.id, charge.amount),
+      catalogId: charge.id,
       referralCategory: "eligible_service",
     });
   }

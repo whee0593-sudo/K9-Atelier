@@ -30,11 +30,10 @@ import { loadBookingAllergySnapshot } from "@/lib/appointments/service";
 import { PET_SELECT } from "@/lib/pets/types";
 import { ALLERGY_PROFILE_UNAVAILABLE_MESSAGE } from "@/lib/allergies";
 import {
+  addOnSelectionMessage,
   bookedServiceAmount,
   estimateServiceDurationMinutes,
   allBookableServices,
-  selectionRepeatsIncludedMiniTrim,
-  MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
 } from "@/lib/services";
 import { keepPrimaryIfReferralFails } from "@/lib/referrals/allocate-code";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -579,8 +578,9 @@ export async function createStaffCustomerBooking(
         : pet.serviceId
           ? [pet.serviceId]
           : [];
-    if (selectionRepeatsIncludedMiniTrim(petServiceIds, input.addOnIds)) {
-      return { error: "conflict", message: MINI_TRIM_ALREADY_INCLUDED_MESSAGE };
+    const addOnMessage = addOnSelectionMessage(petServiceIds, input.addOnIds);
+    if (addOnMessage) {
+      return { error: "conflict", message: addOnMessage };
     }
   }
 

@@ -247,11 +247,20 @@ describe("hand stripping page content", () => {
       /Charged at an hourly rate due to the intense precision and time required\./,
     );
 
-    const html = renderToStaticMarkup(
+    const guest = renderToStaticMarkup(
       <ServiceCard service={service} headingAs="h2" anchorId="hand-stripping" />,
     );
-    assert.match(html, /Wire-coated breeds/);
-    assert.equal(html.includes("Wire-coated Terriers and Schnauzers"), false);
+    const html = renderToStaticMarkup(
+      <ServiceCard
+        service={service}
+        headingAs="h2"
+        anchorId="hand-stripping"
+        showPrices
+      />,
+    );
+    assert.match(guest, /Wire-coated breeds/);
+    assert.equal(guest.includes("Wire-coated Terriers and Schnauzers"), false);
+    assert.equal(/\$\d/.test(guest), false);
     assert.match(html, /\$160 \/ hour/);
     assert.match(html, /From \$160 \/ hour/);
     assert.match(html, /1 – 1\.5 hours \(varies by coat texture &amp; coverage\)/);

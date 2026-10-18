@@ -1,19 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ServiceCategoryView } from "@/components/services/ServiceCategoryView";
-import {
-  SERVICE_CATEGORIES,
-  absoluteSiteUrl,
-  getServiceCategory,
-} from "@/lib/service-page";
+import { viewerCanViewServicePrices } from "@/lib/pricing-access";
+import { absoluteSiteUrl, getServiceCategory } from "@/lib/service-page";
 
 type Props = {
   params: Promise<{ slug: string }>;
 };
 
-export function generateStaticParams() {
-  return SERVICE_CATEGORIES.map((category) => ({ slug: category.slug }));
-}
+/** Prices depend on the staff session cookie, so this page cannot be prerendered. */
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -48,6 +44,7 @@ export default async function ServiceCategoryPage({ params }: Props) {
   const { slug } = await params;
   const category = getServiceCategory(slug);
   if (!category) notFound();
+  const showPrices = await viewerCanViewServicePrices();
 
-  return <ServiceCategoryView category={category} />;
+  return <ServiceCategoryView category={category} showPrices={showPrices} />;
 }

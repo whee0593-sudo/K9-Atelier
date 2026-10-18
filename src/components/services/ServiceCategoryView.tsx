@@ -29,6 +29,7 @@ import {
 
 type Props = {
   category: ServiceCategory;
+  showPrices?: boolean;
 };
 
 function serviceGridClass(count: number) {
@@ -37,7 +38,7 @@ function serviceGridClass(count: number) {
   return "grid gap-6 lg:grid-cols-2";
 }
 
-export function ServiceCategoryView({ category }: Props) {
+export function ServiceCategoryView({ category, showPrices = false }: Props) {
   const services = getServicesByIds(category.serviceIds);
   const coloring = getServiceById("creative-accent-coloring");
 
@@ -61,7 +62,7 @@ export function ServiceCategoryView({ category }: Props) {
         tone="white"
       >
         {category.layout === "coloring" && coloring ? (
-          <CreativeColoringSection service={coloring} />
+          <CreativeColoringSection service={coloring} showPrices={showPrices} />
         ) : (
           <div className={serviceGridClass(services.length)}>
             {services.map((service) => {
@@ -73,6 +74,7 @@ export function ServiceCategoryView({ category }: Props) {
                 <ServiceCard
                   key={service.id}
                   service={displayed}
+                  showPrices={showPrices}
                   headingAs="h2"
                   quiet={service.id === "end-of-life-care"}
                   anchorId={SERVICE_ANCHORS[service.id] ?? service.id}

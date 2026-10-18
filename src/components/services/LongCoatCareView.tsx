@@ -57,7 +57,7 @@ function AreaSentence() {
   );
 }
 
-export function LongCoatCareView() {
+export function LongCoatCareView({ showPrices = false }: { showPrices?: boolean }) {
   const service = getServiceById(LONG_COAT_CARE_SERVICE_ID);
 
   return (
@@ -122,6 +122,7 @@ export function LongCoatCareView() {
             <div className="mx-auto max-w-2xl">
               <ServiceCard
                 service={service}
+                showPrices={showPrices}
                 headingAs="h2"
                 anchorId="show-care-booking"
                 detailsInitiallyOpen

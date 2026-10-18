@@ -97,28 +97,28 @@ describe("full groom coat-type pricing", () => {
 });
 
 describe("mini trim add-on pricing", () => {
-  it("charges $30 / $35 / $40 by weight and shows $30+ publicly", () => {
+  it("charges a flat $30 at every weight", () => {
     const mini = getServiceById("mini-trim");
     assert.ok(mini);
     assert.equal(mini.flatRate, 30);
-    assert.equal(getServicePriceEstimate(mini, 12)?.from, 30);
-    assert.equal(getServicePriceEstimate(mini, 15)?.from, 30);
-    assert.equal(getServicePriceEstimate(mini, 20)?.from, 35);
-    assert.equal(getServicePriceEstimate(mini, 30)?.from, 35);
-    assert.equal(getServicePriceEstimate(mini, 40)?.from, 40);
+    assert.equal(mini.tiers, undefined);
+    for (const weight of [12, 15, 20, 30, 40, 45]) {
+      assert.equal(getServicePriceEstimate(mini, weight)?.from, 30);
+    }
     assert.notEqual(mini.flatRate, 50);
   });
 });
 
-describe("unchanged add-on prices", () => {
-  it("keeps de-matting at $30 / 15 min and deshedding starting at $30", () => {
+describe("assessed and weight-tier add-on prices", () => {
+  it("leaves Gentle DeMatting unpriced and keeps deshedding by weight", () => {
     const dematting = getServiceById("dematting-brush-out");
     const deshedding = getServiceById("deshedding-treatment");
     assert.ok(dematting);
     assert.ok(deshedding);
-    assert.equal(dematting.flatRate, 30);
-    assert.equal(dematting.durationMin, 15);
-    assert.equal(getServicePriceEstimate(dematting, 20)?.from, 30);
+    assert.equal(dematting.pricingType, "assessed");
+    assert.equal(dematting.flatRate, undefined);
+    assert.equal(dematting.durationMin, undefined);
+    assert.equal(getServicePriceEstimate(dematting, 20), null);
     assert.equal(getServicePriceEstimate(deshedding, 12)?.from, 30);
     assert.equal(getServicePriceEstimate(deshedding, 20)?.from, 40);
     assert.equal(getServicePriceEstimate(deshedding, 40)?.from, 50);

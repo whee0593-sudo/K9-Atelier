@@ -17,9 +17,8 @@ import {
   changeNoticeBand,
   type AppointmentChangeAction,
 } from "@/lib/appointments/change-policy";
-import { formatPrice } from "@/lib/business";
 import { useCustomerPets } from "@/lib/pets/use-customer-pets";
-import { allBookableServices, formatServicePrice, getBookableServicesForPet } from "@/lib/services";
+import { allBookableServices, getBookableServicesForPet } from "@/lib/services";
 import { formatServiceAddress } from "@/lib/travel";
 import { petReadyToBook } from "@/lib/pets";
 import { bookingWeightLbs } from "@/lib/pets/weight";
@@ -298,9 +297,6 @@ export function AppointmentChangeForm({
           {appointments.map((item) => (
             <li key={item.id}>
               {item.petName} · {item.serviceName}
-              {item.estimatedTotal != null
-                ? ` · from ${formatPrice(item.estimatedTotal)}`
-                : ""}
             </li>
           ))}
         </ul>
@@ -389,9 +385,6 @@ export function AppointmentChangeForm({
               {addServices.map((service) => (
                 <option key={service.id} value={service.id}>
                   {service.name}
-                  {selectedAddWeight != null
-                    ? ` · ${formatServicePrice(service, selectedAddWeight)}`
-                    : ""}
                 </option>
               ))}
             </select>

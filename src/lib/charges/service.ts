@@ -42,8 +42,7 @@ import {
   type VisitBillSnapshot,
   type VisitCheckoutPet,
 } from "@/lib/charges/visit-bill";
-import { getAddOnService, getServicePriceEstimate } from "@/lib/services";
-import { getServiceDisplayName } from "@/lib/service-display";
+import { resolveAddOnCharges } from "@/lib/services";
 import {
   attemptSavedCardCharge,
   customerFacingStripeMessage,
@@ -308,8 +307,12 @@ async function loadVisitCollect(
     const petRow = Array.isArray(pet) ? pet[0] : pet;
     const weight = bookingWeightLbs(petRow?.weight_lbs);
     const addOnIds = (row.add_on_ids as string[] | null) ?? [];
-    const addOnOptions =
-      (row.add_on_options as Record<string, string> | null) ?? {};
+    const rawOptions =
+      (row.add_on_options as Record<string, unknown> | null) ?? {};
+    const addOnOptions: Record<string, string> = {};
+    for (const [key, value] of Object.entries(rawOptions)) {
+      if (typeof value === "string" && value.trim()) addOnOptions[key] = value;
+    }
     return {
       appointmentId: row.id as string,
       petName: petRow?.name?.trim() || "Dog",
@@ -321,20 +324,22 @@ async function loadVisitCollect(
       addOns:
         weight == null
           ? []
-          : addOnIds.map((addOnId) => {
-        const addOn = getAddOnService(addOnId);
-        const optionName = addOnOptions[addOnId];
-        const estimate = addOn
-          ? getServicePriceEstimate(addOn, weight, optionName)
-          : null;
-        return {
-          label: addOn
-            ? getServiceDisplayName(addOn.id, addOn.name)
-            : addOnId,
-          amount: Number(estimate?.from ?? 0),
-          catalogId: addOnId,
-        };
-      }),
+          : resolveAddOnCharges(
+              String(row.service_id ?? ""),
+              addOnIds,
+              weight,
+              addOnOptions,
+            ).flatMap((charge) =>
+              charge.kind === "priced"
+                ? [
+                    {
+                      label: charge.name,
+                      amount: charge.amount,
+                      catalogId: charge.id,
+                    },
+                  ]
+                : [],
+            ),
     };
   });
 

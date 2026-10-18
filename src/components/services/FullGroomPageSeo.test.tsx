@@ -197,11 +197,20 @@ describe("full groom page content", () => {
       assert.equal(entry?.priceFrom, price, `${weightTier} ${coatType}`);
     }
 
-    const html = renderToStaticMarkup(
+    const guest = renderToStaticMarkup(
       <ServiceCard service={service} headingAs="h2" anchorId="atelier-full-groom" />,
     );
+    assert.equal(/\$\d/.test(guest), false);
+    const html = renderToStaticMarkup(
+      <ServiceCard
+        service={service}
+        headingAs="h2"
+        anchorId="atelier-full-groom"
+        showPrices
+      />,
+    );
     assert.match(html, />\$140</);
-    assert.match(html, /75\u2013120 min/);
+    assert.match(guest, /75\u2013120 min/);
     assert.match(html, /From \$140/);
     assert.match(html, /From \$210/);
     assert.match(html, /Final pricing may vary based on coat density/);

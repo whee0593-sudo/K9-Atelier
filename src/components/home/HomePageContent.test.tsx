@@ -93,7 +93,7 @@ describe("home page content", () => {
     );
 
     const hero = source.indexOf("<HomeHero />");
-    const services = source.indexOf("<HomeServices />");
+    const services = source.indexOf("<HomeServices");
     const selectedWork = source.indexOf("<HomeSelectedWork />");
     const firstVisit = source.indexOf("<HomeFirstVisit />");
 
@@ -201,10 +201,10 @@ describe("homepage SEO", () => {
     assert.match(byHref("/services/hand-stripping")?.text ?? "", /^Hand Stripping\b/);
     assert.match(byHref("/services/spa")?.text ?? "", /^Luxury Spa Day\b/);
     assert.match(byHref("/services/spa")?.text ?? "", /A fully customized spa experience/);
-    assert.match(byHref("/services/spa")?.text ?? "", /From \$140/);
+    assert.equal((byHref("/services/spa")?.text ?? "").includes("$"), false);
     assert.match(byHref("/services/color")?.text ?? "", /^Creative Color\b/);
     assert.match(byHref("/services/color")?.text ?? "", /Pet-safe color artistry/);
-    assert.match(byHref("/services/color")?.text ?? "", /From \$50/);
+    assert.equal((byHref("/services/color")?.text ?? "").includes("$"), false);
     const specialtyCard = anchors.find(
       (anchor) =>
         anchor.href === "/services/specialty-care" &&

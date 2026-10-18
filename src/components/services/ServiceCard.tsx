@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import React, { useId, useState } from "react";
 import Link from "next/link";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { FullGroomPriceMatrix } from "@/components/services/FullGroomPriceMatrix";
@@ -33,6 +33,7 @@ type Props = {
     after: string;
     href: string;
   };
+  showPrices?: boolean;
 };
 
 export function ServiceCard({
@@ -47,13 +48,14 @@ export function ServiceCard({
   learnMoreLabel,
   detailParagraphs,
   leadLink,
+  showPrices = false,
 }: Props) {
   const Heading = headingAs;
   const [open, setOpen] = useState(detailsInitiallyOpen);
   const panelId = useId();
   const bestFor = serviceCardBestFor(service);
   const duration = serviceDurationLabel(service);
-  const price = serviceCardPriceValue(service);
+  const price = showPrices ? serviceCardPriceValue(service) : "";
   const access = serviceCardAccessLabel(service);
   const priceLabel =
     service.pricingType === "free" ? "Care" : "From";
@@ -169,7 +171,11 @@ export function ServiceCard({
         }`}
       >
         <div className="overflow-hidden" inert={!open || undefined}>
-          <ServiceDetails service={service} detailParagraphs={detailParagraphs} />
+          <ServiceDetails
+            service={service}
+            detailParagraphs={detailParagraphs}
+            showPrices={showPrices}
+          />
         </div>
       </div>
     </article>
@@ -202,9 +208,11 @@ function ServiceNote({ service }: { service: BookableService }) {
 function ServiceDetails({
   service,
   detailParagraphs,
+  showPrices,
 }: {
   service: BookableService;
   detailParagraphs?: readonly string[];
+  showPrices: boolean;
 }) {
   const replaceNarrative = Boolean(detailParagraphs?.length);
 
@@ -249,20 +257,28 @@ function ServiceDetails({
         </div>
       )}
 
-      {service.pricingType === "tiered" && service.coatTypePrices?.length ? (
+      {service.pricingType === "assessed" && service.assessmentNote ? (
+        <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
+          {service.assessmentNote}
+        </p>
+      ) : null}
+
+      {showPrices && service.pricingType === "tiered" && service.coatTypePrices?.length ? (
         <FullGroomPriceMatrix service={service} />
       ) : (
+        showPrices &&
         service.tiers &&
         service.pricingType === "tiered" && <PriceTiers tiers={service.tiers} />
       )}
 
-      {service.pricingType === "hourly" && service.hourlyRate != null && (
+      {showPrices && service.pricingType === "hourly" && service.hourlyRate != null && (
         <p className="font-body mt-4 text-sm text-ink">
           From {formatPrice(service.hourlyRate)} / hour
         </p>
       )}
 
-      {service.pricingType === "add_on" &&
+      {showPrices &&
+        service.pricingType === "add_on" &&
         service.tiers &&
         service.flatRate == null && (
           <PriceTiers
@@ -272,7 +288,7 @@ function ServiceDetails({
           />
         )}
 
-      {service.pricingType === "add_on" && service.flatRate != null && (
+      {showPrices && service.pricingType === "add_on" && service.flatRate != null && (
         <p className="font-body mt-4 text-sm text-ink">
           {service.durationMin != null
             ? `From ${formatPrice(service.flatRate)} / ${service.durationMin} min`
@@ -280,7 +296,7 @@ function ServiceDetails({
         </p>
       )}
 
-      {service.pricingType === "free" && (
+      {showPrices && service.pricingType === "free" && (
         <p className="font-body mt-4 text-sm text-ink">
           Complimentary
           {service.membersOnly ? " · Members only" : ""} · By appointment only

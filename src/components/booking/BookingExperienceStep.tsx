@@ -41,6 +41,7 @@ type Props = {
   pet: PetProfile;
   selectedServiceId: string | null;
   selectedOptionName?: string | null;
+  showPrices?: boolean;
   onSelect: (service: BookableService, optionName?: string) => void;
   onContinue: (service?: BookableService) => void;
   onBack: () => void;
@@ -58,11 +59,13 @@ function CareServiceCard({
   pet,
   service,
   selected,
+  showPrices,
   onSelect,
 }: {
   pet: PetProfile;
   service: BookableService;
   selected: boolean;
+  showPrices: boolean;
   onSelect: (service: BookableService) => void;
 }) {
   const weightLbs = bookingWeightLbs(pet.weightLbs);
@@ -87,19 +90,17 @@ function CareServiceCard({
       <p className="font-body mt-6 text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
         For {pet.name}
       </p>
-      {estimate && (
-        <>
-          <p className="font-display mt-2 text-2xl text-ink">
-            {bookingCarePriceLabel(service, estimate.from)}
-          </p>
-          {estimate.durationLabel && (
-            <p className="font-body mt-2 text-sm text-taupe">
-              Approximately {estimate.durationLabel}
-            </p>
-          )}
-        </>
+      {showPrices && estimate && (
+        <p className="font-display mt-2 text-2xl text-ink">
+          {bookingCarePriceLabel(service, estimate.from)}
+        </p>
       )}
-      {!estimate && weightLbs != null ? (
+      {estimate?.durationLabel && (
+        <p className="font-body mt-2 text-sm text-taupe">
+          Approximately {estimate.durationLabel}
+        </p>
+      )}
+      {showPrices && !estimate && weightLbs != null ? (
         <p className="font-body mt-2 text-sm text-taupe">
           {formatServicePrice(service, weightLbs)}
         </p>
@@ -120,12 +121,14 @@ function CareColorOptionCard({
   service,
   option,
   selected,
+  showPrices,
   onSelect,
 }: {
   pet: PetProfile;
   service: BookableService;
   option: ServiceOption;
   selected: boolean;
+  showPrices: boolean;
   onSelect: (service: BookableService, optionName: string) => void;
 }) {
   const note = coloringOptionDisplayNote(option.note);
@@ -147,13 +150,17 @@ function CareColorOptionCard({
       <p className="font-body mt-6 text-[12px] font-medium uppercase tracking-[0.14em] text-taupe">
         For {pet.name}
       </p>
-      <p className="font-display mt-2 text-2xl text-ink">
-        {option.consultationRequired
-          ? "Consultation"
-          : option.priceFrom != null
-            ? `From ${formatPrice(option.priceFrom)}`
-            : "—"}
-      </p>
+      {showPrices ? (
+        <p className="font-display mt-2 text-2xl text-ink">
+          {option.consultationRequired
+            ? "Consultation"
+            : option.priceFrom != null
+              ? `From ${formatPrice(option.priceFrom)}`
+              : "—"}
+        </p>
+      ) : option.consultationRequired ? (
+        <p className="font-body mt-2 text-sm text-taupe">Consultation required</p>
+      ) : null}
       {note && (
         <p className="font-body mt-2 text-sm text-taupe">{note}</p>
       )}
@@ -183,6 +190,7 @@ export function BookingExperienceStep({
   pet,
   selectedServiceId,
   selectedOptionName = null,
+  showPrices = false,
   onSelect,
   onContinue,
   onBack,
@@ -378,6 +386,7 @@ export function BookingExperienceStep({
                                   key={service.id}
                                   pet={pet}
                                   service={service}
+                                  showPrices={showPrices}
                                   selected={selectedServiceId === service.id}
                                   onSelect={handleServiceSelect}
                                 />
@@ -399,6 +408,7 @@ export function BookingExperienceStep({
                               pet={pet}
                               service={service}
                               option={option}
+                              showPrices={showPrices}
                               selected={
                                 selectedServiceId === service.id &&
                                 selectedOptionName === option.name
@@ -415,6 +425,7 @@ export function BookingExperienceStep({
                         key={service.id}
                         pet={pet}
                         service={service}
+                        showPrices={showPrices}
                         selected={selectedServiceId === service.id}
                         onSelect={handleServiceSelect}
                       />

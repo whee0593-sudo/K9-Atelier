@@ -4,11 +4,11 @@ import { HomeHero } from "./HomeHero";
 import { HomeSelectedWork } from "./HomeSelectedWork";
 import { HomeServices } from "./HomeServices";
 
-export function HomePageContent() {
+export function HomePageContent({ showPrices = false }: { showPrices?: boolean }) {
   return (
     <>
       <HomeHero />
-      <HomeServices />
+      <HomeServices showPrices={showPrices} />
       <HomeSelectedWork />
       <HomeFirstVisit />
     </>

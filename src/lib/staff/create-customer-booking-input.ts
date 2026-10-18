@@ -3,11 +3,10 @@ import { isWithinServiceDay } from "@/lib/booking-schedule";
 import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
 import {
+  addOnSelectionMessage,
   allBookableServices,
   isCustomCreativeDesignSelection,
-  MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
   parseEnteredServicePrice,
-  selectionRepeatsIncludedMiniTrim,
 } from "@/lib/services";
 import {
   parseStaffServiceSelection,
@@ -373,13 +372,12 @@ export function validateStaffCustomerBookingInput(
         }
         return chosen;
       });
-      if (
-        selectionRepeatsIncludedMiniTrim(
-          selections.map((selection) => selection.serviceId),
-        )
-      ) {
+      const addOnMessage = addOnSelectionMessage(
+        selections.map((selection) => selection.serviceId),
+      );
+      if (addOnMessage) {
         throw new StaffBookingValidationError(
-          MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
+          addOnMessage,
           `pets[${index}].serviceIds`,
         );
       }
@@ -486,22 +484,17 @@ export function validateStaffCustomerBookingInput(
   const addOnIds = Array.isArray(record.addOnIds)
     ? record.addOnIds.filter((id): id is string => typeof id === "string")
     : [];
-  if (
-    pets.some((pet) =>
-      selectionRepeatsIncludedMiniTrim(
-        pet.serviceIds.length > 0
-          ? pet.serviceIds
-          : pet.serviceId
-            ? [pet.serviceId]
-            : [],
-        addOnIds,
-      ),
-    )
-  ) {
-    throw new StaffBookingValidationError(
-      MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
-      "addOnIds",
-    );
+  for (const pet of pets) {
+    const serviceIds =
+      pet.serviceIds.length > 0
+        ? pet.serviceIds
+        : pet.serviceId
+          ? [pet.serviceId]
+          : [];
+    const addOnMessage = addOnSelectionMessage(serviceIds, addOnIds);
+    if (addOnMessage) {
+      throw new StaffBookingValidationError(addOnMessage, "addOnIds");
+    }
   }
 
   const hasCompleteBooking = Boolean(

@@ -3,21 +3,22 @@ import { calculateTravelFee } from "@/lib/travel";
 import {
   CREATIVE_ACCENT_COLORING_ID,
   CUSTOM_CREATIVE_DESIGN_GUEST_MESSAGE,
+  GENTLE_DEMATTING_EXCLUSION_NOTE,
   getAddOnService,
   getAvailableAddOns,
   getServicePriceEstimate,
   isCustomCreativeDesignOption,
   isCustomCreativeDesignSelection,
   isServiceAvailableForPet,
+  resolveAddOnCharges,
   unavailableReason,
   allBookableServices,
-  type BookableService,
 } from "@/lib/services";
 import { getServiceDisplayName } from "@/lib/service-display";
 import { canonicalServiceId } from "@/lib/service-catalog";
 
 export const BOOKING_PRICE_DISCLAIMER =
-  "Your estimated total is based on the selected services and available pet information. Final pricing may vary depending on coat condition, time required, or additional care. Any additional charges will be discussed before proceeding.";
+  "Your estimated total is based on your dog's weight, coat type, and selected services. Final pricing may vary depending on coat condition, matting, additional handling needs, and any adjustments discussed with your groomer.";
 
 export const PRICE_CHANGED_CODE = "price_changed";
 
@@ -52,6 +53,12 @@ export type BookingPriceAddOn = {
   priceLabel: string;
 };
 
+export type BookingAssessedAddOn = {
+  id: string;
+  name: string;
+  note: string;
+};
+
 export type BookingPricingBasis = "starting" | "hourly";
 
 export type BookingPriceQuote = {
@@ -62,6 +69,8 @@ export type BookingPriceQuote = {
   estimateNote: string | null;
   pricingBasis: BookingPricingBasis;
   addOns: BookingPriceAddOn[];
+  assessedAddOns: BookingAssessedAddOn[];
+  assessmentExclusionNote: string | null;
   addOnPrice: number;
   addOnLabel: string;
   travelDistanceMiles: number;
@@ -96,6 +105,27 @@ export function formatBookingDate(iso: string) {
 
 export function bookingMoney(amount: number) {
   return Math.round(amount * 100) / 100;
+}
+
+export function formatReviewMoney(amount: number) {
+  return `$${bookingMoney(amount).toFixed(2)}`;
+}
+
+export function bookingTravelAreaCopy(zone: string, showPrices: boolean) {
+  if (zone === "complimentary") {
+    return {
+      heading: "Your Address Is Within Our Service Area",
+      body: "Your address is within our service area.",
+      showFee: false,
+    };
+  }
+  return {
+    heading: "Extended Service Area",
+    body: showPrices
+      ? "An extended travel fee applies to this location."
+      : "An extended travel fee applies. The fee is shown on Review & Confirm.",
+    showFee: showPrices,
+  };
 }
 
 function bookingCents(amount: number) {
@@ -174,25 +204,13 @@ export function guestBookingSelectionError(
   return null;
 }
 
-function addOnAmount(
-  addOn: BookableService,
-  weightLbs: number,
-  optionName: string | undefined,
-) {
-  if (addOn.options?.length) {
-    const option = addOn.options.find((item) => item.name === optionName);
-    if (!option || option.priceFrom == null) return null;
-    return option.priceFrom;
-  }
-  return getServicePriceEstimate(addOn, weightLbs)?.from ?? null;
-}
-
 export function quoteGuestBooking(input: {
   serviceId: string;
   weightLbs: number;
   addOnIds: string[];
   addOnOptions: Record<string, string>;
   distanceMiles: number;
+  coatType?: string | null;
 }):
   | { ok: true; quote: BookingPriceQuote }
   | { ok: false; code: Exclude<BookingPriceFailureCode, "price_changed">; message: string } {
@@ -225,7 +243,12 @@ export function quoteGuestBooking(input: {
     };
   }
 
-  const serviceEstimate = getServicePriceEstimate(service, input.weightLbs);
+  const serviceEstimate = getServicePriceEstimate(
+    service,
+    input.weightLbs,
+    undefined,
+    input.coatType,
+  );
   if (serviceEstimate == null) {
     return {
       ok: false,
@@ -234,29 +257,32 @@ export function quoteGuestBooking(input: {
     };
   }
 
+  const resolvedAddOns = resolveAddOnCharges(
+    service.id,
+    input.addOnIds,
+    input.weightLbs,
+    input.addOnOptions,
+  );
+  if (resolvedAddOns.some((item) => item.kind === "unpriced")) {
+    return {
+      ok: false,
+      code: "unpriced",
+      message: "We could not price this add-on.",
+    };
+  }
   const addOns: BookingPriceAddOn[] = [];
-  for (const id of input.addOnIds) {
-    const addOn = getAddOnService(id);
-    if (!addOn) {
-      return {
-        ok: false,
-        code: "invalid_addon",
-        message: "That add-on cannot be booked with this service.",
-      };
+  const assessedAddOns: BookingAssessedAddOn[] = [];
+  for (const item of resolvedAddOns) {
+    if (item.kind === "assessed") {
+      assessedAddOns.push({ id: item.id, name: item.name, note: item.note });
+      continue;
     }
-    const price = addOnAmount(addOn, input.weightLbs, input.addOnOptions[id]);
-    if (price == null) {
-      return {
-        ok: false,
-        code: "unpriced",
-        message: "We could not price this add-on.",
-      };
-    }
+    if (item.kind !== "priced") continue;
     addOns.push({
-      id,
-      name: getServiceDisplayName(addOn.id, addOn.name),
-      price: bookingMoney(price),
-      priceLabel: formatPrice(price),
+      id: item.id,
+      name: item.name,
+      price: bookingMoney(item.amount),
+      priceLabel: formatPrice(item.amount),
     });
   }
 
@@ -302,11 +328,17 @@ export function quoteGuestBooking(input: {
             : null,
       pricingBasis,
       addOns,
+      assessedAddOns,
+      assessmentExclusionNote:
+        assessedAddOns.length > 0 ? GENTLE_DEMATTING_EXCLUSION_NOTE : null,
       addOnPrice,
       addOnLabel:
-        addOns.length === 0
+        addOns.length + assessedAddOns.length === 0
           ? "None"
-          : addOns.map((item) => `${item.name} · ${item.priceLabel}`).join(", "),
+          : [
+              ...addOns.map((item) => `${item.name} · ${item.priceLabel}`),
+              ...assessedAddOns.map((item) => item.name),
+            ].join(", "),
       travelDistanceMiles: travel.distanceMiles,
       travelFee,
       travelFeeLabel: travelFee === 0 ? "Complimentary" : formatPrice(travelFee),
