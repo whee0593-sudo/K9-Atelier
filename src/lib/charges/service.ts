@@ -42,8 +42,7 @@ import {
   type VisitBillSnapshot,
   type VisitCheckoutPet,
 } from "@/lib/charges/visit-bill";
-import { getAddOnService, getServicePriceEstimate } from "@/lib/services";
-import { getServiceDisplayName } from "@/lib/service-display";
+import { checkoutPetFromStoredRow } from "@/lib/appointments/priced-service";
 import {
   attemptSavedCardCharge,
   customerFacingStripeMessage,
@@ -307,34 +306,24 @@ async function loadVisitCollect(
       | null;
     const petRow = Array.isArray(pet) ? pet[0] : pet;
     const weight = bookingWeightLbs(petRow?.weight_lbs);
-    const addOnIds = (row.add_on_ids as string[] | null) ?? [];
-    const addOnOptions =
-      (row.add_on_options as Record<string, string> | null) ?? {};
-    return {
-      appointmentId: row.id as string,
-      petName: petRow?.name?.trim() || "Dog",
+    const priced = checkoutPetFromStoredRow({
+      serviceId: row.service_id as string,
       serviceName: String(row.service_name ?? "Service"),
       servicePrice:
         row.service_price == null ? null : Number(row.service_price),
+      addOnIds: (row.add_on_ids as string[] | null) ?? [],
+      addOnOptions:
+        (row.add_on_options as Record<string, unknown> | null) ?? null,
+      weightLbs: weight,
+    });
+    return {
+      appointmentId: row.id as string,
+      petName: petRow?.name?.trim() || "Dog",
+      serviceName: priced.serviceName || String(row.service_name ?? "Service"),
+      servicePrice: priced.servicePrice,
       status: String(row.status ?? ""),
       serviceEndedAt: (row.service_ended_at as string | null) ?? null,
-      addOns:
-        weight == null
-          ? []
-          : addOnIds.map((addOnId) => {
-        const addOn = getAddOnService(addOnId);
-        const optionName = addOnOptions[addOnId];
-        const estimate = addOn
-          ? getServicePriceEstimate(addOn, weight, optionName)
-          : null;
-        return {
-          label: addOn
-            ? getServiceDisplayName(addOn.id, addOn.name)
-            : addOnId,
-          amount: Number(estimate?.from ?? 0),
-          catalogId: addOnId,
-        };
-      }),
+      addOns: priced.addOns,
     };
   });
 
