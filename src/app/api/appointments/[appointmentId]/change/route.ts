@@ -118,6 +118,12 @@ export async function POST(
           "weightLbs",
         );
       }
+      if (result.error === "price_review_required") {
+        return appointmentJsonError(
+          "We need to review this visit's saved price before a change fee can be charged. Please contact us. Nothing has been charged.",
+          409,
+        );
+      }
       if (result.error === "conflict") {
         return appointmentJsonError(
           "This appointment can no longer be changed that way.",

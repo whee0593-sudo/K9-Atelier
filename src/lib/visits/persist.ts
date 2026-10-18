@@ -23,7 +23,7 @@ export type StaffVisitAppointmentInsert = {
   service_id: string;
   service_name: string;
   add_on_ids: string[];
-  add_on_options: Record<string, string>;
+  add_on_options: Record<string, unknown>;
   spa_goals?: string[];
   allergy_snapshot?: {
     petName: string;

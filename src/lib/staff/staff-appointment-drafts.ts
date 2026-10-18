@@ -1,4 +1,5 @@
 import { snapshotServicePrice } from "@/lib/visits/visit";
+import { attachBookingPriceSnapshot } from "@/lib/charges/visit-line-items";
 import {
   bookedServiceAmount,
   estimateServiceDurationMinutes,
@@ -26,7 +27,7 @@ export type StaffAppointmentPriceDraft = {
   optionName: string | null;
   servicePrice: number;
   addOnIds: string[];
-  addOnOptions: Record<string, string>;
+  addOnOptions: Record<string, unknown>;
   travelFee: number;
   estimatedTotal: number;
   durationMinutes: number;
@@ -94,7 +95,7 @@ export function staffAppointmentPriceDrafts(
       const carriesAddOns = serviceIndex === carrierIndex;
       const addOnIds = carriesAddOns ? pet.addOnIds : [];
       const optionName = pet.serviceOptionNames[serviceIndex] ?? null;
-      const addOnOptions = carriesAddOns
+      const optionNames = carriesAddOns
         ? {
             ...pet.addOnOptions,
             ...(optionName ? { [service.id]: optionName } : {}),
@@ -102,6 +103,25 @@ export function staffAppointmentPriceDrafts(
         : optionName
           ? { [service.id]: optionName }
           : {};
+      const charges = carriesAddOns
+        ? resolveAddOnCharges(service.id, addOnIds, pet.weightLbs, pet.addOnOptions)
+        : [];
+      if (charges.some((charge) => charge.kind === "unpriced")) {
+        return { ok: false, message: "We could not price this add-on." };
+      }
+      const addOnOptions = attachBookingPriceSnapshot(
+        optionNames,
+        charges.flatMap((charge) =>
+          charge.kind === "priced"
+            ? [{ id: charge.id, label: charge.name, amount: charge.amount }]
+            : [],
+        ),
+        charges.flatMap((charge) =>
+          charge.kind === "assessed"
+            ? [{ id: charge.id, label: charge.name, note: charge.note }]
+            : [],
+        ),
+      );
       const price = bookedServiceAmount(
         service,
         pet.weightLbs,

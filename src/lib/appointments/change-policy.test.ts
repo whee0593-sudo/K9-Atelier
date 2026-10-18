@@ -8,8 +8,9 @@ import {
 } from "./change-policy";
 import {
   addressServicePortion,
-  changeQuoteEstimatedTotal,
+  changeFeeBase,
 } from "./stored-service-price";
+import { attachBookingPriceSnapshot } from "@/lib/charges/visit-line-items";
 
 describe("appointment change fees", () => {
   it("is complimentary 48+ hours before the visit", () => {
@@ -60,29 +61,52 @@ describe("appointment change fees", () => {
     );
   });
 
-  it("includes the visit travel fee in the cancellation and reschedule base", () => {
+  it("charges the fee from the main service and one travel fee", () => {
     const source = readFileSync(
       new URL("./customer-change.ts", import.meta.url),
       "utf8",
     );
-    assert.match(source, /changeQuoteEstimatedTotal\(action, rows\)/);
-    assert.match(source, /fee: changeFeeAmount\(action, estimatedTotal, band\)/);
+    const feeSource = readFileSync(
+      new URL("./stored-service-price.ts", import.meta.url),
+      "utf8",
+    );
+    assert.match(source, /changeFeeAmount\(action, base\.amount, band\)/);
+    assert.equal(source.includes("changeQuoteEstimatedTotal"), false);
+    assert.match(feeSource, /action === "remove_dog"/);
+    assert.match(source, /needsPriceReview/);
   });
 
-  it("keeps priced add-ons in the stored total without reading them out of service_price", () => {
+  it("keeps priced add-ons in the customer total and out of the fee base", () => {
     const guest = {
       estimated_total: 133,
       service_price: 90,
       travel_fee: 13,
+      add_on_ids: ["mini-trim"],
+      add_on_options: attachBookingPriceSnapshot(
+        {},
+        [{ id: "mini-trim", label: "Mini Trim", amount: 30 }],
+        [],
+      ),
     };
-    assert.equal(changeQuoteEstimatedTotal("cancel", [guest]), 133);
-    assert.equal(changeQuoteEstimatedTotal("reschedule", [guest]), 133);
-    assert.equal(changeQuoteEstimatedTotal("remove_dog", [guest]), 120);
+    assert.equal(changeFeeBase("cancel", [guest]).ok && changeFeeBase("cancel", [guest]).amount, 103);
+    assert.equal(
+      changeFeeBase("reschedule", [guest]).ok && changeFeeBase("reschedule", [guest]).amount,
+      103,
+    );
+    assert.equal(
+      changeFeeBase("remove_dog", [guest]).ok && changeFeeBase("remove_dog", [guest]).amount,
+      90,
+    );
     assert.equal(addressServicePortion(guest), 120);
     assert.equal(
-      changeQuoteEstimatedTotal("cancel", [
-        { estimated_total: null, service_price: 90, travel_fee: 13 },
-      ]),
+      changeFeeBase("cancel", [
+        {
+          estimated_total: null,
+          service_price: 90,
+          travel_fee: 13,
+          add_on_ids: [],
+        },
+      ]).amount,
       103,
     );
     assert.equal(
@@ -92,6 +116,17 @@ describe("appointment change fees", () => {
         travel_fee: 13,
       }),
       90,
+    );
+    assert.equal(
+      changeFeeBase("cancel", [
+        {
+          estimated_total: 170,
+          service_price: 170,
+          travel_fee: 13,
+          add_on_ids: ["mini-trim"],
+        },
+      ]).ok,
+      false,
     );
   });
 });

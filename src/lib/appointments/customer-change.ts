@@ -45,7 +45,8 @@ import { canonicalServiceId, isRetiredSpaService } from "@/lib/service-catalog";
 import { spaGoalsForService } from "@/lib/spa-goals";
 import { loadBookingAllergySnapshot } from "@/lib/appointments/service";
 import { resolveAppointmentDuration } from "@/lib/visits/duration";
-import { changeQuoteEstimatedTotal } from "@/lib/appointments/stored-service-price";
+import { changeFeeBase } from "@/lib/appointments/stored-service-price";
+import { attachBookingPriceSnapshot } from "@/lib/charges/visit-line-items";
 import {
   hasVisitSequence,
   nextVisitSequence,
@@ -102,8 +103,12 @@ const CHANGE_SELECT = `
 export type ChangeQuote = {
   action: AppointmentChangeAction;
   band: ReturnType<typeof changeNoticeBand>;
-  fee: number;
+  /** Customer-facing visit estimate. This includes priced add-ons and is not the fee base. */
   estimatedTotal: number;
+  /** Main service plus the applicable travel fee. Null when the saved amount needs review. */
+  feeBase: number | null;
+  fee: number;
+  needsPriceReview: boolean;
 };
 
 export type ChangeVisitContext = {
@@ -207,16 +212,42 @@ async function visitSequences(
 }
 
 function quoteForRows(action: AppointmentChangeAction, rows: ChangeRow[]) {
-  const estimatedTotal = changeQuoteEstimatedTotal(action, rows);
+  const estimatedTotal =
+    Math.round(
+      rows.reduce((sum, row) => sum + Number(row.estimated_total ?? 0), 0) * 100,
+    ) / 100;
   const first = rows[0];
   const band = first
     ? changeNoticeBand(first.appointment_date, first.scheduled_start ?? null)
     : "complimentary";
+  if (changeFeeAmount(action, 1, band) === 0) {
+    return {
+      action,
+      band,
+      estimatedTotal,
+      feeBase: 0,
+      fee: 0,
+      needsPriceReview: false,
+    } satisfies ChangeQuote;
+  }
+  const base = changeFeeBase(action, rows);
+  if (!base.ok) {
+    return {
+      action,
+      band,
+      estimatedTotal,
+      feeBase: null,
+      fee: 0,
+      needsPriceReview: true,
+    } satisfies ChangeQuote;
+  }
   return {
     action,
     band,
     estimatedTotal,
-    fee: changeFeeAmount(action, estimatedTotal, band),
+    feeBase: base.amount,
+    fee: changeFeeAmount(action, base.amount, band),
+    needsPriceReview: false,
   } satisfies ChangeQuote;
 }
 
@@ -465,6 +496,7 @@ export async function applyAppointmentChange(
         | "misconfigured"
         | "weight_required"
         | "allergy_unavailable"
+        | "price_review_required"
         | "server";
     }
 > {
@@ -497,6 +529,7 @@ export async function applyAppointmentChange(
   }
 
   const quote = quoteForRows(input.action, targetRows);
+  if (quote.needsPriceReview) return { error: "price_review_required" };
   const contact = await fetchCustomerContact(user.id);
   const charged = await chargeChangeFee({
     appointment: targetRows[0],
@@ -950,7 +983,7 @@ async function addDogToVisit(
       service_id: service.id,
       service_name: getServiceDisplayName(service.id, service.name),
       add_on_ids: [],
-      add_on_options: {},
+      add_on_options: attachBookingPriceSnapshot({}, [], []),
       spa_goals: spaGoals.goals,
       allergy_snapshot: allergySnapshot,
       address_street: visit.address_street,

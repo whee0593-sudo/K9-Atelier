@@ -36,6 +36,7 @@ import {
   buildVisitBill,
   chargedVisitSnapshot,
   decideVisitServiceCharge,
+  visitChargeGate,
   isFullyRefundedPayment,
   serviceChargeHasVisitBill,
   visitPaymentStatus,
@@ -202,14 +203,22 @@ export async function getCollectContext(
       ),
     }));
   const visitDecision = decideVisitServiceCharge(visitCharges);
-  const defaultItems = visitCollect
-    ? visitCollect.bill.lineItems
-    : withCatalogListAmount(
-        readStoredVisitLineItems(
-          (timing?.add_on_options as Record<string, unknown> | null) ?? null,
-        ) ?? buildDefaultLineItems(appointment, weightLbs),
-        catalog,
-      );
+  const paidService = paidRows.find((row) => row.kind === "service");
+  const paidBillItems =
+    (visitDecision === "already_paid" || visitDecision === "legacy_paid") &&
+    paidService
+      ? paidService.line_items
+      : null;
+  const defaultItems = paidBillItems
+    ? withCatalogListAmount(paidBillItems, catalog)
+    : visitCollect
+      ? visitCollect.bill.lineItems
+      : withCatalogListAmount(
+          readStoredVisitLineItems(
+            (timing?.add_on_options as Record<string, unknown> | null) ?? null,
+          ) ?? buildDefaultLineItems(appointment, weightLbs),
+          catalog,
+        );
 
   return {
     context: {
@@ -238,7 +247,11 @@ export async function getCollectContext(
                   ? "This visit already has a payment recorded on one dog. That receipt stays as it is."
                   : visitDecision === "in_progress"
                     ? "A payment is already in progress. Please wait a moment and try again."
-                    : visitCollect.bill.blockedMessage,
+                    : visitDecision === "already_paid"
+                      ? visitCollect.bill.blockReason === "incomplete"
+                        ? visitCollect.bill.blockedMessage
+                        : null
+                      : visitCollect.bill.blockedMessage,
               paymentStatus: visitPaymentStatus(visitCharges),
             },
           }
@@ -494,12 +507,6 @@ export async function createAppointmentCharge(
       ? await loadVisitCollect(admin, appointment.visitId)
       : null;
   if (visitCollect && "error" in visitCollect) return { error: visitCollect.error };
-  if (visitCollect && !("error" in visitCollect) && visitCollect.bill.blocked) {
-    return {
-      error: "conflict",
-      message: visitCollect.bill.blockedMessage ?? "This visit is not ready to collect.",
-    };
-  }
 
   const visitId =
     visitCollect && !("error" in visitCollect) ? visitCollect.bill.visitId : null;
@@ -516,7 +523,7 @@ export async function createAppointmentCharge(
         .eq("kind", input.kind)
         .eq("status", "paid");
 
-  if (visitId && input.kind === "service") {
+  if (visitId && input.kind === "service" && visitCollect && !("error" in visitCollect)) {
     const decision = decideVisitServiceCharge(
       (existingCharges ?? []).map((row) => ({
         status: row.status as "pending" | "paid" | "failed",
@@ -528,15 +535,24 @@ export async function createAppointmentCharge(
         ),
       })),
     );
-    if (decision === "already_paid" || decision === "legacy_paid") {
-      return { error: "conflict", message: "This visit is already paid." };
+    const gate = visitChargeGate({
+      decision,
+      blocked: visitCollect.bill.blocked,
+      blockedMessage: visitCollect.bill.blockedMessage,
+    });
+    if (!gate.allow) {
+      return { error: "conflict", message: gate.message };
     }
-    if (decision === "in_progress") {
-      return {
-        error: "conflict",
-        message: "A payment is already in progress. Please wait a moment and try again.",
-      };
-    }
+  } else if (
+    visitCollect &&
+    !("error" in visitCollect) &&
+    visitCollect.bill.blocked
+  ) {
+    return {
+      error: "conflict",
+      message:
+        visitCollect.bill.blockedMessage ?? "This visit is not ready to collect.",
+    };
   } else if (
     (existingCharges ?? []).some(
       (row) =>
