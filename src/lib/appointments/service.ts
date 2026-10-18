@@ -43,7 +43,8 @@ import {
 } from "@/lib/appointments/guest-booking";
 import { estimateServiceDurationMinutes } from "@/lib/services";
 import { allergySnapshotFromProfileRead } from "@/lib/allergies";
-import { snapshotServicePrice, visitArrivalFields } from "@/lib/visits/visit";
+import { guestAppointmentPriceFields } from "@/lib/appointments/priced-service";
+import { visitArrivalFields } from "@/lib/visits/visit";
 import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
 import {
   assignArrivalWindow,
@@ -310,7 +311,7 @@ export async function createAppointment(
   }
 
   const status = "confirmed";
-  const servicePrice = snapshotServicePrice(quote.estimatedServicePrice);
+  const storedPrice = guestAppointmentPriceFields(quote, input.addOnOptions);
   const arrival = visitArrivalFields(schedule.scheduledStart);
   const payloadHash = guestBookingIntentHash({
     petId: input.petId,
@@ -367,8 +368,8 @@ export async function createAppointment(
         pet_id: input.petId,
         service_id: quote.serviceId,
         service_name: quote.serviceName,
-        add_on_ids: input.addOnIds,
-        add_on_options: input.addOnOptions,
+        add_on_ids: storedPrice.addOnIds,
+        add_on_options: storedPrice.addOnOptions,
         spa_goals: input.spaGoals ?? [],
         allergy_snapshot: allergySnapshot,
         address_street: input.address.street,
@@ -377,7 +378,7 @@ export async function createAppointment(
         address_zip: input.address.zip,
         travel_distance_miles: quote.travelDistanceMiles,
         travel_fee: quote.travelFee,
-        service_price: servicePrice,
+        service_price: storedPrice.servicePrice,
         estimated_duration_minutes: durationMinutes,
         visit_sequence: 1,
         appointment_date: input.appointmentDate,

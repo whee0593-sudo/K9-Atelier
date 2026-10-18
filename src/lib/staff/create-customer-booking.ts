@@ -16,6 +16,10 @@ import {
 } from "@/lib/visits/persist";
 import { snapshotServicePrice } from "@/lib/visits/visit";
 import {
+  priceAddOnSnapshots,
+  staffServicePriceFields,
+} from "@/lib/appointments/priced-service";
+import {
   mapAppointmentRowToRecord,
 } from "@/lib/appointments/map";
 import type {
@@ -474,32 +478,39 @@ async function saveBookingPet(
   return { pet: petRow as { id: string } };
 }
 
+function petServiceIdsOf(
+  pet: StaffBookingPetInput,
+  fallbackServiceId: string | null,
+) {
+  if (pet.serviceIds.length > 0) return pet.serviceIds;
+  if (pet.serviceId) return [pet.serviceId];
+  return fallbackServiceId ? [fallbackServiceId] : [];
+}
+
+function durationForPetService(
+  pet: StaffBookingPetInput,
+  serviceId: string,
+  serviceIndex: number,
+) {
+  return estimateServiceDurationMinutes(
+    serviceId,
+    pet.weightLbs,
+    serviceIndex === 0 ? pet.addOnIds : [],
+  );
+}
+
 function staffVisitDurations(
   input: StaffCustomerBookingInput,
 ): { ok: true; durations: number[] } | { ok: false; error: "conflict"; message: string } {
   const durations: number[] = [];
-  const serviceId = input.serviceId;
   for (const pet of input.pets) {
-    const petServiceIds =
-      pet.serviceIds.length > 0
-        ? pet.serviceIds
-        : pet.serviceId
-          ? [pet.serviceId]
-          : serviceId
-            ? [serviceId]
-            : [];
-    for (const petServiceId of petServiceIds) {
+    const petServiceIds = petServiceIdsOf(pet, input.serviceId);
+    for (const [serviceIndex, petServiceId] of petServiceIds.entries()) {
       const known = allBookableServices().some((entry) => entry.id === petServiceId);
       if (!known) {
         return { ok: false, error: "conflict", message: "Unknown service." };
       }
-      durations.push(
-        estimateServiceDurationMinutes(
-          petServiceId,
-          pet.weightLbs,
-          input.addOnIds,
-        ),
-      );
+      durations.push(durationForPetService(pet, petServiceId, serviceIndex));
     }
   }
   return { ok: true, durations };
@@ -573,14 +584,17 @@ export async function createStaffCustomerBooking(
   }
 
   for (const pet of input.pets) {
-    const petServiceIds =
-      pet.serviceIds.length > 0
-        ? pet.serviceIds
-        : pet.serviceId
-          ? [pet.serviceId]
-          : [];
-    if (selectionRepeatsIncludedMiniTrim(petServiceIds, input.addOnIds)) {
+    const petServiceIds = petServiceIdsOf(pet, null);
+    if (selectionRepeatsIncludedMiniTrim(petServiceIds, pet.addOnIds)) {
       return { error: "conflict", message: MINI_TRIM_ALREADY_INCLUDED_MESSAGE };
+    }
+    const pricedAddOns = priceAddOnSnapshots(
+      pet.addOnIds,
+      pet.addOnOptions,
+      pet.weightLbs,
+    );
+    if (!pricedAddOns.ok) {
+      return { error: "conflict", message: pricedAddOns.message };
     }
   }
 
@@ -597,10 +611,10 @@ export async function createStaffCustomerBooking(
     return { error: "conflict", message: "Unknown service." };
   }
 
-  const firstDurationMinutes = estimateServiceDurationMinutes(
+  const firstDurationMinutes = durationForPetService(
+    firstPet,
     firstServiceId,
-    firstPet.weightLbs,
-    input.addOnIds,
+    0,
   );
   const plannedVisits = staffVisitDurations(input);
   if (!plannedVisits.ok) {
@@ -682,14 +696,7 @@ export async function createStaffCustomerBooking(
         });
       });
 
-      const petServiceIds =
-        pet.serviceIds.length > 0
-          ? pet.serviceIds
-          : pet.serviceId
-            ? [pet.serviceId]
-            : serviceId
-              ? [serviceId]
-              : [];
+      const petServiceIds = petServiceIdsOf(pet, serviceId);
 
       for (const [visitServiceIndex, petServiceId] of petServiceIds.entries()) {
         const petService = allBookableServices().find(
@@ -698,10 +705,10 @@ export async function createStaffCustomerBooking(
         if (!petService) {
           return { error: "conflict", message: "Unknown service." };
         }
-        const durationMinutes = estimateServiceDurationMinutes(
+        const durationMinutes = durationForPetService(
+          pet,
           petServiceId,
-          pet.weightLbs,
-          input.addOnIds,
+          visitServiceIndex,
         );
         const companion =
           visitIndex === 0
@@ -747,8 +754,19 @@ export async function createStaffCustomerBooking(
         );
         const travelFee = visitIndex === 0 ? quote.fee : 0;
         const servicePrice = snapshotServicePrice(price ?? 0);
-        const estimatedTotal =
-          Math.round((servicePrice + travelFee) * 100) / 100;
+        const priced = staffServicePriceFields({
+          serviceId: petService.id,
+          servicePrice,
+          travelFee,
+          weightLbs: pet.weightLbs,
+          optionName,
+          addOnIds: pet.addOnIds,
+          addOnOptions: pet.addOnOptions,
+          includeAddOns: visitServiceIndex === 0,
+        });
+        if (!priced.ok) {
+          return { error: "conflict", message: priced.message };
+        }
 
         const allergy = await loadBookingAllergySnapshot(
           userId,
@@ -768,8 +786,8 @@ export async function createStaffCustomerBooking(
           pet_id: petRow.id as string,
           service_id: petService.id,
           service_name: serviceNameForPet,
-          add_on_ids: input.addOnIds,
-          add_on_options: optionName ? { [petService.id]: optionName } : {},
+          add_on_ids: priced.addOnIds,
+          add_on_options: priced.addOnOptions,
           spa_goals: [],
           allergy_snapshot: allergySnapshot,
           address_street: address.street,
@@ -788,7 +806,7 @@ export async function createStaffCustomerBooking(
           address_lat: destination.lat,
           address_lon: destination.lon,
           timezone: business.booking.timezone,
-          estimated_total: estimatedTotal,
+          estimated_total: priced.estimatedTotal,
           new_client_deposit: 0,
           payment_method_id: null,
           vaccination_status_at_booking: "missing",

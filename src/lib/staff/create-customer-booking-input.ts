@@ -4,6 +4,10 @@ import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
 import {
   allBookableServices,
+  CREATIVE_ACCENT_COLORING_ID,
+  getAddOnService,
+  getAvailableAddOns,
+  getServicePriceEstimate,
   isCustomCreativeDesignSelection,
   MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
   parseEnteredServicePrice,
@@ -46,6 +50,9 @@ export type StaffBookingPetInput = PetWriteInput & {
   serviceOptionNames: (string | null)[];
   /** Parallel to serviceIds. Set when staff type a price for Custom Creative Design. */
   servicePrices: (number | null)[];
+  /** Add-ons for this dog only. They are not copied onto the other dogs. */
+  addOnIds: string[];
+  addOnOptions: Record<string, string>;
 };
 
 export type StaffCustomerBookingInput = {
@@ -135,6 +142,52 @@ function readPetServiceIds(record: Record<string, unknown>, index: number) {
   return ids;
 }
 
+function readAddOnIdList(value: unknown, field: string) {
+  if (value == null) return [];
+  if (!Array.isArray(value)) {
+    throw new StaffBookingValidationError("Add-ons must be a list.", field);
+  }
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  value.forEach((item, index) => {
+    if (typeof item !== "string" || !item.trim() || item.trim().length > 120) {
+      throw new StaffBookingValidationError(
+        "Choose a valid add-on.",
+        `${field}[${index}]`,
+      );
+    }
+    const id = item.trim();
+    const addOn = getAddOnService(id);
+    if (
+      !addOn ||
+      (addOn.bookableAsPrimary && addOn.id !== CREATIVE_ACCENT_COLORING_ID)
+    ) {
+      throw new StaffBookingValidationError(
+        "That add-on cannot be booked with this service.",
+        `${field}[${index}]`,
+      );
+    }
+    if (seen.has(id)) return;
+    seen.add(id);
+    ids.push(id);
+  });
+  return ids;
+}
+
+function readAddOnOptions(value: unknown, field: string) {
+  if (value == null) return {};
+  if (typeof value !== "object" || Array.isArray(value)) {
+    throw new StaffBookingValidationError("Add-on options must be a list of choices.", field);
+  }
+  const options: Record<string, string> = {};
+  for (const [key, option] of Object.entries(value)) {
+    if (key.startsWith("__")) continue;
+    if (typeof option !== "string" || !option.trim()) continue;
+    options[key] = option.trim();
+  }
+  return options;
+}
+
 function readOptionalMoney(value: unknown, field: string) {
   if (value == null || value === "") return null;
   const amount = parseEnteredServicePrice(value);
@@ -142,6 +195,47 @@ function readOptionalMoney(value: unknown, field: string) {
     throw new StaffBookingValidationError("Enter a valid price.", field);
   }
   return amount;
+}
+
+function assertPricedAddOns(pet: StaffBookingPetInput, index: number) {
+  if (pet.addOnIds.length === 0) return;
+  const primaryId = pet.serviceIds[0] ?? pet.serviceId;
+  if (!primaryId) return;
+  const primary = allBookableServices().find((entry) => entry.id === primaryId);
+  const available = new Set(
+    getAvailableAddOns(primary?.categoryId ?? "", primaryId).map(
+      (addOn) => addOn.id,
+    ),
+  );
+  const serviceIds = new Set(pet.serviceIds);
+  pet.addOnIds.forEach((id, addOnIndex) => {
+    if (serviceIds.has(id) || !available.has(id)) {
+      throw new StaffBookingValidationError(
+        "That add-on cannot be booked with this service.",
+        `pets[${index}].addOnIds`,
+      );
+    }
+    const addOn = getAddOnService(id);
+    const optionName = pet.addOnOptions[id];
+    if (addOn?.options?.length) {
+      const option = addOn.options.find((entry) => entry.name === optionName);
+      if (!option || option.priceFrom == null) {
+        throw new StaffBookingValidationError(
+          "Choose an add-on style.",
+          `pets[${index}].addOnOptions`,
+        );
+      }
+    }
+    if (
+      !addOn ||
+      getServicePriceEstimate(addOn, pet.weightLbs, optionName) == null
+    ) {
+      throw new StaffBookingValidationError(
+        "We could not price this add-on.",
+        `pets[${index}].addOnIds[${addOnIndex}]`,
+      );
+    }
+  });
 }
 
 function readPetServicePrices(
@@ -329,6 +423,7 @@ export function validateStaffCustomerBookingInput(
 
   const serviceIdRaw = readOptionalString(record, "serviceId", "Service", 120);
   const sharedService = resolveBookableService(serviceIdRaw, "serviceId");
+  const addOnSpecified: boolean[] = [];
   const pets: StaffBookingPetInput[] = filledPetBodies.map((petBody, index) => {
     try {
       const petRecord = assertPlainObject(petBody);
@@ -339,11 +434,24 @@ export function validateStaffCustomerBookingInput(
         requestedServiceIds.length,
         index,
       );
+      const addOnIdsSpecified = Object.prototype.hasOwnProperty.call(
+        petRecord,
+        "addOnIds",
+      );
+      const petAddOnIds = addOnIdsSpecified
+        ? readAddOnIdList(petRecord.addOnIds, `pets[${index}].addOnIds`)
+        : [];
+      const petAddOnOptions = readAddOnOptions(
+        petRecord.addOnOptions,
+        `pets[${index}].addOnOptions`,
+      );
       const rest = { ...petRecord };
       delete rest.id;
       delete rest.serviceId;
       delete rest.serviceIds;
       delete rest.servicePrices;
+      delete rest.addOnIds;
+      delete rest.addOnOptions;
       const pet = validateCreatePetInput(rest);
       const chosenIds =
         requestedServiceIds.length > 0
@@ -391,6 +499,7 @@ export function validateStaffCustomerBookingInput(
           ? (requestedPrices[serviceIndex] ?? null)
           : null,
       );
+      addOnSpecified.push(addOnIdsSpecified);
       return {
         ...pet,
         id,
@@ -398,6 +507,8 @@ export function validateStaffCustomerBookingInput(
         serviceIds: selections.map((selection) => selection.serviceId),
         serviceOptionNames: selections.map((selection) => selection.optionName),
         servicePrices,
+        addOnIds: petAddOnIds,
+        addOnOptions: petAddOnOptions,
       };
     } catch (error) {
       if (error instanceof StaffBookingValidationError) throw error;
@@ -483,26 +594,31 @@ export function validateStaffCustomerBookingInput(
     }
   }
 
-  const addOnIds = Array.isArray(record.addOnIds)
-    ? record.addOnIds.filter((id): id is string => typeof id === "string")
-    : [];
-  if (
-    pets.some((pet) =>
-      selectionRepeatsIncludedMiniTrim(
-        pet.serviceIds.length > 0
-          ? pet.serviceIds
-          : pet.serviceId
-            ? [pet.serviceId]
-            : [],
-        addOnIds,
-      ),
-    )
-  ) {
+  const sharedAddOnIds = readAddOnIdList(record.addOnIds, "addOnIds");
+  if (sharedAddOnIds.length > 0 && pets.length > 1) {
     throw new StaffBookingValidationError(
-      MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
+      "Choose add-ons for each dog. Add-ons are not applied to every dog.",
       "addOnIds",
     );
   }
+  const resolvedPets = pets.map((pet, index) => {
+    const ownList = addOnSpecified[index] === true;
+    const addOnIds =
+      ownList || pets.length !== 1 ? pet.addOnIds : sharedAddOnIds;
+    const serviceIds =
+      pet.serviceIds.length > 0
+        ? pet.serviceIds
+        : pet.serviceId
+          ? [pet.serviceId]
+          : [];
+    if (selectionRepeatsIncludedMiniTrim(serviceIds, addOnIds)) {
+      throw new StaffBookingValidationError(
+        MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
+        ownList || pets.length !== 1 ? `pets[${index}].addOnIds` : "addOnIds",
+      );
+    }
+    return { ...pet, addOnIds };
+  });
 
   const hasCompleteBooking = Boolean(
     pets.length > 0 &&
@@ -513,7 +629,7 @@ export function validateStaffCustomerBookingInput(
   );
 
   if (hasCompleteBooking) {
-    pets.forEach((pet, petIndex) => {
+    resolvedPets.forEach((pet, petIndex) => {
       pet.serviceIds.forEach((serviceId, serviceIndex) => {
         if (
           !isCustomCreativeDesignSelection(
@@ -530,6 +646,7 @@ export function validateStaffCustomerBookingInput(
           );
         }
       });
+      assertPricedAddOns(pet, petIndex);
     });
   }
 
@@ -541,10 +658,10 @@ export function validateStaffCustomerBookingInput(
     notifyEmail,
     notifySms,
     mode: hasCompleteBooking ? "booking" : "invite",
-    pets,
+    pets: resolvedPets,
     serviceId: primaryService?.id ?? null,
     serviceName: primaryLabel ?? primaryService?.name ?? null,
-    addOnIds,
+    addOnIds: sharedAddOnIds,
     appointmentDate,
     slotStartMinutes,
     address,

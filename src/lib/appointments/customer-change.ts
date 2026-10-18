@@ -46,10 +46,13 @@ import { spaGoalsForService } from "@/lib/spa-goals";
 import { loadBookingAllergySnapshot } from "@/lib/appointments/service";
 import { resolveAppointmentDuration } from "@/lib/visits/duration";
 import {
+  attachServicePriceSnapshot,
+  cancellationServicePortion,
+} from "@/lib/appointments/priced-service";
+import {
   hasVisitSequence,
   nextVisitSequence,
   scheduleVisitPetChain,
-  servicePriceFromEstimatedTotal,
   snapshotServicePrice,
 } from "@/lib/visits/visit";
 import { compactVisitChildStarts } from "@/lib/visits/compact";
@@ -207,15 +210,7 @@ async function visitSequences(
 }
 
 function rowServicePrice(row: ChangeRow) {
-  if (row.service_price != null && Number.isFinite(Number(row.service_price))) {
-    return Number(row.service_price);
-  }
-  return (
-    servicePriceFromEstimatedTotal(
-      row.estimated_total == null ? null : Number(row.estimated_total),
-      Number(row.travel_fee ?? 0),
-    ) ?? 0
-  );
+  return cancellationServicePortion(row);
 }
 
 function quoteForRows(action: AppointmentChangeAction, rows: ChangeRow[]) {
@@ -967,7 +962,7 @@ async function addDogToVisit(
       service_id: service.id,
       service_name: getServiceDisplayName(service.id, service.name),
       add_on_ids: [],
-      add_on_options: {},
+      add_on_options: attachServicePriceSnapshot({}, [], true),
       spa_goals: spaGoals.goals,
       allergy_snapshot: allergySnapshot,
       address_street: visit.address_street,

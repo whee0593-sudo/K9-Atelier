@@ -5,11 +5,16 @@ import Link from "next/link";
 import { StaffBookingDatePicker } from "@/components/admin/StaffBookingDatePicker";
 import { formatMinutesLabel } from "@/lib/appointments/closures";
 import { formatPrice } from "@/lib/business";
+import { getServiceDisplayName } from "@/lib/service-display";
 import {
   bookedServiceAmount,
   estimateServiceDurationMinutes,
+  getAddOnService,
+  getAvailableAddOns,
+  getServicePriceEstimate,
   isCustomCreativeDesignSelection,
   parseEnteredServicePrice,
+  type BookableService,
 } from "@/lib/services";
 import {
   listStaffServiceChoices,
@@ -77,6 +82,8 @@ type PetDraft = {
   weightLbs: string;
   serviceIds: string[];
   servicePrices: string[];
+  addOnIds: string[];
+  addOnOptions: Record<string, string>;
 };
 
 function createPetDraft(): PetDraft {
@@ -92,6 +99,8 @@ function createPetDraft(): PetDraft {
     weightLbs: "",
     serviceIds: [""],
     servicePrices: [""],
+    addOnIds: [],
+    addOnOptions: {},
   };
 }
 
@@ -104,7 +113,51 @@ function petDraftFromSaved(pet: StaffBookingProfilePet): PetDraft {
     weightLbs: pet.weightLbs > 0 ? String(pet.weightLbs) : "",
     serviceIds: [""],
     servicePrices: [""],
+    addOnIds: [],
+    addOnOptions: {},
   };
+}
+
+function firstServiceId(pet: PetDraft) {
+  const value = pet.serviceIds.find((serviceId) => serviceId) ?? "";
+  return parseStaffServiceSelection(value)?.serviceId ?? "";
+}
+
+function addOnChoices(pet: PetDraft) {
+  const weight = positiveWeight(pet.weightLbs);
+  const serviceId = firstServiceId(pet);
+  if (!serviceId || weight == null) return [];
+  const taken = new Set(
+    pet.serviceIds
+      .map((value) => parseStaffServiceSelection(value)?.serviceId)
+      .filter((id): id is string => Boolean(id)),
+  );
+  return getAvailableAddOns("", serviceId).filter((addOn) => !taken.has(addOn.id));
+}
+
+function retainPetAddOns(pet: PetDraft): PetDraft {
+  const available = new Set(addOnChoices(pet).map((addOn) => addOn.id));
+  const addOnIds = pet.addOnIds.filter((id) => available.has(id));
+  const addOnOptions: Record<string, string> = {};
+  for (const id of addOnIds) {
+    const option = pet.addOnOptions[id];
+    if (option) addOnOptions[id] = option;
+  }
+  return { ...pet, addOnIds, addOnOptions };
+}
+
+function pricedAddOnOptions(addOn: BookableService) {
+  return (addOn.options ?? []).filter((option) => option.priceFrom != null);
+}
+
+function addOnPriceLabel(addOn: BookableService, weight: number, optionName?: string) {
+  const priced = pricedAddOnOptions(addOn);
+  if (priced.length > 0) {
+    const selected = priced.find((option) => option.name === optionName);
+    return selected?.priceFrom != null ? formatPrice(selected.priceFrom) : "";
+  }
+  const estimate = getServicePriceEstimate(addOn, weight);
+  return estimate ? formatPrice(estimate.from) : "";
 }
 
 function serviceChoices(weightLbs: string, serviceIds: string[], index: number) {
@@ -261,25 +314,33 @@ export function BookForCustomerForm({
   });
 
   const estimatedServiceTotal = everyDogServiceReady
-    ? dogServices.reduce(
-        (sum, row) =>
-          sum +
-          row.selected.reduce((serviceSum, line) => {
-            const amount = bookedServiceAmount(
-              line.choice.service,
-              row.weight!,
+    ? dogServices.reduce((sum, row) => {
+        const serviceSum = row.selected.reduce((serviceTotal, line) => {
+          const amount = bookedServiceAmount(
+            line.choice.service,
+            row.weight!,
+            line.choice.optionName,
+            isCustomCreativeDesignSelection(
+              line.choice.serviceId,
               line.choice.optionName,
-              isCustomCreativeDesignSelection(
-                line.choice.serviceId,
-                line.choice.optionName,
-              )
-                ? parseEnteredServicePrice(line.priceRaw)
-                : null,
-            );
-            return serviceSum + (amount ?? 0);
-          }, 0),
-        0,
-      )
+            )
+              ? parseEnteredServicePrice(line.priceRaw)
+              : null,
+          );
+          return serviceTotal + (amount ?? 0);
+        }, 0);
+        const kept = retainPetAddOns(row.pet);
+        const addOnSum = kept.addOnIds.reduce((addOnTotal, id) => {
+          const addOn = getAddOnService(id);
+          if (!addOn) return addOnTotal;
+          return (
+            addOnTotal +
+            (getServicePriceEstimate(addOn, row.weight!, kept.addOnOptions[id])
+              ?.from ?? 0)
+          );
+        }, 0);
+        return sum + serviceSum + addOnSum;
+      }, 0)
     : null;
   const estimatedTotal =
     estimatedServiceTotal != null && quoteState.status === "ready"
@@ -287,11 +348,16 @@ export function BookForCustomerForm({
       : null;
   const visitDurations = useMemo(() => {
     if (!everyDogServiceReady) return [];
-    return dogServices.flatMap((row) =>
-      row.selected.map((line) =>
-        estimateServiceDurationMinutes(line.choice.serviceId, row.weight!),
-      ),
-    );
+    return dogServices.flatMap((row) => {
+      const addOnIds = retainPetAddOns(row.pet).addOnIds;
+      return row.selected.map((line, index) =>
+        estimateServiceDurationMinutes(
+          line.choice.serviceId,
+          row.weight!,
+          index === 0 ? addOnIds : [],
+        ),
+      );
+    });
   }, [dogServices, everyDogServiceReady]);
   const visitDurationKey = visitDurations.join(",");
   const selectedConflict = useMemo(() => {
@@ -350,6 +416,7 @@ export function BookForCustomerForm({
           });
           next.serviceIds = serviceIds;
           next.servicePrices = servicePrices;
+          return retainPetAddOns(next);
         }
         return next;
       }),
@@ -378,7 +445,7 @@ export function BookForCustomerForm({
           }
           return price;
         });
-        return { ...pet, serviceIds, servicePrices };
+        return retainPetAddOns({ ...pet, serviceIds, servicePrices });
       }),
     );
     setAppointmentDate(pinnedDateRef.current);
@@ -417,7 +484,7 @@ export function BookForCustomerForm({
     setPets((current) =>
       current.map((pet) => {
         if (pet.key !== key || pet.serviceIds.length <= 1) return pet;
-        return {
+        return retainPetAddOns({
           ...pet,
           serviceIds: pet.serviceIds.filter(
             (_, serviceIndex) => serviceIndex !== index,
@@ -425,11 +492,41 @@ export function BookForCustomerForm({
           servicePrices: pet.servicePrices.filter(
             (_, serviceIndex) => serviceIndex !== index,
           ),
-        };
+        });
       }),
     );
     setAppointmentDate(pinnedDateRef.current);
     setSlotStartMinutes("");
+  }
+
+  function togglePetAddOn(key: string, addOnId: string, checked: boolean) {
+    markPetsEdited();
+    setPets((current) =>
+      current.map((pet) => {
+        if (pet.key !== key) return pet;
+        const addOnIds = checked
+          ? pet.addOnIds.includes(addOnId)
+            ? pet.addOnIds
+            : [...pet.addOnIds, addOnId]
+          : pet.addOnIds.filter((id) => id !== addOnId);
+        const addOnOptions = { ...pet.addOnOptions };
+        if (!checked) delete addOnOptions[addOnId];
+        return { ...pet, addOnIds, addOnOptions };
+      }),
+    );
+  }
+
+  function updatePetAddOnOption(key: string, addOnId: string, optionName: string) {
+    markPetsEdited();
+    setPets((current) =>
+      current.map((pet) => {
+        if (pet.key !== key) return pet;
+        const addOnOptions = { ...pet.addOnOptions };
+        if (optionName) addOnOptions[addOnId] = optionName;
+        else delete addOnOptions[addOnId];
+        return { ...pet, addOnOptions };
+      }),
+    );
   }
 
   function addPetRow() {
@@ -774,18 +871,23 @@ export function BookForCustomerForm({
     }
 
     const filledPets = pets
-      .map((pet) => ({
-        id: pet.id,
-        name: pet.name.trim(),
-        breed: pet.breed.trim(),
-        weightLbs: Number(pet.weightLbs),
-        lines: pet.serviceIds
-          .map((serviceId, index) => ({
-            serviceId,
-            price: parseEnteredServicePrice(pet.servicePrices[index] ?? ""),
-          }))
-          .filter((line) => line.serviceId),
-      }))
+      .map((pet) => {
+        const kept = retainPetAddOns(pet);
+        return {
+          id: pet.id,
+          name: pet.name.trim(),
+          breed: pet.breed.trim(),
+          weightLbs: Number(pet.weightLbs),
+          addOnIds: kept.addOnIds,
+          addOnOptions: kept.addOnOptions,
+          lines: pet.serviceIds
+            .map((serviceId, index) => ({
+              serviceId,
+              price: parseEnteredServicePrice(pet.servicePrices[index] ?? ""),
+            }))
+            .filter((line) => line.serviceId),
+        };
+      })
       .filter(
         (pet) =>
           pet.name ||
@@ -808,6 +910,16 @@ export function BookForCustomerForm({
         );
       }),
     );
+    const missingAddOnStyle = filledPets.some((pet) =>
+      pet.addOnIds.some((id) => {
+        const addOn = getAddOnService(id);
+        const priced = addOn ? pricedAddOnOptions(addOn) : [];
+        return (
+          priced.length > 0 &&
+          !priced.some((option) => option.name === pet.addOnOptions[id])
+        );
+      }),
+    );
     if (
       servicesReady &&
       appointmentDate &&
@@ -816,6 +928,16 @@ export function BookForCustomerForm({
       missingCustomPrice
     ) {
       setError("Enter a price for Custom Creative Design.");
+      return;
+    }
+    if (
+      servicesReady &&
+      appointmentDate &&
+      slotStartMinutes &&
+      addressComplete &&
+      missingAddOnStyle
+    ) {
+      setError("Choose an add-on style.");
       return;
     }
 
@@ -875,6 +997,8 @@ export function BookForCustomerForm({
                   servicePrices: pet.lines.map((line) => line.price),
                 }
               : {}),
+            addOnIds: pet.addOnIds,
+            addOnOptions: pet.addOnOptions,
           })),
           appointmentDate: appointmentDate || undefined,
           slotStartMinutes: slotStartMinutes
@@ -1286,6 +1410,71 @@ export function BookForCustomerForm({
                 >
                   Add service
                 </button>
+                {addOnChoices(pet).length > 0 ? (
+                  <fieldset className="space-y-2">
+                    <legend className={labelClass}>Add-on care</legend>
+                    <p className="text-sm text-text-muted">
+                      Add-ons apply to this dog only.
+                    </p>
+                    {addOnChoices(pet).map((addOn) => {
+                      const checked = pet.addOnIds.includes(addOn.id);
+                      const weight = positiveWeight(pet.weightLbs) ?? 0;
+                      const priceLabel = addOnPriceLabel(
+                        addOn,
+                        weight,
+                        pet.addOnOptions[addOn.id],
+                      );
+                      const styles = pricedAddOnOptions(addOn);
+                      const styleId = `pet-addon-style-${pet.key}-${addOn.id}`;
+                      return (
+                        <div key={addOn.id} className="space-y-2">
+                          <label className="flex items-start gap-2 text-sm text-text">
+                            <input
+                              type="checkbox"
+                              className="mt-1"
+                              checked={checked}
+                              onChange={(event) =>
+                                togglePetAddOn(
+                                  pet.key,
+                                  addOn.id,
+                                  event.target.checked,
+                                )
+                              }
+                            />
+                            <span>
+                              {getServiceDisplayName(addOn.id, addOn.name)}
+                              {priceLabel ? ` · ${priceLabel}` : ""}
+                            </span>
+                          </label>
+                          {checked && styles.length > 0 ? (
+                            <select
+                              id={styleId}
+                              className={fieldClass}
+                              value={pet.addOnOptions[addOn.id] ?? ""}
+                              onChange={(event) =>
+                                updatePetAddOnOption(
+                                  pet.key,
+                                  addOn.id,
+                                  event.target.value,
+                                )
+                              }
+                            >
+                              <option value="">Choose a style</option>
+                              {styles.map((option) => (
+                                <option key={option.name} value={option.name}>
+                                  {option.name}
+                                  {option.priceFrom != null
+                                    ? ` · ${formatPrice(option.priceFrom)}`
+                                    : ""}
+                                </option>
+                              ))}
+                            </select>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </fieldset>
+                ) : null}
               </div>
             </div>
           );

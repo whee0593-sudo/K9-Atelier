@@ -1,4 +1,5 @@
 import { getBaseGeoPoint } from "@/lib/appointments/schedule";
+import { cancellationServicePortion } from "@/lib/appointments/priced-service";
 import { drivingDistanceMiles, geocodeAddress } from "@/lib/geo";
 import { getStaffSession } from "@/lib/staff/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -93,18 +94,12 @@ type AddressAppointmentRow = {
   travel_fee: number | null;
   estimated_total: number | null;
   service_price: number | null;
+  add_on_options: Record<string, unknown> | null;
 };
 
-function servicePortion(row: AddressAppointmentRow) {
-  if (row.service_price != null && Number.isFinite(Number(row.service_price))) {
-    return Number(row.service_price);
-  }
-  if (row.estimated_total == null) return null;
-  return (
-    Math.round(
-      (Number(row.estimated_total) - Number(row.travel_fee ?? 0)) * 100,
-    ) / 100
-  );
+function addressServicePortion(row: AddressAppointmentRow) {
+  if (row.service_price == null && row.estimated_total == null) return null;
+  return cancellationServicePortion(row);
 }
 
 /**
@@ -172,7 +167,7 @@ async function rewriteVisitAddressSnapshots(
 
     for (const row of rows) {
       const travelFee = mirror?.get(row.id);
-      const portion = servicePortion(row);
+      const portion = addressServicePortion(row);
       const estimatedTotal =
         travelFee == null || portion == null
           ? null
@@ -492,7 +487,7 @@ export async function rewriteStaffCustomerServiceAddress(
   const { data: visitRows, error: loadError } = await admin
     .from("appointments")
     .select(
-      "id, visit_id, status, scheduled_start, travel_fee, estimated_total, service_price",
+      "id, visit_id, status, scheduled_start, travel_fee, estimated_total, service_price, add_on_options",
     )
     .eq("customer_id", customerId)
     .eq("address_street", from.street)
@@ -516,6 +511,7 @@ export async function rewriteStaffCustomerServiceAddress(
     travel_fee: number | null;
     estimated_total: number | null;
     service_price: number | null;
+    add_on_options: Record<string, unknown> | null;
   }>;
   if (!savedFrom && matches.length === 0) {
     return { error: "not_found", message: "No addresses match that entry." };
