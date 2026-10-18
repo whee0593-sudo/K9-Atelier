@@ -470,6 +470,10 @@ const KNOWN_ADD_ON_IDS = new Set<string>([
   CREATIVE_ACCENT_COLORING_ID,
 ]);
 
+export function isCatalogAddOnId(id: string) {
+  return KNOWN_ADD_ON_IDS.has(canonicalServiceId(id));
+}
+
 export const DESHEDDING_ALREADY_INCLUDED_MESSAGE =
   "DeShedding Care is already included with Luxury Spa Day.";
 
