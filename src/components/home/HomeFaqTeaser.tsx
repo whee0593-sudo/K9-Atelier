@@ -20,7 +20,7 @@ const faqPreview: Array<{
   },
   {
     q: "What is your cancellation policy?",
-    a: "48+ hours: no fee. Under 48 hours: 50%. Same-day cancel or reschedule, or no-show: 100%.",
+    a: "Two days before the appointment, or earlier: no fee. The day before: 50%. The day of the appointment: 100% for a cancellation, reschedule, or removing a dog. No-show: 100%.",
   },
 ] as const;
 

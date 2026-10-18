@@ -473,7 +473,7 @@ export function buildCustomerConfirmedEmailHtml(content: CustomerConfirmedEmailC
         )}
         ${customerConfirmedSection(
           "Need to reschedule?",
-          `<p style="margin:0; font-size:13px; color:#5A5347;">We kindly ask for at least 48 hours&apos; notice for any changes. Please reply to this email or reach us at ${escapeHtml(business.brand.phone ?? business.brand.email)}.</p>`,
+          `<p style="margin:0; font-size:13px; color:#5A5347;">We kindly ask for notice at least two days before the appointment date for any changes. Please reply to this email or reach us at ${escapeHtml(business.brand.phone ?? business.brand.email)}.</p>`,
         )}
         <p style="margin:22px 0 0;">Warmly,</p>
         <p style="margin:2px 0 0;">${escapeHtml(business.brand.name)}</p>

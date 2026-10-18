@@ -43,17 +43,22 @@ export function hoursUntilAppointment(
   return (dayDiff * 24 * 60 + startMinutes - nowNy.minutes) / 60;
 }
 
+/**
+ * Notice band from the America/New_York calendar date.
+ * Two days before the appointment, or earlier, is free.
+ * The day before is 50%. The appointment date, or any later date, is 100%.
+ * The clock time on either day does not change the band.
+ */
 export function changeNoticeBand(
   appointmentDate: string,
   scheduledStart: number | null,
   now = new Date(),
 ): ChangeNoticeBand {
-  const today = nyParts(now).date;
-  if (appointmentDate === today) return "same_day";
-  if (hoursUntilAppointment(appointmentDate, scheduledStart, now) >= 48) {
-    return "complimentary";
-  }
-  return "late";
+  void scheduledStart;
+  const daysUntil = daysBetween(nyParts(now).date, appointmentDate);
+  if (daysUntil >= 2) return "complimentary";
+  if (daysUntil === 1) return "late";
+  return "same_day";
 }
 
 export function changeFeePercent(

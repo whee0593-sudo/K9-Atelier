@@ -180,7 +180,7 @@ export function buildBookingConfirmationEmail(
       details.priceLabel ? "" : null,
       details.priceLabel ? estimateNote : null,
       "",
-      "Need to reschedule? We kindly ask for at least 48 hours' notice for any changes. Reply to this email or contact us at " +
+      "Need to reschedule? We kindly ask for notice at least two days before the appointment date for any changes. Reply to this email or contact us at " +
         `${contactMethod()}.`,
       "",
       "Warmly,",
@@ -219,7 +219,7 @@ export function buildBookingConfirmationEmail(
     `- Please let us know in advance about any allergies, sensitivities, medical conditions, or behavioral notes for ${details.petName}`,
     "",
     "Need to Reschedule?",
-    `We kindly ask for at least 48 hours' notice for any changes. You can reply directly to this email or contact us at ${contactMethod()}.`,
+    `We kindly ask for notice at least two days before the appointment date for any changes. You can reply directly to this email or contact us at ${contactMethod()}.`,
     "",
     "Warmly,",
     details.signoffName ?? business.brand.name,

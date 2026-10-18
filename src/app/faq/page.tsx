@@ -12,17 +12,17 @@ export const metadata = {
 
 const cancellationPolicy = {
   intro:
-    "Each appointment is reserved exclusively for your dog and includes dedicated travel, preparation, and grooming time. We kindly ask for at least 48 hours' notice for cancellations or rescheduling.",
+    "Each appointment is reserved exclusively for your dog and includes dedicated travel, preparation, and grooming time. We kindly ask for notice at least two days before the appointment date for cancellations or rescheduling.",
   sections: [
     {
       heading: "1. Cancellations & Rescheduling",
-      body: "We kindly request at least 48 hours’ notice when canceling or rescheduling an appointment. This allows us an opportunity to offer the reserved time to another client.\n\nThe percentage applies to the scheduled service price plus any travel fee on that visit.",
+      body: "Notice is counted by calendar date in Eastern Time. Two days before the appointment, or earlier, there is no fee. The day before is 50%. The day of the appointment is 100%, at any time that day.\n\nThe percentage applies to the confirmed service, priced add-ons, one travel fee, and other charges already saved on the visit. Removing one dog uses that dog's confirmed charges only and does not include the travel fee that stays with the visit. An add-on that has not been priced yet is not included.",
       table: {
         columns: ["Notice", "Fee"],
         rows: [
-          ["48 hours or more", "No fee"],
-          ["Less than 48 hours, but not the same day", "50%"],
-          ["Same-day cancellation or rescheduling", "100%"],
+          ["Two days before the appointment, or earlier", "No fee"],
+          ["The day before the appointment", "50%"],
+          ["The day of the appointment", "100%"],
         ],
       },
     },

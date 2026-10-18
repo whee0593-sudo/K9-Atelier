@@ -96,7 +96,7 @@ function billFor(
   });
 }
 
-describe("scheme B billing", () => {
+describe("confirmed visit billing", () => {
   it("bills Mini Trim at the frozen $30 beside the main service", () => {
     const stored = guestStored({
       serviceId: "signature-bath-care",
@@ -306,6 +306,25 @@ describe("scheme B billing", () => {
     );
     assert.equal(bill.subtotal, 112);
     assert.equal(options[SERVICE_PRICE_SCOPE_KEY], "base");
+    assert.equal(
+      changeFeeBase("cancel", [
+        {
+          service_price: 90,
+          travel_fee: 0,
+          add_on_ids: [MINI_TRIM_ADD_ON_ID],
+          add_on_options: options,
+        },
+      ]).ok &&
+        changeFeeBase("cancel", [
+          {
+            service_price: 90,
+            travel_fee: 0,
+            add_on_ids: [MINI_TRIM_ADD_ON_ID],
+            add_on_options: options,
+          },
+        ]).amount,
+      112,
+    );
   });
 
   it("does not add add-on lines to an old guest row whose service price already includes them", () => {
@@ -393,7 +412,7 @@ describe("scheme B billing", () => {
     );
   });
 
-  it("charges cancel, reschedule, and remove-dog fees without add-ons", () => {
+  it("charges cancel, reschedule, and remove-dog fees from confirmed items", () => {
     const late = changeNoticeBand("2026-08-24", 10 * 60, new Date("2026-08-23T22:00:00.000Z"));
     const sameDay = changeNoticeBand("2026-08-24", 15 * 60, new Date("2026-08-24T13:00:00.000Z"));
     const free = changeNoticeBand("2026-08-24", 10 * 60, new Date("2026-08-20T15:00:00.000Z"));
@@ -416,10 +435,13 @@ describe("scheme B billing", () => {
       service_price: 110,
       estimated_total: 190,
       travel_fee: 0,
-      add_on_ids: [DESHEDDING_ADD_ON_ID],
+      add_on_ids: [DESHEDDING_ADD_ON_ID, "nail-grind"],
       add_on_options: attachBookingPriceSnapshot(
         {},
-        [{ id: DESHEDDING_ADD_ON_ID, label: "DeShedding", amount: 40 }],
+        [
+          { id: DESHEDDING_ADD_ON_ID, label: "DeShedding", amount: 40 },
+          { id: "nail-grind", label: "Nail grind", amount: 40 },
+        ],
         [],
       ),
     };
@@ -427,30 +449,30 @@ describe("scheme B billing", () => {
     const rescheduleBase = changeFeeBase("reschedule", [daisy, milo]);
     const removeCarrier = changeFeeBase("remove_dog", [daisy]);
     const removeOther = changeFeeBase("remove_dog", [milo]);
-    assert.equal(cancelBase.ok && cancelBase.amount, 213);
-    assert.equal(rescheduleBase.ok && rescheduleBase.amount, 213);
-    assert.equal(removeCarrier.ok && removeCarrier.amount, 90);
-    assert.equal(removeOther.ok && removeOther.amount, 110);
-    assert.equal(changeFeeAmount("cancel", cancelBase.ok ? cancelBase.amount : 0, late), 106.5);
+    assert.equal(cancelBase.ok && cancelBase.amount, 323);
+    assert.equal(rescheduleBase.ok && rescheduleBase.amount, 323);
+    assert.equal(removeCarrier.ok && removeCarrier.amount, 120);
+    assert.equal(removeOther.ok && removeOther.amount, 190);
+    assert.equal(changeFeeAmount("cancel", cancelBase.ok ? cancelBase.amount : 0, late), 161.5);
     assert.equal(
       changeFeeAmount("cancel", cancelBase.ok ? cancelBase.amount : 0, sameDay),
-      213,
+      323,
     );
     assert.equal(changeFeeAmount("cancel", cancelBase.ok ? cancelBase.amount : 0, free), 0);
     assert.equal(
       changeFeeAmount("reschedule", rescheduleBase.ok ? rescheduleBase.amount : 0, late),
-      106.5,
+      161.5,
     );
     assert.equal(
       changeFeeAmount("remove_dog", removeOther.ok ? removeOther.amount : 0, late),
-      55,
+      95,
     );
 
     const doubledTravel = changeFeeBase("cancel", [
       { ...daisy, travel_fee: 13 },
       { ...milo, travel_fee: 13 },
     ]);
-    assert.equal(doubledTravel.ok && doubledTravel.amount, 213);
+    assert.equal(doubledTravel.ok && doubledTravel.amount, 323);
 
     const mirror = planTravelFeeMirror(
       [
@@ -477,7 +499,7 @@ describe("scheme B billing", () => {
     );
   });
 
-  it("shows the full estimate on review and the scheme B fee on the change form", () => {
+  it("shows the full estimate on review and the confirmed fee on the change form", () => {
     const confirm = readFileSync(
       new URL("../../components/booking/BookingConfirmStep.tsx", import.meta.url),
       "utf8",
@@ -495,6 +517,8 @@ describe("scheme B billing", () => {
     assert.match(review, /quote\.estimatedTotal/);
     assert.match(form, /serverQuote\?\.fee/);
     assert.match(form, /needsPriceReview/);
+    assert.match(form, /priced add-ons/);
+    assert.equal(form.includes("are not part of this fee"), false);
     assert.equal(form.includes("changeFeeAmount(action, estimatedTotal"), false);
   });
 

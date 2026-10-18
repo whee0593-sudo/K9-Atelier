@@ -507,8 +507,10 @@ export function AppointmentChangeForm({
                 {changeFeeWarning(fee)}
               </p>
               <p className="text-sm text-text-muted">
-                This fee uses the main service and travel fee. Priced add-ons
-                stay on the estimated total and are not part of this fee.
+                This fee uses the confirmed services, priced add-ons, and other
+                saved charges on this visit, plus one travel fee. Removing a
+                dog uses only that dog&apos;s confirmed charges and does not
+                include the travel fee that stays with the visit.
               </p>
             </div>
           ) : (

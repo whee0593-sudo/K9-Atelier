@@ -3,6 +3,7 @@ import type { AppointmentChangeAction } from "@/lib/appointments/change-policy";
 import {
   appointmentFieldsFromVisitLineItems,
   attachBookingPriceSnapshot,
+  readAssessedAddOns,
   readPricedAddOns,
   readStoredVisitLineItems,
   servicePriceIsBaseOnly,
@@ -49,10 +50,16 @@ function money(amount: number) {
   return Math.round(amount * 100) / 100;
 }
 
+function positiveAmount(value: number) {
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
 /**
- * Main-service dollars for a change fee.
- * A base-price snapshot or a saved service line is reliable.
- * An appointment with no add-ons has nothing to split.
+ * Confirmed non-travel dollars for a change fee.
+ * Saved visit lines include the service, priced add-ons, and other confirmed charges.
+ * A base-price snapshot adds its priced add-ons to the saved service amount.
+ * Unquoted assessed care and $0 lines are not charges.
+ * An appointment with no add-ons uses the stored service price.
  * Anything else needs a person to confirm the amount.
  */
 export function feeServicePortion(
@@ -61,15 +68,26 @@ export function feeServicePortion(
   const options = row.add_on_options ?? null;
   const lines = readStoredVisitLineItems(options);
   if (lines) {
-    const primary = primaryServicePriceFromLineItems(lines);
-    if (primary != null) return { ok: true, amount: primary };
+    let sum = 0;
+    let counted = false;
+    for (const item of lines) {
+      const catalog = item.catalogId ?? "";
+      if (catalog === "travel-fee" || catalog === "no-show") continue;
+      if (!(item.amount > 0)) continue;
+      sum += item.amount;
+      counted = true;
+    }
+    if (counted) return { ok: true, amount: money(sum) };
   }
   const service =
     row.service_price != null && Number.isFinite(Number(row.service_price))
       ? Number(row.service_price)
       : null;
-  if (servicePriceIsBaseOnly(options) && service != null && readPricedAddOns(options)) {
-    return { ok: true, amount: service };
+  const priced = readPricedAddOns(options);
+  if (servicePriceIsBaseOnly(options) && service != null && priced) {
+    if (readAssessedAddOns(options) == null) return { ok: false };
+    const addOnTotal = priced.reduce((sum, item) => sum + item.amount, 0);
+    return { ok: true, amount: money(service + addOnTotal) };
   }
   const addOnIds = row.add_on_ids;
   if (addOnIds != null && addOnIds.length === 0 && service != null) {
@@ -89,11 +107,19 @@ export function feeServicePortion(
   return { ok: false };
 }
 
+function storedTravelFee(row: ScheduledPriceRow) {
+  const column = positiveAmount(Number(row.travel_fee ?? 0));
+  const lines = readStoredVisitLineItems(row.add_on_options ?? null);
+  const line = lines?.find((item) => item.catalogId === "travel-fee");
+  return Math.max(column, positiveAmount(line?.amount ?? 0));
+}
+
 /**
- * Scheme B fee base: main service plus one applicable travel fee.
- * Priced add-ons stay in estimated_total and are not part of this base.
- * remove_dog never includes travel; the visit mirror keeps that fee on a remaining dog.
- * Other actions use the highest stored travel fee once, never the sum.
+ * Confirmed order amount for a change fee.
+ * Cancel and reschedule include every target dog's confirmed charges
+ * plus one travel fee for the visit.
+ * remove_dog includes only that dog's confirmed charges.
+ * The travel fee stays with the visit and is not charged again.
  */
 export function changeFeeBase(
   action: AppointmentChangeAction,
@@ -108,7 +134,7 @@ export function changeFeeBase(
   const travel =
     action === "remove_dog"
       ? 0
-      : rows.reduce((max, row) => Math.max(max, Number(row.travel_fee ?? 0)), 0);
+      : rows.reduce((max, row) => Math.max(max, storedTravelFee(row)), 0);
   return { ok: true, amount: money(serviceTotal + travel) };
 }
 

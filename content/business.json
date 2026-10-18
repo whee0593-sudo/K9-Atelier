@@ -175,7 +175,7 @@
       "sections": [
         {
           "heading": "1. Rescheduling & Cancellations",
-          "body": "We kindly ask for at least 48 hours' notice for any cancellation or rescheduling request. This allows us to offer the time slot to another client on our waitlist.",
+          "body": "Notice is counted by calendar date in Eastern Time. Two days before the appointment, or earlier, you may reschedule or cancel with no fee. The day before is 50%. The day of the appointment is 100%, at any time that day. The percentage applies to the confirmed service, priced add-ons, one travel fee, and other charges already saved on the visit. Removing one dog uses that dog's confirmed charges only and does not include the travel fee that stays with the visit.",
           "table": {
             "columns": [
               "Notice Given",
@@ -183,16 +183,16 @@
             ],
             "rows": [
               [
-                "48+ hours before appointment",
+                "Two days before the appointment, or earlier",
                 "No fee — reschedule or cancel freely"
               ],
               [
-                "Less than 48 hours",
-                "50% of the scheduled service price"
+                "The day before the appointment",
+                "50% of the confirmed visit total"
               ],
               [
-                "Same-day cancellation or rescheduling",
-                "100% of the scheduled service price"
+                "The day of the appointment",
+                "100% of the confirmed visit total"
               ]
             ]
           }

@@ -64,10 +64,11 @@ describe("FAQ page", () => {
     assert.equal(page.includes("more expensive than salon"), false);
     assert.equal(page.includes("Between 24 and 48"), false);
     assert.equal(page.includes("Less than 24 hours"), false);
-    assert.match(page, /48 hours or more/);
-    assert.match(page, /Less than 48 hours, but not the same day/);
-    assert.match(page, /Same-day cancellation or rescheduling/);
-    assert.match(page, /scheduled service price plus any travel fee on that visit/);
+    assert.match(page, /Two days before the appointment, or earlier/);
+    assert.match(page, /The day before the appointment/);
+    assert.match(page, /The day of the appointment/);
+    assert.match(page, /confirmed service, priced add-ons, one travel fee/);
+    assert.equal(page.includes("48 hours"), false);
     assert.match(page, /No-Shows/);
     assert.match(page, /within 15 minutes/);
     assert.match(page, /Delayed Access/);
