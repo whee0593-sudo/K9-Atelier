@@ -3,18 +3,13 @@
 import React, { useId, useState } from "react";
 import Link from "next/link";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
-import { FullGroomPriceMatrix } from "@/components/services/FullGroomPriceMatrix";
-import { PriceTiers } from "@/components/services/PriceTiers";
-import { formatPrice } from "@/lib/business";
 import type { BookableService } from "@/lib/services";
 import {
-  BATH_COAT_PATH,
   serviceCardAccessLabel,
   serviceCardBestFor,
-  serviceCardPriceValue,
   serviceCardSummary,
   serviceDurationLabel,
-} from "@/lib/service-page";
+} from "@/lib/service-card-copy";
 
 type Props = {
   service: BookableService;
@@ -34,6 +29,8 @@ type Props = {
     href: string;
   };
   showPrices?: boolean;
+  priceText?: string;
+  priceDetails?: React.ReactNode;
 };
 
 export function ServiceCard({
@@ -49,13 +46,15 @@ export function ServiceCard({
   detailParagraphs,
   leadLink,
   showPrices = false,
+  priceText = "",
+  priceDetails = null,
 }: Props) {
   const Heading = headingAs;
   const [open, setOpen] = useState(detailsInitiallyOpen);
   const panelId = useId();
   const bestFor = serviceCardBestFor(service);
   const duration = serviceDurationLabel(service);
-  const price = showPrices ? serviceCardPriceValue(service) : "";
+  const price = showPrices ? priceText : "";
   const access = serviceCardAccessLabel(service);
   const priceLabel =
     service.pricingType === "free" ? "Care" : "From";
@@ -174,7 +173,7 @@ export function ServiceCard({
           <ServiceDetails
             service={service}
             detailParagraphs={detailParagraphs}
-            showPrices={showPrices}
+            priceDetails={priceDetails}
           />
         </div>
       </div>
@@ -195,7 +194,7 @@ function ServiceNote({ service }: { service: BookableService }) {
     <p className="font-body mt-4 text-sm text-taupe">
       {note.slice(0, index)}
       <Link
-        href={BATH_COAT_PATH}
+        href="/services/bath-coat-care"
         className="text-deep-lavender underline decoration-champagne/70 underline-offset-4 transition hover:text-ink"
       >
         {label}
@@ -208,11 +207,11 @@ function ServiceNote({ service }: { service: BookableService }) {
 function ServiceDetails({
   service,
   detailParagraphs,
-  showPrices,
+  priceDetails,
 }: {
   service: BookableService;
   detailParagraphs?: readonly string[];
-  showPrices: boolean;
+  priceDetails?: React.ReactNode;
 }) {
   const replaceNarrative = Boolean(detailParagraphs?.length);
 
@@ -263,45 +262,7 @@ function ServiceDetails({
         </p>
       ) : null}
 
-      {showPrices && service.pricingType === "tiered" && service.coatTypePrices?.length ? (
-        <FullGroomPriceMatrix service={service} />
-      ) : (
-        showPrices &&
-        service.tiers &&
-        service.pricingType === "tiered" && <PriceTiers tiers={service.tiers} />
-      )}
-
-      {showPrices && service.pricingType === "hourly" && service.hourlyRate != null && (
-        <p className="font-body mt-4 text-sm text-ink">
-          From {formatPrice(service.hourlyRate)} / hour
-        </p>
-      )}
-
-      {showPrices &&
-        service.pricingType === "add_on" &&
-        service.tiers &&
-        service.flatRate == null && (
-          <PriceTiers
-            tiers={service.tiers}
-            priceOnly
-            feeSuffix="added to the base service"
-          />
-        )}
-
-      {showPrices && service.pricingType === "add_on" && service.flatRate != null && (
-        <p className="font-body mt-4 text-sm text-ink">
-          {service.durationMin != null
-            ? `From ${formatPrice(service.flatRate)} / ${service.durationMin} min`
-            : `From ${formatPrice(service.flatRate)}`}
-        </p>
-      )}
-
-      {showPrices && service.pricingType === "free" && (
-        <p className="font-body mt-4 text-sm text-ink">
-          Complimentary
-          {service.membersOnly ? " · Members only" : ""} · By appointment only
-        </p>
-      )}
+      {priceDetails}
 
       {!replaceNarrative && service.suitableFor && (
         <p className="font-body mt-4 text-sm text-taupe">

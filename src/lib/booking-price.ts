@@ -18,7 +18,7 @@ import { getServiceDisplayName } from "@/lib/service-display";
 import { canonicalServiceId } from "@/lib/service-catalog";
 
 export const BOOKING_PRICE_DISCLAIMER =
-  "Your estimated total is based on your dog's weight, coat type, and selected services. Final pricing may vary depending on coat condition, matting, additional handling needs, and any adjustments discussed with your groomer.";
+  "Your estimated total is based on your dog's weight and selected services. Final pricing may vary depending on coat condition, matting, additional handling needs, and any adjustments discussed with your groomer.";
 
 export const PRICE_CHANGED_CODE = "price_changed";
 
@@ -26,7 +26,7 @@ export const PRICE_CHANGED_MESSAGE =
   "The estimated total changed. Review the latest price, then confirm again.";
 
 export const FULL_GROOM_ESTIMATE_NOTE =
-  "Full Groom is estimated at the starting price for this weight, using the lowest coat type. Coat type is confirmed with you before the visit.";
+  "This estimate reflects the starting coat price for your dog's weight. The price may vary based on your dog's coat situation, which will be discussed with you before your appointment.";
 
 export const HAND_STRIPPING_ESTIMATE_NOTE =
   "Hand Stripping is shown from the hourly rate. That rate is included once in this estimate and is not a fixed final price.";

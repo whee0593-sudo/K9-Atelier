@@ -412,7 +412,7 @@
           "name": "Custom Full Haircut & Styling",
           "description": "Full-service personalized grooming experience. Includes everything in the Signature Bath, followed by a customized whole-body groom styled to your preferences (e.g., teddy bear head, custom length, or breed standard).",
           "pricingType": "tiered",
-          "pricingNote": "Starting prices are based on weight and coat type. Final pricing may vary based on coat density, condition, requested style, temperament, and additional grooming time required.",
+          "pricingNote": "Starting prices use the lowest coat price for each weight. The price may vary based on the dog's coat situation, which is discussed before the appointment.",
           "coatTypeNote": "Coat type reflects length, density, and overall grooming workload — not breed alone.",
           "tiers": [
             {

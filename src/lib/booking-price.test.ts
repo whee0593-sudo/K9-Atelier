@@ -346,7 +346,7 @@ describe("create appointment price gate", () => {
   it("keeps the customer disclaimer text exact", () => {
     assert.equal(
       BOOKING_PRICE_DISCLAIMER,
-      "Your estimated total is based on your dog's weight, coat type, and selected services. Final pricing may vary depending on coat condition, matting, additional handling needs, and any adjustments discussed with your groomer.",
+      "Your estimated total is based on your dog's weight and selected services. Final pricing may vary depending on coat condition, matting, additional handling needs, and any adjustments discussed with your groomer.",
     );
   });
 });

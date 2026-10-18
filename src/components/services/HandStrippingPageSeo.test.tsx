@@ -15,6 +15,7 @@ import {
 import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
 import { HandStrippingEditorial } from "@/components/services/HandStrippingEditorial";
 import { ServiceCard } from "@/components/services/ServiceCard";
+import { ServicePriceDetails } from "@/components/services/ServicePriceDetails";
 import { ServicesSection } from "@/components/services/ServicesSection";
 import { business, getBrandSearchName, getCommunitiesServed } from "@/lib/business";
 import {
@@ -256,6 +257,8 @@ describe("hand stripping page content", () => {
         headingAs="h2"
         anchorId="hand-stripping"
         showPrices
+        priceText={serviceCardPriceValue(service)}
+        priceDetails={<ServicePriceDetails service={service} />}
       />,
     );
     assert.match(guest, /Wire-coated breeds/);

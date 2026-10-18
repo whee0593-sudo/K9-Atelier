@@ -10,7 +10,8 @@ import {
 } from "@/lib/visits/visit";
 import { getStaffSession } from "@/lib/staff/auth";
 import { sanitizeLineItems } from "@/lib/charges/line-items";
-import { selectionRepeatsIncludedMiniTrim } from "@/lib/services";
+import { addOnSelectionMessage } from "@/lib/services";
+import { primaryServicePriceFromLineItems } from "@/lib/appointments/stored-service-price";
 import { sumLineItems } from "@/lib/charges/money";
 import {
   appointmentFieldsFromVisitLineItems,
@@ -31,6 +32,7 @@ import type { AppointmentStatus } from "@/lib/appointments/types";
 export async function updateAppointmentVisitServices(input: {
   appointmentId: string;
   lineItems: unknown;
+  confirmIncompatibleAddOns?: boolean;
 }): Promise<
   | {
       ok: true;
@@ -45,9 +47,10 @@ export async function updateAppointmentVisitServices(input: {
         | "forbidden"
         | "not_found"
         | "invalid"
-        | "mini_trim_included"
+        | "addon_confirmation_required"
         | "slot_unavailable"
         | "server";
+      message?: string;
     }
 > {
   const session = await getStaffSession();
@@ -55,15 +58,15 @@ export async function updateAppointmentVisitServices(input: {
 
   const lineItems = sanitizeLineItems(input.lineItems);
   if (!lineItems) return { error: "invalid" };
-  const catalogIds = lineItems.flatMap((item) => {
-    const catalog = item.catalogId ?? "";
-    if (!catalog || catalog === "travel-fee" || catalog === "no-show") return [];
-    const id = catalog.split("::")[0];
-    return id ? [id] : [];
-  });
-  if (selectionRepeatsIncludedMiniTrim(catalogIds)) {
-    return { error: "mini_trim_included" };
+  const draft = appointmentFieldsFromVisitLineItems(lineItems);
+  const addonMessage = addOnSelectionMessage(
+    draft.serviceId ? [draft.serviceId] : [],
+    draft.addOnIds,
+  );
+  if (addonMessage && !input.confirmIncompatibleAddOns) {
+    return { error: "addon_confirmation_required", message: addonMessage };
   }
+  const primaryServicePrice = primaryServicePriceFromLineItems(lineItems);
 
   const admin = createAdminClient();
   const { data: row, error } = await admin
@@ -115,6 +118,9 @@ export async function updateAppointmentVisitServices(input: {
         add_on_options: service.addOnOptions,
         travel_fee: service.travelFee,
         estimated_total: service.estimatedTotal,
+        ...(primaryServicePrice != null
+          ? { service_price: primaryServicePrice }
+          : {}),
         ...(futureRow && durationMinutes != null
           ? { estimated_duration_minutes: durationMinutes }
           : {}),
@@ -149,6 +155,19 @@ export async function updateAppointmentVisitServices(input: {
       schedule: planned.schedule,
     });
     if ("error" in written) return written;
+    if (primaryServicePrice != null) {
+      const { error: priceError } = await admin
+        .from("appointments")
+        .update({ service_price: primaryServicePrice })
+        .eq("id", row.id);
+      if (priceError) {
+        console.error(
+          "updateAppointmentVisitServices service price failed:",
+          priceError.message,
+        );
+        return { error: "server" };
+      }
+    }
   }
 
   const smsSent = await sendVisitServicesUpdatedSms({

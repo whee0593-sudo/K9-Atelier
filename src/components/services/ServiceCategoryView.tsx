@@ -8,13 +8,16 @@ import { FullGroomEditorial } from "@/components/services/FullGroomEditorial";
 import { HandStrippingEditorial } from "@/components/services/HandStrippingEditorial";
 import { MobileBookBar } from "@/components/services/MobileBookBar";
 import { ServiceCard } from "@/components/services/ServiceCard";
+import { ServicePriceDetails } from "@/components/services/ServicePriceDetails";
 import { ServicesHashRedirect } from "@/components/services/ServicesHashRedirect";
 import { ServicesNav } from "@/components/services/ServicesNav";
 import { ServicesSection } from "@/components/services/ServicesSection";
 import type { ServiceCategory } from "@/lib/service-page";
 import { LONG_COAT_CARE_PATH } from "@/lib/long-coat-care-page";
+import { serviceWithoutMenuPrices } from "@/lib/public-service";
 import {
   SERVICE_ANCHORS,
+  serviceCardPriceValue,
   SPECIALTY_CARE_AREA_SENTENCE,
   SPECIALTY_CARE_PENNY_AFTER,
   SPECIALTY_CARE_PENNY_BEFORE,
@@ -62,19 +65,27 @@ export function ServiceCategoryView({ category, showPrices = false }: Props) {
         tone="white"
       >
         {category.layout === "coloring" && coloring ? (
-          <CreativeColoringSection service={coloring} showPrices={showPrices} />
+          <CreativeColoringSection
+            service={showPrices ? coloring : serviceWithoutMenuPrices(coloring)}
+            showPrices={showPrices}
+          />
         ) : (
           <div className={serviceGridClass(services.length)}>
             {services.map((service) => {
-              const displayed =
+              const named =
                 category.slug === "specialty-care"
                   ? specialtyCareDisplayService(service)
                   : service;
+              const displayed = showPrices ? named : serviceWithoutMenuPrices(named);
               return (
                 <ServiceCard
                   key={service.id}
                   service={displayed}
                   showPrices={showPrices}
+                  priceText={showPrices ? serviceCardPriceValue(named) : ""}
+                  priceDetails={
+                    showPrices ? <ServicePriceDetails service={named} /> : null
+                  }
                   headingAs="h2"
                   quiet={service.id === "end-of-life-care"}
                   anchorId={SERVICE_ANCHORS[service.id] ?? service.id}

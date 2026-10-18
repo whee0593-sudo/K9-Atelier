@@ -6,7 +6,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 (globalThis as { React?: typeof React }).React = React;
 import { BookingCareOptionsStep } from "@/components/booking/BookingCareOptionsStep";
 import { BookingConfirmStep } from "@/components/booking/BookingConfirmStep";
+import { BookingReviewQuote } from "@/components/booking/BookingReviewQuote";
 import { ServiceCard } from "@/components/services/ServiceCard";
+import { ServicePriceDetails } from "@/components/services/ServicePriceDetails";
 import { ServiceDirectory } from "@/components/services/ServiceDirectory";
 import { createDraftBookingPet } from "@/lib/booking-flow";
 import {
@@ -24,7 +26,7 @@ import {
   containsDisplayedServicePrice,
   servicePricesVisibleToViewer,
 } from "@/lib/pricing-access";
-import { getServiceById } from "@/lib/service-page";
+import { getServiceById, serviceCardPriceValue } from "@/lib/service-page";
 import {
   DESHEDDING_ADD_ON_ID,
   DESHEDDING_ALREADY_INCLUDED_MESSAGE,
@@ -336,7 +338,12 @@ describe("service price visibility", () => {
     const admin = renderToStaticMarkup(
       <>
         <ServiceDirectory showPrices />
-        <ServiceCard service={bath} showPrices />
+        <ServiceCard
+          service={bath}
+          showPrices
+          priceText={serviceCardPriceValue(bath)}
+          priceDetails={<ServicePriceDetails service={bath} />}
+        />
       </>,
     );
     assert.equal(containsDisplayedServicePrice(guest.replace(/<[^>]+>/g, " ")), false);
@@ -524,5 +531,30 @@ describe("bills and visits", () => {
       },
     ]);
     assert.equal(adjusted?.[0]?.amount, 45);
+  });
+});
+
+describe("Full Groom estimate copy", () => {
+  it("shows the starting coat price note and does not claim coat type is already known", () => {
+    const quoted = quoteGuestBooking({
+      serviceId: "custom-full-haircut",
+      weightLbs: 12,
+      addOnIds: [],
+      addOnOptions: {},
+      distanceMiles: 4,
+    });
+    assert.equal(quoted.ok, true);
+    if (!quoted.ok) return;
+    assert.equal(
+      quoted.quote.estimateNote,
+      "This estimate reflects the starting coat price for your dog's weight. The price may vary based on your dog's coat situation, which will be discussed with you before your appointment.",
+    );
+    const html = renderToStaticMarkup(
+      <BookingReviewQuote quote={quoted.quote} />,
+    ).replaceAll("&#x27;", "'");
+    assert.match(html, /Pricing Notice/);
+    assert.match(html, new RegExp(quoted.quote.estimateNote));
+    assert.match(html, new RegExp(BOOKING_PRICE_DISCLAIMER));
+    assert.equal(/coat type/i.test(html), false);
   });
 });

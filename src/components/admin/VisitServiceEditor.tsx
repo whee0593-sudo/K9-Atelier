@@ -116,6 +116,24 @@ export function VisitServiceEditor({
         ))}
       </ul>
 
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() =>
+          onChange([
+            ...lineItems,
+            {
+              id: newLineId(),
+              label: "Additional care",
+              amount: 0,
+            },
+          ])
+        }
+        className="mt-4 text-sm text-ink underline disabled:opacity-40"
+      >
+        Add a custom charge
+      </button>
+
       <label className="font-body mt-4 block text-sm text-taupe">
         Add a service
         <select

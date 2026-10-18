@@ -42,7 +42,7 @@ import {
   type VisitBillSnapshot,
   type VisitCheckoutPet,
 } from "@/lib/charges/visit-bill";
-import { resolveAddOnCharges } from "@/lib/services";
+import { visitCheckoutPetFromStoredAppointment } from "@/lib/charges/stored-visit-pet";
 import {
   attemptSavedCardCharge,
   customerFacingStripeMessage,
@@ -305,42 +305,20 @@ async function loadVisitCollect(
       | { name?: string | null; weight_lbs?: number | null }[]
       | null;
     const petRow = Array.isArray(pet) ? pet[0] : pet;
-    const weight = bookingWeightLbs(petRow?.weight_lbs);
-    const addOnIds = (row.add_on_ids as string[] | null) ?? [];
-    const rawOptions =
-      (row.add_on_options as Record<string, unknown> | null) ?? {};
-    const addOnOptions: Record<string, string> = {};
-    for (const [key, value] of Object.entries(rawOptions)) {
-      if (typeof value === "string" && value.trim()) addOnOptions[key] = value;
-    }
-    return {
-      appointmentId: row.id as string,
-      petName: petRow?.name?.trim() || "Dog",
+    return visitCheckoutPetFromStoredAppointment({
+      id: row.id as string,
+      status: String(row.status ?? ""),
       serviceName: String(row.service_name ?? "Service"),
+      serviceId: String(row.service_id ?? ""),
       servicePrice:
         row.service_price == null ? null : Number(row.service_price),
-      status: String(row.status ?? ""),
       serviceEndedAt: (row.service_ended_at as string | null) ?? null,
-      addOns:
-        weight == null
-          ? []
-          : resolveAddOnCharges(
-              String(row.service_id ?? ""),
-              addOnIds,
-              weight,
-              addOnOptions,
-            ).flatMap((charge) =>
-              charge.kind === "priced"
-                ? [
-                    {
-                      label: charge.name,
-                      amount: charge.amount,
-                      catalogId: charge.id,
-                    },
-                  ]
-                : [],
-            ),
-    };
+      addOnIds: (row.add_on_ids as string[] | null) ?? [],
+      addOnOptions:
+        (row.add_on_options as Record<string, unknown> | null) ?? null,
+      petName: petRow?.name?.trim() || "Dog",
+      weightLbs: petRow?.weight_lbs ?? null,
+    });
   });
 
   const bill = buildVisitBill({

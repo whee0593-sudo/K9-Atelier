@@ -91,7 +91,10 @@ describe("booking price summary", () => {
     );
     assert.match(bath, /From \$90/);
     assert.match(groom, /From \$140/);
-    assert.match(groom, new RegExp(FULL_GROOM_ESTIMATE_NOTE));
+    assert.match(
+      groom.replaceAll("&#x27;", "'"),
+      new RegExp(FULL_GROOM_ESTIMATE_NOTE),
+    );
     assert.match(withTravel, /\$13/);
     assert.match(withTravel, /From \$103/);
     assert.equal(bath.includes("$13"), false);
@@ -214,7 +217,10 @@ describe("booking confirm step", () => {
     const groom = confirm("custom-full-haircut", 12);
     const stripping = confirm("hand-stripping", 50);
     assert.match(groom, /\$140\.00/);
-    assert.match(groom, new RegExp(FULL_GROOM_ESTIMATE_NOTE));
+    assert.match(
+      groom.replaceAll("&#x27;", "'"),
+      new RegExp(FULL_GROOM_ESTIMATE_NOTE),
+    );
     assert.match(stripping, /\$160\.00\/hour/);
     assert.match(stripping, new RegExp(HAND_STRIPPING_ESTIMATE_NOTE));
   });

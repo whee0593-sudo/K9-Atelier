@@ -6,6 +6,10 @@ import {
   changeFeeWarning,
   changeNoticeBand,
 } from "./change-policy";
+import {
+  addressServicePortion,
+  changeQuoteEstimatedTotal,
+} from "./stored-service-price";
 
 describe("appointment change fees", () => {
   it("is complimentary 48+ hours before the visit", () => {
@@ -61,11 +65,33 @@ describe("appointment change fees", () => {
       new URL("./customer-change.ts", import.meta.url),
       "utf8",
     );
-    assert.match(
-      source,
-      /const estimatedTotal = Math\.round\(\(serviceTotal \+ travel\) \* 100\) \/ 100/,
-    );
-    assert.match(source, /action === "remove_dog"\s*\?\s*0/);
+    assert.match(source, /changeQuoteEstimatedTotal\(action, rows\)/);
     assert.match(source, /fee: changeFeeAmount\(action, estimatedTotal, band\)/);
+  });
+
+  it("keeps priced add-ons in the stored total without reading them out of service_price", () => {
+    const guest = {
+      estimated_total: 133,
+      service_price: 90,
+      travel_fee: 13,
+    };
+    assert.equal(changeQuoteEstimatedTotal("cancel", [guest]), 133);
+    assert.equal(changeQuoteEstimatedTotal("reschedule", [guest]), 133);
+    assert.equal(changeQuoteEstimatedTotal("remove_dog", [guest]), 120);
+    assert.equal(addressServicePortion(guest), 120);
+    assert.equal(
+      changeQuoteEstimatedTotal("cancel", [
+        { estimated_total: null, service_price: 90, travel_fee: 13 },
+      ]),
+      103,
+    );
+    assert.equal(
+      addressServicePortion({
+        estimated_total: null,
+        service_price: 90,
+        travel_fee: 13,
+      }),
+      90,
+    );
   });
 });

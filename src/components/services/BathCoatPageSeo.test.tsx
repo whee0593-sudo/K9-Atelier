@@ -11,6 +11,7 @@ import { BathCoatJsonLd } from "@/components/seo/BathCoatJsonLd";
 import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
 import { BathCoatEditorial } from "@/components/services/BathCoatEditorial";
 import { ServiceCard } from "@/components/services/ServiceCard";
+import { ServicePriceDetails } from "@/components/services/ServicePriceDetails";
 import { ServicesSection } from "@/components/services/ServicesSection";
 import { business, getBrandSearchName, getCommunitiesServed } from "@/lib/business";
 import {
@@ -266,12 +267,16 @@ describe("bath and coat care page content", () => {
           headingAs="h2"
           anchorId="signature-bath"
           showPrices
+          priceText={serviceCardPriceValue(signature)}
+          priceDetails={<ServicePriceDetails service={signature} />}
         />
         <ServiceCard
           service={longCoat}
           headingAs="h2"
           anchorId="long-coat-show-care"
           showPrices
+          priceText={serviceCardPriceValue(longCoat)}
+          priceDetails={<ServicePriceDetails service={longCoat} />}
         />
       </>,
     );

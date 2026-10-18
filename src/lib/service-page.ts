@@ -1,6 +1,5 @@
 import {
   business,
-  formatDuration,
   formatPrice,
   getBrandWebsiteUrl,
 } from "@/lib/business";
@@ -8,16 +7,32 @@ import { canonicalServiceId } from "@/lib/service-catalog";
 import {
   allBookableServices,
   type BookableService,
-  type ServiceTier,
 } from "@/lib/services";
+import {
+  ADD_ONS_PATH,
+  BATH_COAT_PATH,
+  COLOR_PATH,
+  FULL_GROOM_PATH,
+  HAND_STRIPPING_PATH,
+  SPA_PATH,
+  SPECIALTY_CARE_PATH,
+} from "@/lib/services-nav";
 
-export const SERVICES_PATH = "/services";
-export const FULL_GROOM_PATH = "/services/full-groom";
-export const HAND_STRIPPING_PATH = "/services/hand-stripping";
-export const BATH_COAT_PATH = "/services/bath-coat-care";
-export const SPA_PATH = "/services/spa";
-export const COLOR_PATH = "/services/color";
-export const SPECIALTY_CARE_PATH = "/services/specialty-care";
+export {
+  ADD_ONS_PATH,
+  BATH_COAT_PATH,
+  COLOR_PATH,
+  CONSULTATION_PATH,
+  FEES_POLICIES_PATH,
+  FULL_GROOM_PATH,
+  HAND_STRIPPING_PATH,
+  SERVICES_HASH_ROUTES,
+  SERVICES_NAV,
+  SERVICES_PATH,
+  SPA_PATH,
+  SPECIALTY_CARE_PATH,
+} from "@/lib/services-nav";
+
 export const SPECIALTY_CARE_PAGE_TITLE =
   "Extra-Gentle Senior Dog Grooming in Palm Beach | K9 Atelier";
 export const SPECIALTY_CARE_PAGE_DESCRIPTION =
@@ -53,9 +68,6 @@ export const SPECIALTY_CARE_AREA_SERVED = [
 ] as const;
 export const SPECIALTY_CARE_SERVICE_TYPE = "Mobile Senior Dog Grooming";
 export const SPECIALTY_CARE_SERVICE_ID = "senior-comfort-care";
-export const ADD_ONS_PATH = "/services/add-ons";
-export const FEES_POLICIES_PATH = "/faq#fees-policies";
-export const CONSULTATION_PATH = "/contact?inquiry=grooming-consultation";
 
 export const SERVICES_PAGE_TITLE =
   "Mobile Dog Grooming Services in Palm Beach | K9 Atelier";
@@ -91,7 +103,7 @@ export const FULL_GROOM_FAQS = [
   {
     question: "How is Full Groom pricing determined?",
     answer:
-      "Starting prices are based on weight and coat type. Final pricing may vary with coat density, condition, requested style, temperament and additional grooming time required.",
+      "This estimate reflects the starting coat price for your dog's weight. The price may vary based on your dog's coat situation, which will be discussed with you before your appointment.",
   },
 ] as const;
 
@@ -384,68 +396,6 @@ export function getServiceCategory(slug: string) {
   return SERVICE_CATEGORIES.find((category) => category.slug === slug) ?? null;
 }
 
-const CARD_SUMMARIES: Record<string, string> = {
-  "signature-bath-care":
-    "Bath, blow-dry, and brush-out. Nail, ear, and teeth care included.",
-  "custom-full-haircut":
-    "A complete grooming experience finished with a custom haircut tailored to coat, lifestyle, and expression.",
-  "show-level-coat-care":
-    "An upgraded bath with show-level coat conditioning. Nail, ear, and teeth care included. Mini trim included.",
-  "long-coat-show-care":
-    "An upgraded bath with show-level coat conditioning. Nail, ear, and teeth care included. Mini trim included.",
-  "hand-stripping":
-    "Traditional hand stripping for wire-coated breeds, preserving harsh texture, color, and natural coat protection.",
-  "luxury-spa-day":
-    "A fully customized, relaxing spa experience for your pup. Nail, ear, and teeth care included. Mini trim included.",
-  "dematting-brush-out":
-    "Gentle removal of light to moderate tangles, with your dog's comfort and coat health as the priority.",
-  "deshedding-treatment":
-    "A deep undercoat treatment to release trapped hair and reduce shedding after the bath.",
-  "senior-comfort-care": SPECIALTY_CARE_SENIOR_SUMMARY,
-  "mini-trim": "Eyes, feet & sanitary areas only.",
-  "creative-accent-coloring":
-    "Pet-safe, semi-permanent accent color designed specifically for animal coats.",
-  "end-of-life-care": SPECIALTY_CARE_EOL_SUMMARY,
-};
-
-const CARD_BEST_FOR: Record<string, string> = {
-  "signature-bath-care": "Regular coat maintenance",
-  "custom-full-haircut": "A complete haircut and style",
-  "show-level-coat-care": "Full-coat breeds on a weekly schedule",
-  "long-coat-show-care": "Full-coat breeds on a weekly schedule",
-  "luxury-spa-day": "A relaxing spa day",
-  "hand-stripping": "Wire-coated breeds",
-  "dematting-brush-out": "Light to moderate tangles",
-  "deshedding-treatment": "Heavy-shedding double coats",
-  "senior-comfort-care": SPECIALTY_CARE_SENIOR_BEST_FOR,
-  "mini-trim": "Quick tidy between full grooms",
-  "creative-accent-coloring": "A playful, pet-safe pop of color",
-  "end-of-life-care": "Comfort-first visits in a dog’s final chapter",
-};
-
-export const SERVICES_NAV = SERVICE_CATEGORIES.map((category) => ({
-  href: category.path,
-  sectionId: category.slug,
-  label: category.navLabel,
-}));
-
-/** Old in-page hashes that now have dedicated category or FAQ routes. */
-export const SERVICES_HASH_ROUTES: Record<string, string> = {
-  "most-requested": SERVICES_PATH,
-  "bath-coat": BATH_COAT_PATH,
-  "signature-bath": BATH_COAT_PATH,
-  "full-groom": FULL_GROOM_PATH,
-  "atelier-full-groom": FULL_GROOM_PATH,
-  "hand-stripping": HAND_STRIPPING_PATH,
-  "spa-rituals": SPA_PATH,
-  "spa-wellness": SPA_PATH,
-  "color-dye": COLOR_PATH,
-  "specialty-care": SPECIALTY_CARE_PATH,
-  "gentle-care": SPECIALTY_CARE_PATH,
-  "add-ons": ADD_ONS_PATH,
-  "fees-policies": FEES_POLICIES_PATH,
-};
-
 export function getServiceById(id: string) {
   const canonical = canonicalServiceId(id);
   return allBookableServices().find((service) => service.id === canonical) ?? null;
@@ -478,13 +428,13 @@ export function getServicesByIds(ids: readonly string[]) {
     .filter((service): service is BookableService => service != null);
 }
 
-export function serviceCardSummary(service: BookableService) {
-  return CARD_SUMMARIES[service.id] ?? firstSentences(service.description, 35);
-}
-
-export function serviceCardBestFor(service: BookableService) {
-  return CARD_BEST_FOR[service.id] ?? shortenBestFor(service.bestFor);
-}
+export {
+  durationRangeFromTiers,
+  serviceCardAccessLabel,
+  serviceCardBestFor,
+  serviceCardSummary,
+  serviceDurationLabel,
+} from "@/lib/service-card-copy";
 
 export function serviceCardPriceValue(service: BookableService) {
   return serviceStartingPriceLabel(service).replace(/^From\s+/i, "");
@@ -573,37 +523,6 @@ export function directoryPriceLabel(category: ServiceCategory) {
   return categoryStartingPriceLabel(category.serviceIds);
 }
 
-export function serviceCardAccessLabel(service: BookableService) {
-  if (service.membersOnly) return "Members only";
-  return null;
-}
-
-export function serviceDurationLabel(service: BookableService) {
-  if (service.durationNote) return service.durationNote;
-  if (service.pricingType === "free") return "By appointment only";
-  if (service.pricingType === "hourly") {
-    return formatDuration(service.durationMin ?? 60, service.durationMax);
-  }
-  if (service.tiers?.some((tier) => tier.durationMin != null)) {
-    return durationRangeFromTiers(service.tiers);
-  }
-  if (service.durationMin != null) {
-    return formatDuration(service.durationMin, service.durationMax);
-  }
-  return null;
-}
-
-export function durationRangeFromTiers(tiers: ServiceTier[]) {
-  const mins = tiers
-    .map((tier) => tier.durationMin)
-    .filter((value): value is number => value != null);
-  const maxes = tiers
-    .map((tier) => tier.durationMax ?? tier.durationMin)
-    .filter((value): value is number => value != null);
-  if (!mins.length) return null;
-  return formatDuration(Math.min(...mins), Math.max(...maxes));
-}
-
 export function getSpaTreatmentsIntro() {
   const category = business.serviceCategories.find(
     (item) => "spaTreatments" in item,
@@ -643,19 +562,6 @@ export function coloringOptionPriceLabel(option: {
   const extra = coloringOptionDisplayNote(option.note) ?? "";
   const unit = /section/i.test(extra) ? " / section" : "";
   return `From ${formatPrice(option.priceFrom)}${unit}`;
-}
-
-function firstSentences(text: string, maxWords: number) {
-  const compact = text.replace(/\s+/g, " ").trim();
-  const words = compact.split(" ");
-  if (words.length <= maxWords) return compact;
-  return `${words.slice(0, maxWords).join(" ").replace(/[,:;]+$/, "")}.`;
-}
-
-function shortenBestFor(value?: string) {
-  if (!value) return null;
-  const first = value.split("—")[0]?.trim();
-  return first || value;
 }
 
 function splitCombinedList(value: string) {
