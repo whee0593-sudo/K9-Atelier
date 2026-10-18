@@ -2,7 +2,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { applyFixedCollectCap } from "@/lib/policy-fees/amounts";
 import type { ActiveCoverage } from "@/lib/policy-fees/coverage";
 import { legacyChargeNeedsReview } from "@/lib/policy-fees/coverage";
-import type { PolicyClaimSnapshot } from "@/lib/policy-fees/execute";
+import type {
+  PolicyClaimSnapshot,
+  PolicyPaymentState,
+  PolicyReserveResult,
+} from "@/lib/policy-fees/execute";
 import type { PolicyFeeAction } from "@/lib/policy-fees/keys";
 
 export type BeginClaimInput = {
@@ -61,7 +65,52 @@ function snapshotFromRpc(row: Record<string, unknown>): PolicyClaimSnapshot {
     chargeId: typeof row.charge_id === "string" ? row.charge_id : null,
     tender:
       tender === "card" || tender === "cash" || tender === "zelle" ? tender : null,
+    paymentState: paymentStateFrom(row.payment_state),
+    stripeSubmittedAt:
+      typeof row.stripe_submitted_at === "string" ? row.stripe_submitted_at : null,
   };
+}
+
+const PAYMENT_STATES = new Set<PolicyPaymentState>([
+  "none",
+  "submitting",
+  "awaiting_customer",
+  "processing",
+  "succeeded",
+  "failed",
+  "canceled",
+  "unknown",
+]);
+
+function paymentStateFrom(value: unknown): PolicyPaymentState {
+  return typeof value === "string" && PAYMENT_STATES.has(value as PolicyPaymentState)
+    ? (value as PolicyPaymentState)
+    : "none";
+}
+
+export async function loadPolicyFeeClaim(claimId: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("policy_fee_claims")
+    .select(
+      "id, status, charged_amount, stripe_idempotency_key, stripe_payment_intent_id, appointment_change_applied, charge_id, tender, payment_state, stripe_submitted_at",
+    )
+    .eq("id", claimId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  return snapshotFromRpc({
+    claim_id: data.id,
+    status: data.status,
+    charged: data.charged_amount,
+    stripe_idempotency_key: data.stripe_idempotency_key,
+    stripe_payment_intent_id: data.stripe_payment_intent_id,
+    appointment_change_applied: data.appointment_change_applied,
+    charge_id: data.charge_id,
+    tender: data.tender,
+    payment_state: data.payment_state,
+    stripe_submitted_at: data.stripe_submitted_at,
+  });
 }
 
 export async function loadActiveCoverage(visitId: string): Promise<ActiveCoverage> {
@@ -191,6 +240,76 @@ export async function beginPolicyFeeClaim(
   };
 }
 
+export async function reservePolicyFeeStripeSubmit(
+  claimId: string,
+): Promise<PolicyReserveResult> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("reserve_policy_fee_stripe_submit", {
+    p_claim_id: claimId,
+  });
+  if (error) throw new Error(error.message);
+  const row = asRecord(data);
+  const outcome = String(row.outcome ?? "");
+  if (outcome === "submit") {
+    return {
+      outcome: "submit",
+      idempotencyKey: String(row.stripe_idempotency_key ?? ""),
+    };
+  }
+  if (outcome === "known") {
+    return { outcome: "known", paymentIntentId: String(row.payment_intent_id ?? "") };
+  }
+  if (outcome === "reconcile") return { outcome: "reconcile" };
+  throw new Error(outcome || "reserve_failed");
+}
+
+export async function recordPolicyFeePayment(
+  claimId: string,
+  paymentIntentId: string,
+  state: PolicyPaymentState,
+) {
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("record_policy_fee_payment", {
+    p_claim_id: claimId,
+    p_payment_intent_id: paymentIntentId,
+    p_state: state,
+  });
+  if (error) throw new Error(error.message);
+  const outcome = String(asRecord(data).outcome ?? "");
+  if (outcome === "different_intent" || outcome === "invalid" || outcome === "not_charging") {
+    throw new Error(outcome);
+  }
+}
+
+export async function markPolicyFeePaymentUnknown(claimId: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("mark_policy_fee_payment_unknown", {
+    p_claim_id: claimId,
+  });
+  if (error) throw new Error(error.message);
+  const outcome = String(asRecord(data).outcome ?? "");
+  if (outcome === "not_charging") throw new Error(outcome);
+}
+
+export async function acquirePolicyFeeChange(claimId: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("acquire_policy_fee_change", {
+    p_claim_id: claimId,
+  });
+  if (error) throw new Error(error.message);
+  const outcome = String(asRecord(data).outcome ?? "");
+  if (outcome === "apply" || outcome === "already" || outcome === "busy") return outcome;
+  return "busy" as const;
+}
+
+export async function releasePolicyFeeChange(claimId: string) {
+  const admin = createAdminClient();
+  const { error } = await admin.rpc("release_policy_fee_change", {
+    p_claim_id: claimId,
+  });
+  if (error) throw new Error(error.message);
+}
+
 export async function recordPolicyFeeIntent(claimId: string, paymentIntentId: string) {
   const admin = createAdminClient();
   const { data, error } = await admin.rpc("record_policy_fee_intent", {
@@ -216,11 +335,15 @@ export async function completePolicyFeeClaim(claimId: string, chargeId: string |
 
 export async function failPolicyFeeClaim(claimId: string, reason: string) {
   const admin = createAdminClient();
-  const { error } = await admin.rpc("fail_policy_fee_claim", {
+  const { data, error } = await admin.rpc("fail_policy_fee_claim", {
     p_claim_id: claimId,
     p_reason: reason,
   });
   if (error) throw new Error(error.message);
+  const outcome = String(asRecord(data).outcome ?? "");
+  if (outcome === "unconfirmed" || outcome === "not_charging") {
+    throw new Error(outcome);
+  }
 }
 
 export async function markPolicyFeeChangeApplied(claimId: string) {

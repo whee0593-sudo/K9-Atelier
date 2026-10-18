@@ -117,6 +117,18 @@ export async function POST(
           409,
         );
       }
+      if (result.error === "payment_pending") {
+        return appointmentJsonError(
+          "This card is waiting for confirmation. Nothing else was charged. Confirm again to finish the same payment.",
+          409,
+        );
+      }
+      if (result.error === "payment_unknown") {
+        return appointmentJsonError(
+          "We could not confirm whether this card was charged. Nothing else will be charged until this payment is reviewed. Please contact us.",
+          409,
+        );
+      }
       if (result.error === "misconfigured") {
         return appointmentJsonError(
           "Card charges are unavailable right now. Please contact us to finish this change.",

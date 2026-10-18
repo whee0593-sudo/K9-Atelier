@@ -14,7 +14,12 @@ import {
   noShowInstantToBusinessInput,
 } from "@/lib/policy-fees/no-show-evidence";
 import { executePolicyFee, nextPolicyFeeStep } from "@/lib/policy-fees/execute";
-import type { PolicyClaimSnapshot } from "@/lib/policy-fees/execute";
+import type {
+  PolicyClaimSnapshot,
+  PolicyFeeExecutorDeps,
+  PolicyPaymentState,
+} from "@/lib/policy-fees/execute";
+import { noShowPaymentNotice } from "@/lib/policy-fees/stripe-lookup";
 
 describe("fixed dollar cap", () => {
   it("does not waive when the cap is above the computed fee", () => {
@@ -206,73 +211,270 @@ describe("stripe recovery", () => {
       appointmentChangeApplied: false,
       chargeId: null,
       tender: "card",
+      paymentState: "none",
+      stripeSubmittedAt: null,
       ...overrides,
     };
   }
 
-  it("reuses one PaymentIntent when the database write fails, then applies the change once", async () => {
-    const intents = new Map<string, { id: string; status: string }>();
+  function store(options?: {
+    initial?: Partial<PolicyClaimSnapshot>;
+    stripeStatus?: string;
+    search?: "found" | "none" | "unavailable";
+    expireIdempotency?: boolean;
+    failSave?: boolean;
+  }) {
+    const current = claim(options?.initial);
+    const ledger = new Map<string, { id: string; status: string }>();
     let creates = 0;
     let applications = 0;
-    let applied = false;
-    let failSave = true;
-    const current = claim();
-    const deps = {
-      loadClaim: async () => ({ ...current, appointmentChangeApplied: applied }),
-      createPaymentIntent: async (input: { idempotencyKey: string }) => {
-        const existing = intents.get(input.idempotencyKey);
+    let fails = 0;
+    let chain = Promise.resolve();
+    const lock = <T>(run: () => Promise<T> | T) => {
+      const next = chain.then(run, run);
+      chain = next.then(
+        () => undefined,
+        () => undefined,
+      );
+      return next;
+    };
+    const deps: PolicyFeeExecutorDeps = {
+      loadClaim: async () => ({ ...current }),
+      reserveStripeSubmit: (claimId) =>
+        lock(async () => {
+          if (current.id !== claimId) return { outcome: "reconcile" as const };
+          if (current.stripePaymentIntentId) {
+            return { outcome: "known" as const, paymentIntentId: current.stripePaymentIntentId };
+          }
+          if (current.paymentState === "none" && !current.stripeSubmittedAt) {
+            current.paymentState = "submitting";
+            current.stripeSubmittedAt = "2026-10-18T18:00:00.000Z";
+            return { outcome: "submit" as const, idempotencyKey: current.stripeIdempotencyKey };
+          }
+          return { outcome: "reconcile" as const };
+        }),
+      createPaymentIntent: async (input) => {
+        if (options?.expireIdempotency && ledger.has(input.idempotencyKey)) {
+          creates += 1;
+          return { id: `pi_late_${creates}`, status: "succeeded" };
+        }
+        const existing = ledger.get(input.idempotencyKey);
         if (existing) return existing;
         creates += 1;
-        const created = { id: "pi_once", status: "succeeded" };
-        intents.set(input.idempotencyKey, created);
+        const created = {
+          id: "pi_once",
+          status: options?.stripeStatus ?? "succeeded",
+        };
+        ledger.set(input.idempotencyKey, created);
         return created;
       },
-      retrievePaymentIntent: async (id: string) => ({ id, status: "succeeded" }),
-      savePaymentIntentId: async (_claimId: string, paymentIntentId: string) => {
-        if (failSave) throw new Error("database write failed");
+      retrievePaymentIntent: async (id) => ({
+        id,
+        status: ledger.get(current.stripeIdempotencyKey)?.status ?? options?.stripeStatus ?? "succeeded",
+      }),
+      searchPaymentIntents: async () => {
+        if (options?.search === "none") return { outcome: "none" as const };
+        if (options?.search === "unavailable") return { outcome: "unavailable" as const };
+        const found = ledger.get(current.stripeIdempotencyKey);
+        return found
+          ? { outcome: "found" as const, intent: found }
+          : { outcome: "none" as const };
+      },
+      recordPayment: async (_claimId, paymentIntentId, state) => {
+        if (options?.failSave) throw new Error("database write failed");
         current.stripePaymentIntentId = paymentIntentId;
+        current.paymentState = state;
+      },
+      markUnknown: async () => {
+        if (current.paymentState === "succeeded") return;
+        current.paymentState = "unknown";
+        current.status = "charging";
       },
       recordCharge: async () => {
-        current.chargeId = "chg-1";
-        return { chargeId: "chg-1" };
+        current.chargeId = current.chargeId ?? "chg-1";
+        return { chargeId: current.chargeId };
       },
       completeClaim: async () => {
         current.status = "charged";
+        current.paymentState = "succeeded";
       },
       failClaim: async () => {
+        if (current.paymentState !== "failed" && current.paymentState !== "canceled") {
+          throw new Error("unconfirmed");
+        }
+        fails += 1;
         current.status = "failed";
       },
+      claimAppointmentChange: () =>
+        lock(async () => {
+          if (current.appointmentChangeApplied) return "already" as const;
+          if (current.paymentState === "succeeded" && current.status !== "charged") {
+            return "busy" as const;
+          }
+          if ((current as PolicyClaimSnapshot & { changeStarted?: boolean }).changeStarted) {
+            return "busy" as const;
+          }
+          (current as PolicyClaimSnapshot & { changeStarted?: boolean }).changeStarted = true;
+          return "apply" as const;
+        }),
       applyAppointmentChange: async () => {
         applications += 1;
       },
       markChangeApplied: async () => {
-        applied = true;
+        current.appointmentChangeApplied = true;
         return true;
       },
     };
-    await assert.rejects(
-      () => executePolicyFee(deps, { settlePaymentOnly: true }),
-      /database write failed/,
-    );
-    assert.equal(creates, 1);
-    assert.equal(current.status, "charging");
-    failSave = false;
-    const recovered = await executePolicyFee(deps, { settlePaymentOnly: true });
-    assert.equal(recovered.outcome, "ready_to_change");
+    return {
+      current,
+      deps,
+      counts: () => ({ creates, applications, fails }),
+      setStatus(status: string) {
+        const intent = ledger.get(current.stripeIdempotencyKey);
+        if (intent) intent.status = status;
+        options = { ...options, stripeStatus: status };
+      },
+    };
+  }
+
+  it("saves a succeeded PaymentIntent after the id write failed, including after the idempotency window", async () => {
+    const world = store({ failSave: true });
+    await assert.rejects(() => executePolicyFee(world.deps), /database write failed/);
+    assert.equal(world.counts().creates, 1);
+    assert.equal(world.current.paymentState, "submitting");
+    assert.equal(world.current.stripePaymentIntentId, null);
+    world.deps.recordPayment = async (_claimId, paymentIntentId, state) => {
+      world.current.stripePaymentIntentId = paymentIntentId;
+      world.current.paymentState = state;
+    };
+    const create = world.deps.createPaymentIntent;
+    world.deps.createPaymentIntent = async (input) => {
+      const late = await create({ ...input, idempotencyKey: `${input.idempotencyKey}:expired` });
+      return { id: `pi_second_${late.id}`, status: "succeeded" };
+    };
+    const recovered = await executePolicyFee(world.deps);
+    assert.equal(recovered.outcome, "change_applied");
     assert.equal(recovered.paymentIntentIds[0], "pi_once");
-    assert.equal(creates, 1);
-    const replay = await executePolicyFee(deps, { settlePaymentOnly: true });
-    assert.equal(replay.outcome, "ready_to_change");
-    assert.equal(creates, 1);
-    const changed = await executePolicyFee(deps);
-    const again = await executePolicyFee(deps);
-    assert.equal(changed.changeApplications, 1);
+    assert.equal(world.counts().creates, 1);
+    assert.equal(world.counts().applications, 1);
+    const again = await executePolicyFee(world.deps);
     assert.equal(again.outcome, "settled");
-    assert.equal(applications, 1);
-    assert.equal(
-      nextPolicyFeeStep(claim({ status: "charged", appointmentChangeApplied: true })).type,
-      "done",
-    );
+    assert.equal(world.counts().creates, 1);
+    assert.equal(world.counts().applications, 1);
+  });
+
+  it("does not create a PaymentIntent when Stripe search is empty or unavailable", async () => {
+    for (const search of ["none", "unavailable"] as const) {
+      const world = store({
+        search,
+        initial: {
+          paymentState: "submitting",
+          stripeSubmittedAt: "2026-10-17T18:00:00.000Z",
+        },
+      });
+      const result = await executePolicyFee(world.deps);
+      assert.equal(result.outcome, "needs_review");
+      assert.equal(world.counts().creates, 0);
+      assert.equal(world.current.paymentState, "unknown");
+      assert.equal(world.current.status, "charging");
+      assert.equal(world.counts().fails, 0);
+      assert.equal(
+        nextPolicyFeeStep(world.current).type,
+        "reconcile",
+      );
+    }
+  });
+
+  it("recovers one PaymentIntent when the same claim is resumed concurrently and after a restart", async () => {
+    const world = store({
+      initial: {
+        paymentState: "submitting",
+        stripeSubmittedAt: "2026-10-17T18:00:00.000Z",
+      },
+    });
+    world.deps.createPaymentIntent = async () => {
+      throw new Error("must not create");
+    };
+    const seeded = { id: "pi_once", status: "succeeded" };
+    world.deps.searchPaymentIntents = async () => ({ outcome: "found", intent: seeded });
+    world.deps.retrievePaymentIntent = async (id) => ({ id, status: "succeeded" });
+    const [first, second] = await Promise.all([
+      executePolicyFee(world.deps),
+      executePolicyFee(world.deps),
+    ]);
+    assert.equal(first.changeApplications + second.changeApplications, 1);
+    assert.equal(world.counts().applications, 1);
+    for (const outcome of [first.outcome, second.outcome]) {
+      assert.ok(
+        outcome === "change_applied" || outcome === "change_pending" || outcome === "settled",
+      );
+    }
+    const restarted = await executePolicyFee(world.deps);
+    assert.equal(restarted.outcome, "settled");
+    assert.equal(world.counts().applications, 1);
+    assert.equal(world.current.chargeId, "chg-1");
+  });
+
+  it("keeps a no-show card waiting, then records success, failure, or cancellation without a second charge", async () => {
+    const waiting = store({ stripeStatus: "requires_action" });
+    const pending = await executePolicyFee(waiting.deps, { settlePaymentOnly: true });
+    assert.equal(pending.outcome, "in_progress");
+    assert.equal(waiting.current.paymentState, "awaiting_customer");
+    assert.equal(waiting.counts().creates, 1);
+    assert.equal(waiting.counts().fails, 0);
+    const stillWaiting = await executePolicyFee(waiting.deps, { settlePaymentOnly: true });
+    assert.equal(stillWaiting.outcome, "in_progress");
+    assert.equal(waiting.counts().creates, 1);
+    assert.match(noShowPaymentNotice("awaiting_customer") ?? "", /Do not charge again/);
+    assert.match(noShowPaymentNotice("unknown") ?? "", /manual check/);
+
+    waiting.setStatus("succeeded");
+    const paid = await executePolicyFee(waiting.deps, { settlePaymentOnly: true });
+    assert.equal(paid.outcome, "ready_to_change");
+    assert.equal(waiting.counts().creates, 1);
+    assert.equal(waiting.current.status, "charged");
+
+    const declined = store({ stripeStatus: "requires_payment_method" });
+    assert.equal((await executePolicyFee(declined.deps)).outcome, "declined");
+    assert.equal(declined.current.status, "failed");
+    assert.equal(declined.counts().creates, 1);
+
+    const canceled = store({ stripeStatus: "canceled" });
+    assert.equal((await executePolicyFee(canceled.deps)).outcome, "declined");
+    assert.equal(canceled.current.paymentState, "canceled");
+    assert.equal(canceled.counts().fails, 1);
+
+    const saved = store();
+    const normal = await executePolicyFee(saved.deps, { settlePaymentOnly: true });
+    assert.equal(normal.outcome, "ready_to_change");
+    assert.equal(saved.counts().creates, 1);
+    const repeat = await executePolicyFee(saved.deps);
+    assert.equal(repeat.changeApplications, 1);
+    assert.equal((await executePolicyFee(saved.deps)).outcome, "settled");
+    assert.equal(saved.counts().creates, 1);
+    assert.equal(saved.counts().applications, 1);
+  });
+
+  it("does not choose a new card create after Stripe has been asked", () => {
+    const asked: PolicyPaymentState[] = [
+      "submitting",
+      "awaiting_customer",
+      "processing",
+      "unknown",
+      "succeeded",
+    ];
+    for (const paymentState of asked) {
+      assert.notEqual(
+        nextPolicyFeeStep(
+          claim({
+            paymentState,
+            stripeSubmittedAt: "2026-10-17T18:00:00.000Z",
+            status: paymentState === "succeeded" ? "charged" : "charging",
+          }),
+        ).type,
+        "create_intent",
+      );
+    }
   });
 });
 
@@ -295,11 +497,12 @@ describe("eastern no-show times", () => {
 
 describe("migration safety", () => {
   it("does not rewrite historical charge amounts while creating tables", () => {
-    const sql = readFileSync(
-      "supabase/migrations/20261018190000_policy_fee_controls.sql",
-      "utf8",
-    );
+    const sql = [
+      readFileSync("supabase/migrations/20261018190000_policy_fee_controls.sql", "utf8"),
+      readFileSync("supabase/migrations/20261018210000_policy_fee_payment_recovery.sql", "utf8"),
+    ].join("\n");
     assert.equal(/\bUPDATE\s+public\.appointment_charges\b/i.test(sql), false);
     assert.match(sql, /claim_id IS NULL/);
+    assert.match(sql, /mark_policy_fee_payment_unknown/);
   });
 });

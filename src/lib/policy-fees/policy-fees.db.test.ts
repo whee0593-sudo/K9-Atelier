@@ -29,6 +29,7 @@ const ACTOR = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const CUSTOMER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const CONTROLS = "supabase/migrations/20261018190000_policy_fee_controls.sql";
 const FUNCTIONS = "supabase/migrations/20261018190100_policy_fee_functions.sql";
+const RECOVERY = "supabase/migrations/20261018210000_policy_fee_payment_recovery.sql";
 
 function pgBinary(name: string) {
   for (const version of ["18", "17", "16", "15", "14"]) {
@@ -165,6 +166,7 @@ describe("policy fee postgres controls", () => {
     await left.query(fixtureSql());
     await left.query(sqlFile(CONTROLS));
     await left.query(sqlFile(FUNCTIONS));
+    await left.query(sqlFile(RECOVERY));
   });
 
   after(async () => {
@@ -247,6 +249,7 @@ describe("policy fee postgres controls", () => {
     );
     await left!.query(sqlFile(CONTROLS));
     await left!.query(sqlFile(FUNCTIONS));
+    await left!.query(sqlFile(RECOVERY));
     const row = await left!.query<{ total: string; stripe_payment_intent_id: string; claim_id: string | null }>(
       "SELECT total, stripe_payment_intent_id, claim_id FROM public.appointment_charges WHERE id = $1",
       [inserted.rows[0]!.id],
@@ -438,6 +441,27 @@ describe("policy fee postgres controls", () => {
       [created.claim_id, "pi_other"],
     );
     assert.equal(asJson(different.rows[0]?.result).outcome, "different_intent");
+    const blocked = await left!.query<{ result: unknown }>(
+      "SELECT public.fail_policy_fee_claim($1::uuid, 'card_declined') AS result",
+      [created.claim_id],
+    );
+    assert.equal(asJson(blocked.rows[0]?.result).outcome, "unconfirmed");
+    const stillHeld = await left!.query<{ claim_id: string; active: boolean; status: string }>(
+      `SELECT locks.claim_id, coverage.active, claims.status
+       FROM public.policy_fee_claims claims
+       JOIN public.visit_policy_locks locks ON locks.visit_id = claims.visit_id
+       JOIN public.policy_fee_coverage coverage ON coverage.claim_id = claims.id
+       WHERE claims.id = $1`,
+      [created.claim_id],
+    );
+    assert.equal(stillHeld.rows[0]?.claim_id, created.claim_id);
+    assert.equal(stillHeld.rows[0]?.active, true);
+    assert.equal(stillHeld.rows[0]?.status, "charging");
+    const recorded = await left!.query<{ result: unknown }>(
+      "SELECT public.record_policy_fee_payment($1::uuid, $2, 'canceled') AS result",
+      [created.claim_id, "pi_once"],
+    );
+    assert.equal(asJson(recorded.rows[0]?.result).outcome, "saved");
     const failed = await left!.query<{ result: unknown }>(
       "SELECT public.fail_policy_fee_claim($1::uuid, 'card_declined') AS result",
       [created.claim_id],
@@ -455,6 +479,12 @@ describe("policy fee postgres controls", () => {
     assert.equal(Number(restarted.attempt), 2);
     assert.notEqual(restarted.stripe_idempotency_key, firstKey);
     assert.equal(restarted.stripe_payment_intent_id, null);
+    const reset = await left!.query<{ payment_state: string; stripe_submitted_at: string | null }>(
+      "SELECT payment_state, stripe_submitted_at FROM public.policy_fee_claims WHERE id = $1",
+      [created.claim_id],
+    );
+    assert.equal(reset.rows[0]?.payment_state, "none");
+    assert.equal(reset.rows[0]?.stripe_submitted_at, null);
     const active = await left!.query<{ count: string }>(
       `SELECT count(*)::text AS count FROM public.policy_fee_coverage
        WHERE visit_id = $1 AND active`,
@@ -757,5 +787,122 @@ describe("policy fee postgres controls", () => {
     } finally {
       await left!.query("RESET ROLE");
     }
+  });
+
+  it("keeps an unknown card payment on the visit and does not fail it", async () => {
+    const made = await makeVisit(1);
+    await left!.query(
+      `INSERT INTO public.visit_no_show_reports (
+         visit_id, arrived_at, contact_attempted_at, contact_channel,
+         customer_replied, handoff_arranged, recorded_by, status, confirmed_by, confirmed_at
+       ) VALUES (
+         $1, now() - interval '40 minutes', now() - interval '20 minutes',
+         'phone', false, false, $2, 'draft', NULL, NULL
+       )`,
+      [made.visitId, ACTOR],
+    );
+    await left!.query(
+      `UPDATE public.visit_no_show_reports
+       SET status = 'confirmed', confirmed_by = $2, confirmed_at = now()
+       WHERE visit_id = $1`,
+      [made.visitId, ACTOR],
+    );
+    const created = await begin(left!, {
+      idempotency_key: `no_show:visit:${made.visitId}`,
+      visit_id: made.visitId,
+      action: "no_show",
+      appointment_id: made.appointmentIds[0],
+      affected_appointment_ids: made.appointmentIds,
+      includes_travel: false,
+      forfeit: true,
+      computed: 18,
+      charged: 18,
+      waiver: 0,
+      tender: "card",
+      actor_id: ACTOR,
+      change_payload: { action: "no_show" },
+    });
+    const first = await left!.query<{ result: unknown }>(
+      "SELECT public.reserve_policy_fee_stripe_submit($1::uuid) AS result",
+      [created.claim_id],
+    );
+    const second = await left!.query<{ result: unknown }>(
+      "SELECT public.reserve_policy_fee_stripe_submit($1::uuid) AS result",
+      [created.claim_id],
+    );
+    assert.equal(asJson(first.rows[0]?.result).outcome, "submit");
+    assert.equal(asJson(second.rows[0]?.result).outcome, "reconcile");
+    const unknown = await left!.query<{ result: unknown }>(
+      "SELECT public.mark_policy_fee_payment_unknown($1::uuid) AS result",
+      [created.claim_id],
+    );
+    assert.equal(asJson(unknown.rows[0]?.result).outcome, "unknown");
+    const held = await left!.query<{
+      status: string;
+      payment_state: string;
+      lock_id: string;
+      active: boolean;
+      evidence: string;
+    }>(
+      `SELECT claims.status, claims.payment_state, locks.claim_id AS lock_id,
+              coverage.active, reports.status AS evidence
+       FROM public.policy_fee_claims claims
+       JOIN public.visit_policy_locks locks ON locks.visit_id = claims.visit_id
+       JOIN public.policy_fee_coverage coverage ON coverage.claim_id = claims.id
+       JOIN public.visit_no_show_reports reports ON reports.visit_id = claims.visit_id
+       WHERE claims.id = $1`,
+      [created.claim_id],
+    );
+    assert.equal(held.rows[0]?.status, "charging");
+    assert.equal(held.rows[0]?.payment_state, "unknown");
+    assert.equal(held.rows[0]?.lock_id, created.claim_id);
+    assert.equal(held.rows[0]?.active, true);
+    assert.equal(held.rows[0]?.evidence, "confirmed");
+    const refused = await left!.query<{ result: unknown }>(
+      "SELECT public.fail_policy_fee_claim($1::uuid, 'timeout') AS result",
+      [created.claim_id],
+    );
+    assert.equal(asJson(refused.rows[0]?.result).outcome, "unconfirmed");
+  });
+
+  it("lets only one recovery acquire the appointment change", async () => {
+    const made = await makeVisit(1);
+    const key = `remove_dog:appointment:${made.appointmentIds[0]}`;
+    await call("authorize_policy_fee_waiver", {
+      idempotency_key: key,
+      visit_id: made.visitId,
+      action: "remove_dog",
+      appointment_id: made.appointmentIds[0],
+      collect_cap: 0,
+      reason: "Owner waived this removed dog",
+      actor_id: ACTOR,
+    });
+    const created = await begin(
+      left!,
+      removeInput(made, 0, { computed: 8, charged: 0, waiver: 8 }),
+    );
+    assert.equal(created.status, "waived");
+    const [first, second] = await Promise.all([
+      left!.query<{ result: unknown }>(
+        "SELECT public.acquire_policy_fee_change($1::uuid) AS result",
+        [created.claim_id],
+      ),
+      right!.query<{ result: unknown }>(
+        "SELECT public.acquire_policy_fee_change($1::uuid) AS result",
+        [created.claim_id],
+      ),
+    ]);
+    assert.deepEqual(
+      [asJson(first.rows[0]?.result).outcome, asJson(second.rows[0]?.result).outcome].sort(),
+      ["apply", "busy"],
+    );
+    await left!.query("SELECT public.mark_policy_fee_change_applied($1::uuid)", [
+      created.claim_id,
+    ]);
+    const replay = await left!.query<{ result: unknown }>(
+      "SELECT public.acquire_policy_fee_change($1::uuid) AS result",
+      [created.claim_id],
+    );
+    assert.equal(asJson(replay.rows[0]?.result).outcome, "already");
   });
 });

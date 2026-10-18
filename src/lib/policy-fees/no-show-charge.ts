@@ -9,16 +9,25 @@ import { isManualTender } from "@/lib/charges/tender";
 import { executePolicyFee } from "@/lib/policy-fees/execute";
 import { policyFeeFromRows, type PolicyPriceRow } from "@/lib/policy-fees/coverage";
 import {
+  acquirePolicyFeeChange,
   beginPolicyFeeClaim,
   completePolicyFeeClaim,
   failPolicyFeeClaim,
   loadActiveCoverage,
   loadAuthorizedCap,
   loadAuthorizedReopen,
+  loadPolicyFeeClaim,
+  markPolicyFeePaymentUnknown,
   priceWithCap,
-  recordPolicyFeeIntent,
+  recordPolicyFeePayment,
+  reservePolicyFeeStripeSubmit,
   visitHasUnreviewedLegacyPolicyCharge,
 } from "@/lib/policy-fees/db";
+import {
+  openCardPayment,
+  policyFeeStripeMetadata,
+  searchStripePolicyPayment,
+} from "@/lib/policy-fees/stripe-lookup";
 import { policyFeeIdempotencyKey } from "@/lib/policy-fees/keys";
 import { getStaffSession } from "@/lib/staff/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -206,7 +215,26 @@ export async function chargeNoShow(input: {
   if (begun.outcome !== "created" && begun.outcome !== "existing") {
     return { error: "server" as const };
   }
-  const claim = begun.claim;
+  let claim = begun.claim;
+  try {
+    claim = (await loadPolicyFeeClaim(begun.claim.id)) ?? begun.claim;
+  } catch (error) {
+    console.error("loadPolicyFeeClaim failed:", error);
+    return { error: "server" as const };
+  }
+  if (
+    claim.tender === "card" &&
+    claim.status === "charging" &&
+    manual &&
+    openCardPayment(claim.paymentState)
+  ) {
+    return {
+      error: "pending" as const,
+      paymentState: claim.paymentState,
+      message:
+        "This no-show is already waiting on the saved card. Cash and Zelle stay closed until Stripe confirms that attempt failed or was canceled.",
+    };
+  }
   if (claim.status === "charged" && claim.chargeId) {
     const charge = await loadChargeByClaim(claim.id);
     if (!charge) {
@@ -228,14 +256,23 @@ export async function chargeNoShow(input: {
   if (manual) {
     const execution = await executePolicyFee(
       {
-        loadClaim: async () => ({ ...claim, tender: input.tender }),
+        loadClaim: async () => ({
+          ...((await loadPolicyFeeClaim(claim.id)) ?? claim),
+          tender: input.tender,
+        }),
         createPaymentIntent: async () => {
           throw new Error("manual no-show does not call Stripe");
         },
         retrievePaymentIntent: async () => {
           throw new Error("manual no-show does not call Stripe");
         },
-        savePaymentIntentId: async () => undefined,
+        searchPaymentIntents: async () => ({ outcome: "unavailable" as const }),
+        reserveStripeSubmit: async () => {
+          throw new Error("manual no-show does not call Stripe");
+        },
+        recordPayment: async () => undefined,
+        markUnknown: async () => undefined,
+        claimAppointmentChange: async () => "already" as const,
         recordCharge: ({ claimId }) =>
           insertNoShowCharge({
             appointmentId: input.appointmentId,
@@ -284,7 +321,16 @@ export async function chargeNoShow(input: {
 
   const execution = await executePolicyFee(
     {
-      loadClaim: async () => ({ ...claim, tender: "card" }),
+      loadClaim: async () => ({
+        ...((await loadPolicyFeeClaim(claim.id)) ?? claim),
+        tender: "card" as const,
+      }),
+      reserveStripeSubmit: reservePolicyFeeStripeSubmit,
+      searchPaymentIntents: (payment) =>
+        searchStripePolicyPayment(stripe, payment.claimId, payment.idempotencyKey),
+      recordPayment: recordPolicyFeePayment,
+      markUnknown: markPolicyFeePaymentUnknown,
+      claimAppointmentChange: acquirePolicyFeeChange,
       createPaymentIntent: async (payment) => {
         const intent = await stripe.paymentIntents.create(
           {
@@ -295,11 +341,12 @@ export async function chargeNoShow(input: {
             confirm: true,
             off_session: true,
             description: "K9 Atelier no-show fee",
-            metadata: {
-              appointment_id: input.appointmentId,
-              claim_id: claim.id,
+            metadata: policyFeeStripeMetadata({
+              claimId: claim.id,
+              idempotencyKey: payment.idempotencyKey,
+              appointmentId: input.appointmentId,
               kind: "no_show",
-            },
+            }),
           },
           { idempotencyKey: payment.idempotencyKey },
         );
@@ -309,7 +356,6 @@ export async function chargeNoShow(input: {
         const intent = await stripe.paymentIntents.retrieve(id);
         return { id: intent.id, status: intent.status };
       },
-      savePaymentIntentId: recordPolicyFeeIntent,
       recordCharge: ({ claimId, paymentIntentId }) =>
         insertNoShowCharge({
           appointmentId: input.appointmentId,
@@ -329,11 +375,16 @@ export async function chargeNoShow(input: {
     },
     { settlePaymentOnly: true },
   );
-  if (execution.outcome === "in_progress") {
+  if (execution.outcome === "in_progress" || execution.outcome === "needs_review") {
+    const current = await loadPolicyFeeClaim(claim.id);
+    const paymentState = current?.paymentState ?? "unknown";
     return {
-      error: "pending" as const,
+      error: execution.outcome === "needs_review" ? ("needs_review" as const) : ("pending" as const),
+      paymentState,
       message:
-        "This card is waiting for the customer. Nothing else was charged, and this no-show cannot be collected again until the attempt finishes or is declined.",
+        paymentState === "unknown"
+          ? "This payment needs a manual check. A new charge stays blocked until Stripe shows a definite result."
+          : "This card is waiting for the customer. Nothing else was charged. Check the payment after the customer finishes.",
     };
   }
   if (execution.outcome === "declined") {
@@ -343,6 +394,98 @@ export async function chargeNoShow(input: {
   const charge = await loadChargeByClaim(claim.id);
   if (!charge) return { error: "server" as const };
   return { charge };
+}
+
+export async function reviewNoShowPayment(appointmentId: string) {
+  const session = await getStaffSession();
+  if ("error" in session) return { error: session.error };
+  const loaded = await loadVisitRows(appointmentId);
+  if ("error" in loaded) return loaded;
+  const admin = createAdminClient();
+  const { data: row, error } = await admin
+    .from("policy_fee_claims")
+    .select("id")
+    .eq("visit_id", loaded.visitId)
+    .eq("action", "no_show")
+    .eq("status", "charging")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return { error: "server" as const };
+  if (!row?.id) {
+    return {
+      error: "conflict" as const,
+      message: "No card payment has been sent for this no-show.",
+    };
+  }
+  const claim = await loadPolicyFeeClaim(row.id as string);
+  if (!claim) return { error: "server" as const };
+  if (claim.status === "charged" && claim.chargeId) {
+    const charge = await loadChargeByClaim(claim.id);
+    return charge
+      ? { charge }
+      : { error: "conflict" as const, message: "This no-show fee is already charged." };
+  }
+  if (claim.paymentState === "none" && !claim.stripeSubmittedAt && !claim.stripePaymentIntentId) {
+    return {
+      error: "conflict" as const,
+      message: "No card payment has been sent for this no-show.",
+    };
+  }
+  const stripe = getStripe();
+  if (!stripe || !isStripeConfigured()) return { error: "misconfigured" as const };
+  const execution = await executePolicyFee(
+    {
+      loadClaim: async () => (await loadPolicyFeeClaim(claim.id)) ?? claim,
+      createPaymentIntent: async () => {
+        throw new Error("review does not create a PaymentIntent");
+      },
+      retrievePaymentIntent: async (id) => {
+        const intent = await stripe.paymentIntents.retrieve(id);
+        return { id: intent.id, status: intent.status };
+      },
+      searchPaymentIntents: (payment) =>
+        searchStripePolicyPayment(stripe, payment.claimId, payment.idempotencyKey),
+      reserveStripeSubmit: async () => ({ outcome: "reconcile" as const }),
+      recordPayment: recordPolicyFeePayment,
+      markUnknown: markPolicyFeePaymentUnknown,
+      recordCharge: ({ claimId, paymentIntentId }) =>
+        insertNoShowCharge({
+          appointmentId,
+          visitId: loaded.visitId,
+          claimId,
+          amount: claim.chargedAmount,
+          actorId: session.user.id,
+          tender: "card",
+          paymentIntentId,
+          paymentMethodId: null,
+          status: "paid",
+        }),
+      completeClaim: completePolicyFeeClaim,
+      failClaim: (claimId) => failPolicyFeeClaim(claimId, "card_declined"),
+      claimAppointmentChange: acquirePolicyFeeChange,
+      applyAppointmentChange: async () => undefined,
+      markChangeApplied: async () => true,
+    },
+    { settlePaymentOnly: true },
+  );
+  const current = await loadPolicyFeeClaim(claim.id);
+  if (execution.outcome === "ready_to_change" || execution.outcome === "settled") {
+    await linkNoShowCharge(loaded.visitId, claim.id);
+    const charge = await loadChargeByClaim(claim.id);
+    if (!charge) return { error: "server" as const };
+    return { charge, paymentState: current?.paymentState ?? "succeeded" };
+  }
+  return {
+    error: execution.outcome === "declined" ? ("declined" as const) : ("pending" as const),
+    paymentState: current?.paymentState ?? "unknown",
+    message:
+      execution.outcome === "declined"
+        ? "Stripe confirmed this attempt did not collect."
+        : current?.paymentState === "unknown"
+          ? "This payment needs a manual check. A new charge stays blocked until Stripe shows a definite result."
+          : "This card is waiting for the customer. Nothing else was charged.",
+  };
 }
 
 async function insertNoShowCharge(input: {

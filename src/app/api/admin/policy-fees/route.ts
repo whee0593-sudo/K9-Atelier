@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { previewCustomerPolicyFee } from "@/lib/policy-fees/customer-settle";
 import { NO_SHOW_CONTACT_CHANNELS } from "@/lib/policy-fees/no-show-evidence";
 import { policyFeeIdempotencyKey } from "@/lib/policy-fees/keys";
-import { previewNoShowFee } from "@/lib/policy-fees/no-show-charge";
+import { previewNoShowFee, reviewNoShowPayment } from "@/lib/policy-fees/no-show-charge";
 import { getStaffSession } from "@/lib/staff/auth";
 import { mapStaffServiceError, staffJsonError } from "@/lib/staff/api-errors";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     .eq("visit_id", opened.visit_id)
     .neq("status", "cancelled");
   const active = rows ?? [];
-  const [noShow, cancelFee, removeFee, evidence, coverage, legacy] = await Promise.all([
+  const [noShow, cancelFee, removeFee, evidence, coverage, legacy, payment] = await Promise.all([
     previewNoShowFee(appointmentId),
     previewCustomerPolicyFee({
       action: "cancel",
@@ -66,6 +66,15 @@ export async function GET(request: Request) {
         active.map((row) => row.id),
       )
       .in("kind", ["cancellation", "no_show"]),
+    admin
+      .from("policy_fee_claims")
+      .select("id, status, payment_state, stripe_submitted_at, stripe_payment_intent_id")
+      .eq("visit_id", opened.visit_id)
+      .eq("action", "no_show")
+      .eq("status", "charging")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
   return NextResponse.json({
     visitId: opened.visit_id,
@@ -75,6 +84,13 @@ export async function GET(request: Request) {
     evidence: evidence.data,
     coverage: coverage.data ?? [],
     legacyCharges: legacy.data ?? [],
+    payment: payment.data
+      ? {
+          state: payment.data.payment_state,
+          submitted: Boolean(payment.data.stripe_submitted_at),
+          paymentIntentKnown: Boolean(payment.data.stripe_payment_intent_id),
+        }
+      : null,
   });
 }
 
@@ -189,6 +205,33 @@ export async function POST(request: Request) {
       return staffJsonError("Choose active coverage and enter a business reason.", 409);
     }
     return NextResponse.json(data);
+  }
+
+  if (action === "reconcile-no-show") {
+    const reviewed = await reviewNoShowPayment(String(body.appointmentId ?? ""));
+    if ("error" in reviewed) {
+      if (reviewed.error === "pending" || reviewed.error === "declined") {
+        return NextResponse.json(
+          {
+            error: "message" in reviewed ? reviewed.message : "This payment is not finished.",
+            paymentState: "paymentState" in reviewed ? reviewed.paymentState : null,
+          },
+          { status: 409 },
+        );
+      }
+      if (reviewed.error === "conflict" && "message" in reviewed && reviewed.message) {
+        return staffJsonError(reviewed.message, 409);
+      }
+      if (
+        reviewed.error === "unauthenticated" ||
+        reviewed.error === "forbidden" ||
+        reviewed.error === "misconfigured"
+      ) {
+        return mapStaffServiceError(reviewed.error);
+      }
+      return mapStaffServiceError("server");
+    }
+    return NextResponse.json(reviewed);
   }
 
   if (action === "no-show-key") {

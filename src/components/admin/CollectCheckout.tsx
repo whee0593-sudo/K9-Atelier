@@ -28,6 +28,10 @@ import { ChargeReceiptActions } from "@/components/admin/ChargeReceiptActions";
 import { ChargeReceiptLetter } from "@/components/admin/ChargeReceiptLetter";
 import { ChargeRefundForm } from "@/components/admin/ChargeRefundForm";
 import { NoShowEvidencePanel } from "@/components/admin/NoShowEvidencePanel";
+import {
+  noShowPaymentNotice,
+  openCardPayment,
+} from "@/lib/policy-fees/stripe-lookup";
 import { collectBillHeading, formatVisitBillDate } from "@/lib/charges/receipt-view";
 import { manualCardWallets } from "@/lib/payments/card-wallets";
 import {
@@ -157,6 +161,7 @@ export function CollectCheckout({
   const [receiptSent, setReceiptSent] = useState(false);
   const [refundPending, setRefundPending] = useState(false);
   const [noShowConfirmed, setNoShowConfirmed] = useState(false);
+  const [paymentState, setPaymentState] = useState<string | null>(null);
   const [referralMode, setReferralMode] = useState<ReferralApplyMode>("none");
   const [referralCustom, setReferralCustom] = useState("");
   const [referralCode, setReferralCode] = useState("");
@@ -273,6 +278,18 @@ export function CollectCheckout({
       setReferralCodeMessage(
         existingCode ? "Referral code already on file for this household." : null,
       );
+      if (kind === "no_show") {
+        const feeResponse = await fetch(
+          `/api/admin/policy-fees?appointmentId=${appointmentId}`,
+          { credentials: "include" },
+        );
+        if (feeResponse.ok) {
+          const feeBody = (await feeResponse.json()) as {
+            payment?: { state?: string | null } | null;
+          };
+          setPaymentState(feeBody.payment?.state ?? null);
+        }
+      }
     } catch {
       setError("Could not load this appointment.");
     } finally {
@@ -552,8 +569,15 @@ export function CollectCheckout({
         charge?: AppointmentChargeRecord;
         clientSecret?: string;
         requiresAction?: boolean;
+        paymentState?: string | null;
       };
       if (!response.ok) {
+        if (body.paymentState && noShowPaymentNotice(body.paymentState)) {
+          setPaymentState(body.paymentState);
+          setError(null);
+          return;
+        }
+        if (body.paymentState) setPaymentState(body.paymentState);
         setError(
           sanitizeCustomerPaymentError(
             body.error,
@@ -634,6 +658,44 @@ export function CollectCheckout({
       setBusy(false);
     }
     return null;
+  }
+
+  async function checkNoShowPayment() {
+    if (preview) {
+      setPaymentState("awaiting_customer");
+      setError(null);
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/admin/policy-fees", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reconcile-no-show", appointmentId }),
+      });
+      const body = (await response.json()) as {
+        error?: string;
+        paymentState?: string | null;
+        charge?: AppointmentChargeRecord;
+      };
+      if (body.charge?.id && body.charge.lineItems) {
+        setChargeId(body.charge.id);
+        setPaidCharge(body.charge);
+        setPaymentState(null);
+        setError(null);
+        setStep("receipt");
+        return;
+      }
+      const nextState = body.paymentState ?? paymentState;
+      setPaymentState(nextState);
+      setError(noShowPaymentNotice(nextState) ? null : (body.error ?? null));
+    } catch {
+      setError("Could not check this payment. Nothing else was charged.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function sendReceiptEmail() {
@@ -1061,6 +1123,9 @@ export function CollectCheckout({
           }}
           onBack={() => setStep("review")}
           onPay={() => startPayment()}
+          paymentNotice={kind === "no_show" ? noShowPaymentNotice(paymentState) : null}
+          paymentBlocked={kind === "no_show" && openCardPayment(paymentState)}
+          onCheckPayment={kind === "no_show" ? () => void checkNoShowPayment() : undefined}
           onPaid={() => setStep("receipt")}
           onError={setError}
           onBusy={setBusy}
@@ -1146,6 +1211,9 @@ function PayStep({
   onPaid,
   onError,
   onBusy,
+  paymentNotice,
+  paymentBlocked,
+  onCheckPayment,
 }: {
   kind: ChargeKind;
   context: CollectContext;
@@ -1184,6 +1252,9 @@ function PayStep({
   onPaid: () => void;
   onError: (message: string | null) => void;
   onBusy: (value: boolean) => void;
+  paymentNotice?: string | null;
+  paymentBlocked?: boolean;
+  onCheckPayment?: () => void;
 }) {
   const stripePromise = useMemo(
     () => stripePromiseFor(context.stripePublishableKey),
@@ -1435,6 +1506,19 @@ function PayStep({
           ? "Use the card on file, cash, or Zelle."
           : "Choose a saved card, a different card, cash, or Zelle."}
       </p>
+      {paymentNotice ? (
+        <p className="font-body mt-3 text-sm text-ink">{paymentNotice}</p>
+      ) : null}
+      {onCheckPayment ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onCheckPayment}
+          className="font-body mt-3 text-sm text-ink underline"
+        >
+          Check payment status
+        </button>
+      ) : null}
       <div className="mt-3 space-y-2">
         {methods.map((method) => (
           <label
@@ -1513,6 +1597,7 @@ function PayStep({
           type="button"
           disabled={
             busy ||
+            Boolean(paymentBlocked) ||
             Boolean(context.visit?.blockedMessage) ||
             (!useCash && !useZelle && !selectedMethodId)
           }

@@ -41,6 +41,10 @@ import { loadBookingAllergySnapshot } from "@/lib/appointments/service";
 import { resolveAppointmentDuration } from "@/lib/visits/duration";
 import { changeFeeBase } from "@/lib/appointments/stored-service-price";
 import {
+  acquirePolicyFeeChange,
+  releasePolicyFeeChange,
+} from "@/lib/policy-fees/db";
+import {
   finishCustomerPolicyChange,
   previewCustomerPolicyFee,
   settleCustomerPolicyFee,
@@ -369,6 +373,8 @@ export async function applyAppointmentChange(
         | "coverage_review_required"
         | "fee_changed"
         | "visit_busy"
+        | "payment_pending"
+        | "payment_unknown"
         | "server";
     }
 > {
@@ -429,12 +435,16 @@ export async function applyAppointmentChange(
   if ("error" in charged) return charged;
   const billedQuote = { ...quote, fee: charged.fee };
   if (!charged.performChange) return { ok: true, quote: billedQuote };
+  const changeGate = await acquirePolicyFeeChange(charged.claimId);
+  if (changeGate === "already") return { ok: true, quote: billedQuote };
+  if (changeGate !== "apply") return { error: "visit_busy" };
 
   if (input.action === "reschedule") {
     if (
       !input.date ||
       (input.slotStartMinutes == null && !input.timePreference)
     ) {
+      await releasePolicyFeeChange(charged.claimId);
       return { error: "conflict" };
     }
     const slotStartMinutes =
@@ -442,7 +452,12 @@ export async function applyAppointmentChange(
       (input.timePreference === "afternoon" ? 12 * 60 : 9 * 60);
     const previousWhenLabel = earliestChangeWhen(targetRows);
     const moved = await rescheduleRows(targetRows, input.date, slotStartMinutes);
-    if ("error" in moved) return moved;
+    if ("error" in moved) {
+      if (moved.error === "slot_unavailable") {
+        await releasePolicyFeeChange(charged.claimId);
+      }
+      return moved;
+    }
     await sendChangeConfirmationEmail({
       action: "reschedule",
       appointments: moved.appointments,
@@ -471,7 +486,10 @@ export async function applyAppointmentChange(
         )
       : [];
   const cancelled = await cancelRows(targetRows);
-  if ("error" in cancelled) return cancelled;
+  if ("error" in cancelled) {
+    await releasePolicyFeeChange(charged.claimId);
+    return cancelled;
+  }
   if (loaded.row.visit_id) {
     const mirrored = await syncVisitTravelFeeMirror(loaded.row.visit_id);
     if ("error" in mirrored) return mirrored;
