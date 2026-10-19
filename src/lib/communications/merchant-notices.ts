@@ -31,7 +31,7 @@ export type MerchantPetLine = {
 };
 
 export type MerchantVisitFacts = {
-  visitId: string;
+  visitId: string | null;
   customerId: string | null;
   customerName?: string | null;
   replyTo?: string | null;
@@ -102,7 +102,9 @@ export function factsFromAppointments(
   extra?: { customerName?: string | null; replyTo?: string | null },
 ): MerchantVisitFacts | null {
   const visitId = appointments.find((row) => row.visitId)?.visitId ?? null;
-  if (!visitId) return null;
+  // A visit keeps main's grouped notice. One old appointment with no visit
+  // still notifies, keyed by that appointment. Several ungrouped rows do not.
+  if (!visitId && appointments.length !== 1) return null;
   const ordered = [...appointments].sort(
     (left, right) => (left.scheduledStart ?? 0) - (right.scheduledStart ?? 0),
   );
@@ -376,6 +378,12 @@ function outcomeOf(result: CommunicationSendResult): MerchantChannelOutcome {
   return "failed";
 }
 
+function merchantAlertScope(facts: MerchantVisitFacts) {
+  if (facts.visitId) return facts.visitId;
+  const appointmentId = facts.pets[0]?.appointmentId.trim() ?? "";
+  return appointmentId ? `appointment:${appointmentId}` : "appointment:missing";
+}
+
 function replayMessage(input: {
   visitId: string;
   notificationType: string;
@@ -483,7 +491,7 @@ async function sendChannel(input: {
     await store.recordAlert({
       code: MERCHANT_REPLAY_ALERT,
       message: replayMessage({
-        visitId: input.facts.visitId,
+        visitId: merchantAlertScope(input.facts),
         notificationType: input.notificationType,
         channel: input.channel,
         fingerprint: input.fingerprint,
@@ -601,7 +609,7 @@ export async function notifyMerchantVisitPetsChanged(
 
 export async function notifyMerchantCustomerReplyC(
   input: {
-    visitId: string;
+    visitId: string | null;
     customerId: string | null;
     customerName?: string | null;
     replyTo?: string | null;
@@ -809,8 +817,32 @@ function channelSettled(outcome: MerchantChannelOutcome | "not_confirmed") {
   );
 }
 
-async function loadVisitFacts(visitId: string): Promise<MerchantVisitFacts | null> {
-  const appointments = await loadVisitAppointments(visitId);
+async function loadHistoricalAppointmentFacts(
+  appointmentId: string,
+): Promise<MerchantVisitFacts | null> {
+  if (!appointmentId || !hasSupabaseAdminConfig()) return null;
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("appointments")
+    .select(VISIT_SELECT)
+    .eq("id", appointmentId)
+    .maybeSingle();
+  if (error || !data) {
+    if (error) {
+      console.error("loadHistoricalAppointmentFacts failed:", error.message);
+    }
+    return null;
+  }
+  return factsFromAppointments([
+    mapAppointmentRowToRecord(data as unknown as AppointmentRow),
+  ]);
+}
+
+async function loadVisitFacts(scopeId: string): Promise<MerchantVisitFacts | null> {
+  if (scopeId.startsWith("appointment:")) {
+    return loadHistoricalAppointmentFacts(scopeId.slice("appointment:".length));
+  }
+  const appointments = await loadVisitAppointments(scopeId);
   if (!appointments) return null;
   return factsFromAppointments(appointments);
 }

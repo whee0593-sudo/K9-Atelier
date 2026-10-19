@@ -104,74 +104,92 @@ CREATE UNIQUE INDEX IF NOT EXISTS communication_log_alerts_code_key_uidx
   ON public.communication_log_alerts (code, idempotency_key)
   WHERE idempotency_key IS NOT NULL;
 
-CREATE OR REPLACE FUNCTION private.communication_logs_protect_snapshot()
-RETURNS trigger
-LANGUAGE plpgsql
-SET search_path = ''
-AS $$
+-- An existing snapshot trigger keeps its current function. Production's trigger
+-- is not bound to private.communication_logs_protect_snapshot. Replacing that
+-- trigger would discard the live function. Fresh databases still create it.
+DO $migration$
 BEGIN
-  IF NEW.channel IS DISTINCT FROM OLD.channel
-    OR NEW.notification_type IS DISTINCT FROM OLD.notification_type
-    OR NEW.audience IS DISTINCT FROM OLD.audience
-    OR NEW.customer_id IS DISTINCT FROM OLD.customer_id
-    OR NEW.visit_id IS DISTINCT FROM OLD.visit_id
-    OR NEW.appointment_ids IS DISTINCT FROM OLD.appointment_ids
-    OR NEW.pet_ids IS DISTINCT FROM OLD.pet_ids
-    OR NEW.recipient IS DISTINCT FROM OLD.recipient
-    OR NEW.subject IS DISTINCT FROM OLD.subject
-    OR NEW.body_text IS DISTINCT FROM OLD.body_text
-    OR NEW.body_html IS DISTINCT FROM OLD.body_html
-    OR NEW.reply_to IS DISTINCT FROM OLD.reply_to
-    OR NEW.provider IS DISTINCT FROM OLD.provider
-    OR NEW.idempotency_key IS DISTINCT FROM OLD.idempotency_key
-    OR NEW.created_at IS DISTINCT FROM OLD.created_at
-  THEN
-    RAISE EXCEPTION 'communication log snapshot is immutable'
-      USING ERRCODE = '23514';
+  IF EXISTS (
+    SELECT 1
+    FROM pg_trigger
+    WHERE tgname = 'communication_logs_protect_snapshot'
+      AND tgrelid = 'public.communication_logs'::regclass
+      AND NOT tgisinternal
+  ) THEN
+    RETURN;
   END IF;
-  RETURN NEW;
-END;
-$$;
 
-REVOKE ALL ON FUNCTION private.communication_logs_protect_snapshot() FROM PUBLIC;
-REVOKE ALL ON FUNCTION private.communication_logs_protect_snapshot() FROM anon;
-REVOKE ALL ON FUNCTION private.communication_logs_protect_snapshot() FROM authenticated;
-GRANT EXECUTE ON FUNCTION private.communication_logs_protect_snapshot() TO service_role;
+  EXECUTE $create$
+    CREATE FUNCTION private.communication_logs_protect_snapshot()
+    RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path = ''
+    AS $body$
+    BEGIN
+      IF NEW.channel IS DISTINCT FROM OLD.channel
+        OR NEW.notification_type IS DISTINCT FROM OLD.notification_type
+        OR NEW.audience IS DISTINCT FROM OLD.audience
+        OR NEW.customer_id IS DISTINCT FROM OLD.customer_id
+        OR NEW.visit_id IS DISTINCT FROM OLD.visit_id
+        OR NEW.appointment_ids IS DISTINCT FROM OLD.appointment_ids
+        OR NEW.pet_ids IS DISTINCT FROM OLD.pet_ids
+        OR NEW.recipient IS DISTINCT FROM OLD.recipient
+        OR NEW.subject IS DISTINCT FROM OLD.subject
+        OR NEW.body_text IS DISTINCT FROM OLD.body_text
+        OR NEW.body_html IS DISTINCT FROM OLD.body_html
+        OR NEW.reply_to IS DISTINCT FROM OLD.reply_to
+        OR NEW.provider IS DISTINCT FROM OLD.provider
+        OR NEW.idempotency_key IS DISTINCT FROM OLD.idempotency_key
+        OR NEW.created_at IS DISTINCT FROM OLD.created_at
+      THEN
+        RAISE EXCEPTION 'communication log snapshot is immutable'
+          USING ERRCODE = '23514';
+      END IF;
+      RETURN NEW;
+    END;
+    $body$;
+  $create$;
 
-DROP TRIGGER IF EXISTS communication_logs_protect_snapshot ON public.communication_logs;
-CREATE TRIGGER communication_logs_protect_snapshot
-  BEFORE UPDATE ON public.communication_logs
-  FOR EACH ROW
-  EXECUTE FUNCTION private.communication_logs_protect_snapshot();
+  REVOKE ALL ON FUNCTION private.communication_logs_protect_snapshot() FROM PUBLIC;
+  REVOKE ALL ON FUNCTION private.communication_logs_protect_snapshot() FROM anon;
+  REVOKE ALL ON FUNCTION private.communication_logs_protect_snapshot() FROM authenticated;
+  GRANT EXECUTE ON FUNCTION private.communication_logs_protect_snapshot() TO service_role;
 
-REVOKE ALL ON TABLE public.communication_logs FROM PUBLIC;
-REVOKE ALL ON TABLE public.communication_logs FROM anon;
-REVOKE ALL ON TABLE public.communication_logs FROM authenticated;
-GRANT SELECT ON TABLE public.communication_logs TO authenticated;
-GRANT ALL ON TABLE public.communication_logs TO service_role;
+  CREATE TRIGGER communication_logs_protect_snapshot
+    BEFORE UPDATE ON public.communication_logs
+    FOR EACH ROW
+    EXECUTE FUNCTION private.communication_logs_protect_snapshot();
 
-ALTER TABLE public.communication_logs ENABLE ROW LEVEL SECURITY;
+  REVOKE ALL ON TABLE public.communication_logs FROM PUBLIC;
+  REVOKE ALL ON TABLE public.communication_logs FROM anon;
+  REVOKE ALL ON TABLE public.communication_logs FROM authenticated;
+  GRANT SELECT ON TABLE public.communication_logs TO authenticated;
+  GRANT ALL ON TABLE public.communication_logs TO service_role;
 
-DROP POLICY IF EXISTS communication_logs_select_staff ON public.communication_logs;
-CREATE POLICY communication_logs_select_staff
-  ON public.communication_logs
-  FOR SELECT
-  TO authenticated
-  USING (private.is_staff());
+  ALTER TABLE public.communication_logs ENABLE ROW LEVEL SECURITY;
 
-REVOKE ALL ON TABLE public.communication_log_alerts FROM PUBLIC;
-REVOKE ALL ON TABLE public.communication_log_alerts FROM anon;
-REVOKE ALL ON TABLE public.communication_log_alerts FROM authenticated;
-GRANT SELECT ON TABLE public.communication_log_alerts TO authenticated;
-GRANT ALL ON TABLE public.communication_log_alerts TO service_role;
+  DROP POLICY IF EXISTS communication_logs_select_staff ON public.communication_logs;
+  CREATE POLICY communication_logs_select_staff
+    ON public.communication_logs
+    FOR SELECT
+    TO authenticated
+    USING (private.is_staff());
 
-ALTER TABLE public.communication_log_alerts ENABLE ROW LEVEL SECURITY;
+  REVOKE ALL ON TABLE public.communication_log_alerts FROM PUBLIC;
+  REVOKE ALL ON TABLE public.communication_log_alerts FROM anon;
+  REVOKE ALL ON TABLE public.communication_log_alerts FROM authenticated;
+  GRANT SELECT ON TABLE public.communication_log_alerts TO authenticated;
+  GRANT ALL ON TABLE public.communication_log_alerts TO service_role;
 
-DROP POLICY IF EXISTS communication_log_alerts_select_staff ON public.communication_log_alerts;
-CREATE POLICY communication_log_alerts_select_staff
-  ON public.communication_log_alerts
-  FOR SELECT
-  TO authenticated
-  USING (private.is_staff());
+  ALTER TABLE public.communication_log_alerts ENABLE ROW LEVEL SECURITY;
+
+  DROP POLICY IF EXISTS communication_log_alerts_select_staff ON public.communication_log_alerts;
+  CREATE POLICY communication_log_alerts_select_staff
+    ON public.communication_log_alerts
+    FOR SELECT
+    TO authenticated
+    USING (private.is_staff());
+END
+$migration$;
 
 COMMIT;

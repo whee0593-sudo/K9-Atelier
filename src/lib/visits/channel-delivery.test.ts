@@ -118,6 +118,13 @@ describe("independent email and SMS delivery", () => {
     );
     assert.match(checkout, /petsReadyForCheckout/);
     assert.equal(/payment|paid|charge/i.test(checkout), false);
+    const enRoute = readFileSync(
+      path.join(process.cwd(), "src/lib/appointments/service.ts"),
+      "utf8",
+    );
+    assert.match(enRoute, /planVisitEnRoute/);
+    assert.match(enRoute, /runVisitNotification/);
+    assert.match(enRoute, /event: "en_route"/);
   });
 
   it("schedules follow-up from the last completion morning, without a catch-up window", () => {

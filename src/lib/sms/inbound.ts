@@ -183,10 +183,10 @@ export async function handleInboundCustomerSms(input: {
   });
   await sendSms({ to: input.from, body: reply });
 
-  if (!already && appointment.visitId) {
+  if (!already) {
     try {
       await notifyMerchantCustomerReplyC({
-        visitId: appointment.visitId,
+        visitId: appointment.visitId ?? null,
         customerId: appointment.customerId,
         customerName: contact?.name ?? contact?.email ?? null,
         replyTo: contact?.email ?? null,

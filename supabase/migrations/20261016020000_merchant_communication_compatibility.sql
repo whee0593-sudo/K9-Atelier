@@ -6,8 +6,9 @@
 -- This file does not DROP or recreate an existing trigger or policy.
 -- A non-null provider_called_at blocks another automatic send.
 -- accepted is not delivered. failed and uncertain are not reclaimed.
--- When both production triggers already exist, this file returns without
--- adding indexes, policies, comments, grants, or functions.
+-- When both production triggers already exist, this file adds
+-- provider_called_at if it is missing, then returns without adding indexes,
+-- policies, comments, grants, or functions.
 
 BEGIN;
 
@@ -17,6 +18,8 @@ DECLARE
 BEGIN
   logs := to_regclass('public.communication_logs');
   IF logs IS NOT NULL THEN
+    ALTER TABLE public.communication_logs
+      ADD COLUMN IF NOT EXISTS provider_called_at timestamptz;
     IF EXISTS (
       SELECT 1
       FROM pg_trigger

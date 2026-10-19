@@ -119,4 +119,103 @@ describe("notification migrations", () => {
     assert.equal(block.rows[0]?.count, "1");
     await db.close();
   });
+
+  it("does not replace a snapshot trigger that already calls another function", async () => {
+    const db = new PGlite();
+    await db.exec(`
+      CREATE SCHEMA IF NOT EXISTS private;
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+          CREATE ROLE anon NOINHERIT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+          CREATE ROLE authenticated NOINHERIT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+          CREATE ROLE service_role NOINHERIT BYPASSRLS;
+        END IF;
+      END $$;
+      CREATE TABLE public.profiles (id uuid PRIMARY KEY);
+      CREATE TABLE public.visits (id uuid PRIMARY KEY);
+      CREATE TABLE public.communication_logs (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        customer_id uuid,
+        visit_id uuid,
+        status text NOT NULL,
+        body_text text NOT NULL,
+        body_html text,
+        provider_message_id text,
+        idempotency_key text NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE TABLE public.communication_log_alerts (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        code text NOT NULL,
+        message text NOT NULL,
+        idempotency_key text,
+        created_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE FUNCTION private.production_snapshot_guard()
+      RETURNS trigger
+      LANGUAGE plpgsql
+      AS $$
+      BEGIN
+        RAISE EXCEPTION 'production-snapshot-guard' USING ERRCODE = '23514';
+      END;
+      $$;
+      CREATE FUNCTION private.production_retry_guard()
+      RETURNS trigger
+      LANGUAGE plpgsql
+      AS $$
+      BEGIN
+        RETURN NEW;
+      END;
+      $$;
+      CREATE TRIGGER communication_logs_protect_snapshot
+        BEFORE UPDATE ON public.communication_logs
+        FOR EACH ROW
+        EXECUTE FUNCTION private.production_snapshot_guard();
+      CREATE TRIGGER communication_logs_block_provider_retry
+        BEFORE UPDATE ON public.communication_logs
+        FOR EACH ROW
+        EXECUTE FUNCTION private.production_retry_guard();
+      INSERT INTO public.communication_logs (status, body_text, idempotency_key)
+      VALUES ('pending', 'keep', 'existing-key');
+    `);
+
+    await db.exec(sql(ORDER[1]!));
+    await db.exec(sql(ORDER[3]!));
+
+    const bound = await db.query<{ proname: string }>(
+      `
+        SELECT fn.proname
+        FROM pg_trigger AS tg
+        JOIN pg_proc AS fn ON fn.oid = tg.tgfoid
+        WHERE tg.tgname = 'communication_logs_protect_snapshot'
+          AND NOT tg.tgisinternal
+      `,
+    );
+    assert.deepEqual(
+      bound.rows.map((row) => row.proname),
+      ["production_snapshot_guard"],
+    );
+    const installed = await db.query<{ count: string }>(
+      `
+        SELECT count(*)::text AS count
+        FROM pg_proc AS fn
+        JOIN pg_namespace AS ns ON ns.oid = fn.pronamespace
+        WHERE ns.nspname = 'private'
+          AND fn.proname = 'communication_logs_protect_snapshot'
+      `,
+    );
+    assert.equal(installed.rows[0]?.count, "0");
+    await assert.rejects(
+      db.query(
+        `UPDATE public.communication_logs SET body_text = 'changed' WHERE idempotency_key = 'existing-key'`,
+      ),
+      /production-snapshot-guard/,
+    );
+    await db.close();
+  });
 });

@@ -187,6 +187,29 @@ export function planStaffStatusNotice(input: {
   };
 }
 
+export type VisitEnRoutePet = {
+  id: string;
+  status: string;
+  enRouteSmsSentAt: string | null;
+};
+
+/**
+ * One en-route text for every dog still on the visit.
+ * A timestamp already stored for any of those dogs means the text went out.
+ * An appointment with no visit id is planned as that one dog.
+ */
+export function planVisitEnRoute(pets: VisitEnRoutePet[]) {
+  const active = pets.filter((pet) => pet.status !== "cancelled");
+  const appointmentIds = active.map((pet) => pet.id);
+  if (active.length === 0) {
+    return { action: "empty" as const, appointmentIds };
+  }
+  if (active.some((pet) => pet.enRouteSmsSentAt)) {
+    return { action: "already_sent" as const, appointmentIds };
+  }
+  return { action: "send" as const, appointmentIds };
+}
+
 /** Checkout text waits until every dog still on the visit has finished. */
 export function petsReadyForCheckout(pets: VisitNoticePet[]) {
   const active = pets.filter((pet) => pet.status !== "cancelled");

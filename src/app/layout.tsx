@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 import { GoogleTagManager } from "@next/third-parties/google";
 import { SiteShell } from "@/components/SiteShell";
 import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
@@ -75,6 +76,7 @@ export default function RootLayout({
         </Script>
         <LocalBusinessJsonLd />
         <SiteShell chrome={getSiteChrome()}>{children}</SiteShell>
+        <Analytics />
       </body>
     </html>
   );

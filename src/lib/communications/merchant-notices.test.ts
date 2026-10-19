@@ -4,11 +4,14 @@ import { createMemoryCommunicationLogStore } from "@/lib/communications/memory-s
 import { readMerchantFromAddress } from "@/lib/communications/merchant-config";
 import {
   MERCHANT_REPLAY_ALERT,
+  factsFromAppointments,
   merchantVisitIsConfirmed,
   notifyMerchantVisitConfirmed,
+  notifyMerchantVisitConfirmedFromAppointments,
   replayDeferredMerchantAlerts,
   type MerchantVisitFacts,
 } from "@/lib/communications/merchant-notices";
+import type { AppointmentRecord } from "@/lib/appointments/types";
 
 function testEnv(
   patch: Record<string, string> = {},
@@ -331,5 +334,75 @@ describe("merchant visit confirmation", () => {
     assert.equal(emails, 0);
     assert.deepEqual(result, { replayed: 0, kept: 1 });
     assert.equal(alerts.length, 1);
+  });
+});
+
+function historicalAppointment(id: string, visitId: string | null = null): AppointmentRecord {
+  return {
+    id,
+    customerId: "cust-1",
+    petId: "pet-1",
+    petName: "Lychee",
+    petBreed: "Poodle",
+    serviceId: "svc-1",
+    serviceName: "Full Groom",
+    addOnIds: [],
+    addOnOptions: {},
+    addressStreet: "1 Main St",
+    addressCity: "West Palm Beach",
+    addressState: "FL",
+    addressZip: "33401",
+    travelDistanceMiles: 0,
+    travelFee: 0,
+    appointmentDate: "2026-10-16",
+    appointmentTime: "9:00 AM",
+    scheduledStart: 540,
+    timePreference: "morning",
+    timezone: "America/New_York",
+    estimatedTotal: 80,
+    newClientDeposit: null,
+    vaccinationStatusAtBooking: null,
+    status: "confirmed",
+    confirmedAt: "2026-10-01T12:00:00.000Z",
+    customerConfirmedAt: null,
+    createdAt: "2026-10-01T12:00:00.000Z",
+    visitId,
+  };
+}
+
+describe("historical appointments without a visit", () => {
+  it("notifies one old appointment and does not merge several", async () => {
+    const store = createMemoryCommunicationLogStore();
+    const sent = sender();
+    const one = historicalAppointment("apt-old");
+    const factsForOne = factsFromAppointments([one], {
+      customerName: "Sarah",
+      replyTo: "sarah@example.com",
+    });
+    assert.equal(factsForOne?.visitId, null);
+    assert.equal(
+      factsFromAppointments([
+        one,
+        historicalAppointment("apt-other"),
+      ]),
+      null,
+    );
+
+    const first = await notifyMerchantVisitConfirmedFromAppointments([one], {
+      customerName: "Sarah",
+      replyTo: "sarah@example.com",
+    }, { store, env: baseEnv, sender: sent });
+    const again = await notifyMerchantVisitConfirmedFromAppointments([one], {
+      customerName: "Sarah",
+      replyTo: "sarah@example.com",
+    }, { store, env: baseEnv, sender: sent });
+
+    assert.deepEqual(first, { email: "accepted", sms: "accepted" });
+    assert.deepEqual(again, { email: "duplicate", sms: "duplicate" });
+    assert.deepEqual(sent.calls, ["email", "sms"]);
+    const key = store.rows()[0]?.snapshot.idempotencyKey ?? "";
+    assert.match(key, /apt-old/);
+    assert.equal(key.includes("visit:"), false);
+    assert.equal(store.rows()[0]?.snapshot.visitId, null);
   });
 });

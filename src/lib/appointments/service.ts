@@ -655,40 +655,118 @@ export async function sendAppointmentEnRouteNotification(
   if (!hasSupabaseAdminConfig()) return { error: "misconfigured" };
 
   const admin = createAdminClient();
-  const { data: smsRow, error: smsLookupError } = await admin
-    .from("appointments")
-    .select("en_route_sms_sent_at")
-    .eq("id", appointmentId)
-    .maybeSingle();
-
-  if (smsLookupError) {
-    console.error(
-      "sendAppointmentEnRouteNotification lookup failed:",
-      smsLookupError.message,
-    );
-    return { error: "server" };
+  type EnRouteDog = {
+    id: string;
+    status: string;
+    petId: string;
+    petName: string;
+    enRouteSmsSentAt: string | null;
+  };
+  let dogs: EnRouteDog[];
+  if (!appointment.visitId) {
+    const { data: smsRow, error: smsLookupError } = await admin
+      .from("appointments")
+      .select("id, status, pet_id, en_route_sms_sent_at")
+      .eq("id", appointmentId)
+      .maybeSingle();
+    if (smsLookupError) {
+      console.error(
+        "sendAppointmentEnRouteNotification lookup failed:",
+        smsLookupError.message,
+      );
+      return { error: "server" };
+    }
+    if (!smsRow) return { error: "not_found" };
+    dogs = [
+      {
+        id: smsRow.id as string,
+        status: smsRow.status as string,
+        petId: (smsRow.pet_id as string | null) ?? appointment.petId,
+        petName: appointment.petName,
+        enRouteSmsSentAt: (smsRow.en_route_sms_sent_at as string | null) ?? null,
+      },
+    ];
+  } else {
+    const visit = await admin
+      .from("appointments")
+      .select("id, status, pet_id, en_route_sms_sent_at, pets ( name )")
+      .eq("visit_id", appointment.visitId)
+      .order("visit_sequence", { ascending: true });
+    if (visit.error) {
+      console.error(
+        "sendAppointmentEnRouteNotification lookup failed:",
+        visit.error.message,
+      );
+      return { error: "server" };
+    }
+    dogs = (
+      (visit.data ?? []) as Array<{
+        id: string;
+        status: string;
+        pet_id: string | null;
+        en_route_sms_sent_at: string | null;
+        pets?: { name: string | null } | { name: string | null }[] | null;
+      }>
+    ).map((row) => {
+      const pet = Array.isArray(row.pets) ? row.pets[0] : row.pets;
+      return {
+        id: row.id,
+        status: row.status,
+        petId: row.pet_id ?? appointment.petId,
+        petName: pet?.name?.trim() || appointment.petName,
+        enRouteSmsSentAt: row.en_route_sms_sent_at,
+      };
+    });
   }
-  if (smsRow?.en_route_sms_sent_at) return { error: "conflict" };
 
+  const { planVisitEnRoute } = await import("@/lib/visits/notification-scope");
+  const plan = planVisitEnRoute(dogs);
+  const markSent = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    const { error: markError } = await admin
+      .from("appointments")
+      .update({ en_route_sms_sent_at: new Date().toISOString() })
+      .in("id", ids)
+      .is("en_route_sms_sent_at", null);
+    if (markError) {
+      console.error(
+        "sendAppointmentEnRouteNotification mark failed:",
+        markError.message,
+      );
+    }
+  };
+  if (plan.action === "empty") return { error: "not_found" };
+  if (plan.action === "already_sent") {
+    await markSent(plan.appointmentIds);
+    return { error: "conflict" };
+  }
+
+  const active = dogs.filter((dog) => plan.appointmentIds.includes(dog.id));
   const { sendAppointmentEnRouteSms } = await import(
     "@/lib/sms/appointment-sms"
   );
-  const sent = await sendAppointmentEnRouteSms(appointment, contact);
-  if (sent !== "delivered") return { error: "server" };
-
-  const { error: markError } = await admin
-    .from("appointments")
-    .update({ en_route_sms_sent_at: new Date().toISOString() })
-    .eq("id", appointmentId);
-
-  if (markError) {
-    console.error(
-      "sendAppointmentEnRouteNotification mark failed:",
-      markError.message,
-    );
+  const { runVisitNotification } = await import(
+    "@/lib/visits/notification-ledger"
+  );
+  const outcome = await runVisitNotification({
+    visitId: appointment.visitId,
+    event: "en_route",
+    send: () =>
+      sendAppointmentEnRouteSms(
+        appointment,
+        contact,
+        active.map((dog) => dog.petName),
+        {
+          appointmentIds: active.map((dog) => dog.id),
+          petIds: active.map((dog) => dog.petId).filter(Boolean),
+        },
+      ),
+  });
+  if (outcome === "sent" || outcome === "skipped") {
+    await markSent(plan.appointmentIds);
+    return outcome === "sent" ? { ok: true } : { error: "conflict" };
   }
-
-  return { ok: true };
+  return { error: "server" };
 }
 
 export async function setAppointmentVisitTiming(

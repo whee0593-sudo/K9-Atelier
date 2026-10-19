@@ -14,6 +14,7 @@ import {
   isVisitLogisticsEvent,
   petsReadyForCheckout,
   planStaffStatusNotice,
+  planVisitEnRoute,
   rescheduleNotificationEvent,
   type VisitNoticePet,
 } from "@/lib/visits/notification-scope";
@@ -164,6 +165,30 @@ describe("checkout and en route pets", () => {
       ["Lychee"],
     );
     assert.deepEqual(activeVisitPets(pets)?.map((row) => row.petName), ["Daisy", "Milo"]);
+  });
+
+  it("sends one en-route text for the visit, including a historical appointment", () => {
+    assert.deepEqual(
+      planVisitEnRoute([
+        { id: "a", status: "confirmed", enRouteSmsSentAt: null },
+        { id: "b", status: "confirmed", enRouteSmsSentAt: null },
+        { id: "c", status: "cancelled", enRouteSmsSentAt: null },
+      ]),
+      { action: "send", appointmentIds: ["a", "b"] },
+    );
+    assert.equal(
+      planVisitEnRoute([
+        { id: "a", status: "confirmed", enRouteSmsSentAt: "2026-10-16T14:00:00.000Z" },
+        { id: "b", status: "confirmed", enRouteSmsSentAt: null },
+      ]).action,
+      "already_sent",
+    );
+    assert.deepEqual(
+      planVisitEnRoute([
+        { id: "historical", status: "confirmed", enRouteSmsSentAt: null },
+      ]),
+      { action: "send", appointmentIds: ["historical"] },
+    );
   });
 });
 
