@@ -7,6 +7,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { BookingCareOptionsStep } from "@/components/booking/BookingCareOptionsStep";
 import { BookingConfirmStep } from "@/components/booking/BookingConfirmStep";
 import { BookingReviewQuote } from "@/components/booking/BookingReviewQuote";
+import { ServiceAreaRates } from "@/components/service-area/ServiceAreaRates";
+import { FeesPoliciesSection } from "@/components/services/FeesPoliciesSection";
 import { ServiceCard } from "@/components/services/ServiceCard";
 import { ServicePriceDetails } from "@/components/services/ServicePriceDetails";
 import { ServiceDirectory } from "@/components/services/ServiceDirectory";
@@ -348,6 +350,23 @@ describe("service price visibility", () => {
     );
     assert.equal(containsDisplayedServicePrice(guest.replace(/<[^>]+>/g, " ")), false);
     assert.match(admin, /From \$90/);
+  });
+
+  it("hides fee and travel rates from guests until review", () => {
+    const guestFees = renderToStaticMarkup(<FeesPoliciesSection />);
+    const guestArea = renderToStaticMarkup(<ServiceAreaRates />);
+    const staffFees = renderToStaticMarkup(<FeesPoliciesSection showPrices />);
+    const staffArea = renderToStaticMarkup(<ServiceAreaRates showPrices />);
+    const guestText = `${guestFees} ${guestArea}`.replace(/<[^>]+>/g, " ");
+
+    assert.equal(/\$\s?\d/.test(guestText), false);
+    assert.match(guestText, /shown when you confirm/);
+    assert.match(staffFees, /\$6\.50/);
+    assert.match(staffFees, /From \$20/);
+    assert.match(staffFees, /From \$25/);
+    assert.match(staffArea, /\$6\.50/);
+    assert.match(staffArea, /\$26/);
+    assert.match(staffArea, /\$85/);
   });
 
   it("hides mid-booking prices and shows the full quote only on review", () => {

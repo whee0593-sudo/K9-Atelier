@@ -103,7 +103,7 @@ export const FULL_GROOM_FAQS = [
   {
     question: "How is Full Groom pricing determined?",
     answer:
-      "This estimate reflects the starting coat price for your dog's weight. The price may vary based on your dog's coat situation, which will be discussed with you before your appointment.",
+      "The estimate for the groom you select is shown when you confirm the appointment. Coat condition can change that estimate, and we discuss it with you before the visit.",
   },
 ] as const;
 
