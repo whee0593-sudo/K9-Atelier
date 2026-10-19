@@ -18,8 +18,8 @@ const STAFF_MENU_PREFIX: Record<string, string> = {
 };
 
 const STAFF_MENU_CHILD_NAME: Record<string, string> = {
-  "senior-comfort-care": "Extra-gentle senior care",
-  "dematting-brush-out": "Dematting & gentle brush-out",
+  "senior-comfort-care": "Extra-Gentle Senior Care",
+  "dematting-brush-out": "Gentle DeMatting",
 };
 
 export function staffMenuAllows(serviceId: string, weightLbs: number) {

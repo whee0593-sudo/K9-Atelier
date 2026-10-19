@@ -119,9 +119,11 @@ describe("guest booking price", () => {
     });
     assert.equal(quoted.ok, true);
     if (!quoted.ok) return;
-    assert.equal(quoted.quote.addOnPrice, 80);
-    assert.equal(quoted.quote.estimatedServicePrice, 170);
-    assert.equal(quoted.quote.estimatedTotal, 170);
+    assert.equal(quoted.quote.addOnPrice, 50);
+    assert.equal(quoted.quote.estimatedServicePrice, 140);
+    assert.equal(quoted.quote.estimatedTotal, 140);
+    assert.equal(quoted.quote.assessedAddOns[0]?.id, "dematting-brush-out");
+    assert.equal(quoted.quote.addOns.some((item) => item.price === 0), false);
   });
 
   it("describes hand stripping as one hour at the hourly rate", () => {
@@ -210,7 +212,7 @@ describe("submitted booking price", () => {
         addOnIds: ["dematting-brush-out"],
         addOnOptions: {},
         distanceMiles: 4,
-        estimatedTotal: 120,
+        estimatedTotal: 90,
       },
       12,
     );
@@ -226,8 +228,9 @@ describe("submitted booking price", () => {
     );
     assert.equal(honest.ok, true);
     if (honest.ok) {
-      assert.equal(honest.quote.estimatedServicePrice, 120);
+      assert.equal(honest.quote.estimatedServicePrice, 90);
       assert.equal(honest.quote.travelFee, 0);
+      assert.equal(honest.quote.assessedAddOns.length, 1);
     }
     assert.equal(tampered.ok, false);
   });
@@ -343,7 +346,7 @@ describe("create appointment price gate", () => {
   it("keeps the customer disclaimer text exact", () => {
     assert.equal(
       BOOKING_PRICE_DISCLAIMER,
-      "Your estimated total is based on the selected services and available pet information. Final pricing may vary depending on coat condition, time required, or additional care. Any additional charges will be discussed before proceeding.",
+      "Your estimated total is based on your dog's weight and selected services. Final pricing may vary depending on coat condition, matting, additional handling needs, and any adjustments discussed with your groomer.",
     );
   });
 });

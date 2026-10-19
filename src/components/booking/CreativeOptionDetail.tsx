@@ -1,4 +1,5 @@
 import { formatPrice } from "@/lib/business";
+import { coloringOptionDisplayNote } from "@/lib/service-page";
 import type { ServiceOption } from "@/lib/services";
 
 type Props = {
@@ -16,6 +17,7 @@ export function CreativeOptionDetail({
 }: Props) {
   const muted = selected ? "text-white/90" : "text-text-muted";
   const gold = selected ? "text-white" : "text-gold-dark";
+  const note = showPrice ? opt.note : coloringOptionDisplayNote(opt.note);
 
   return (
     <div className={`text-center ${className}`}>
@@ -31,11 +33,11 @@ export function CreativeOptionDetail({
           {opt.description}
         </span>
       )}
-      {opt.note && (
+      {note ? (
         <span className={`mt-2 block text-xs font-medium ${gold}`}>
-          {opt.note}
+          {note}
         </span>
-      )}
+      ) : null}
       {showPrice && (
         <span className={`mt-2 block text-sm font-medium ${gold}`}>
           {opt.consultationRequired

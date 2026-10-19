@@ -2,12 +2,15 @@ import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
 import { isWithinServiceDay } from "@/lib/booking-schedule";
 import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
+import { canonicalServiceId } from "@/lib/service-catalog";
 import {
+  CREATIVE_ACCENT_COLORING_ID,
+  addOnSelectionMessage,
   allBookableServices,
+  getAddOnService,
+  isCatalogAddOnId,
   isCustomCreativeDesignSelection,
-  MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
   parseEnteredServicePrice,
-  selectionRepeatsIncludedMiniTrim,
 } from "@/lib/services";
 import {
   parseStaffServiceSelection,
@@ -46,6 +49,9 @@ export type StaffBookingPetInput = PetWriteInput & {
   serviceOptionNames: (string | null)[];
   /** Parallel to serviceIds. Set when staff type a price for Custom Creative Design. */
   servicePrices: (number | null)[];
+  /** Add-ons for this dog only. They are not copied onto the other dogs. */
+  addOnIds: string[];
+  addOnOptions: Record<string, string>;
 };
 
 export type StaffCustomerBookingInput = {
@@ -59,7 +65,6 @@ export type StaffCustomerBookingInput = {
   pets: StaffBookingPetInput[];
   serviceId: string | null;
   serviceName: string | null;
-  addOnIds: string[];
   appointmentDate: string | null;
   slotStartMinutes: number | null;
   address: StaffCustomerBookingAddress | null;
@@ -163,6 +168,85 @@ function readPetServicePrices(
       `pets[${index}].servicePrices[${serviceIndex}]`,
     ),
   );
+}
+
+function readPetAddOnIds(record: Record<string, unknown>, index: number) {
+  if (!Object.prototype.hasOwnProperty.call(record, "addOnIds")) {
+    return { specified: false, addOnIds: [] as string[] };
+  }
+  const raw = record.addOnIds;
+  if (!Array.isArray(raw)) {
+    throw new StaffBookingValidationError(
+      "Add-ons must be a list.",
+      `pets[${index}].addOnIds`,
+    );
+  }
+  const addOnIds = raw.map((value, addOnIndex) => {
+    if (typeof value !== "string" || !value.trim()) {
+      throw new StaffBookingValidationError(
+        "Add-on must be text.",
+        `pets[${index}].addOnIds[${addOnIndex}]`,
+      );
+    }
+    const id = canonicalServiceId(value.trim());
+    if (!isCatalogAddOnId(id)) {
+      throw new StaffBookingValidationError(
+        "Choose an add-on from the list.",
+        `pets[${index}].addOnIds[${addOnIndex}]`,
+      );
+    }
+    return id;
+  });
+  return { specified: true, addOnIds };
+}
+
+function readPetAddOnOptions(record: Record<string, unknown>, index: number) {
+  if (!Object.prototype.hasOwnProperty.call(record, "addOnOptions")) return {};
+  const raw = record.addOnOptions;
+  if (raw == null || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new StaffBookingValidationError(
+      "Add-on options must be a set of choices.",
+      `pets[${index}].addOnOptions`,
+    );
+  }
+  const options: Record<string, string> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    const id = canonicalServiceId(key);
+    if (!isCatalogAddOnId(id)) {
+      throw new StaffBookingValidationError(
+        "Choose an add-on from the list.",
+        `pets[${index}].addOnOptions`,
+      );
+    }
+    if (typeof value !== "string" || !value.trim() || value.trim().length > 120) {
+      throw new StaffBookingValidationError(
+        "Choose an add-on option.",
+        `pets[${index}].addOnOptions`,
+      );
+    }
+    options[id] = value.trim();
+  }
+  return options;
+}
+
+function assertAddOnOptions(
+  addOnIds: string[],
+  addOnOptions: Record<string, string>,
+  field: string,
+) {
+  for (const addOnId of addOnIds) {
+    const addOn = getAddOnService(addOnId);
+    if (!addOn?.options?.length) continue;
+    const optionName = addOnOptions[addOnId];
+    if (!optionName || !addOn.options.some((option) => option.name === optionName)) {
+      throw new StaffBookingValidationError(
+        addOnId === CREATIVE_ACCENT_COLORING_ID
+          ? "Choose a Creative Accent Color option."
+          : "Choose an add-on option.",
+        field,
+      );
+    }
+  }
 }
 
 const MAX_STAFF_BOOKING_PETS = 8;
@@ -329,6 +413,15 @@ export function validateStaffCustomerBookingInput(
 
   const serviceIdRaw = readOptionalString(record, "serviceId", "Service", 120);
   const sharedService = resolveBookableService(serviceIdRaw, "serviceId");
+  const sharedAddOnIds = Array.isArray(record.addOnIds)
+    ? record.addOnIds.filter((id): id is string => typeof id === "string")
+    : [];
+  if (sharedAddOnIds.length > 0 && filledPetBodies.length > 1) {
+    throw new StaffBookingValidationError(
+      "Choose add-ons on each dog. One add-on list is not applied to every dog.",
+      "addOnIds",
+    );
+  }
   const pets: StaffBookingPetInput[] = filledPetBodies.map((petBody, index) => {
     try {
       const petRecord = assertPlainObject(petBody);
@@ -339,11 +432,15 @@ export function validateStaffCustomerBookingInput(
         requestedServiceIds.length,
         index,
       );
+      const requestedAddOns = readPetAddOnIds(petRecord, index);
+      const addOnOptions = readPetAddOnOptions(petRecord, index);
       const rest = { ...petRecord };
       delete rest.id;
       delete rest.serviceId;
       delete rest.serviceIds;
       delete rest.servicePrices;
+      delete rest.addOnIds;
+      delete rest.addOnOptions;
       const pet = validateCreatePetInput(rest);
       const chosenIds =
         requestedServiceIds.length > 0
@@ -373,16 +470,22 @@ export function validateStaffCustomerBookingInput(
         }
         return chosen;
       });
-      if (
-        selectionRepeatsIncludedMiniTrim(
-          selections.map((selection) => selection.serviceId),
-        )
-      ) {
-        throw new StaffBookingValidationError(
-          MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
-          `pets[${index}].serviceIds`,
-        );
+      const serviceIds = selections.map((selection) => selection.serviceId);
+      const addOnIds =
+        !requestedAddOns.specified &&
+        sharedAddOnIds.length > 0 &&
+        filledPetBodies.length === 1
+          ? sharedAddOnIds.map((id) => canonicalServiceId(id))
+          : requestedAddOns.addOnIds;
+      const addOnField =
+        !requestedAddOns.specified && sharedAddOnIds.length > 0
+          ? "addOnIds"
+          : `pets[${index}].addOnIds`;
+      const addOnMessage = addOnSelectionMessage(serviceIds, addOnIds);
+      if (addOnMessage) {
+        throw new StaffBookingValidationError(addOnMessage, addOnField);
       }
+      assertAddOnOptions(addOnIds, addOnOptions, `pets[${index}].addOnOptions`);
       const servicePrices = selections.map((selection, serviceIndex) =>
         isCustomCreativeDesignSelection(
           selection.serviceId,
@@ -395,9 +498,11 @@ export function validateStaffCustomerBookingInput(
         ...pet,
         id,
         serviceId: selections[0]?.serviceId ?? null,
-        serviceIds: selections.map((selection) => selection.serviceId),
+        serviceIds,
         serviceOptionNames: selections.map((selection) => selection.optionName),
         servicePrices,
+        addOnIds,
+        addOnOptions,
       };
     } catch (error) {
       if (error instanceof StaffBookingValidationError) throw error;
@@ -483,27 +588,6 @@ export function validateStaffCustomerBookingInput(
     }
   }
 
-  const addOnIds = Array.isArray(record.addOnIds)
-    ? record.addOnIds.filter((id): id is string => typeof id === "string")
-    : [];
-  if (
-    pets.some((pet) =>
-      selectionRepeatsIncludedMiniTrim(
-        pet.serviceIds.length > 0
-          ? pet.serviceIds
-          : pet.serviceId
-            ? [pet.serviceId]
-            : [],
-        addOnIds,
-      ),
-    )
-  ) {
-    throw new StaffBookingValidationError(
-      MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
-      "addOnIds",
-    );
-  }
-
   const hasCompleteBooking = Boolean(
     pets.length > 0 &&
       pets.every((pet) => pet.serviceIds.length > 0) &&
@@ -544,7 +628,6 @@ export function validateStaffCustomerBookingInput(
     pets,
     serviceId: primaryService?.id ?? null,
     serviceName: primaryLabel ?? primaryService?.name ?? null,
-    addOnIds,
     appointmentDate,
     slotStartMinutes,
     address,

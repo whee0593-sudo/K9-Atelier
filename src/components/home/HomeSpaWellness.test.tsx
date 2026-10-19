@@ -13,7 +13,10 @@ describe("home spa wellness content", () => {
   it("shows Luxury Spa Day instead of the retired spa rituals", () => {
     assert.equal(homeSpaWellnessServices.length, 1);
     assert.equal(homeSpaWellnessServices[0]?.title, "Luxury Spa Day");
-    assert.equal(homeSpaWellnessServices[0]?.suitability, "From $140");
+    assert.equal(
+      homeSpaWellnessServices[0]?.suitability,
+      "Nail, ear, and teeth care included",
+    );
     assert.match(
       homeSpaWellnessServices[0]?.details ?? "",
       /fully customized, relaxing spa experience/,
@@ -63,7 +66,7 @@ describe("home spa wellness markup", () => {
     assert.equal((html.match(/>View Details</g) ?? []).length, 1);
     assert.equal(html.includes("Hide Details"), false);
     assert.match(html, /grid-rows-\[0fr\]/);
-    assert.match(html, /From \$140/);
+    assert.equal(html.includes("From $140"), false);
     assert.equal(html.includes("All spa treatments include"), false);
   });
 

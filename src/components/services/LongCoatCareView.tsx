@@ -4,6 +4,7 @@ import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { Container } from "@/components/luxury/Container";
 import { MobileBookBar } from "@/components/services/MobileBookBar";
 import { ServiceCard } from "@/components/services/ServiceCard";
+import { ServicePriceDetails } from "@/components/services/ServicePriceDetails";
 import {
   LONG_COAT_CARE_DISTINCTION,
   LONG_COAT_CARE_GROOMER_AFTER,
@@ -20,7 +21,13 @@ import {
   LONG_COAT_CARE_YORKIE_BODY,
   LONG_COAT_CARE_YORKIE_HEADING,
 } from "@/lib/long-coat-care-page";
-import { FULL_GROOM_PATH, SERVICES_PATH, getServiceById } from "@/lib/service-page";
+import {
+  FULL_GROOM_PATH,
+  SERVICES_PATH,
+  getServiceById,
+  serviceCardPriceValue,
+} from "@/lib/service-page";
+import { serviceWithoutMenuPrices } from "@/lib/public-service";
 
 const textLinkClass =
   "font-body inline-flex min-h-[48px] max-w-full items-center justify-center text-center text-[12px] font-medium uppercase leading-snug tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne";
@@ -57,7 +64,7 @@ function AreaSentence() {
   );
 }
 
-export function LongCoatCareView() {
+export function LongCoatCareView({ showPrices = false }: { showPrices?: boolean }) {
   const service = getServiceById(LONG_COAT_CARE_SERVICE_ID);
 
   return (
@@ -121,7 +128,12 @@ export function LongCoatCareView() {
           <Container>
             <div className="mx-auto max-w-2xl">
               <ServiceCard
-                service={service}
+                service={showPrices ? service : serviceWithoutMenuPrices(service)}
+                showPrices={showPrices}
+                priceText={showPrices ? serviceCardPriceValue(service) : ""}
+                priceDetails={
+                  showPrices ? <ServicePriceDetails service={service} /> : null
+                }
                 headingAs="h2"
                 anchorId="show-care-booking"
                 detailsInitiallyOpen

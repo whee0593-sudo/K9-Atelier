@@ -31,12 +31,12 @@ export function HomeGentleCare() {
 
         <div className="border border-gray-line/80 bg-ivory p-8 md:p-10">
           <h3 className="font-display text-2xl text-ink">
-            Senior & Gentle Comfort Care
+            Extra-Gentle Senior Care
           </h3>
           <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
-            Additional pricing from +$30 depending on weight. Suitable for
-            senior dogs who require extra resting breaks, adapted handling,
-            anti-slip support, gentler drying and a slower grooming pace.
+            Suitable for senior dogs who require extra resting breaks, adapted
+            handling, anti-slip support, gentler drying and a slower grooming
+            pace.
           </p>
           <div className="mt-8 border-t border-gray-line/80 pt-8">
             <h4 className="font-body text-[12px] font-semibold uppercase tracking-[0.16em] text-deep-lavender">
@@ -44,7 +44,7 @@ export function HomeGentleCare() {
             </h4>
             <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
               Compassionate, low-stress grooming support for dogs in their final
-              stage of life. Complimentary for members, by appointment only.
+              stage of life. Available to members, by appointment only.
               Dogs over 45 lbs may receive this service even when standard
               bath/full grooming services are unavailable.
             </p>

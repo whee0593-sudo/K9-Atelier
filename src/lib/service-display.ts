@@ -12,7 +12,7 @@ export const SERVICE_DISPLAY_NAMES: Record<string, string> = {
   "creative-accent-coloring": "Creative Accent Color",
   "deshedding-treatment": "DeShedding Care",
   "dematting-brush-out": "Gentle DeMatting",
-  "senior-comfort-care": "Gentle Care",
+  "senior-comfort-care": "Extra-Gentle Senior Care",
   "mini-trim": "Mini Trim",
   "end-of-life-care": "End-of-Life Comfort Care",
 };
@@ -34,7 +34,7 @@ export const SERVICE_DISPLAY_DESCRIPTIONS: Record<string, string> = {
     "A bespoke pop of pet-appropriate color, tailored to your dog's coat and your preferred look.",
   "deshedding-treatment": "For coats with excess undercoat.",
   "dematting-brush-out":
-    "Professional coat care when matting requires additional time.",
+    "Gentle removal of light to moderate tangles, with your dog's comfort and coat health as the priority.",
   "senior-comfort-care":
     "Additional time and adapted handling for comfort and an unhurried pace.",
   "mini-trim": "Eyes, feet & sanitary areas only.",

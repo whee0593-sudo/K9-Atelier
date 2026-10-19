@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { SERVICES_HASH_ROUTES } from "@/lib/service-page";
+import { SERVICES_HASH_ROUTES } from "@/lib/services-nav";
 
 export function ServicesHashRedirect() {
   const router = useRouter();

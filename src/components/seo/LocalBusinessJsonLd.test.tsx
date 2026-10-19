@@ -55,6 +55,7 @@ describe("LocalBusiness structured data", () => {
     assert.equal(business.telephone, "+1-561-593-3335");
     assert.equal(business.review, undefined);
     assert.equal(business.aggregateRating, undefined);
+    assert.equal(business.priceRange, undefined);
 
     const reviews = nodes.filter((node) => typesOf(node).includes("Review"));
     const ratings = nodes.filter((node) => typesOf(node).includes("AggregateRating"));

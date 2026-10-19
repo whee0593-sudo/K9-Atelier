@@ -30,7 +30,6 @@ import {
 import { BookingCareOptionsStep } from "@/components/booking/BookingCareOptionsStep";
 import { BookingOwnerStep, type BookingOwnerDetails } from "@/components/booking/BookingOwnerStep";
 import { BookingPaymentStep } from "@/components/booking/BookingPaymentStep";
-import { BookingPriceSummaryStep } from "@/components/booking/BookingPriceSummaryStep";
 import { nextIdempotencyKey } from "@/lib/booking-intent";
 import { BookingConfirmStep } from "@/components/booking/BookingConfirmStep";
 import { BookingConfirmationView } from "@/components/booking/BookingReviewStep";
@@ -98,8 +97,10 @@ function isReloadNavigation() {
 
 export function BookingFlow({
   initialReferralCode = "",
+  showPrices = false,
 }: {
   initialReferralCode?: string;
+  showPrices?: boolean;
 }) {
   const [draftPet, setDraftPet] = useState<PetProfile>(() => createDraftBookingPet());
   const [selectedPet, setSelectedPet] = useState<PetProfile | null>(null);
@@ -124,7 +125,6 @@ export function BookingFlow({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodRecord | null>(
     null,
   );
-  const [acceptedPriceKey, setAcceptedPriceKey] = useState<string | null>(null);
   const [idempotency, setIdempotency] = useState<{
     intent: string;
     key: string;
@@ -173,7 +173,6 @@ export function BookingFlow({
     setSlotStartMinutes(null);
     setOwner(null);
     setPaymentMethod(null);
-    setAcceptedPriceKey(null);
     setShowCreativePairing(false);
   }
 
@@ -209,7 +208,6 @@ export function BookingFlow({
     );
     setOwner(null);
     setPaymentMethod(null);
-    setAcceptedPriceKey(null);
   }
 
   function handleExperienceContinue(service?: BookableService) {
@@ -270,20 +268,6 @@ export function BookingFlow({
     }
   }
 
-  const priceKey =
-    selectedPet && selectedService && travelQuote
-      ? [
-          selectedPet.id,
-          selectedPet.weightLbs,
-          selectedService.id,
-          [...selectedAddOnIds]
-            .sort()
-            .map((id) => `${id}=${addOnOptions[id] ?? ""}`)
-            .join(","),
-          travelQuote.distanceMiles,
-        ].join("|")
-      : "";
-  const priceAccepted = priceKey !== "" && acceptedPriceKey === priceKey;
   const bookingIntent =
     selectedPet &&
     selectedService &&
@@ -316,13 +300,6 @@ export function BookingFlow({
     );
   }, [bookingIntent]);
 
-  useEffect(() => {
-    if (acceptedPriceKey && acceptedPriceKey !== priceKey) {
-      setAcceptedPriceKey(null);
-      setPaymentMethod(null);
-    }
-  }, [acceptedPriceKey, priceKey]);
-
   const currentStep = reserved
     ? 6
     : !selectedPet
@@ -333,7 +310,7 @@ export function BookingFlow({
           ? 3
           : !owner
             ? 4
-            : !priceAccepted || !paymentMethod
+            : !paymentMethod
               ? 5
               : 6;
 
@@ -391,6 +368,7 @@ export function BookingFlow({
               ? addOnOptions[selectedService.id] ?? null
               : null
           }
+          showPrices={showPrices}
           onSelect={handleServiceSelect}
           onContinue={handleExperienceContinue}
           onBack={() => {
@@ -405,6 +383,7 @@ export function BookingFlow({
           creativeService={creativeService}
           requiredBaseServices={getRequiredBaseServicesForCreative()}
           initialColorOption={addOnOptions[creativeService.id] ?? null}
+          showPrices={showPrices}
           onComplete={handleCreativeComplete}
           onBack={() => setShowCreativePairing(false)}
         />
@@ -420,6 +399,7 @@ export function BookingFlow({
             primaryService={selectedService}
             selectedIds={selectedAddOnIds}
             addOnOptions={addOnOptions}
+            showPrices={showPrices}
             spaGoals={spaGoals}
             onSpaGoalsChange={setSpaGoals}
             onToggle={toggleAddOn}
@@ -439,6 +419,7 @@ export function BookingFlow({
           pet={selectedPet}
           serviceId={selectedService.id}
           addOnIds={selectedAddOnIds}
+          showPrices={showPrices}
           initialAddress={address}
           initialQuote={travelQuote}
           initialDate={appointmentDate}
@@ -487,26 +468,10 @@ export function BookingFlow({
         />
       )}
 
-      {currentStep === 5 &&
-      !priceAccepted &&
-      selectedPet &&
-      selectedService &&
-      travelQuote ? (
-        <BookingPriceSummaryStep
-          pet={selectedPet}
-          service={selectedService}
-          addOnIds={selectedAddOnIds}
-          addOnOptions={addOnOptions}
-          distanceMiles={travelQuote.distanceMiles}
-          onBack={() => setOwner(null)}
-          onContinue={() => setAcceptedPriceKey(priceKey)}
-        />
-      ) : null}
-
-      {currentStep === 5 && priceAccepted ? (
+      {currentStep === 5 ? (
         <BookingPaymentStep
           initialPaymentMethodId={paymentMethod?.id ?? null}
-          onBack={() => setAcceptedPriceKey(null)}
+          onBack={() => setOwner(null)}
           onComplete={setPaymentMethod}
         />
       ) : null}
@@ -521,6 +486,7 @@ export function BookingFlow({
         owner &&
         paymentMethod && (
           <BookingConfirmStep
+            key={travelQuote.distanceMiles}
             pet={selectedPet}
             service={selectedService}
             addOnIds={selectedAddOnIds}
@@ -586,6 +552,7 @@ export function BookingFlow({
         }}
         returnFocusRef={policiesTriggerRef}
         initialSection={policiesSection}
+        showPrices={showPrices}
       />
     </div>
   );

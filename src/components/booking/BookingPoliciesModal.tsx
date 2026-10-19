@@ -18,6 +18,7 @@ type Props = {
   onClose: () => void;
   returnFocusRef?: RefObject<HTMLElement | null>;
   initialSection?: BookingPolicySectionId;
+  showPrices?: boolean;
 };
 
 const SECTIONS: Array<{
@@ -151,6 +152,7 @@ export function BookingPoliciesModal({
   onClose,
   returnFocusRef,
   initialSection,
+  showPrices = false,
 }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -364,28 +366,32 @@ export function BookingPoliciesModal({
                 Gardens, Palm Beach, and West Palm Beach.
               </p>
               <p>
-                Complimentary travel is included within{" "}
-                {business.serviceArea.freeRadiusMiles} driving miles.
+                Travel within {business.serviceArea.freeRadiusMiles} driving
+                miles is included.
               </p>
-              <p>
-                Above {business.serviceArea.freeRadiusMiles} through{" "}
-                {business.serviceArea.maxDistanceMiles} miles, the fee is{" "}
-                {formatPrice(business.serviceArea.travelFeePerMile)} per one-way
-                mile beyond {business.serviceArea.freeRadiusMiles}. Above{" "}
-                {business.serviceArea.maxDistanceMiles} through{" "}
-                {business.serviceArea.standardServiceMiles} miles, the fee is{" "}
-                {formatPrice(
-                  (business.serviceArea.maxDistanceMiles -
-                    business.serviceArea.freeRadiusMiles) *
-                    business.serviceArea.travelFeePerMile,
-                )}{" "}
-                plus {formatPrice(business.serviceArea.extendedTravelFeePerMile)}{" "}
-                per mile beyond {business.serviceArea.maxDistanceMiles}. The
-                amount is rounded to the nearest dollar.
-              </p>
+              {showPrices ? (
+                <p>
+                  Above {business.serviceArea.freeRadiusMiles} through{" "}
+                  {business.serviceArea.maxDistanceMiles} miles, the fee is{" "}
+                  {formatPrice(business.serviceArea.travelFeePerMile)} per one-way
+                  mile beyond {business.serviceArea.freeRadiusMiles}. Above{" "}
+                  {business.serviceArea.maxDistanceMiles} through{" "}
+                  {business.serviceArea.standardServiceMiles} miles, the fee is{" "}
+                  {formatPrice(
+                    (business.serviceArea.maxDistanceMiles -
+                      business.serviceArea.freeRadiusMiles) *
+                      business.serviceArea.travelFeePerMile,
+                  )}{" "}
+                  plus {formatPrice(business.serviceArea.extendedTravelFeePerMile)}{" "}
+                  per mile beyond {business.serviceArea.maxDistanceMiles}. The
+                  amount is rounded to the nearest dollar.
+                </p>
+              ) : (
+                <p>Your travel fee, if any, is shown on Review & Confirm.</p>
+              )}
               <p>
                 Beyond {business.serviceArea.standardServiceMiles} miles, please
-                contact us. Your travel fee, if any, is shown before you confirm.
+                contact us.
               </p>
             </div>
           </AccordionPanel>
@@ -402,16 +408,18 @@ export function BookingPoliciesModal({
                 assessment, treatment and sanitation are required to protect your
                 dog and subsequent clients.
               </p>
-              <div>
-                <PolicyPriceRow
-                  label="Medicated Treatment"
-                  value={`From ${formatPrice(medicatedRate)}`}
-                />
-                <PolicyPriceRow
-                  label="Vehicle Sanitation"
-                  value={`From ${formatPrice(sanitationRate)}`}
-                />
-              </div>
+              {showPrices ? (
+                <div>
+                  <PolicyPriceRow
+                    label="Medicated Treatment"
+                    value={`From ${formatPrice(medicatedRate)}`}
+                  />
+                  <PolicyPriceRow
+                    label="Vehicle Sanitation"
+                    value={`From ${formatPrice(sanitationRate)}`}
+                  />
+                </div>
+              ) : null}
             </div>
           </AccordionPanel>
 
@@ -431,16 +439,18 @@ export function BookingPoliciesModal({
                 to matting, significant anxiety, resistance or aggression, an
                 additional handling fee may apply.
               </p>
-              <div className="mx-auto max-w-sm text-left">
-                <PolicyPriceRow
-                  label="Dematting Fee"
-                  value={`From ${formatPrice(30)}`}
-                />
-                <PolicyPriceRow
-                  label="Special Handling"
-                  value={`From ${formatPrice(behaviorMin)}`}
-                />
-              </div>
+              {showPrices ? (
+                <div className="mx-auto max-w-sm text-left">
+                  <PolicyPriceRow
+                    label="Dematting Fee"
+                    value={`From ${formatPrice(30)}`}
+                  />
+                  <PolicyPriceRow
+                    label="Special Handling"
+                    value={`From ${formatPrice(behaviorMin)}`}
+                  />
+                </div>
+              ) : null}
               <p>
                 Whenever possible, we will communicate any additional care
                 requirements with you.
