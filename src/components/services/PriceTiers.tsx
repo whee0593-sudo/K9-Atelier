@@ -22,14 +22,14 @@ export function PriceTiers({
         <table className="w-full text-left text-sm">
           <thead className="bg-dusty-lavender/35">
             <tr>
-              <th className="px-4 py-3 font-body text-[11px] font-medium uppercase tracking-[0.12em] text-taupe">
+              <th className="px-4 py-3 font-body text-sm font-medium uppercase tracking-[0.12em] text-taupe">
                 Weight
               </th>
-              <th className="px-4 py-3 font-body text-[11px] font-medium uppercase tracking-[0.12em] text-taupe">
+              <th className="px-4 py-3 font-body text-sm font-medium uppercase tracking-[0.12em] text-taupe">
                 Starting Price
               </th>
               {!priceOnly && (
-                <th className="px-4 py-3 font-body text-[11px] font-medium uppercase tracking-[0.12em] text-taupe">
+                <th className="px-4 py-3 font-body text-sm font-medium uppercase tracking-[0.12em] text-taupe">
                   Estimated Time
                 </th>
               )}
@@ -64,7 +64,7 @@ export function PriceTiers({
             key={tier.weightTier}
             className="border border-gray-line/80 bg-ivory px-4 py-4"
           >
-            <p className="font-body text-[11px] font-medium uppercase tracking-[0.12em] text-taupe">
+            <p className="font-body text-sm font-medium uppercase tracking-[0.12em] text-taupe">
               {formatWeightLabel(labels[tier.weightTier] ?? tier.weightTier)}
             </p>
             <p className="font-display mt-2 text-xl text-ink">

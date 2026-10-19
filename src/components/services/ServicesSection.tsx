@@ -52,7 +52,7 @@ export function ServicesSection({
           {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}
           <TitleTag className={titleClass}>{title}</TitleTag>
           {intro && (
-            <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
+            <p className="font-body mt-4 text-base leading-relaxed text-taupe">
               {intro}
             </p>
           )}
@@ -60,8 +60,8 @@ export function ServicesSection({
         <div className="mt-10">{children}</div>
         {showRequestLink && (
           <p className="mt-10 text-center">
-            <BookServiceLink className="font-body inline-flex min-h-[48px] items-center justify-center rounded-sm border border-champagne bg-transparent px-8 text-[10px] font-medium uppercase tracking-[0.16em] text-ink transition hover:border-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne">
-              Book an Appointment
+            <BookServiceLink className="font-body inline-flex min-h-[48px] items-center justify-center rounded-sm border border-champagne bg-transparent px-8 text-sm font-medium uppercase tracking-[0.06em] text-ink transition hover:border-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne">
+              Book Online
             </BookServiceLink>
           </p>
         )}

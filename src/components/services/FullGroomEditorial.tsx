@@ -12,7 +12,7 @@ import {
 } from "@/lib/service-page";
 
 const textLinkClass =
-  "font-body inline-flex min-h-[48px] items-center justify-center text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne";
+  "font-body inline-flex min-h-[48px] items-center justify-center text-sm font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne";
 
 function TextLink({ href, children }: { href: string; children: string }) {
   return (
@@ -34,7 +34,7 @@ export function FullGroomEditorial() {
             <h2 className="font-display text-3xl text-ink md:text-4xl">
               {FULL_GROOM_INCLUDED_HEADING}
             </h2>
-            <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
+            <p className="font-body mt-4 text-base leading-relaxed text-taupe">
               {FULL_GROOM_INCLUDED_BODY}
             </p>
             <p className="mt-6">
@@ -46,7 +46,7 @@ export function FullGroomEditorial() {
             <h2 className="font-display text-3xl text-ink md:text-4xl">
               {FULL_GROOM_STYLING_HEADING}
             </h2>
-            <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
+            <p className="font-body mt-4 text-base leading-relaxed text-taupe">
               {FULL_GROOM_STYLING_BODY}
             </p>
             <p className="mt-6">
@@ -67,16 +67,16 @@ export function FullGroomEditorial() {
             </h2>
             <div className="mt-8 divide-y divide-gray-line/80 border-y border-gray-line/80">
               {FULL_GROOM_FAQS.map((faq) => (
-                <details key={faq.question} open className="group py-6">
+                <details key={faq.question} className="group py-6">
                   <summary className="cursor-pointer list-none font-body text-base font-medium text-ink marker:content-none [&::-webkit-details-marker]:hidden">
                     <span className="flex items-start justify-between gap-4 text-left">
                       {faq.question}
-                      <span className="text-champagne transition group-open:rotate-45">
+                      <span className="text-deep-lavender transition group-open:rotate-45">
                         +
                       </span>
                     </span>
                   </summary>
-                  <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
+                  <p className="font-body mt-4 text-base leading-relaxed text-taupe">
                     {faq.answer}
                   </p>
                 </details>

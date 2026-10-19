@@ -39,7 +39,7 @@ export function ServiceCard({
   service,
   featured = false,
   quiet = false,
-  requestLabel = "Book an Appointment",
+  requestLabel = "Book Online",
   anchorId,
   headingAs = "h3",
   detailsInitiallyOpen = false,
@@ -89,7 +89,7 @@ export function ServiceCard({
       <dl className="mt-6 grid gap-4 sm:grid-cols-3">
         {bestFor && (
           <div>
-            <dt className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-taupe">
+            <dt className="font-body text-sm font-medium uppercase tracking-[0.06em] text-taupe">
               Best for
             </dt>
             <dd className="font-body mt-1 text-sm text-ink">{bestFor}</dd>
@@ -97,15 +97,15 @@ export function ServiceCard({
         )}
         {price && (
           <div>
-            <dt className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-taupe">
+            <dt className="font-body text-sm font-medium uppercase tracking-[0.06em] text-taupe">
               {priceLabel}
             </dt>
-            <dd className="font-body mt-1 text-sm text-ink">{price}</dd>
+            <dd className="font-body mt-1 text-sm text-ink">{price}{service.pricingType === "add_on" ? " added to your service" : ""}</dd>
           </div>
         )}
         {duration && (
           <div>
-            <dt className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-taupe">
+            <dt className="font-body text-sm font-medium uppercase tracking-[0.06em] text-taupe">
               Time
             </dt>
             <dd className="font-body mt-1 text-sm text-ink">{duration}</dd>
@@ -113,7 +113,7 @@ export function ServiceCard({
         )}
         {access && (
           <div>
-            <dt className="font-body text-[10px] font-medium uppercase tracking-[0.16em] text-taupe">
+            <dt className="font-body text-sm font-medium uppercase tracking-[0.06em] text-taupe">
               Access
             </dt>
             <dd className="font-body mt-1 text-sm text-ink">{access}</dd>
@@ -124,7 +124,7 @@ export function ServiceCard({
       <div className="mt-6 flex flex-wrap gap-3">
         <button
           type="button"
-          className="inline-flex min-h-[48px] items-center justify-center rounded-sm border border-champagne bg-transparent px-5 text-[10px] font-medium uppercase tracking-[0.16em] text-ink transition hover:border-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne"
+          className="inline-flex min-h-[48px] items-center justify-center rounded-sm border border-champagne bg-transparent px-5 text-sm font-medium uppercase tracking-[0.06em] text-ink transition hover:border-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne"
           aria-expanded={open}
           aria-controls={panelId}
           aria-label={
@@ -137,14 +137,14 @@ export function ServiceCard({
           {detailsLabel}
         </button>
         {!quiet && !membersOnly && (
-          <BookServiceLink className="inline-flex min-h-[48px] items-center justify-center rounded-sm bg-deep-lavender px-5 text-[10px] font-medium uppercase tracking-[0.16em] text-ivory transition hover:bg-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne">
-            {featured ? "Book an Appointment" : requestLabel}
+          <BookServiceLink className="inline-flex min-h-[48px] items-center justify-center rounded-sm bg-deep-lavender px-5 text-sm font-medium uppercase tracking-[0.06em] text-ivory transition hover:bg-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne">
+            {featured ? "Book Online" : requestLabel}
           </BookServiceLink>
         )}
         {membersOnly && (
           <Link
             href="/login"
-            className="inline-flex min-h-[48px] items-center justify-center rounded-sm border border-gray-line bg-transparent px-5 text-[10px] font-medium uppercase tracking-[0.16em] text-ink transition hover:border-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne"
+            className="inline-flex min-h-[48px] items-center justify-center rounded-sm border border-gray-line bg-transparent px-5 text-sm font-medium uppercase tracking-[0.06em] text-ink transition hover:border-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne"
           >
             Member Sign In
           </Link>
@@ -152,7 +152,7 @@ export function ServiceCard({
         {learnMoreHref && learnMoreLabel ? (
           <Link
             href={learnMoreHref}
-            className="font-body inline-flex min-h-[48px] max-w-full min-w-0 items-center text-left text-[11px] font-medium uppercase leading-snug tracking-[0.12em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne"
+            className="font-body inline-flex min-h-[48px] max-w-full min-w-0 items-center text-left text-sm font-medium uppercase leading-snug tracking-[0.12em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne"
           >
             {learnMoreLabel}
             <span aria-hidden="true" className="ml-1.5">
@@ -219,11 +219,11 @@ function ServiceDetails({
             {paragraph}
           </p>
         ))
-      ) : (
+      ) : service.description !== serviceCardSummary(service) ? (
         <p className="font-body whitespace-pre-line text-sm leading-relaxed text-taupe">
           {service.description}
         </p>
-      )}
+      ) : null}
 
       {service.bestFor && (
         <p className="font-body mt-4 text-sm text-taupe">
@@ -236,7 +236,7 @@ function ServiceDetails({
 
       {!replaceNarrative && service.includes && service.includes.length > 0 && (
         <div className="mt-5">
-          <p className="font-body text-[11px] font-medium uppercase tracking-[0.14em] text-taupe">
+          <p className="font-body text-sm font-medium uppercase tracking-[0.14em] text-taupe">
             What’s Included
           </p>
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">

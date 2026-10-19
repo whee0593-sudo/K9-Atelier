@@ -1,3 +1,4 @@
+import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { GalleryWall } from "@/components/gallery/GalleryWall";
 import { PageShell } from "@/components/luxury/PageShell";
 
@@ -15,10 +16,13 @@ export default function GalleryPage() {
   return (
     <PageShell
       eyebrow="K9 ATELIER · OUR WORK"
-      title="The Art of Grooming"
-      intro="A collection of our grooming work, reflecting thoughtful detail, refined styling, and individualized coat care."
+      title="Groomed by Penny"
+      intro="Real dogs. Individual styles. Some backgrounds have been edited for presentation."
     >
       <GalleryWall />
+      <div className="mt-10 text-center">
+        <BookServiceLink className="inline-flex min-h-12 items-center rounded-sm bg-deep-lavender px-8 text-sm font-medium text-ivory hover:bg-ink">Book Online</BookServiceLink>
+      </div>
     </PageShell>
   );
 }

@@ -26,13 +26,13 @@ export function FullGroomPriceMatrix({ service }: Props) {
         <table className="w-full text-left text-sm">
           <thead className="bg-dusty-lavender/35">
             <tr>
-              <th className="px-4 py-3 font-body text-[11px] font-medium uppercase tracking-[0.12em] text-taupe">
+              <th className="px-4 py-3 font-body text-sm font-medium uppercase tracking-[0.04em] text-ink">
                 Weight
               </th>
               {coatTypes.map((coat) => (
                 <th
                   key={coat.id}
-                  className="px-4 py-3 font-body text-[11px] font-medium uppercase tracking-[0.12em] text-taupe"
+                  className="px-4 py-3 font-body text-sm font-medium uppercase tracking-[0.04em] text-ink"
                 >
                   {coat.label}
                 </th>
@@ -76,7 +76,7 @@ export function FullGroomPriceMatrix({ service }: Props) {
             key={weight.id}
             className="border border-gray-line/80 bg-ivory px-4 py-4"
           >
-            <p className="font-body text-[11px] font-medium uppercase tracking-[0.12em] text-taupe">
+            <p className="font-body text-sm font-medium uppercase tracking-[0.04em] text-ink">
               {formatWeightLabel(weight.label)}
             </p>
             {durationByWeight[weight.id] && (
@@ -96,7 +96,7 @@ export function FullGroomPriceMatrix({ service }: Props) {
                     key={coat.id}
                     className="flex items-baseline justify-between gap-3"
                   >
-                    <dt className="font-body text-[11px] uppercase tracking-[0.1em] text-taupe">
+                    <dt className="font-body text-sm uppercase tracking-[0.04em] text-ink">
                       {coat.label}
                     </dt>
                     <dd className="font-body text-sm text-ink">
@@ -111,7 +111,7 @@ export function FullGroomPriceMatrix({ service }: Props) {
       </div>
 
       {service.pricingNote && (
-        <p className="font-body mt-4 text-[12px] leading-relaxed text-taupe/90">
+        <p className="font-body mt-4 text-sm leading-relaxed text-ink">
           {service.pricingNote}
         </p>
       )}

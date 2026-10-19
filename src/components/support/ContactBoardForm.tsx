@@ -188,7 +188,7 @@ export function ContactBoardForm({
       <div>
         <label htmlFor="board-inquiry" className={bookingLabelClass}>
           Inquiry Type
-          <span className="text-champagne"> *</span>
+          <span className="text-deep-lavender"> *</span>
         </label>
         <select
           id="board-inquiry"
@@ -267,7 +267,7 @@ export function ContactBoardForm({
           placeholder="(561) 555-0123"
           className={inputClass()}
         />
-        <p className="font-body mt-2 text-xs leading-relaxed text-taupe">
+        <p className="font-body mt-2 text-sm leading-relaxed text-taupe">
           Email address, phone number, or both.
         </p>
       </div>
@@ -276,7 +276,7 @@ export function ContactBoardForm({
         <div>
           <label htmlFor="board-subject" className={bookingLabelClass}>
             Subject
-            <span className="text-champagne"> *</span>
+            <span className="text-deep-lavender"> *</span>
           </label>
           <input
             id="board-subject"
@@ -315,7 +315,7 @@ export function ContactBoardForm({
       <div>
         <label htmlFor="board-message" className={bookingLabelClass}>
           Message
-          <span className="text-champagne"> *</span>
+          <span className="text-deep-lavender"> *</span>
         </label>
         <textarea
           id="board-message"

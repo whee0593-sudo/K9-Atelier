@@ -19,7 +19,7 @@ export function HomeFirstVisit() {
               key={step.number}
               className="border-t border-champagne/55 pt-5 text-left md:pt-6"
             >
-              <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-champagne">
+              <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-deep-lavender">
                 {step.number} —
               </p>
               <h3 className="font-body mt-3 text-[13px] font-semibold uppercase tracking-[0.14em] text-ink">
@@ -33,8 +33,8 @@ export function HomeFirstVisit() {
         </ol>
 
         <div className="mt-12 text-center md:mt-14">
-          <BookServiceLink className="inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-deep-lavender px-8 text-[13px] font-medium uppercase tracking-[0.14em] text-ivory transition duration-500 hover:bg-ink motion-reduce:transition-none md:w-auto md:text-[12px] md:tracking-[0.16em]">
-            Book an Appointment
+          <BookServiceLink className="inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-deep-lavender px-8 text-sm font-medium tracking-[0.06em] text-ivory transition duration-500 hover:bg-ink motion-reduce:transition-none md:w-auto md:text-sm md:tracking-[0.16em]">
+            Book Online
           </BookServiceLink>
         </div>
       </Container>

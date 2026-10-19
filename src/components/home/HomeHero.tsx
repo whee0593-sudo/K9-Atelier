@@ -10,7 +10,7 @@ import { LONG_COAT_CARE_PATH } from "@/lib/long-coat-care-page";
 import { SPECIALTY_CARE_PATH } from "@/lib/service-page";
 
 const heroCtaClass =
-  "inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-deep-lavender px-8 text-[13px] font-medium uppercase tracking-[0.14em] text-ivory transition duration-500 hover:bg-ink sm:w-auto md:text-[12px] md:tracking-[0.16em]";
+  "inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-deep-lavender px-8 text-sm font-medium tracking-[0.06em] text-ivory transition duration-500 hover:bg-ink sm:w-auto md:text-sm";
 
 /**
  * CSS sets the box. `sizes` only picks the file for that box.
@@ -65,7 +65,7 @@ function HeroLead({ lead }: { lead: string }) {
 function HeroServiceMeta({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`font-body max-w-xl space-y-3 text-[13px] font-medium uppercase leading-relaxed tracking-[0.12em] text-taupe md:text-[12px] md:tracking-[0.16em] ${className}`}
+      className={`font-body max-w-xl space-y-3 text-[13px] font-medium uppercase leading-relaxed tracking-[0.12em] text-taupe md:text-sm ${className}`}
     >
       <p className="text-pretty">
         <span className="whitespace-nowrap">Serving Jupiter Island ·</span>{" "}
@@ -97,7 +97,7 @@ export function HomeHero() {
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:items-center sm:gap-4">
             <BookServiceLink className={heroCtaClass}>
-              Book an Appointment
+              Book Online
             </BookServiceLink>
             <Link href="/contact" className={heroCtaClass}>
               Ask a Question

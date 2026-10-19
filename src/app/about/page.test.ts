@@ -46,52 +46,15 @@ describe("about page", () => {
     assert.match(page, /ABOUT_PAGE_TITLE/);
   });
 
-  it("follows Penny’s career from the ring to the atelier", () => {
-    for (const line of [
-      "About Penny",
-      "Meet Penny",
-      "Founder & Groomer, K9 Atelier",
-      "Professional Groomer Since 2010",
-      "From the Show Ring",
-      "Where precision became instinct.",
-      "2019 · Best in Show · Bichon",
-      "A life shaped by the grooming table.",
-      "Award-Winning Experience",
-      "Years of craft. Moments of recognition.",
-      "Best in Group",
-      "Pomeranian",
-      "Poodle",
-      "Best in Show",
-      "Bichon",
-      "Sharing the Craft",
-      "Experience worth sharing.",
-      "The Craft",
-      "The details make the difference.",
-      "The K9 Atelier Approach",
-      "Experience, made personal.",
-      "Grooming, elevated.",
-    ]) {
-      assert.equal(story.includes(line), true, line);
-    }
-
+  it("keeps career facts, awards and service links without repeated slogans", () => {
     const html = renderToStaticMarkup(React.createElement(AboutStory));
-    const text = html
-      .replace(/<a\b[^>]*>|<\/a>/g, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ");
-    assert.match(
-      text,
-      /Penny is a multiple award-winning professional dog groomer with experience across a wide range of breeds, coat types, and grooming techniques\. As the founder of K9 Atelier, she brings years of all-breed grooming experience to a private, one-on-one mobile grooming experience in Palm Beach\./,
-    );
-    assert.match(
-      text,
-      /Her background includes breed-specific styling, hand stripping, full-coat maintenance, show grooming, creative grooming, and personalized coat care, with an emphasis on preserving coat health while bringing out the character of each breed\./,
-    );
-    assert.match(
-      html,
-      /<a [^>]*href="\/services\/show-level-coat-care"[^>]*>full-coat maintenance<\/a>/,
-    );
-    assert.doesNotMatch(text, /every size|all sizes|dogs of every|any breed we accept/i);
+    const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    assert.match(text, /professional groomer since 2010/);
+    for (const fact of ["2014", "2017", "2019", "Best in Group", "Best in Show", "Pomeranian", "Poodle", "Bichon"]) assert.ok(text.includes(fact), fact);
+    assert.match(html, /href="\/services\/show-level-coat-care"/);
+    assert.match(html, /href="\/book"/);
+    assert.doesNotMatch(text, /Where precision became instinct|Experience, made personal/);
+    assert.equal((html.match(/<h1\b/g) ?? []).length, 1);
   });
 
   it("uses the about photographs with descriptive filenames", () => {

@@ -272,7 +272,7 @@ describe("service page helpers", () => {
       FULL_GROOM_PAGE_DESCRIPTION,
       "Private mobile full grooming in Palm Beach with custom haircuts and styling tailored to your dog\u2019s coat, lifestyle and individual expression.",
     );
-    assert.equal(FULL_GROOM_PAGE_H1, "A Complete Style, Done With Patience.");
+    assert.equal(FULL_GROOM_PAGE_H1, "Full Grooming");
     assert.equal(
       HAND_STRIPPING_PAGE_TITLE,
       "Hand Stripping Dog Grooming in Palm Beach | K9 Atelier",
@@ -308,7 +308,7 @@ describe("service page helpers", () => {
       BATH_COAT_PAGE_DESCRIPTION,
       "Private mobile bath and coat care in Palm Beach with professional bathing, drying and coat maintenance tailored to your dog\u2019s skin, coat and grooming needs.",
     );
-    assert.equal(BATH_COAT_PAGE_H1, "Coat Health, Kept Beautiful.");
+    assert.equal(BATH_COAT_PAGE_H1, "Bath & Coat Care");
     assert.notEqual(BATH_COAT_PAGE_TITLE, FULL_GROOM_PAGE_TITLE);
     assert.notEqual(BATH_COAT_PAGE_TITLE, HAND_STRIPPING_PAGE_TITLE);
     assert.equal(

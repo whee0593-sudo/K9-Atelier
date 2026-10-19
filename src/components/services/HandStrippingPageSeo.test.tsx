@@ -121,7 +121,7 @@ describe("hand stripping page metadata", () => {
     assert.equal(category?.pageIntro, HAND_STRIPPING_PAGE_INTRO);
     assert.equal(
       category?.pageIntro,
-      "Professional mobile hand stripping for wire-coated breeds, with private one-on-one care that preserves harsh texture, rich color and the coat\u2019s natural protective qualities.",
+      "Traditional coat care for suitable wire-coated dogs, charged by the hour. A bath is booked separately.",
     );
   });
 });
@@ -151,7 +151,7 @@ describe("hand stripping page content", () => {
     assert.match(html, /Hand Stripping/);
     assert.match(
       html,
-      /Professional mobile hand stripping for wire-coated breeds, with private one-on-one care that preserves harsh texture, rich color and the coat\u2019s natural protective qualities\./,
+      /Traditional coat care for suitable wire-coated dogs/,
     );
     for (const heading of [
       HAND_STRIPPING_WHAT_HEADING,
@@ -165,14 +165,14 @@ describe("hand stripping page content", () => {
     assert.match(html, /Terriers/);
     assert.match(html, /Schnauzers/);
     assert.match(html, /Norwich Terriers/);
-    assert.match(html, /harsh outer coat/);
+    assert.match(html, /coat texture/);
     assert.match(html, new RegExp(HAND_STRIPPING_SUITABLE_BODY.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(html, new RegExp(HAND_STRIPPING_SUITABLE_NOTE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-    assert.match(html, /Rather than cutting the coat shorter with clippers/);
+    assert.match(html, /Mature outer coat is removed by hand/);
     assert.match(html, new RegExp(HAND_STRIPPING_COMPARE_BODY.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(
       html,
-      /Clipping or shaving cuts the existing coat shorter, while hand stripping removes mature outer coat by hand to help preserve the coat.s natural texture, color and breed character\./,
+      /Clipping cuts the hair shorter\./,
     );
     assert.match(
       html,
@@ -184,7 +184,7 @@ describe("hand stripping page content", () => {
       assert.match(html, new RegExp(faq.answer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     }
     assert.equal((html.match(/<details\b/g) ?? []).length, 3);
-    assert.match(html, /<details[^>]*open/);
+    assert.doesNotMatch(html, /<details[^>]*\bopen/);
     assert.equal(html.includes("FAQPage"), false);
 
     const services = links.find((link) => link.href === "/services");
@@ -222,7 +222,7 @@ describe("hand stripping page content", () => {
     assert.match(html, new RegExp(`${HAND_STRIPPING_GROOMER_BEFORE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}<a`));
     assert.match(html, new RegExp(HAND_STRIPPING_GROOMER_AFTER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.ok(booking.length >= 1);
-    assert.match(booking[0].text, /Book an Appointment/);
+    assert.match(booking[0].text, /Book Online/);
   });
 
   it("keeps the hourly price and duration sourced from the catalog", () => {

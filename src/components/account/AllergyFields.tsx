@@ -31,7 +31,7 @@ export function AllergyFields({
   return (
     <fieldset className="space-y-3">
       <legend className={labelClassName}>{ALLERGY_HEADING}</legend>
-      <p className="font-body text-sm leading-relaxed text-taupe">{ALLERGY_QUESTION}</p>
+      <p className="font-body text-base leading-relaxed text-ink">{ALLERGY_QUESTION}</p>
       <div className="space-y-2">
         {ALLERGY_CHOICES.map((choice) => (
           <label key={choice.value} className="flex items-center gap-3 text-sm text-ink">

@@ -113,7 +113,7 @@ describe("full groom page metadata", () => {
     assert.equal(category?.pageIntro, FULL_GROOM_PAGE_INTRO);
     assert.equal(
       category?.pageIntro,
-      "Private mobile full grooming in Palm Beach, with custom haircuts and styling for coats that need more than a bath.",
+      "A bath, complete coat care and a haircut suited to your dog and your preferred style.",
     );
   });
 });
@@ -145,21 +145,21 @@ describe("full groom page content", () => {
 
     assert.equal((html.match(/<h1\b/g) ?? []).length, 1);
     assert.match(html, /Full Grooming/);
-    assert.match(html, /A Complete Style, Done With Patience\./);
+    assert.match(html, /Full Grooming/);
     assert.match(
       html,
-      /Private mobile full grooming in Palm Beach, with custom haircuts and styling for coats that need more than a bath\./,
+      /A bath, complete coat care and a haircut suited to your dog and your preferred style\./,
     );
     assert.match(html, /What\u2019s Included in a Full Groom/);
     assert.match(html, /complete bath and coat care/);
-    assert.match(html, /teddy-bear inspired finishes/);
+    assert.match(html, /teddy-bear finish/);
     assert.match(html, new RegExp(FULL_GROOM_STYLING_HEADING));
-    assert.match(html, /one-style-fits-all approach/);
+    assert.match(html, /home-care routine/);
 
     for (const faq of FULL_GROOM_FAQS) {
       assert.match(html, new RegExp(faq.question.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
       assert.match(html, new RegExp(faq.answer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-      assert.match(html, new RegExp(`<details[^>]*open[^>]*>[\\s\\S]*${faq.question}`));
+      assert.doesNotMatch(html, /<details[^>]*\bopen/);
     }
     assert.equal((html.match(/<details\b/g) ?? []).length, 3);
     assert.equal(html.includes("FAQPage"), false);
@@ -206,7 +206,7 @@ describe("full groom page content", () => {
     assert.match(html, /From \$210/);
     assert.match(html, /Final pricing may vary based on coat density/);
     assert.match(html, /href="\/book"/);
-    assert.match(html, /Book an Appointment/);
+    assert.match(html, /Book Online/);
 
     const editorial = readFileSync(
       new URL("./FullGroomEditorial.tsx", import.meta.url),

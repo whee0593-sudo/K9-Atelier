@@ -131,11 +131,11 @@ describe("bath and coat care page metadata", () => {
     assert.equal(metadata.twitter?.description, BATH_COAT_PAGE_DESCRIPTION);
     assert.equal(category?.pageEyebrow, "Bath & Coat Care");
     assert.equal(category?.pageH1, BATH_COAT_PAGE_H1);
-    assert.equal(category?.pageH1, "Coat Health, Kept Beautiful.");
+    assert.equal(category?.pageH1, "Bath & Coat Care");
     assert.equal(category?.pageIntro, BATH_COAT_PAGE_INTRO);
     assert.equal(
       category?.pageIntro,
-      "Private mobile grooming in Palm Beach, with professional bath and coat care tailored to your dog\u2019s coat and skin.",
+      "A bath, hand blow-dry and brush-out, with nail, ear and teeth care.",
     );
   });
 });
@@ -170,10 +170,10 @@ describe("bath and coat care page content", () => {
 
     assert.equal((html.match(/<h1\b/g) ?? []).length, 1);
     assert.match(html, /Bath &amp; Coat Care/);
-    assert.match(html, /Coat Health, Kept Beautiful\./);
+    assert.match(html, /Bath &amp; Coat Care/);
     assert.match(
       html,
-      /Private mobile grooming in Palm Beach, with professional bath and coat care tailored to your dog\u2019s coat and skin\./,
+      /A bath, hand blow-dry and brush-out, with nail, ear and teeth care\./,
     );
     assert.match(html, new RegExp(htmlPattern(BATH_COAT_MORE_HEADING)));
     assert.match(html, new RegExp(htmlPattern(BATH_COAT_MORE_BODY)));
@@ -188,10 +188,7 @@ describe("bath and coat care page content", () => {
     for (const faq of BATH_COAT_FAQS) {
       assert.match(html, new RegExp(htmlPattern(faq.question)));
       assert.match(html, new RegExp(htmlPattern(faq.answer)));
-      assert.match(
-        html,
-        new RegExp(`<details[^>]*open[^>]*>[\\s\\S]*${htmlPattern(faq.question)}`),
-      );
+      assert.doesNotMatch(html, /<details[^>]*\bopen/);
     }
     assert.equal((html.match(/<details\b/g) ?? []).length, 3);
     assert.equal(html.includes("FAQPage"), false);
@@ -215,7 +212,7 @@ describe("bath and coat care page content", () => {
     assert.match(groomer.text, /^Meet Your Groomer/);
     assert.match(groomer.text, /→/);
     assert.ok(booking.length >= 1);
-    assert.match(booking[0].text, /Book an Appointment/);
+    assert.match(booking[0].text, /Book Online/);
     assert.equal(
       links.filter((link) => link.href === "/services/full-groom").length,
       1,
@@ -266,7 +263,7 @@ describe("bath and coat care page content", () => {
     assert.match(html, /45\u201360 min/);
     assert.match(html, /90\u2013105 min/);
     assert.match(html, /href="\/book"/);
-    assert.match(html, /Book an Appointment/);
+    assert.match(html, /Book Online/);
 
     const editorial = readFileSync(
       new URL("./BathCoatEditorial.tsx", import.meta.url),

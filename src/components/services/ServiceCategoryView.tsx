@@ -8,6 +8,7 @@ import { FullGroomEditorial } from "@/components/services/FullGroomEditorial";
 import { HandStrippingEditorial } from "@/components/services/HandStrippingEditorial";
 import { MobileBookBar } from "@/components/services/MobileBookBar";
 import { ServiceCard } from "@/components/services/ServiceCard";
+import { ServiceWorkPhoto } from "@/components/services/ServiceWorkPhoto";
 import { ServicesHashRedirect } from "@/components/services/ServicesHashRedirect";
 import { ServicesNav } from "@/components/services/ServicesNav";
 import { ServicesSection } from "@/components/services/ServicesSection";
@@ -40,6 +41,7 @@ function serviceGridClass(count: number) {
 export function ServiceCategoryView({ category }: Props) {
   const services = getServicesByIds(category.serviceIds);
   const coloring = getServiceById("creative-accent-coloring");
+  const hasWorkPhoto = ["full-groom", "hand-stripping", "color"].includes(category.slug);
 
   return (
     <div className="pb-24 md:pb-0">
@@ -60,6 +62,9 @@ export function ServiceCategoryView({ category }: Props) {
         intro={category.pageIntro}
         tone="white"
       >
+        <div className={hasWorkPhoto ? "grid items-start gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" : undefined}>
+        {hasWorkPhoto ? <div className="order-2 lg:order-1"><ServiceWorkPhoto slug={category.slug} /></div> : null}
+        <div className="order-1 min-w-0 lg:order-2">
         {category.layout === "coloring" && coloring ? (
           <CreativeColoringSection service={coloring} />
         ) : (
@@ -109,6 +114,8 @@ export function ServiceCategoryView({ category }: Props) {
             })}
           </div>
         )}
+        </div>
+        </div>
         {category.slug === "specialty-care" ? (
           <p className="font-body mx-auto mt-10 max-w-2xl text-center text-pretty text-sm leading-relaxed text-taupe">
             {SPECIALTY_CARE_AREA_SENTENCE}

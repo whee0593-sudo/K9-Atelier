@@ -36,7 +36,7 @@ function fieldLabelClass(variant: "account" | "booking") {
 
 function fieldNoteClass(variant: "account" | "booking") {
   return variant === "booking"
-    ? "font-body mt-1.5 text-[13px] leading-relaxed text-taupe"
+    ? "font-body mt-1.5 text-sm leading-relaxed text-ink"
     : "mt-1.5 text-xs leading-relaxed text-text-muted";
 }
 
@@ -188,7 +188,7 @@ export function PetScalarFields({
               <legend className={labelClass}>
                 {field.label}
                 {showRequired && field.required ? (
-                  <span className="text-gold"> *</span>
+                  <span className="text-deep-lavender"> *</span>
                 ) : null}
               </legend>
               <div className="space-y-2">
@@ -321,7 +321,7 @@ export function PetScalarFields({
               <label className={labelClass}>
                 {field.label}
                 {showRequired && field.required ? (
-                  <span className="text-gold"> *</span>
+                  <span className="text-deep-lavender"> *</span>
                 ) : null}
               </label>
               <textarea
@@ -343,7 +343,7 @@ export function PetScalarFields({
               <label className={labelClass}>
                 {field.label}
                 {showRequired && field.required ? (
-                  <span className="text-gold"> *</span>
+                  <span className="text-deep-lavender"> *</span>
                 ) : null}
               </label>
               <select
@@ -370,7 +370,7 @@ export function PetScalarFields({
               <label className={labelClass}>
                 {field.label}
                 {showRequired && field.required ? (
-                  <span className="text-gold"> *</span>
+                  <span className="text-deep-lavender"> *</span>
                 ) : null}
               </label>
               <input
@@ -390,7 +390,7 @@ export function PetScalarFields({
             <label className={labelClass}>
               {field.label}
               {showRequired && field.required ? (
-                <span className="text-gold"> *</span>
+                <span className="text-deep-lavender"> *</span>
               ) : null}
             </label>
             <input

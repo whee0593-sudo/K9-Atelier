@@ -23,7 +23,7 @@ import {
 import { FULL_GROOM_PATH, SERVICES_PATH, getServiceById } from "@/lib/service-page";
 
 const textLinkClass =
-  "font-body inline-flex min-h-[48px] max-w-full items-center justify-center text-center text-[12px] font-medium uppercase leading-snug tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne";
+  "font-body inline-flex min-h-[48px] max-w-full items-center justify-center text-center text-sm font-medium uppercase leading-snug tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne";
 
 const inlineLinkClass =
   "text-deep-lavender underline decoration-champagne/70 underline-offset-4 transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne";
@@ -31,7 +31,7 @@ const inlineLinkClass =
 const headingClass =
   "font-display text-balance text-3xl leading-[1.15] text-pretty text-ink md:text-4xl";
 
-const bodyClass = "font-body mt-4 text-sm leading-relaxed text-taupe";
+const bodyClass = "font-body mt-4 text-base leading-relaxed text-taupe";
 
 function TextLink({ href, children }: { href: string; children: string }) {
   return (
@@ -70,6 +70,21 @@ export function LongCoatCareView() {
           </header>
         </Container>
       </section>
+
+      {service ? (
+        <section className="bg-white/60 py-14 md:py-16" aria-labelledby="show-care-booking">
+          <Container>
+            <div className="mx-auto max-w-2xl">
+              <ServiceCard
+                service={service}
+                headingAs="h2"
+                anchorId="show-care-booking"
+                detailsInitiallyOpen
+              />
+            </div>
+          </Container>
+        </section>
+      ) : null}
 
       <section className="bg-ivory py-14 md:py-16">
         <Container>
@@ -116,21 +131,6 @@ export function LongCoatCareView() {
         </Container>
       </section>
 
-      {service ? (
-        <section className="bg-white/60 py-14 md:py-16" aria-labelledby="show-care-booking">
-          <Container>
-            <div className="mx-auto max-w-2xl">
-              <ServiceCard
-                service={service}
-                headingAs="h2"
-                anchorId="show-care-booking"
-                detailsInitiallyOpen
-              />
-            </div>
-          </Container>
-        </section>
-      ) : null}
-
       <section className="bg-ivory py-14 md:py-16">
         <Container>
           <div className="mx-auto flex max-w-2xl flex-col items-center text-center">
@@ -140,7 +140,7 @@ export function LongCoatCareView() {
               <TextLink href={FULL_GROOM_PATH}>Full Grooming</TextLink>
               <TextLink href="/about">Meet Your Groomer</TextLink>
               <BookServiceLink className={textLinkClass}>
-                Book an Appointment
+                Book Online
                 <span aria-hidden="true" className="ml-1.5">
                   →
                 </span>

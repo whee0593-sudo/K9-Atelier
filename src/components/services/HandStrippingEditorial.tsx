@@ -20,7 +20,7 @@ import {
 } from "@/lib/service-page";
 
 const textLinkClass =
-  "font-body inline-flex min-h-[48px] items-center justify-center text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne";
+  "font-body inline-flex min-h-[48px] items-center justify-center text-sm font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne";
 
 const inlineLinkClass =
   "text-deep-lavender underline decoration-champagne/70 underline-offset-4 transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne";
@@ -69,13 +69,13 @@ export function HandStrippingEditorial() {
                 {section.paragraphs.map((paragraph) => (
                   <p
                     key={paragraph}
-                    className="font-body mt-4 text-sm leading-relaxed text-taupe"
+                    className="font-body mt-4 text-base leading-relaxed text-taupe"
                   >
                     {paragraph}
                   </p>
                 ))}
                 {section.heading === HAND_STRIPPING_WHAT_HEADING ? (
-                  <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
+                  <p className="font-body mt-4 text-base leading-relaxed text-taupe">
                     {HAND_STRIPPING_GROOMER_BEFORE}
                     <Link href="/about" className={inlineLinkClass}>
                       {HAND_STRIPPING_GROOMER_NAME}
@@ -103,16 +103,16 @@ export function HandStrippingEditorial() {
             </h2>
             <div className="mt-8 divide-y divide-gray-line/80 border-y border-gray-line/80">
               {HAND_STRIPPING_FAQS.map((faq) => (
-                <details key={faq.question} open className="group py-6">
+                <details key={faq.question} className="group py-6">
                   <summary className="cursor-pointer list-none font-body text-base font-medium text-ink marker:content-none [&::-webkit-details-marker]:hidden">
                     <span className="flex items-start justify-between gap-4 text-left">
                       {faq.question}
-                      <span className="text-champagne transition group-open:rotate-45">
+                      <span className="text-deep-lavender transition group-open:rotate-45">
                         +
                       </span>
                     </span>
                   </summary>
-                  <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
+                  <p className="font-body mt-4 text-base leading-relaxed text-taupe">
                     {faq.answer}
                   </p>
                 </details>

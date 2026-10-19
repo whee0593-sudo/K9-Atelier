@@ -34,7 +34,7 @@ describe("home page content", () => {
 
     assert.equal(
       business.brand.lead,
-      "Multiple award-winning show groomer specializing in tailored styling, show-level coat care, extra-gentle senior care and hand stripping.",
+      "Award-winning grooming by Penny, from show-level coat care to extra-gentle senior care and hand stripping.",
     );
     assert.equal(
       business.brand.lead.includes("Private mobile pet spa in Palm Beach County"),
@@ -64,7 +64,7 @@ describe("home page content", () => {
     const eyebrow = source.indexOf("business.brand.lockup");
     const tagline = source.indexOf("business.brand.tagline");
     const lead = source.indexOf("business.brand.lead");
-    const bookCta = source.indexOf("Book an Appointment");
+    const bookCta = source.indexOf("Book Online");
     const askCta = source.indexOf("Ask a Question");
     const photo = source.indexOf("<EditorialPhoto");
     const mobileMeta = source.indexOf("<HeroServiceMeta className=\"md:hidden\"");
@@ -147,7 +147,7 @@ describe("homepage SEO", () => {
       .replace(/\s+/g, " ");
     assert.match(
       leadText,
-      /Multiple award-winning show groomer specializing in tailored styling, show-level coat care, extra-gentle senior care and hand stripping\./,
+      /Award-winning grooming by Penny, from show-level coat care to extra-gentle senior care and hand stripping\./,
     );
     assert.match(html, /Grooming, tailored to the individual\./);
     const visibleText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
@@ -178,8 +178,8 @@ describe("homepage SEO", () => {
       anchors.find((anchor) => anchor.text === "extra-gentle senior care")?.href,
       "/services/specialty-care",
     );
-    const leadStart = html.indexOf("Multiple award-winning");
-    const leadHtml = html.slice(leadStart, html.indexOf("Book an Appointment", leadStart));
+    const leadStart = html.indexOf("Award-winning grooming");
+    const leadHtml = html.slice(leadStart, html.indexOf("Book Online", leadStart));
     const leadAnchors = [...leadHtml.matchAll(/<a([^>]*)>([\s\S]*?)<\/a>/g)].map(
       (match) => ({
         attrs: match[1],
