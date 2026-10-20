@@ -41,7 +41,7 @@ function CardForm({ contact, onSaved }: { contact: { name: string; phone: string
     finally { setBusy(false); }
   }
   return <form onSubmit={submit} className="space-y-6">
-    <PaymentElement options={{ wallets: manualCardWallets, fields: { billingDetails: { name: "never", email: "never", phone: "never" } } }} />
+    <PaymentElement options={{ wallets: manualCardWallets, fields: { billingDetails: { name: "never", phone: "never" } } }} />
     {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
     <button type="submit" disabled={busy || !stripe || !elements} className={bookingPrimaryBtnClass}>{busy ? "Saving…" : "Save Card & Request a Call"}</button>
   </form>;

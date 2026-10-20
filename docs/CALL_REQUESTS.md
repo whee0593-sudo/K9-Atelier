@@ -28,3 +28,13 @@ Run `npm run test:call-requests`, the existing regression suite and `npm run bui
 Before release, use the configured test environment to verify a successful test card, a declined card, 3DS, refresh/back/retry, timeout after successful Stripe setup but before completion, duplicate clicks, merchant replay and authenticated staff linking. Verify the unchanged Book Online flow end to end. These live provider checks cannot be claimed from local unit/SQL/build checks alone.
 
 Before Production rollout, approve retention/cleanup of abandoned drafts and their standalone Stripe test/customer objects. Session expiry blocks further guest access; it does not delete saved records. Include the new workflow in the business’s existing privacy/retention process. Any deployment, production migration, merge or push remains a separate explicitly approved action.
+
+## Live test review — 2026-10-20
+
+The dedicated Development project was transferred to the Free organization `K9 Atelier Testing`; Production remains in its original Pro organization. The callback migration was installed only in Development. Its older schema also needed server-only SELECT/UPDATE on profiles and SELECT/INSERT on payment_methods for owner linking. Public callback access remains denied. Local credentials are in ignored `.env*.local` files, with merchant notifications disabled.
+
+Verified at 390 × 844: a card is saved and a callback request is received; refresh preserves success; the page says the appointment is not confirmed. A second browser test completed Stripe's 3D Secure challenge and saved the received request. Only test cards and test Stripe keys were used. API checks verified idempotent duplicate completion, rejection of declined cards and incomplete authentication, and denied public table reads. No charges or merchant notifications were created.
+
+Live testing found that setting the uncollected email field to `never` made Stripe require an email in confirmSetup. The callback now leaves email collection at Stripe's default, while supplying the already-collected name and phone. The tested card form did not require email.
+
+Authenticated owner linking, live merchant notification delivery, and an entire existing Book Online appointment have not been exercised against this older Development schema. These remain release checks; the booking, tracking, and notification isolation regression tests cover the existing behavior locally. Keep the callback feature disabled while the test database is paused. Do not deploy this configuration to Production.
