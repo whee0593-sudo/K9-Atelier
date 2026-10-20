@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/merchant-notice-replay",
       "schedule": "5 * * * *"
+    },
+    {
+      "path": "/api/cron/call-request-notices",
+      "schedule": "10 * * * *"
     }
   ]
 }

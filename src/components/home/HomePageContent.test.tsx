@@ -42,11 +42,11 @@ describe("home page content", () => {
     );
   });
 
-  it("sends the hero secondary button to the contact page", () => {
+  it("sends the hero secondary button to the callback page", () => {
     const source = readFileSync(new URL("./HomeHero.tsx", import.meta.url), "utf8");
 
-    assert.match(source, /Ask a Question/);
-    assert.match(source, /href="\/contact"/);
+    assert.match(source, /Request a Call/);
+    assert.match(source, /href="\/request-a-call"/);
     assert.match(source, /heroCtaClass/);
     assert.match(source, /business\.brand\.lead/);
     assert.equal(
@@ -65,7 +65,7 @@ describe("home page content", () => {
     const tagline = source.indexOf("business.brand.tagline");
     const lead = source.indexOf("business.brand.lead");
     const bookCta = source.indexOf("Book Online");
-    const askCta = source.indexOf("Ask a Question");
+    const askCta = source.indexOf("Request a Call");
     const photo = source.indexOf("<EditorialPhoto");
     const mobileMeta = source.indexOf("<HeroServiceMeta className=\"md:hidden\"");
     const desktopMeta = source.indexOf("hidden md:block");

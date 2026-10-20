@@ -99,8 +99,8 @@ export function HomeHero() {
             <BookServiceLink className={heroCtaClass}>
               Book Online
             </BookServiceLink>
-            <Link href="/contact" className={heroCtaClass}>
-              Ask a Question
+            <Link href="/request-a-call" className={heroCtaClass}>
+              Request a Call
             </Link>
           </div>
           <HeroServiceMeta className="mt-8 hidden md:block" />
