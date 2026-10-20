@@ -13,7 +13,7 @@ export function CreativeColoringSection({ service }: Props) {
   return (
     <div>
       {service.note && (
-        <p className="font-body mx-auto mb-8 max-w-2xl text-center text-sm text-taupe">
+        <p className="font-body mx-auto mb-8 max-w-2xl text-center text-base text-ink">
           {service.note}
         </p>
       )}
@@ -26,7 +26,7 @@ export function CreativeColoringSection({ service }: Props) {
           >
             <h3 className="font-display text-xl text-ink">{option.name}</h3>
             {option.description && (
-              <p className="font-body mt-2 text-sm leading-relaxed text-taupe">
+              <p className="font-body mt-2 text-base leading-relaxed text-ink">
                 {option.description}
               </p>
             )}
@@ -43,10 +43,7 @@ export function CreativeColoringSection({ service }: Props) {
             title="Creative Coloring Policies"
             summary="Consultation, coat condition, fade expectations, and booking requirements."
           >
-            <p className="font-body mb-5 text-sm leading-relaxed text-taupe">
-              {service.description}
-            </p>
-            <ol className="list-decimal space-y-4 pl-5 text-sm text-taupe">
+            <ol className="list-decimal space-y-4 pl-5 text-base text-ink">
               {policy.items.map((item) => (
                 <li key={item.title}>
                   <p className="font-medium text-ink">{item.title}</p>

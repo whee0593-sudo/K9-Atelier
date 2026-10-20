@@ -263,7 +263,7 @@ function CancellationAnswer() {
                       {table.columns.map((col) => (
                         <th
                           key={col}
-                          className="px-4 py-3 font-body text-[11px] font-medium uppercase tracking-[0.12em] text-taupe"
+                          className="px-4 py-3 font-body text-sm font-medium uppercase tracking-[0.12em] text-ink"
                         >
                           {col}
                         </th>
@@ -277,7 +277,7 @@ function CancellationAnswer() {
                         className="border-t border-gray-line/60"
                       >
                         {row.map((cell, cellIndex) => (
-                          <td key={cellIndex} className="px-4 py-3 text-taupe">
+                          <td key={cellIndex} className="px-4 py-3 text-ink">
                             {cell}
                           </td>
                         ))}
@@ -334,12 +334,11 @@ export default function FaqPage() {
     <PageShell
       eyebrow="FAQ"
       title="Questions About Your Appointment"
-      intro="Everything you need to know about booking a calm, private, cage-free mobile grooming experience."
     >
       <div className="mx-auto max-w-3xl space-y-14">
         {faqGroups.map((group) => (
           <section key={group.title}>
-            <h2 className="font-body text-[11px] font-semibold uppercase tracking-[0.18em] text-deep-lavender">
+            <h2 className="font-body text-sm font-semibold uppercase tracking-[0.18em] text-deep-lavender">
               {group.title}
             </h2>
             <div className="mt-6 divide-y divide-gray-line/80 border-y border-gray-line/80">
@@ -353,7 +352,7 @@ export default function FaqPage() {
                       </span>
                     </span>
                   </summary>
-                  <div className="font-body pb-4 text-sm leading-relaxed text-taupe">
+                  <div className="font-body pb-4 text-base leading-relaxed text-ink">
                     <FaqAnswer item={faq} />
                   </div>
                 </details>
@@ -364,21 +363,17 @@ export default function FaqPage() {
       </div>
 
       <section id="fees-policies" className="mx-auto mt-16 max-w-3xl scroll-mt-32">
-        <h2 className="font-body text-[11px] font-semibold uppercase tracking-[0.18em] text-deep-lavender">
+        <h2 className="font-body text-sm font-semibold uppercase tracking-[0.18em] text-deep-lavender">
           Fees &amp; Policies
         </h2>
-        <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
-          Starting prices are not a fixed quote. Open any item for the full
-          rule.
-        </p>
         <div className="mt-8">
           <FeesPoliciesSection />
         </div>
       </section>
 
       <div className="mt-14 flex flex-col items-center justify-center gap-4 sm:flex-row">
-        <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[10px] font-medium uppercase tracking-[0.16em] text-ivory transition hover:bg-ink">
-          Book an Appointment
+        <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-sm font-medium uppercase tracking-[0.16em] text-ivory transition hover:bg-ink">
+          Book Online
         </BookServiceLink>
         <LuxuryButton href="/contact" variant="secondary">
           Email the Atelier

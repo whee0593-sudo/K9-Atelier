@@ -31,12 +31,12 @@ export function FeesPoliciesSection() {
       {flea && (
         <PolicyAccordion
           title={flea.name}
-          summary="Applied only if fleas or ticks are found during the pre-groom check."
         >
-          <p className="font-body text-sm leading-relaxed text-taupe">
-            {flea.description}
+          <p className="font-body text-base leading-relaxed text-ink">
+            If fleas or ticks are found, we will notify you. A medicated bath
+            and vehicle sanitation are required; both fees apply.
           </p>
-          <ul className="mt-4 space-y-2 text-sm text-ink">
+          <ul className="mt-4 space-y-2 text-base text-ink">
             {fleaItems.map((item) => (
               <li key={item.name}>
                 {item.name}: From {formatPrice(item.rate)}
@@ -49,12 +49,8 @@ export function FeesPoliciesSection() {
       {behavior && (
         <PolicyAccordion
           title={behavior.name}
-          summary={`From ${formatPrice(behaviorMin)}, assessed on-site when extra handling is needed.`}
         >
-          <p className="font-body text-sm leading-relaxed text-taupe">
-            {behavior.description}
-          </p>
-          <p className="font-body mt-3 text-sm text-ink">
+          <p className="font-body mt-3 text-base text-ink">
             From {formatPrice(behaviorMin)}, based on the level of anxiety,
             resistance, or aggression shown on-site.
           </p>
@@ -64,9 +60,8 @@ export function FeesPoliciesSection() {
       {travel && "rate" in travel && typeof travel.rate === "number" && (
         <PolicyAccordion
           title="Travel Fee"
-          summary={`Complimentary within ${freeRadiusMiles} miles, then ${formatPrice(travelFeePerMile)} per mile through ${maxDistanceMiles}, and ${formatPrice(extendedTravelFeePerMile)} per mile through ${standardServiceMiles}.`}
         >
-          <ul className="font-body space-y-2 text-sm text-ink">
+          <ul className="font-body space-y-2 text-base text-ink">
             <li>Complimentary within {freeRadiusMiles} miles</li>
             <li>
               Above {freeRadiusMiles} through {maxDistanceMiles} miles:{" "}
@@ -85,29 +80,22 @@ export function FeesPoliciesSection() {
               booking is not available.
             </li>
           </ul>
-          <p className="font-body mt-3 text-sm leading-relaxed text-taupe">
-            {travel.description}
-          </p>
         </PolicyAccordion>
       )}
 
       <PolicyAccordion
         title="Pricing Adjustments"
-        summary="Starting prices may change with coat condition, temperament, and time required."
       >
-        <p className="font-body text-sm leading-relaxed text-taupe">
-          Starting prices reflect a typical appointment within each weight
-          range. Final pricing may vary based on coat condition, grooming
-          requirements, temperament, and the time required to complete the
-          service comfortably.
+        <p className="font-body text-base leading-relaxed text-ink">
+          Prices start at the listed rate and may vary with coat condition,
+          styling, temperament and time needed.
         </p>
       </PolicyAccordion>
 
       <PolicyAccordion
         title="Dogs Over 45 lbs"
-        summary={business.weightPolicy.over45Note}
       >
-        <p className="font-body text-sm leading-relaxed text-taupe">
+        <p className="font-body text-base leading-relaxed text-ink">
           {business.weightPolicy.over45Note}
         </p>
       </PolicyAccordion>
@@ -115,24 +103,21 @@ export function FeesPoliciesSection() {
       {dematting?.policyNote && (
         <PolicyAccordion
           title="Dematting Policy"
-          summary="Dematting is limited in time to protect skin and keep the visit low-stress."
         >
-          <p className="font-body text-sm leading-relaxed text-taupe">
+          <p className="font-body text-base leading-relaxed text-ink">
             {dematting.policyNote}
           </p>
         </PolicyAccordion>
       )}
 
       {senior && (
-        <p className="font-body px-1 pt-2 text-sm leading-relaxed text-taupe">
-          Senior & Gentle Comfort Care is listed under{" "}
+        <p className="font-body px-1 pt-2 text-base leading-relaxed text-ink">
           <Link
             href={SPECIALTY_CARE_PATH}
             className="underline decoration-champagne/70 underline-offset-4 transition hover:text-ink"
           >
-            Specialty Care
+            Senior &amp; Gentle Comfort Care →
           </Link>
-          , including starting prices by weight.
         </p>
       )}
     </div>
