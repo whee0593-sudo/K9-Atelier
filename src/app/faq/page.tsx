@@ -2,6 +2,7 @@ import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { LuxuryButton } from "@/components/luxury/LuxuryButton";
 import { PageShell } from "@/components/luxury/PageShell";
 import { FeesPoliciesSection } from "@/components/services/FeesPoliciesSection";
+import { viewerCanViewServicePrices } from "@/lib/pricing-access";
 import Link from "next/link";
 
 export const metadata = {
@@ -329,7 +330,9 @@ function FaqAnswer({ item }: { item: FaqItem }) {
   return <FaqParagraphs paragraphs={item.paragraphs ?? []} />;
 }
 
-export default function FaqPage() {
+export default async function FaqPage() {
+  const showPrices = await viewerCanViewServicePrices();
+
   return (
     <PageShell
       eyebrow="FAQ"
@@ -368,11 +371,12 @@ export default function FaqPage() {
           Fees &amp; Policies
         </h2>
         <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
-          Starting prices are not a fixed quote. Open any item for the full
-          rule.
+          {showPrices
+            ? "Starting prices are not a fixed quote. Open any item for the full rule."
+            : "The estimate for your selected services is shown when you confirm the appointment. Open any item for the full rule."}
         </p>
         <div className="mt-8">
-          <FeesPoliciesSection />
+          <FeesPoliciesSection showPrices={showPrices} />
         </div>
       </section>
 

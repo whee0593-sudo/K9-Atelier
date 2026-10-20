@@ -11,8 +11,9 @@ export function ServiceNotes() {
           <Eyebrow>Service Notes</Eyebrow>
           <div className="font-body mx-auto mt-5 max-w-[30rem] space-y-3.5 text-base leading-[1.7] text-taupe">
             <p>
-              Starting prices may vary based on coat condition, temperament,
-              styling requirements and time.
+              The estimate for the services you select is shown when you confirm
+              the appointment. It may vary with coat condition, temperament,
+              styling, and time.
             </p>
             <p>Dogs up to 45 lbs · By appointment only</p>
             <p>
