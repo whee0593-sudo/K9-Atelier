@@ -1,7 +1,8 @@
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/luxury/Container";
-import { PortfolioPhoto } from "@/components/gallery/PortfolioPhoto";
+import { getGallerySlot, type GalleryFrameSlot } from "@/lib/gallery-wall";
 
 /**
  * `sizes` matches the layout width, not the source file.
@@ -26,7 +27,20 @@ const HOME_SELECTED_WORK = [
   { id: 16, sizes: FEATURE_SIZES, feature: true },
 ] as const;
 
+function selectedSlot(id: number): GalleryFrameSlot {
+  const slot = getGallerySlot(id);
+  if (!slot) {
+    throw new Error(`Missing gallery portrait: ${id}`);
+  }
+  return slot;
+}
+
 export function HomeSelectedWork() {
+  const works = HOME_SELECTED_WORK.map((item) => ({
+    ...item,
+    slot: selectedSlot(item.id),
+  }));
+
   return (
     <section
       aria-labelledby="home-selected-work-heading"
@@ -46,12 +60,21 @@ export function HomeSelectedWork() {
         </div>
 
         <ul className="mt-10 grid list-none grid-cols-2 items-center gap-x-4 gap-y-8 p-0 md:mt-14 md:grid-cols-4 md:gap-x-8 md:gap-y-0 lg:gap-x-12 xl:gap-x-14">
-          {HOME_SELECTED_WORK.map(({ id, sizes, feature }) => (
+          {works.map(({ slot, sizes, feature }) => (
             <li
-              key={id}
+              key={slot.id}
               className={`min-w-0 ${feature ? "col-span-2 md:col-span-1" : ""}`}
             >
-              <PortfolioPhoto id={id} sizes={sizes} />
+              <Image
+                src={slot.photoSrc}
+                alt={slot.photoAlt}
+                width={slot.photoWidth}
+                height={slot.photoHeight}
+                sizes={sizes}
+                quality={75}
+                loading="lazy"
+                className="h-auto w-full max-w-full"
+              />
             </li>
           ))}
         </ul>

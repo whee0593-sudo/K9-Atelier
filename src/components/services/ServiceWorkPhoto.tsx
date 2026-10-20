@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { PortfolioPhoto } from "@/components/gallery/PortfolioPhoto";
+
 
 // Existing portfolio assets; no new or generated imagery.
 const work = {
@@ -14,11 +14,12 @@ export function ServiceWorkPhoto({ slug }: { slug: string }) {
   if (!photo) return null;
   return (
     <figure className="mx-auto max-w-sm">
-      {slug === "hand-stripping" ? <PortfolioPhoto id={16} loading="eager" sizes="(max-width: 415px) calc(100vw - 2rem), 384px" /> :
-        <Image {...photo} loading="eager" sizes="(max-width: 415px) calc(100vw - 2rem), 384px" className="h-auto max-h-[420px] w-full object-contain" />}
+      
+        <Image {...photo} loading="eager" sizes="(max-width: 415px) calc(100vw - 2rem), 384px" className="h-auto max-h-[420px] w-full object-contain" />
       <figcaption className="font-body mt-3 text-center text-sm text-ink">
         <Link href="/gallery" className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-deep-lavender">See Penny’s work</Link>
       </figcaption>
     </figure>
   );
 }
+
