@@ -228,7 +228,7 @@ export const SERVICES_DIRECTORY_DESCRIPTIONS: Record<
   string
 > = {
   "bath-coat-care": "Bathing · Coat & skin maintenance",
-  "full-groom": "Haircuts · Styling · Coat care",
+  "full-groom": "Haircuts · Styling",
   "hand-stripping": "Traditional wire-coat maintenance",
   spa: "A fully customized spa experience",
   color: "Pet-safe color artistry",

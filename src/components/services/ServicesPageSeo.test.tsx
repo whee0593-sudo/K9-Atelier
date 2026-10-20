@@ -19,7 +19,7 @@ import { metadata } from "@/app/services/page";
 
 const SERVICE_LINKS = [
   ["/services/bath-coat-care", "Bath & Coat Care", "Bathing · Coat & skin maintenance"],
-  ["/services/full-groom", "Full Grooming", "Haircuts · Styling · Coat care"],
+  ["/services/full-groom", "Full Grooming", "Haircuts · Styling"],
   ["/services/hand-stripping", "Hand Stripping", "Traditional wire-coat maintenance"],
   ["/services/spa", "Luxury Spa Day", "A fully customized spa experience"],
   ["/services/color", "Creative Color", "Pet-safe color artistry"],
