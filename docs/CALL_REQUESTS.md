@@ -38,3 +38,15 @@ Verified at 390 × 844: a card is saved and a callback request is received; refr
 Live testing found that setting the uncollected email field to `never` made Stripe require an email in confirmSetup. The callback now leaves email collection at Stripe's default, while supplying the already-collected name and phone. The tested card form did not require email.
 
 Authenticated owner linking, live merchant notification delivery, and an entire existing Book Online appointment have not been exercised against this older Development schema. These remain release checks; the booking, tracking, and notification isolation regression tests cover the existing behavior locally. Keep the callback feature disabled while the test database is paused. Do not deploy this configuration to Production.
+
+## Staff and existing-booking review — 2026-10-20
+
+The later review completed authenticated owner linking and an entire existing Book Online appointment in Development. The paragraph above records the earlier review's limits.
+
+- Rehearsed the 47 existing migrations locally, then applied the 28 missing pre-callback migrations only to Development. Its older grants also needed server-only availability reads and day-plan writes; no public callback access was added.
+- Created dedicated synthetic owner and customer accounts only in Development. Verified mobile queue display, masked card details, marking contacted, owner-only linking, anonymous/customer rejection, and duplicate linking leaving one saved card.
+- Intercepted the email provider locally while using real Development communication records. Concurrent and repeated notice calls produced one provider attempt, one accepted test log and one receipt. The notice had no appointment/Visit relation. No email was sent. Actual email/SMS delivery remains unverified because provider credentials were unavailable; do not treat the intercepted provider receipt as real delivery.
+- Completed Book Online at 390 × 844 with a synthetic pet/customer and a public test address. It reused the card linked from the callback, created exactly one confirmed appointment and one linked Visit, and produced zero Stripe charges. Missing notification/referral provider configuration did not roll back the booking.
+- Found a reproducible migration omission: the allergy columns existed, but the original customer column grants did not cover them, so owner-details saving failed. The new `20261020191652_booking_allergy_field_permissions.sql` grants only those customer-editable fields. A database regression test reproduces the old denial, verifies own-profile/pet writes after the fix, and confirms other-customer, anonymous and Stripe-account updates remain denied. Applied only in Development; Production still needs separate review and approval.
+
+Before release, supply a deliberately configured mail/SMS test environment and verify real delivery separately. Production migration, merge, push and deployment remain unapproved.
