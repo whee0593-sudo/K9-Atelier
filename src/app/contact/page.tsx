@@ -31,14 +31,7 @@ export default async function ContactPage({
   return (
     <PageShell
       eyebrow="Get in Touch"
-      title={
-        <>
-          A Thoughtful Experience
-          <br />
-          Begins With Understanding.
-        </>
-      }
-      intro="Every dog is different. If you are unsure which service is most appropriate, we invite you to get in touch before booking."
+      title="Contact Penny"
     >
       <div className="mx-auto max-w-xl">
         <ContactBoardForm initialInquiry={inquiry} />
