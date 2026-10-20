@@ -1,18 +1,18 @@
 export const homeFirstVisitSteps = [
   {
     number: "01",
-    title: "Who We’re Welcoming",
-    body: "Tell us a little about your furry family.",
+    title: "Your Dog",
+    body: "Add your dog’s name, breed and weight.",
   },
   {
     number: "02",
-    title: "Choose Time & Service",
-    body: "Choose your preferred date, start time, and service.",
+    title: "Service & Time",
+    body: "Select a service, then an available date and time.",
   },
   {
     number: "03",
-    title: "Add a Few Details",
-    body: "Complete a few details to help us prepare for your appointment.",
+    title: "Your Details & Card",
+    body: "Add your contact details and save a card. No charge today.",
   },
   {
     number: "04",

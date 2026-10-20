@@ -16,23 +16,23 @@ describe("home first visit guide", () => {
     assert.deepEqual(
       homeFirstVisitSteps.map((step) => step.title),
       [
-        "Who We’re Welcoming",
-        "Choose Time & Service",
-        "Add a Few Details",
+        "Your Dog",
+        "Service & Time",
+        "Your Details & Card",
         "The Spa Arrives",
       ],
     );
     assert.equal(
       homeFirstVisitSteps[0].body,
-      "Tell us a little about your furry family.",
+      "Add your dog’s name, breed and weight.",
     );
     assert.equal(
       homeFirstVisitSteps[1].body,
-      "Choose your preferred date, start time, and service.",
+      "Select a service, then an available date and time.",
     );
     assert.equal(
       homeFirstVisitSteps[2].body,
-      "Complete a few details to help us prepare for your appointment.",
+      "Add your contact details and save a card. No charge today.",
     );
   });
 

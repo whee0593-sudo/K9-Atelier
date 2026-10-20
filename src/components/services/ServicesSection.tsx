@@ -52,7 +52,7 @@ export function ServicesSection({
           {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}
           <TitleTag className={titleClass}>{title}</TitleTag>
           {intro && (
-            <p className="font-body mt-4 text-base leading-relaxed text-taupe">
+            <p className="font-body mt-4 text-base leading-relaxed text-ink">
               {intro}
             </p>
           )}

@@ -53,7 +53,7 @@ export function ServiceCategoryView({ category }: Props) {
       <ServicesNav />
       <ServicesSection
         id={category.slug}
-        eyebrow={category.pageEyebrow}
+        eyebrow={category.pageEyebrow === category.pageH1 ? undefined : category.pageEyebrow}
         title={category.pageH1}
         titleAs="h1"
         titleClassName={
@@ -78,6 +78,8 @@ export function ServiceCategoryView({ category }: Props) {
                 <ServiceCard
                   key={service.id}
                   service={displayed}
+                  showSummary={category.slug !== "full-groom" && category.slug !== "spa"}
+                  showBestFor={category.slug !== "full-groom" && category.slug !== "spa"}
                   headingAs="h2"
                   quiet={service.id === "end-of-life-care"}
                   anchorId={SERVICE_ANCHORS[service.id] ?? service.id}
@@ -117,7 +119,7 @@ export function ServiceCategoryView({ category }: Props) {
         </div>
         </div>
         {category.slug === "specialty-care" ? (
-          <p className="font-body mx-auto mt-10 max-w-2xl text-center text-pretty text-sm leading-relaxed text-taupe">
+          <p className="font-body mx-auto mt-10 max-w-2xl text-center text-pretty text-sm leading-relaxed text-ink">
             {SPECIALTY_CARE_AREA_SENTENCE}
           </p>
         ) : null}

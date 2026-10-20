@@ -19,7 +19,7 @@ export function ServicesIntroduction() {
           <h2 className="font-display text-[2rem] leading-[1.15] font-medium tracking-[-0.01em] text-pretty text-ink md:text-[2.5rem] md:leading-[1.12]">
             {servicesIntroductionHeading}
           </h2>
-          <p className="font-body mx-auto mt-5 max-w-[36rem] text-base leading-[1.7] text-taupe md:text-[17px] md:leading-[1.75]">
+          <p className="font-body mx-auto mt-5 max-w-[36rem] text-base leading-[1.7] text-ink md:text-[17px] md:leading-[1.75]">
             {servicesIntroductionBody}
           </p>
           <div className="mt-9 flex flex-col items-center">

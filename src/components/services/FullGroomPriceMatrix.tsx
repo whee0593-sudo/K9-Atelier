@@ -47,7 +47,7 @@ export function FullGroomPriceMatrix({ service }: Props) {
                     {formatWeightLabel(weight.label)}
                   </span>
                   {durationByWeight[weight.id] && (
-                    <span className="font-body mt-1 block text-[12px] text-taupe">
+                    <span className="font-body mt-1 block text-sm text-ink">
                       {durationByWeight[weight.id]}
                     </span>
                   )}
@@ -80,7 +80,7 @@ export function FullGroomPriceMatrix({ service }: Props) {
               {formatWeightLabel(weight.label)}
             </p>
             {durationByWeight[weight.id] && (
-              <p className="font-body mt-1 text-sm text-taupe">
+              <p className="font-body mt-1 text-sm text-ink">
                 {durationByWeight[weight.id]}
               </p>
             )}

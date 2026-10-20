@@ -15,7 +15,7 @@ const cardClass =
 const titleClass =
   "font-display text-[1.75rem] leading-[1.15] font-medium text-ink md:text-3xl";
 
-const descriptionClass = "font-body mt-3 text-base leading-[1.65] text-taupe";
+const descriptionClass = "font-body mt-3 text-base leading-[1.65] text-ink";
 
 const priceClass =
   "font-body mt-5 min-h-[1.5rem] text-base font-medium tracking-[0.01em] text-ink md:min-h-[1.7rem] md:text-[17px]";

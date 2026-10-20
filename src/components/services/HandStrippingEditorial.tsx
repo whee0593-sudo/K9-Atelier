@@ -69,13 +69,13 @@ export function HandStrippingEditorial() {
                 {section.paragraphs.map((paragraph) => (
                   <p
                     key={paragraph}
-                    className="font-body mt-4 text-base leading-relaxed text-taupe"
+                    className="font-body mt-4 text-base leading-relaxed text-ink"
                   >
                     {paragraph}
                   </p>
                 ))}
                 {section.heading === HAND_STRIPPING_WHAT_HEADING ? (
-                  <p className="font-body mt-4 text-base leading-relaxed text-taupe">
+                  <p className="font-body mt-4 text-base leading-relaxed text-ink">
                     {HAND_STRIPPING_GROOMER_BEFORE}
                     <Link href="/about" className={inlineLinkClass}>
                       {HAND_STRIPPING_GROOMER_NAME}
@@ -112,7 +112,7 @@ export function HandStrippingEditorial() {
                       </span>
                     </span>
                   </summary>
-                  <p className="font-body mt-4 text-base leading-relaxed text-taupe">
+                  <p className="font-body mt-4 text-base leading-relaxed text-ink">
                     {faq.answer}
                   </p>
                 </details>

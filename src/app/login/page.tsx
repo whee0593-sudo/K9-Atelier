@@ -14,18 +14,18 @@ export default async function LoginPage({ searchParams }: Props) {
   return (
     <Container className="py-14 md:py-20">
       <div className="mx-auto max-w-xl text-center">
-        <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+        <p className="font-body text-sm font-medium uppercase tracking-[0.18em] text-ink">
           {adminFlow ? "K9 Atelier Team" : "Private Appointments"}
         </p>
         <h1 className="font-display mt-4 text-4xl text-ink md:text-5xl">
           {adminFlow ? "Staff Sign In" : "Welcome to K9 Atelier"}
         </h1>
-        <p className="font-body mx-auto mt-6 max-w-md text-sm leading-relaxed text-taupe">
+        <p className="font-body mx-auto mt-6 max-w-md text-sm leading-relaxed text-ink">
           {adminFlow
             ? "Sign in with your team email to review customer records and use admin tools."
             : bookingFlow
-              ? "Sign in with your email and password to reserve or manage your dog's private grooming appointment."
-              : "Sign in with your email and password to manage your profile, pets, and appointments."}
+              ? "Sign in to continue booking."
+              : "Manage your profile, dogs and appointments."}
         </p>
 
         {error === "auth" && (
@@ -67,14 +67,14 @@ export default async function LoginPage({ searchParams }: Props) {
         <div className="mt-10 flex items-center justify-center gap-8">
           <Link
             href="/"
-            className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe transition hover:text-ink"
+            className="font-body text-sm font-medium uppercase tracking-[0.14em] text-ink transition hover:text-ink"
           >
             Return Home
           </Link>
           {adminFlow ? null : (
             <Link
               href="/login?next=/admin"
-              className="font-body text-[10px] font-medium uppercase tracking-[0.14em] text-taupe transition hover:text-ink"
+              className="font-body text-sm font-medium uppercase tracking-[0.14em] text-ink transition hover:text-ink"
             >
               Staff Login
             </Link>

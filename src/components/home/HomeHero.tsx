@@ -65,7 +65,7 @@ function HeroLead({ lead }: { lead: string }) {
 function HeroServiceMeta({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`font-body max-w-xl space-y-3 text-[13px] font-medium uppercase leading-relaxed tracking-[0.12em] text-taupe md:text-sm ${className}`}
+      className={`font-body max-w-xl space-y-3 text-[13px] font-medium uppercase leading-relaxed tracking-[0.12em] text-ink md:text-sm ${className}`}
     >
       <p className="text-pretty">
         <span className="whitespace-nowrap">Serving Jupiter Island ·</span>{" "}
@@ -92,7 +92,7 @@ export function HomeHero() {
           <h1 className="font-display mt-5 text-[2.5rem] leading-[1.08] font-medium text-ink md:mt-6 md:text-[3.5rem] lg:text-[4.5rem]">
             {business.brand.tagline}
           </h1>
-          <p className="font-body mt-5 max-w-xl text-base leading-relaxed text-taupe md:mt-6 md:text-[17px]">
+          <p className="font-body mt-5 max-w-xl text-base leading-relaxed text-ink md:mt-6 md:text-[17px]">
             <HeroLead lead={business.brand.lead} />
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:items-center sm:gap-4">

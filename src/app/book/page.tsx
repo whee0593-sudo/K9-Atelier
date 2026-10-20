@@ -12,9 +12,6 @@ export default async function BookPage({ searchParams }: Props) {
   return (
     <Container className="py-10 md:py-20">
       <header className="mx-auto max-w-3xl text-center">
-        <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-taupe">
-          Private Appointments
-        </p>
         <h1 className="font-display mt-4 text-4xl text-ink md:text-5xl">
           Book Online
         </h1>

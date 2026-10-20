@@ -19,7 +19,7 @@ function Section({
 }) {
   return (
     <section className="border border-gray-line/80 bg-ivory p-6 md:p-8">
-      <h2 className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
+      <h2 className="font-body text-sm font-medium uppercase tracking-[0.12em] text-ink">
         {title}
       </h2>
       <div className="font-body mt-4 space-y-3 text-base leading-relaxed text-ink">

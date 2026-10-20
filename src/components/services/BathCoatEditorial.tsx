@@ -50,20 +50,20 @@ export function BathCoatEditorial() {
                 <h2 className="font-display text-3xl leading-[1.15] text-pretty text-ink md:text-4xl">
                   {section.heading}
                 </h2>
-                <p className="font-body mt-4 text-base leading-relaxed text-taupe">
+                <p className="font-body mt-4 text-base leading-relaxed text-ink">
                   {section.body}
                 </p>
               </div>
             ))}
 
             <div>
-              <p className="font-body text-base leading-relaxed text-taupe">
+              <p className="font-body text-base leading-relaxed text-ink">
                 {BATH_COAT_FULL_GROOM_NOTE}
               </p>
               <p className="mt-6">
                 <TextLink href={FULL_GROOM_PATH}>Full Grooming</TextLink>
               </p>
-              <p className="font-body mt-8 text-base leading-relaxed text-taupe">
+              <p className="font-body mt-8 text-base leading-relaxed text-ink">
                 {BATH_COAT_HAND_STRIPPING_NOTE}
               </p>
               <p className="mt-6">
@@ -94,7 +94,7 @@ export function BathCoatEditorial() {
                       </span>
                     </span>
                   </summary>
-                  <p className="font-body mt-4 text-base leading-relaxed text-taupe">
+                  <p className="font-body mt-4 text-base leading-relaxed text-ink">
                     {faq.answer}
                   </p>
                 </details>

@@ -224,7 +224,7 @@ describe("homepage SEO", () => {
 
     const section = html.slice(start, end);
     assert.match(section, /Selected Work/);
-    assert.match(section, /Every coat, considered individually\./);
+    assert.doesNotMatch(section, /Every coat, considered individually\./);
     assert.match(section, /href="\/gallery"/);
     assert.match(section, /Explore Our Work/);
 

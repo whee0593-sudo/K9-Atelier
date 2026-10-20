@@ -34,7 +34,7 @@ export function FullGroomEditorial() {
             <h2 className="font-display text-3xl text-ink md:text-4xl">
               {FULL_GROOM_INCLUDED_HEADING}
             </h2>
-            <p className="font-body mt-4 text-base leading-relaxed text-taupe">
+            <p className="font-body mt-4 text-base leading-relaxed text-ink">
               {FULL_GROOM_INCLUDED_BODY}
             </p>
             <p className="mt-6">
@@ -46,7 +46,7 @@ export function FullGroomEditorial() {
             <h2 className="font-display text-3xl text-ink md:text-4xl">
               {FULL_GROOM_STYLING_HEADING}
             </h2>
-            <p className="font-body mt-4 text-base leading-relaxed text-taupe">
+            <p className="font-body mt-4 text-base leading-relaxed text-ink">
               {FULL_GROOM_STYLING_BODY}
             </p>
             <p className="mt-6">
@@ -76,7 +76,7 @@ export function FullGroomEditorial() {
                       </span>
                     </span>
                   </summary>
-                  <p className="font-body mt-4 text-base leading-relaxed text-taupe">
+                  <p className="font-body mt-4 text-base leading-relaxed text-ink">
                     {faq.answer}
                   </p>
                 </details>

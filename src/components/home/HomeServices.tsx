@@ -8,8 +8,6 @@ import {
 } from "@/lib/service-page";
 
 export const homeServicesHeading = "Grooming, tailored to the individual.";
-export const homeServicesCopy =
-  "From precision haircuts and coat care to traditional hand stripping, each appointment is tailored to the dog\u2019s coat, comfort and individual needs.";
 
 const HOME_SERVICE_SLUGS = [
   "full-groom",
@@ -40,7 +38,7 @@ function HomeServiceCard({ category }: { category: ServiceCategory }) {
         <h3 className="font-display text-[1.75rem] leading-[1.15] font-medium text-ink md:text-3xl">
           {category.directoryName}
         </h3>
-        <p className="font-body mt-3 text-base leading-[1.65] text-taupe">
+        <p className="font-body mt-3 text-base leading-[1.65] text-ink">
           {category.directoryDescription}
         </p>
         {price ? (
@@ -78,9 +76,6 @@ export function HomeServices() {
           >
             {homeServicesHeading}
           </h2>
-          <p className="font-body mt-5 text-pretty text-base leading-relaxed text-taupe md:text-[17px]">
-            {homeServicesCopy}
-          </p>
         </div>
 
         <ul className="mt-10 grid list-none grid-cols-1 gap-6 p-0 md:mt-14 md:grid-cols-2 md:gap-8 lg:grid-cols-3 lg:gap-x-8 lg:gap-y-10">

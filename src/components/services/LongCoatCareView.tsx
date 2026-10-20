@@ -31,7 +31,7 @@ const inlineLinkClass =
 const headingClass =
   "font-display text-balance text-3xl leading-[1.15] text-pretty text-ink md:text-4xl";
 
-const bodyClass = "font-body mt-4 text-base leading-relaxed text-taupe";
+const bodyClass = "font-body mt-4 text-base leading-relaxed text-ink";
 
 function TextLink({ href, children }: { href: string; children: string }) {
   return (
@@ -46,7 +46,7 @@ function TextLink({ href, children }: { href: string; children: string }) {
 
 function AreaSentence() {
   return (
-    <p className="font-body mx-auto max-w-[28rem] text-pretty text-[13px] leading-relaxed text-taupe md:text-sm">
+    <p className="font-body mx-auto max-w-[28rem] text-pretty text-[13px] leading-relaxed text-ink md:text-sm">
       Serving{" "}
       <span className="whitespace-nowrap">Jupiter Island,</span>{" "}
       <span className="whitespace-nowrap">Jupiter,</span>{" "}

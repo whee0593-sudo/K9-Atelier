@@ -75,10 +75,10 @@ const headingClass =
   "font-display mt-5 text-balance text-[clamp(2.15rem,4.2vw+1rem,3.7rem)] leading-[1.08] font-medium tracking-[-0.02em] text-ink";
 
 const proseClass =
-  "font-body max-w-[40rem] space-y-6 text-[16px] leading-[1.8] text-taupe md:text-[18px] md:leading-[1.85]";
+  "font-body max-w-[40rem] space-y-6 text-[16px] leading-[1.8] text-ink md:text-[18px] md:leading-[1.85]";
 
 const captionClass =
-  "font-body mt-3 text-[11px] font-medium uppercase tracking-[0.18em] text-taupe md:mt-4";
+  "font-body mt-3 text-sm font-medium uppercase tracking-[0.18em] text-ink md:mt-4";
 
 const textLinkClass =
   "font-body mt-8 inline-flex max-w-full min-h-[48px] items-center justify-center text-center text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne md:mt-10";
@@ -185,7 +185,7 @@ function AwardsTimeline() {
             <p className="font-body mt-4 text-[12px] font-medium uppercase tracking-[0.16em] text-ink">
               {award.title}
             </p>
-            <p className="font-display mt-2 text-[1.65rem] text-taupe italic">
+            <p className="font-display mt-2 text-[1.65rem] text-ink italic">
               {award.breed}
             </p>
           </li>
@@ -208,7 +208,7 @@ function AwardsTimeline() {
             <p className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-ink lg:text-[13px] lg:tracking-[0.18em]">
               {award.title}
             </p>
-            <p className="font-display mt-3 text-[1.7rem] text-taupe italic lg:text-[2rem]">
+            <p className="font-display mt-3 text-[1.7rem] text-ink italic lg:text-[2rem]">
               {award.breed}
             </p>
           </li>
@@ -241,7 +241,7 @@ export function AboutStory() {
 
           <section className="mt-16 md:mt-20" aria-labelledby="about-awards">
             <h2 id="about-awards" className="font-display text-3xl text-ink md:text-4xl">From the Show Ring</h2>
-            <p className={`${proseClass} mt-4`}>Competition shaped my approach to coat preparation, balance and finishing. These are some of the awards from that work.</p>
+            <p className={`${proseClass} mt-4`}>Competition shaped my approach to coat preparation, balance and finishing.</p>
             <div className="mt-8 grid gap-8 md:grid-cols-2">
               <figure>
                 <AboutPhoto {...photos.grooming} sizes={SHOW_RING_SIZES} defer objectPosition="62% center" className="aspect-[3/2] w-full object-cover" />
@@ -269,7 +269,7 @@ export function AboutStory() {
               </figure>
               <div>
                 <h2 id="about-teaching" className="font-display text-3xl text-ink md:text-4xl">Sharing the Craft</h2>
-                <p className={`${proseClass} mt-4`}>I also teach hands-on grooming techniques. Whether I’m teaching or caring for a client’s dog, coat health and comfortable handling guide my work.</p>
+                <p className={`${proseClass} mt-4`}>I also teach hands-on grooming techniques, with a focus on coat health and comfortable handling.</p>
                 <Link href="/book" className="font-body mt-6 inline-flex min-h-12 items-center justify-center rounded-sm bg-deep-lavender px-8 text-sm font-medium text-ivory hover:bg-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-deep-lavender">Book Online</Link>
               </div>
             </div>

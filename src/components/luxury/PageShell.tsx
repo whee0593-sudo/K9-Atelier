@@ -26,7 +26,7 @@ export function PageShell({
             {title}
           </h1>
           {intro && (
-            <div className="font-body mx-auto mt-6 max-w-2xl text-base leading-relaxed text-taupe md:text-[17px]">
+            <div className="font-body mx-auto mt-6 max-w-2xl text-base leading-relaxed text-ink md:text-[17px]">
               {intro}
             </div>
           )}

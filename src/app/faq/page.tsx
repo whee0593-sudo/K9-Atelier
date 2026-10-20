@@ -64,49 +64,49 @@ const faqGroups: Array<{ title: string; items: FaqItem[] }> = [
       {
         q: "How does mobile grooming work?",
         paragraphs: [
-          "K9 Atelier brings a fully equipped, private grooming spa directly to your home. Your dog enjoys personalized, one-on-one care in a calm, cage-free environment, without the car ride, waiting room, or busy salon atmosphere.",
+          "We groom your dog one-on-one in our mobile spa, parked outside your home.",
         ],
       },
       {
         q: "Do you groom dogs inside my home?",
         paragraphs: [
-          "No. All grooming takes place inside our fully equipped mobile spa, conveniently parked outside your home. No mess or cleanup required.",
+          "No. Grooming takes place inside the mobile spa.",
         ],
       },
       {
         q: "Will my dog be kept in a cage or crate?",
         paragraphs: [
-          "Never. Our grooming experience is completely cage-free. Your dog receives our undivided attention without waiting in a cage or crate.",
+          "No. Every visit is cage-free.",
         ],
       },
       {
         q: "Will my dog be around other dogs?",
         paragraphs: [
-          "No. Your dog won't be around other clients' dogs. Each visit is private and personalized, and dogs from the same household can be groomed one at a time.",
+          "No. Dogs from the same household can be groomed one at a time.",
         ],
       },
       {
         q: "Do I need to provide water or electricity?",
         paragraphs: [
-          "Not at all. Our mobile spa is fully self-contained, with its own water and power supply. All we need is a suitable place to park.",
+          "No. The mobile spa has its own water and power.",
         ],
       },
       {
         q: "Where should the grooming van park?",
         paragraphs: [
-          "A safe, level, and accessible parking space near your home is ideal. A private driveway is preferred, but other suitable areas may work. Please let us know in advance about any parking restrictions, fees, or community access requirements.",
+          "Please provide a safe, level parking space near your home, preferably a driveway. Tell us about parking fees, restrictions or community access requirements.",
         ],
       },
       {
         q: "Do I need to be home during the appointment?",
         paragraphs: [
-          "You don't need to stay home throughout the grooming session. We simply ask that you or someone you trust be available to safely hand over your dog and receive them when grooming is complete.",
+          "No, but you or someone you trust must be available to hand over and receive your dog.",
         ],
       },
       {
         q: "How should I prepare for my appointment?",
         paragraphs: [
-          "Please give your dog an opportunity to relieve themselves before we arrive. Let us know about any health concerns, allergies, sensitivities, or special handling needs so we can make the experience as comfortable as possible.",
+          "Give your dog a bathroom break before we arrive, and tell us about health concerns, allergies or handling needs.",
         ],
       },
     ],
@@ -123,7 +123,7 @@ const faqGroups: Array<{ title: string; items: FaqItem[] }> = [
       {
         q: "What are your hours, and how do I book?",
         paragraphs: [
-          "Our regular hours are Monday through Friday, from 9 AM to 5 PM. Simply create an account, add your dog's information, select your service and an available appointment time, and save a card to submit your booking request.",
+          "Monday through Friday, from 9 AM to 5 PM. Choose Book Online, add your dog's details, select a service and time, then complete your details and save a card. No charge today.",
         ],
       },
       {
@@ -152,13 +152,13 @@ const faqGroups: Array<{ title: string; items: FaqItem[] }> = [
       {
         q: "Do you groom puppies or senior dogs?",
         paragraphs: [
-          "Absolutely. We welcome puppies and senior dogs, adjusting our approach to their age, comfort, and individual needs. Gentle handling and patience are always our priorities.",
+          "Yes. We adjust handling and pace to your dog's age and comfort.",
         ],
       },
       {
         q: "What if my dog is nervous or has special needs?",
         paragraphs: [
-          "Every dog is different, and we understand that. Our private, one-on-one approach allows us to adjust the pace and handling to your dog's comfort. Please share any anxiety, health concerns, or special needs before your appointment. Additional handling fees may apply when specialized care is required.",
+          "Tell us about anxiety, health concerns or handling needs before booking. Extra handling fees may apply.",
         ],
       },
       {
@@ -170,7 +170,7 @@ const faqGroups: Array<{ title: string; items: FaqItem[] }> = [
       {
         q: "Can I combine Luxury Spa Day with a Full Groom?",
         paragraphs: [
-          "To keep your dog comfortable and avoid an overly long session, Luxury Spa Day is generally scheduled separately from Full Groom appointments. We're happy to recommend the best care schedule for your dog.",
+          "These are generally booked separately to avoid an overly long session.",
         ],
       },
       {
@@ -193,7 +193,7 @@ const faqGroups: Array<{ title: string; items: FaqItem[] }> = [
       {
         q: "Can I pay with cash or Zelle?",
         paragraphs: [
-          "Absolutely. We gladly accept cash and Zelle after your grooming appointment, and we appreciate these payment methods. Credit card payments are also available for your convenience.",
+          "Yes. We gladly accept cash and Zelle after grooming, as well as credit cards.",
         ],
       },
     ],

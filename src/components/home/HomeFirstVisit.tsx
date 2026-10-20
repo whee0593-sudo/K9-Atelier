@@ -25,7 +25,7 @@ export function HomeFirstVisit() {
               <h3 className="font-body mt-3 text-[13px] font-semibold uppercase tracking-[0.14em] text-ink">
                 {step.title}
               </h3>
-              <p className="font-body mt-4 text-sm leading-relaxed text-taupe">
+              <p className="font-body mt-4 text-base leading-relaxed text-ink">
                 {step.body}
               </p>
             </li>

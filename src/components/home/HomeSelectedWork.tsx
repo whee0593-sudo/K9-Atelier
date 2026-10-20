@@ -54,9 +54,6 @@ export function HomeSelectedWork() {
           >
             Selected Work
           </h2>
-          <p className="font-body mt-5 text-pretty text-base leading-relaxed text-taupe md:text-[17px]">
-            Every coat, considered individually.
-          </p>
         </div>
 
         <ul className="mt-10 grid list-none grid-cols-2 items-center gap-x-4 gap-y-8 p-0 md:mt-14 md:grid-cols-4 md:gap-x-8 md:gap-y-0 lg:gap-x-12 xl:gap-x-14">

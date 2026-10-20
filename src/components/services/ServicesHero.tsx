@@ -11,10 +11,10 @@ export function ServicesHero() {
           <h1 className="font-display mt-4 text-[clamp(2.125rem,6.4vw,3.25rem)] leading-[1.12] font-medium tracking-[-0.01em] text-pretty text-ink md:mt-5 md:leading-[1.08]">
             Grooming Services
           </h1>
-          <p className="font-body mx-auto mt-5 max-w-[28rem] text-base leading-[1.7] text-taupe md:mt-6 md:max-w-[32rem] md:text-[17px] md:leading-[1.75]">
+          <p className="font-body mx-auto mt-5 max-w-[28rem] text-base leading-[1.7] text-ink md:mt-6 md:max-w-[32rem] md:text-[17px] md:leading-[1.75]">
             One-on-one mobile grooming by Penny, brought to your home.
           </p>
-          <p className="font-body mx-auto mt-3 max-w-[28rem] text-pretty text-[13px] leading-relaxed text-taupe md:mt-4 md:max-w-[32rem] md:text-sm">
+          <p className="font-body mx-auto mt-3 max-w-[28rem] text-pretty text-[13px] leading-relaxed text-ink md:mt-4 md:max-w-[32rem] md:text-sm">
             <span className="whitespace-nowrap">Jupiter Island,</span>{" "}
             <span className="whitespace-nowrap">Jupiter,</span>{" "}
             <span className="whitespace-nowrap">Tequesta,</span>{" "}
