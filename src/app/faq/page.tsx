@@ -2,6 +2,7 @@ import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { LuxuryButton } from "@/components/luxury/LuxuryButton";
 import { PageShell } from "@/components/luxury/PageShell";
 import { FeesPoliciesSection } from "@/components/services/FeesPoliciesSection";
+import { viewerCanViewServicePrices } from "@/lib/pricing-access";
 import Link from "next/link";
 
 export const metadata = {
@@ -329,7 +330,9 @@ function FaqAnswer({ item }: { item: FaqItem }) {
   return <FaqParagraphs paragraphs={item.paragraphs ?? []} />;
 }
 
-export default function FaqPage() {
+export default async function FaqPage() {
+  const showPrices = await viewerCanViewServicePrices();
+
   return (
     <PageShell
       eyebrow="FAQ"
@@ -367,7 +370,7 @@ export default function FaqPage() {
           Fees &amp; Policies
         </h2>
         <div className="mt-8">
-          <FeesPoliciesSection />
+          <FeesPoliciesSection showPrices={showPrices} />
         </div>
       </section>
 

@@ -563,7 +563,7 @@ describe("included mini trim is not charged again", () => {
       12,
     );
     assert.equal(lines.some((item) => item.catalogId === "mini-trim"), false);
-    assert.equal(lines.some((item) => item.catalogId === "dematting-brush-out"), true);
+    assert.equal(lines.some((item) => item.catalogId === "dematting-brush-out"), false);
     assert.equal(MINI_TRIM_ALREADY_INCLUDED_MESSAGE.includes("Mini Trim"), true);
     assert.equal(selectionRepeatsIncludedMiniTrim(["signature-bath-care", "mini-trim"]), false);
     assert.equal(

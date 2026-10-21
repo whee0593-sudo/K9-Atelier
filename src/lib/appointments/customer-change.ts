@@ -46,11 +46,11 @@ import { canonicalServiceId, isRetiredSpaService } from "@/lib/service-catalog";
 import { spaGoalsForService } from "@/lib/spa-goals";
 import { loadBookingAllergySnapshot } from "@/lib/appointments/service";
 import { resolveAppointmentDuration } from "@/lib/visits/duration";
+import { changeQuoteEstimatedTotal } from "@/lib/appointments/stored-service-price";
 import {
   hasVisitSequence,
   nextVisitSequence,
   scheduleVisitPetChain,
-  servicePriceFromEstimatedTotal,
   snapshotServicePrice,
 } from "@/lib/visits/visit";
 import { compactVisitChildStarts } from "@/lib/visits/compact";
@@ -207,25 +207,8 @@ async function visitSequences(
   };
 }
 
-function rowServicePrice(row: ChangeRow) {
-  if (row.service_price != null && Number.isFinite(Number(row.service_price))) {
-    return Number(row.service_price);
-  }
-  return (
-    servicePriceFromEstimatedTotal(
-      row.estimated_total == null ? null : Number(row.estimated_total),
-      Number(row.travel_fee ?? 0),
-    ) ?? 0
-  );
-}
-
 function quoteForRows(action: AppointmentChangeAction, rows: ChangeRow[]) {
-  const serviceTotal = rows.reduce((sum, row) => sum + rowServicePrice(row), 0);
-  const travel =
-    action === "remove_dog"
-      ? 0
-      : rows.reduce((max, row) => Math.max(max, Number(row.travel_fee ?? 0)), 0);
-  const estimatedTotal = Math.round((serviceTotal + travel) * 100) / 100;
+  const estimatedTotal = changeQuoteEstimatedTotal(action, rows);
   const first = rows[0];
   const band = first
     ? changeNoticeBand(first.appointment_date, first.scheduled_start ?? null)

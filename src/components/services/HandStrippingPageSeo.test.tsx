@@ -15,6 +15,7 @@ import {
 import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
 import { HandStrippingEditorial } from "@/components/services/HandStrippingEditorial";
 import { ServiceCard } from "@/components/services/ServiceCard";
+import { ServicePriceDetails } from "@/components/services/ServicePriceDetails";
 import { ServicesSection } from "@/components/services/ServicesSection";
 import { business, getBrandSearchName, getCommunitiesServed } from "@/lib/business";
 import {
@@ -247,11 +248,22 @@ describe("hand stripping page content", () => {
       /Charged at an hourly rate due to the intense precision and time required\./,
     );
 
-    const html = renderToStaticMarkup(
+    const guest = renderToStaticMarkup(
       <ServiceCard service={service} headingAs="h2" anchorId="hand-stripping" />,
     );
-    assert.match(html, /Wire-coated breeds/);
-    assert.equal(html.includes("Wire-coated Terriers and Schnauzers"), false);
+    const html = renderToStaticMarkup(
+      <ServiceCard
+        service={service}
+        headingAs="h2"
+        anchorId="hand-stripping"
+        showPrices
+        priceText={serviceCardPriceValue(service)}
+        priceDetails={<ServicePriceDetails service={service} />}
+      />,
+    );
+    assert.match(guest, /Wire-coated breeds/);
+    assert.equal(guest.includes("Wire-coated Terriers and Schnauzers"), false);
+    assert.equal(/\$\d/.test(guest), false);
     assert.match(html, /\$160 \/ hour/);
     assert.match(html, /From \$160 \/ hour/);
     assert.match(html, /1 – 1\.5 hours \(varies by coat texture &amp; coverage\)/);

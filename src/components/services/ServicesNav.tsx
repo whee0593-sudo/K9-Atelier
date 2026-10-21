@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SERVICES_NAV } from "@/lib/service-page";
+import { SERVICES_NAV } from "@/lib/services-nav";
 
 const inactiveClass =
   "inline-flex min-h-[56px] w-full items-center justify-center rounded-sm border border-gray-line/80 bg-ivory px-3 py-3 text-center font-body text-sm font-medium uppercase leading-tight tracking-[0.04em] text-taupe transition hover:border-champagne hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne sm:min-h-[60px] sm:px-3 sm:text-sm lg:px-2 xl:px-3";

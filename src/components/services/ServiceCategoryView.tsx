@@ -9,13 +9,16 @@ import { HandStrippingEditorial } from "@/components/services/HandStrippingEdito
 import { MobileBookBar } from "@/components/services/MobileBookBar";
 import { ServiceCard } from "@/components/services/ServiceCard";
 import { ServiceWorkPhoto } from "@/components/services/ServiceWorkPhoto";
+import { ServicePriceDetails } from "@/components/services/ServicePriceDetails";
 import { ServicesHashRedirect } from "@/components/services/ServicesHashRedirect";
 import { ServicesNav } from "@/components/services/ServicesNav";
 import { ServicesSection } from "@/components/services/ServicesSection";
 import type { ServiceCategory } from "@/lib/service-page";
 import { LONG_COAT_CARE_PATH } from "@/lib/long-coat-care-page";
+import { serviceWithoutMenuPrices } from "@/lib/public-service";
 import {
   SERVICE_ANCHORS,
+  serviceCardPriceValue,
   SPECIALTY_CARE_AREA_SENTENCE,
   SPECIALTY_CARE_PENNY_AFTER,
   SPECIALTY_CARE_PENNY_BEFORE,
@@ -30,6 +33,7 @@ import {
 
 type Props = {
   category: ServiceCategory;
+  showPrices?: boolean;
 };
 
 function serviceGridClass(count: number) {
@@ -38,7 +42,7 @@ function serviceGridClass(count: number) {
   return "grid gap-6 lg:grid-cols-2";
 }
 
-export function ServiceCategoryView({ category }: Props) {
+export function ServiceCategoryView({ category, showPrices = false }: Props) {
   const services = getServicesByIds(category.serviceIds);
   const coloring = getServiceById("creative-accent-coloring");
   const hasWorkPhoto = ["full-groom", "hand-stripping", "color"].includes(category.slug);
@@ -66,20 +70,29 @@ export function ServiceCategoryView({ category }: Props) {
         {hasWorkPhoto ? <div className="order-2 lg:order-1"><ServiceWorkPhoto slug={category.slug} /></div> : null}
         <div className="order-1 min-w-0 lg:order-2">
         {category.layout === "coloring" && coloring ? (
-          <CreativeColoringSection service={coloring} />
+          <CreativeColoringSection
+            service={showPrices ? coloring : serviceWithoutMenuPrices(coloring)}
+            showPrices={showPrices}
+          />
         ) : (
           <div className={serviceGridClass(services.length)}>
             {services.map((service) => {
-              const displayed =
+              const named =
                 category.slug === "specialty-care"
                   ? specialtyCareDisplayService(service)
                   : service;
+              const displayed = showPrices ? named : serviceWithoutMenuPrices(named);
               return (
                 <ServiceCard
                   key={service.id}
                   service={displayed}
                   showSummary={category.slug !== "full-groom" && category.slug !== "spa"}
                   showBestFor={category.slug !== "full-groom" && category.slug !== "spa"}
+                  showPrices={showPrices}
+                  priceText={showPrices ? serviceCardPriceValue(named) : ""}
+                  priceDetails={
+                    showPrices ? <ServicePriceDetails service={named} /> : null
+                  }
                   headingAs="h2"
                   quiet={service.id === "end-of-life-care"}
                   anchorId={SERVICE_ANCHORS[service.id] ?? service.id}

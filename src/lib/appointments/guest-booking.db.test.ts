@@ -462,6 +462,12 @@ describe("guest booking idempotency", () => {
 });
 
 function pgBinary(name: string) {
+  if (process.platform === "win32") {
+    for (const version of ["18", "17", "16", "15", "14"]) {
+      const candidate = path.join(process.env.ProgramFiles ?? "C:/Program Files", "PostgreSQL", version, "bin", `${name}.exe`);
+      if (existsSync(candidate)) return candidate;
+    }
+  }
   for (const version of ["18", "17", "16", "15", "14"]) {
     const candidate = `/usr/lib/postgresql/${version}/bin/${name}`;
     if (existsSync(candidate)) return candidate;
@@ -481,11 +487,11 @@ describe("two concurrent guest bookings", () => {
 
   before(async () => {
     dataDir = mkdtempSync(path.join(tmpdir(), "k9-guest-pg-"));
-    socketDir = mkdtempSync(path.join(tmpdir(), "k9-guest-sock-"));
+    socketDir = process.platform === "win32" ? "127.0.0.1" : mkdtempSync(path.join(tmpdir(), "k9-guest-sock-"));
     const init = spawnSync(
       pgBinary("initdb"),
-      ["-D", dataDir, "-U", "postgres", "--auth=trust", "--no-sync"],
-      { encoding: "utf8" },
+      ["-D", dataDir, "-U", "postgres", "--auth=trust", "--no-sync", "--encoding=UTF8", "--locale=C"],
+      { encoding: "utf8", windowsHide: true },
     );
     if (init.status !== 0) {
       throw new Error(init.stderr || init.stdout || "initdb failed");
@@ -495,16 +501,15 @@ describe("two concurrent guest bookings", () => {
       [
         "-D",
         dataDir,
-        "-k",
-        socketDir,
+        ...(process.platform === "win32" ? ["-c", "unix_socket_directories="] : ["-k", socketDir]),
         "-p",
         String(port),
         "-c",
-        "listen_addresses=",
+        process.platform === "win32" ? "listen_addresses=127.0.0.1" : "listen_addresses=",
         "-c",
         "fsync=off",
       ],
-      { stdio: ["ignore", "pipe", "pipe"] },
+      { stdio: ["ignore", "pipe", "pipe"], windowsHide: true },
     );
     let log = "";
     server.stdout?.resume();
@@ -569,12 +574,12 @@ describe("two concurrent guest bookings", () => {
       spawnSync(
         pgBinary("pg_ctl"),
         ["-D", dataDir, "-m", "immediate", "stop"],
-        { encoding: "utf8" },
+        { encoding: "utf8", windowsHide: true },
       );
     }
     if (server && server.exitCode == null) server.kill("SIGKILL");
     if (dataDir) rmSync(dataDir, { recursive: true, force: true });
-    if (socketDir) rmSync(socketDir, { recursive: true, force: true });
+    if (socketDir && process.platform !== "win32") rmSync(socketDir, { recursive: true, force: true });
   });
 
   async function call(client: Client, hash: string, key: string, start: number) {

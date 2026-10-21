@@ -7,6 +7,7 @@ import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
 import { bodyFont, displayFont } from "@/lib/fonts";
 import { GOOGLE_ADS_ID } from "@/lib/google-ads";
 import { getBrandSearchName } from "@/lib/business";
+import { getSiteChrome } from "@/lib/site-chrome";
 import "./globals.css";
 
 /** Container only. Existing Google Ads gtag and conversion events stay as they are. */
@@ -74,7 +75,7 @@ export default function RootLayout({
           `}
         </Script>
         <LocalBusinessJsonLd />
-        <SiteShell>{children}</SiteShell>
+        <SiteShell chrome={getSiteChrome()}>{children}</SiteShell>
         <Analytics />
       </body>
     </html>

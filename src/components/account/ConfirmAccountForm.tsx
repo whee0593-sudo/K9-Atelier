@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
-import { formatPrice } from "@/lib/business";
+import { formatPrice } from "@/lib/format-price";
 import {
   bookingFieldClass,
   bookingLabelClass,

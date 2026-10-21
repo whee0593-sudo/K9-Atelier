@@ -1,6 +1,7 @@
 import { Container } from "@/components/luxury/Container";
 import { BookingFlow } from "@/components/booking/BookingFlow";
 import Link from "next/link";
+import { viewerCanViewServicePrices } from "@/lib/pricing-access";
 
 type Props = {
   searchParams: Promise<{ ref?: string }>;
@@ -9,6 +10,7 @@ type Props = {
 export default async function BookPage({ searchParams }: Props) {
   const { ref } = await searchParams;
   const initialReferralCode = (ref ?? "").trim();
+  const showPrices = await viewerCanViewServicePrices();
 
   return (
     <Container className="py-10 md:py-20">
@@ -23,7 +25,10 @@ export default async function BookPage({ searchParams }: Props) {
       </header>
 
       <div className="mx-auto mt-10 max-w-2xl">
-        <BookingFlow initialReferralCode={initialReferralCode} />
+        <BookingFlow
+          initialReferralCode={initialReferralCode}
+          showPrices={showPrices}
+        />
       </div>
     </Container>
   );

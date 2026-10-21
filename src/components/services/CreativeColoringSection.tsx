@@ -4,9 +4,10 @@ import { PolicyAccordion } from "@/components/services/PolicyAccordion";
 
 type Props = {
   service: BookableService;
+  showPrices?: boolean;
 };
 
-export function CreativeColoringSection({ service }: Props) {
+export function CreativeColoringSection({ service, showPrices = false }: Props) {
   const options = service.options ?? [];
   const policy = service.bookingPolicy;
 
@@ -30,9 +31,13 @@ export function CreativeColoringSection({ service }: Props) {
                 {option.description}
               </p>
             )}
-            <p className="font-body mt-4 text-sm text-ink">
-              {coloringOptionPriceLabel(option)}
-            </p>
+            {showPrices ? (
+              <p className="font-body mt-4 text-sm text-ink">
+                {coloringOptionPriceLabel(option)}
+              </p>
+            ) : option.consultationRequired ? (
+              <p className="font-body mt-4 text-sm text-ink">Consultation required</p>
+            ) : null}
           </article>
         ))}
       </div>

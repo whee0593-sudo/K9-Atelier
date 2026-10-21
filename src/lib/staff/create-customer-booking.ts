@@ -14,7 +14,6 @@ import {
   createStaffVisit,
   type StaffVisitAppointmentInsert,
 } from "@/lib/visits/persist";
-import { snapshotServicePrice } from "@/lib/visits/visit";
 import {
   mapAppointmentRowToRecord,
 } from "@/lib/appointments/map";
@@ -30,18 +29,15 @@ import { loadBookingAllergySnapshot } from "@/lib/appointments/service";
 import { PET_SELECT } from "@/lib/pets/types";
 import { allergySnapshotForBooking } from "@/lib/allergies";
 import {
-  bookedServiceAmount,
-  estimateServiceDurationMinutes,
+  addOnSelectionMessage,
   allBookableServices,
-  selectionRepeatsIncludedMiniTrim,
-  MINI_TRIM_ALREADY_INCLUDED_MESSAGE,
 } from "@/lib/services";
+import { staffAppointmentPriceDrafts } from "@/lib/staff/staff-appointment-drafts";
 import { keepPrimaryIfReferralFails } from "@/lib/referrals/allocate-code";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import { getStaffSession } from "@/lib/staff/auth";
 import { describeStaffScheduleConflict } from "@/lib/staff/schedule-conflict";
-import { parseStaffServiceSelection } from "@/lib/staff/service-choice";
 import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { isFrozenAuthUser } from "@/lib/auth/frozen-account";
 import {
@@ -477,32 +473,24 @@ async function saveBookingPet(
 function staffVisitDurations(
   input: StaffCustomerBookingInput,
 ): { ok: true; durations: number[] } | { ok: false; error: "conflict"; message: string } {
-  const durations: number[] = [];
-  const serviceId = input.serviceId;
-  for (const pet of input.pets) {
-    const petServiceIds =
-      pet.serviceIds.length > 0
-        ? pet.serviceIds
-        : pet.serviceId
-          ? [pet.serviceId]
-          : serviceId
-            ? [serviceId]
-            : [];
-    for (const petServiceId of petServiceIds) {
-      const known = allBookableServices().some((entry) => entry.id === petServiceId);
-      if (!known) {
-        return { ok: false, error: "conflict", message: "Unknown service." };
-      }
-      durations.push(
-        estimateServiceDurationMinutes(
-          petServiceId,
-          pet.weightLbs,
-          input.addOnIds,
-        ),
-      );
-    }
-  }
-  return { ok: true, durations };
+  const pricing = staffAppointmentPriceDrafts(
+    input.pets.map((pet) => ({
+      weightLbs: pet.weightLbs,
+      serviceIds:
+        pet.serviceIds.length > 0
+          ? pet.serviceIds
+          : pet.serviceId
+            ? [pet.serviceId]
+            : [],
+      serviceOptionNames: pet.serviceOptionNames,
+      servicePrices: pet.servicePrices,
+      addOnIds: pet.addOnIds,
+      addOnOptions: pet.addOnOptions,
+    })),
+    0,
+  );
+  if (!pricing.ok) return { ok: false, error: "conflict", message: pricing.message };
+  return { ok: true, durations: pricing.drafts.map((draft) => draft.durationMinutes) };
 }
 
 export async function createStaffCustomerBooking(
@@ -579,8 +567,9 @@ export async function createStaffCustomerBooking(
         : pet.serviceId
           ? [pet.serviceId]
           : [];
-    if (selectionRepeatsIncludedMiniTrim(petServiceIds, input.addOnIds)) {
-      return { error: "conflict", message: MINI_TRIM_ALREADY_INCLUDED_MESSAGE };
+    const addOnMessage = addOnSelectionMessage(petServiceIds, pet.addOnIds);
+    if (addOnMessage) {
+      return { error: "conflict", message: addOnMessage };
     }
   }
 
@@ -597,11 +586,28 @@ export async function createStaffCustomerBooking(
     return { error: "conflict", message: "Unknown service." };
   }
 
-  const firstDurationMinutes = estimateServiceDurationMinutes(
-    firstServiceId,
-    firstPet.weightLbs,
-    input.addOnIds,
+  const pricedVisit = staffAppointmentPriceDrafts(
+    input.pets.map((pet) => ({
+      weightLbs: pet.weightLbs,
+      serviceIds:
+        pet.serviceIds.length > 0
+          ? pet.serviceIds
+          : pet.serviceId
+            ? [pet.serviceId]
+            : serviceId
+              ? [serviceId]
+              : [],
+      serviceOptionNames: pet.serviceOptionNames,
+      servicePrices: pet.servicePrices,
+      addOnIds: pet.addOnIds,
+      addOnOptions: pet.addOnOptions,
+    })),
+    quote.fee,
   );
+  if (!pricedVisit.ok) {
+    return { error: "conflict", message: pricedVisit.message };
+  }
+  const firstDurationMinutes = pricedVisit.drafts[0]?.durationMinutes ?? 0;
   const plannedVisits = staffVisitDurations(input);
   if (!plannedVisits.ok) {
     return { error: plannedVisits.error, message: plannedVisits.message };
@@ -668,7 +674,7 @@ export async function createStaffCustomerBooking(
     let previousDuration = firstDurationMinutes;
     let visitIndex = 0;
 
-    for (const pet of input.pets) {
+    for (const [petIndex, pet] of input.pets.entries()) {
       const savedPet = await saveBookingPet(admin, userId, pet);
       if ("error" in savedPet) return savedPet;
       const petRow = savedPet.pet;
@@ -682,27 +688,12 @@ export async function createStaffCustomerBooking(
         });
       });
 
-      const petServiceIds =
-        pet.serviceIds.length > 0
-          ? pet.serviceIds
-          : pet.serviceId
-            ? [pet.serviceId]
-            : serviceId
-              ? [serviceId]
-              : [];
+      const dogDrafts = pricedVisit.drafts.filter(
+        (draft) => draft.dogIndex === petIndex,
+      );
 
-      for (const [visitServiceIndex, petServiceId] of petServiceIds.entries()) {
-        const petService = allBookableServices().find(
-          (entry) => entry.id === petServiceId,
-        );
-        if (!petService) {
-          return { error: "conflict", message: "Unknown service." };
-        }
-        const durationMinutes = estimateServiceDurationMinutes(
-          petServiceId,
-          pet.weightLbs,
-          input.addOnIds,
-        );
+      for (const draft of dogDrafts) {
+        const durationMinutes = draft.durationMinutes;
         const companion =
           visitIndex === 0
             ? null
@@ -733,27 +724,10 @@ export async function createStaffCustomerBooking(
                 timePreference: companion!.usedPreference,
               };
 
-        const optionName = pet.serviceOptionNames[visitServiceIndex] ?? null;
-        const serviceNameForPet =
-          (optionName
-            ? parseStaffServiceSelection(`${petService.id}::${optionName}`)
-                ?.label
-            : null) || petService.name;
-        const price = bookedServiceAmount(
-          petService,
-          pet.weightLbs,
-          optionName,
-          pet.servicePrices[visitServiceIndex] ?? null,
-        );
-        const travelFee = visitIndex === 0 ? quote.fee : 0;
-        const servicePrice = snapshotServicePrice(price ?? 0);
-        const estimatedTotal =
-          Math.round((servicePrice + travelFee) * 100) / 100;
-
         const allergy = await loadBookingAllergySnapshot(
           userId,
           petRow.id as string,
-          serviceNameForPet,
+          draft.serviceName,
         );
         if (!allergy.ok) {
           console.error("createStaffCustomerBooking allergy profile could not be read");
@@ -762,10 +736,10 @@ export async function createStaffCustomerBooking(
         pendingAppointments.push({
           customer_id: userId,
           pet_id: petRow.id as string,
-          service_id: petService.id,
-          service_name: serviceNameForPet,
-          add_on_ids: input.addOnIds,
-          add_on_options: optionName ? { [petService.id]: optionName } : {},
+          service_id: draft.serviceId,
+          service_name: draft.serviceName,
+          add_on_ids: draft.addOnIds,
+          add_on_options: draft.addOnOptions,
           spa_goals: [],
           allergy_snapshot: allergySnapshot,
           address_street: address.street,
@@ -773,8 +747,8 @@ export async function createStaffCustomerBooking(
           address_state: address.state,
           address_zip: address.zip,
           travel_distance_miles: quote.distanceMiles,
-          travel_fee: travelFee,
-          service_price: servicePrice,
+          travel_fee: draft.travelFee,
+          service_price: draft.servicePrice,
           estimated_duration_minutes: durationMinutes,
           visit_sequence: visitIndex + 1,
           appointment_date: appointmentDate,
@@ -784,7 +758,7 @@ export async function createStaffCustomerBooking(
           address_lat: destination.lat,
           address_lon: destination.lon,
           timezone: business.booking.timezone,
-          estimated_total: estimatedTotal,
+          estimated_total: draft.estimatedTotal,
           new_client_deposit: 0,
           payment_method_id: null,
           vaccination_status_at_booking: "missing",

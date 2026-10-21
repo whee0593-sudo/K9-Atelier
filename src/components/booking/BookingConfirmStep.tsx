@@ -9,9 +9,8 @@ import {
   bookingNoticeClass,
   bookingPrimaryBtnClass,
 } from "@/components/booking/booking-ui";
-import { BookingPriceLines } from "@/components/booking/BookingPriceLines";
+import { BookingReviewQuote } from "@/components/booking/BookingReviewQuote";
 import {
-  BOOKING_PRICE_DISCLAIMER,
   createSubmitGuard,
   formatBookingDate,
   quoteGuestBooking,
@@ -202,14 +201,13 @@ export function BookingConfirmStep({
         ← Back
       </button>
       <p className="font-body mt-8 text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
-        Confirm
+        Review & Confirm
       </p>
       <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
-        Review your appointment
+        Review & Confirm
       </h2>
       <p className="font-body mt-4 text-sm text-taupe">
-        Please look over these details. Confirming saves this household profile
-        and sends your reservation email and text.
+        Please review your appointment details before submitting your request.
       </p>
 
       <div className={`${bookingNoticeClass} mt-8 space-y-6`}>
@@ -291,7 +289,7 @@ export function BookingConfirmStep({
 
         {quoted?.ok ? (
           <div className="border-t border-gray-line/70 pt-6">
-            <BookingPriceLines quote={quoted.quote} />
+            <BookingReviewQuote quote={quoted.quote} />
           </div>
         ) : (
           <p className="font-body border-t border-gray-line/70 pt-6 text-sm text-red-800" role="alert">
@@ -307,14 +305,14 @@ export function BookingConfirmStep({
             {formatPaymentMethodLabel(paymentMethod)}
           </p>
           <p className="font-body mt-2 text-xs leading-relaxed text-taupe">
-            No charge now. Payment is settled after the appointment.
+            No charge today. Your card is securely kept on file to reserve your
+            appointment.
+          </p>
+          <p className="font-body mt-2 text-xs leading-relaxed text-taupe">
+            Cash or Zelle is preferred. Your saved card is kept as a backup.
           </p>
         </div>
       </div>
-
-      <p className="font-body mt-6 text-sm leading-relaxed text-taupe">
-        {BOOKING_PRICE_DISCLAIMER}
-      </p>
 
       <div className={`${bookingNoticeClass} mt-6 space-y-4`}>
         <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
@@ -361,7 +359,7 @@ export function BookingConfirmStep({
         onClick={() => void handleConfirm()}
         className={`${bookingPrimaryBtnClass} mt-8`}
       >
-        {loading ? "Confirming…" : "Confirm Appointment"}
+        {loading ? "Confirming…" : "Confirm & Submit Booking"}
       </button>
     </section>
   );

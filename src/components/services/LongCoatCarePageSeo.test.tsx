@@ -169,8 +169,10 @@ describe("long-coat care page content", () => {
       ],
     );
 
-    const html = renderToStaticMarkup(<LongCoatCareView />);
-    assert.match(html, /Show-Level Coat Care/);
+    const guest = renderToStaticMarkup(<LongCoatCareView />);
+    const html = renderToStaticMarkup(<LongCoatCareView showPrices />);
+    assert.match(guest, /Show-Level Coat Care/);
+    assert.equal(/\$\d/.test(guest), false);
     assert.match(html, /From \$120/);
     assert.match(html, /From \$140/);
     assert.match(html, /From \$160/);

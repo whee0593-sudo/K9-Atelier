@@ -11,6 +11,7 @@ import { BathCoatJsonLd } from "@/components/seo/BathCoatJsonLd";
 import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
 import { BathCoatEditorial } from "@/components/services/BathCoatEditorial";
 import { ServiceCard } from "@/components/services/ServiceCard";
+import { ServicePriceDetails } from "@/components/services/ServicePriceDetails";
 import { ServicesSection } from "@/components/services/ServicesSection";
 import { business, getBrandSearchName, getCommunitiesServed } from "@/lib/business";
 import {
@@ -249,10 +250,31 @@ describe("bath and coat care page content", () => {
       assert.equal(entry?.durationMax, durationMax);
     }
 
-    const html = renderToStaticMarkup(
+    const guest = renderToStaticMarkup(
       <>
         <ServiceCard service={signature} headingAs="h2" anchorId="signature-bath" />
         <ServiceCard service={longCoat} headingAs="h2" anchorId="long-coat-show-care" />
+      </>,
+    );
+    assert.equal(/\$\d/.test(guest), false);
+    const html = renderToStaticMarkup(
+      <>
+        <ServiceCard
+          service={signature}
+          headingAs="h2"
+          anchorId="signature-bath"
+          showPrices
+          priceText={serviceCardPriceValue(signature)}
+          priceDetails={<ServicePriceDetails service={signature} />}
+        />
+        <ServiceCard
+          service={longCoat}
+          headingAs="h2"
+          anchorId="long-coat-show-care"
+          showPrices
+          priceText={serviceCardPriceValue(longCoat)}
+          priceDetails={<ServicePriceDetails service={longCoat} />}
+        />
       </>,
     );
     assert.match(html, />\$90</);
@@ -260,6 +282,7 @@ describe("bath and coat care page content", () => {
     assert.match(html, /From \$90/);
     assert.match(html, /From \$130/);
     assert.match(html, /From \$160/);
+    assert.match(guest, /45\u201390 min/);
     assert.match(html, /45\u201360 min/);
     assert.match(html, /90\u2013105 min/);
     assert.match(html, /href="\/book"/);

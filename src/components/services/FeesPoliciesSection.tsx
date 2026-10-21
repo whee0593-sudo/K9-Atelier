@@ -3,7 +3,11 @@ import { business, formatPrice } from "@/lib/business";
 import { SPECIALTY_CARE_PATH, getServiceById } from "@/lib/service-page";
 import { PolicyAccordion } from "@/components/services/PolicyAccordion";
 
-export function FeesPoliciesSection() {
+export function FeesPoliciesSection({
+  showPrices = false,
+}: {
+  showPrices?: boolean;
+}) {
   const travel = business.fees.find((fee) => fee.type === "travel");
   const flea = business.fees.find((fee) => fee.id === "flea-tick-fee");
   const behavior = business.fees.find((fee) => fee.id === "behavior-fee");
@@ -36,13 +40,20 @@ export function FeesPoliciesSection() {
             If fleas or ticks are found, we will notify you. A medicated bath
             and vehicle sanitation are required; both fees apply.
           </p>
-          <ul className="mt-4 space-y-2 text-base text-ink">
-            {fleaItems.map((item) => (
-              <li key={item.name}>
-                {item.name}: From {formatPrice(item.rate)}
-              </li>
-            ))}
-          </ul>
+          {showPrices ? (
+            <ul className="mt-4 space-y-2 text-base text-ink">
+              {fleaItems.map((item) => (
+                <li key={item.name}>
+                  {item.name}: From {formatPrice(item.rate)}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="font-body mt-4 text-base text-ink">
+              Any treatment or sanitation charge is included in the estimate
+              when you confirm the appointment.
+            </p>
+          )}
         </PolicyAccordion>
       )}
 
@@ -50,10 +61,15 @@ export function FeesPoliciesSection() {
         <PolicyAccordion
           title={behavior.name}
         >
-          <p className="font-body mt-3 text-base text-ink">
-            From {formatPrice(behaviorMin)}, based on the level of anxiety,
-            resistance, or aggression shown on-site.
+          <p className="font-body text-base leading-relaxed text-ink">
+            {behavior.description}
           </p>
+          {showPrices ? (
+            <p className="font-body mt-3 text-base text-ink">
+              From {formatPrice(behaviorMin)}, based on the level of anxiety,
+              resistance, or aggression shown on-site.
+            </p>
+          ) : null}
         </PolicyAccordion>
       )}
 
@@ -61,25 +77,45 @@ export function FeesPoliciesSection() {
         <PolicyAccordion
           title="Travel Fee"
         >
-          <ul className="font-body space-y-2 text-base text-ink">
-            <li>Complimentary within {freeRadiusMiles} miles</li>
-            <li>
-              Above {freeRadiusMiles} through {maxDistanceMiles} miles:{" "}
-              {formatPrice(travelFeePerMile)} per one-way mile beyond{" "}
-              {freeRadiusMiles}
-            </li>
-            <li>
-              Above {maxDistanceMiles} through {standardServiceMiles} miles:{" "}
-              {formatPrice(standardTravelPortion)} plus{" "}
-              {formatPrice(extendedTravelFeePerMile)} per mile beyond{" "}
-              {maxDistanceMiles}
-            </li>
-            <li>One-way GPS driving distance. The travel fee is rounded to the nearest dollar</li>
-            <li>
-              Beyond {standardServiceMiles} miles, please contact us. Online
-              booking is not available.
-            </li>
-          </ul>
+          {showPrices ? (
+            <ul className="font-body space-y-2 text-base text-ink">
+              <li>Complimentary within {freeRadiusMiles} miles</li>
+              <li>
+                Above {freeRadiusMiles} through {maxDistanceMiles} miles:{" "}
+                {formatPrice(travelFeePerMile)} per one-way mile beyond{" "}
+                {freeRadiusMiles}
+              </li>
+              <li>
+                Above {maxDistanceMiles} through {standardServiceMiles} miles:{" "}
+                {formatPrice(standardTravelPortion)} plus{" "}
+                {formatPrice(extendedTravelFeePerMile)} per mile beyond{" "}
+                {maxDistanceMiles}
+              </li>
+              <li>One-way GPS driving distance. The travel fee is rounded to the nearest dollar</li>
+              <li>
+                Beyond {standardServiceMiles} miles, please contact us. Online
+                booking is not available.
+              </li>
+            </ul>
+          ) : (
+            <ul className="font-body space-y-2 text-base text-ink">
+              <li>Included within {freeRadiusMiles} miles</li>
+              <li>
+                Above {freeRadiusMiles} through {standardServiceMiles} miles, a
+                travel fee may apply
+              </li>
+              <li>The amount is shown when you confirm the appointment</li>
+              <li>
+                Beyond {standardServiceMiles} miles, please contact us. Online
+                booking is not available.
+              </li>
+            </ul>
+          )}
+          {showPrices ? (
+            <p className="font-body mt-3 text-base leading-relaxed text-ink">
+              {travel.description}
+            </p>
+          ) : null}
         </PolicyAccordion>
       )}
 
@@ -87,8 +123,9 @@ export function FeesPoliciesSection() {
         title="Pricing Adjustments"
       >
         <p className="font-body text-base leading-relaxed text-ink">
-          Prices start at the listed rate and may vary with coat condition,
-          styling, temperament and time needed.
+          {showPrices
+            ? "Starting prices reflect a typical appointment within each weight range. Final pricing may vary based on coat condition, grooming requirements, temperament, and the time required to complete the service comfortably."
+            : "The estimate shown when you confirm the appointment reflects the services you selected. It may vary based on coat condition, grooming requirements, temperament, and the time required to complete the service comfortably."}
         </p>
       </PolicyAccordion>
 

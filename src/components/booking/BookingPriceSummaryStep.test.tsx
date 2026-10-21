@@ -91,7 +91,10 @@ describe("booking price summary", () => {
     );
     assert.match(bath, /From \$90/);
     assert.match(groom, /From \$140/);
-    assert.match(groom, new RegExp(FULL_GROOM_ESTIMATE_NOTE));
+    assert.match(
+      groom.replaceAll("&#x27;", "'"),
+      new RegExp(FULL_GROOM_ESTIMATE_NOTE),
+    );
     assert.match(withTravel, /\$13/);
     assert.match(withTravel, /From \$103/);
     assert.equal(bath.includes("$13"), false);
@@ -184,51 +187,58 @@ describe("booking confirm step", () => {
       />,
     );
     const html = confirm("signature-bath-care", 12, 12);
+    assert.match(html, /Review &amp; Confirm/);
+    assert.match(html, /Please review your appointment details before submitting your request/);
     assert.match(html, /Customer/);
     assert.match(html, /Tia Francavilla/);
     assert.match(html, /Pet/);
     assert.match(html, /Bella/);
-    assert.match(html, /Selected Service/);
     assert.match(html, /Signature Bath/);
-    assert.match(html, /Add-On Care/);
+    assert.match(html, /\$90\.00/);
     assert.match(html, /Appointment Date/);
     assert.match(html, /October 20, 2026/);
     assert.match(html, /Arrival Window/);
     assert.match(html, /10:00–11:00 AM/);
-    assert.match(html, /Estimated Service Price/);
     assert.match(html, /Travel Fee/);
-    assert.match(html, /\$13/);
+    assert.match(html, /\$13\.00/);
     assert.match(html, /Estimated Total/);
-    assert.match(html, /From \$103/);
+    assert.match(html, /\$103\.00/);
     assert.match(summary, /From \$103/);
-    assert.match(html, new RegExp(BOOKING_PRICE_DISCLAIMER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-    assert.match(html, /Confirm Appointment/);
+    assert.match(
+      html.replaceAll("&#x27;", "'"),
+      new RegExp(BOOKING_PRICE_DISCLAIMER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+    );
+    assert.match(html, /Confirm &amp; Submit Booking/);
+    assert.match(html, /No charge today/);
     assert.equal(html.includes("Reserve Appointment"), false);
   });
 
   it("uses the full groom and hand stripping estimate wording", () => {
     const groom = confirm("custom-full-haircut", 12);
     const stripping = confirm("hand-stripping", 50);
-    assert.match(groom, /From \$140/);
-    assert.match(groom, new RegExp(FULL_GROOM_ESTIMATE_NOTE));
-    assert.match(stripping, /From \$160\/hour/);
+    assert.match(groom, /\$140\.00/);
+    assert.match(
+      groom.replaceAll("&#x27;", "'"),
+      new RegExp(FULL_GROOM_ESTIMATE_NOTE),
+    );
+    assert.match(stripping, /\$160\.00\/hour/);
     assert.match(stripping, new RegExp(HAND_STRIPPING_ESTIMATE_NOTE));
   });
 });
 
 describe("booking flow wiring", () => {
-  it("shows the price summary before payment and does not mount the old review step", () => {
+  it("shows payment before review and does not mount the old review step", () => {
     const source = readFileSync(
       new URL("./BookingFlow.tsx", import.meta.url),
       "utf8",
     );
-    const summaryAt = source.indexOf("<BookingPriceSummaryStep");
     const paymentAt = source.indexOf("<BookingPaymentStep");
     const confirmAt = source.indexOf("<BookingConfirmStep");
-    assert.ok(summaryAt > 0);
-    assert.ok(summaryAt < paymentAt);
+    assert.equal(source.includes("<BookingPriceSummaryStep"), false);
+    assert.ok(paymentAt > 0);
     assert.ok(paymentAt < confirmAt);
     assert.equal(source.includes("<BookingReviewStep"), false);
     assert.match(source, /BookingConfirmationView/);
+    assert.match(source, /showPrices/);
   });
 });

@@ -163,9 +163,9 @@ describe("BookForCustomerForm preview schedule", () => {
     assert.doesNotMatch(light, /Dead Sea/);
     assert.doesNotMatch(light, /Aromatherapy/);
     assert.doesNotMatch(light, /Sensitive Skin/);
-    assert.match(light, />Specialty care\/Extra-gentle senior care</);
+    assert.match(light, />Specialty care\/Extra-Gentle Senior Care</);
     assert.match(light, />Specialty care\/End-of-Life Comfort Care</);
-    assert.match(light, />Add-on care\/Dematting &amp; gentle brush-out</);
+    assert.match(light, />Add-on care\/Gentle DeMatting</);
     assert.match(light, />Add-on care\/DeShedding Treatment</);
     assert.match(light, />Add-on care\/Mini Trim</);
     assert.doesNotMatch(light, />SPA\//);
@@ -188,9 +188,9 @@ describe("BookForCustomerForm preview schedule", () => {
       "Creative coloring/Ears & Tail Accent",
       "Creative coloring/Paws & Boots Accent",
       "Creative coloring/Custom Creative Design",
-      "Specialty care/Extra-gentle senior care",
+      "Specialty care/Extra-Gentle Senior Care",
       "Specialty care/End-of-Life Comfort Care",
-      "Add-on care/Dematting & gentle brush-out",
+      "Add-on care/Gentle DeMatting",
       "Add-on care/DeShedding Treatment",
       "Add-on care/Mini Trim",
     ]);
@@ -201,7 +201,7 @@ describe("BookForCustomerForm preview schedule", () => {
     assert.doesNotMatch(heavy, /Temporary Fun/);
     assert.doesNotMatch(heavy, /SPA\//);
     assert.doesNotMatch(heavy, /Add-on care\//);
-    assert.doesNotMatch(heavy, /Extra-gentle senior care/);
+    assert.doesNotMatch(heavy, /Extra-Gentle Senior Care/);
     assert.match(html, /Dog 1/);
     assert.match(html, /Dog 2/);
     assert.equal((html.match(/>Add service</g) ?? []).length, 2);

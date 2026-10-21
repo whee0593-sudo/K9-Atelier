@@ -26,8 +26,14 @@ export const homeServiceLinks = HOME_SERVICE_SLUGS.map((slug) => {
   return category;
 });
 
-function HomeServiceCard({ category }: { category: ServiceCategory }) {
-  const price = directoryPriceLabel(category);
+function HomeServiceCard({
+  category,
+  showPrices,
+}: {
+  category: ServiceCategory;
+  showPrices: boolean;
+}) {
+  const price = showPrices ? directoryPriceLabel(category) : null;
 
   return (
     <li className="min-w-0">
@@ -62,7 +68,7 @@ function HomeServiceCard({ category }: { category: ServiceCategory }) {
   );
 }
 
-export function HomeServices() {
+export function HomeServices({ showPrices = false }: { showPrices?: boolean }) {
   return (
     <section
       aria-labelledby="home-services-heading"
@@ -80,7 +86,11 @@ export function HomeServices() {
 
         <ul className="mt-10 grid list-none grid-cols-1 gap-6 p-0 md:mt-14 md:grid-cols-2 md:gap-8 lg:grid-cols-3 lg:gap-x-8 lg:gap-y-10">
           {homeServiceLinks.map((category) => (
-            <HomeServiceCard key={category.slug} category={category} />
+            <HomeServiceCard
+              key={category.slug}
+              category={category}
+              showPrices={showPrices}
+            />
           ))}
         </ul>
       </Container>
