@@ -1,3 +1,4 @@
+import { allergySnapshotForBooking } from "@/lib/allergies";
 import { randomUUID } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuthenticatedUser } from "@/lib/pets/auth";
@@ -896,9 +897,8 @@ async function addDogToVisit(
   );
   if (!allergy.ok) {
     console.error("addDogToVisit allergy profile could not be read");
-    return { error: "allergy_unavailable" as const };
   }
-  const allergySnapshot = allergy.snapshot;
+  const allergySnapshot = allergySnapshotForBooking(allergy);
 
   const estimate = getServicePriceEstimate(service, bookedWeight);
   const paymentMethod = await resolvePaymentMethod(

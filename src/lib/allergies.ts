@@ -60,6 +60,11 @@ export type AllergySnapshotLoad =
   | { ok: true; snapshot: AllergySnapshot }
   | { ok: false; error: "unavailable" };
 
+/** Failed reads remain unknown; they do not prevent booking or imply no allergies. */
+export function allergySnapshotForBooking(load: AllergySnapshotLoad): AllergySnapshot | null {
+  return load.ok ? load.snapshot : null;
+}
+
 type AllergyPetRead = {
   name?: string | null;
   allergy_status?: unknown;

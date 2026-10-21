@@ -8,7 +8,7 @@ import {
 import { mapAppointmentServiceError } from "@/lib/appointments/errors";
 import { guestBookingIntentHash } from "@/lib/appointments/guest-booking";
 import {
-  ALLERGY_PROFILE_UNAVAILABLE_MESSAGE,
+  allergySnapshotForBooking,
   allergySnapshotFromProfileRead,
   allergyStatusLabel,
   allergyWarning,
@@ -464,56 +464,24 @@ describe("allergy snapshot and staff email", () => {
     assert.notEqual(unsure.snapshot.petStatus, "none");
   });
 
-  it("stops the booking before the idempotent insert when the allergy read fails", async () => {
-    const response = mapAppointmentServiceError("allergy_unavailable");
-    assert.equal(response.status, 503);
-    const body = (await response.json()) as { error?: string; code?: string };
-    assert.equal(body.code, "allergy_unavailable");
-    assert.equal(body.error, ALLERGY_PROFILE_UNAVAILABLE_MESSAGE);
-    assert.equal(/no known allergies/i.test(body.error ?? ""), false);
-
-    const service = readFileSync(
-      new URL("./appointments/service.ts", import.meta.url),
-      "utf8",
-    );
-    const addDog = readFileSync(
-      new URL("./appointments/customer-change.ts", import.meta.url),
-      "utf8",
-    );
-    const staff = readFileSync(
-      new URL("./staff/create-customer-booking.ts", import.meta.url),
-      "utf8",
-    );
-    assert.ok(
-      service.indexOf('error: "allergy_unavailable"') <
-        service.indexOf("insertGuestBooking("),
-    );
-    assert.ok(
-      addDog.indexOf('error: "allergy_unavailable"') <
-        addDog.indexOf('.from("appointments")\n    .insert'),
-    );
-    assert.ok(
-      staff.indexOf('error: "allergy_unavailable"') <
-        staff.indexOf("createStaffVisit("),
-    );
-    const intent = {
-      petId: "11111111-1111-4111-8111-111111111111",
-      serviceId: SHOW_LEVEL_COAT_CARE_ID,
-      addOnIds: [] as string[],
-      addOnOptions: {},
-      address: {
-        street: "100 Olive Ave",
-        city: "West Palm Beach",
-        state: "FL",
-        zip: "33401",
-      },
-      appointmentDate: "2026-10-24",
-      slotStartMinutes: 600,
-      paymentMethodId: "22222222-2222-4222-8222-222222222222",
-    };
-    assert.equal(guestBookingIntentHash(intent), guestBookingIntentHash(intent));
-  });
-});
+  it("allows booking without an allergy snapshot when the profile read fails", () => {
+    for (const failure of [
+      { petError: true, profileError: false, pet: null, profile: null },
+      { petError: false, profileError: true, pet: { name: "Maple", allergy_status: "yes" }, profile: null },
+    ]) {
+      const loaded = allergySnapshotFromProfileRead({ ...failure, fallbackPetName: "Maple" });
+      assert.equal(loaded.ok, false);
+      assert.equal(allergySnapshotForBooking(loaded), null);
+    }
+    const snapshot = buildAllergySnapshot({petName: "Maple", petStatus: "yes", petDetails: "Fragrance", householdStatus: "unsure"});
+    assert.deepEqual(allergySnapshotForBooking({ok: true, snapshot}), snapshot);
+    assert.match(allergyWarning(snapshot)?.banner ?? "", /FRAGRANCE/);
+    for (const file of ["./appointments/service.ts", "./appointments/customer-change.ts", "./staff/create-customer-booking.ts"]) {
+      const source = readFileSync(new URL(file, import.meta.url), "utf8");
+      assert.ok(source.includes("allergySnapshotForBooking(allergy)"));
+      assert.doesNotMatch(source, /return \{\s*error: "allergy_unavailable"/);
+    }
+  });});
 
 describe("included mini trim is not charged again", () => {
   it("keeps Mini Trim on Signature Bath and rejects it on services that already include it", () => {

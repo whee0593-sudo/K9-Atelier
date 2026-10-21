@@ -28,7 +28,7 @@ import { formatServiceAddress, calculateTravelFee } from "@/lib/travel";
 import { mapValidatedInputToInsertRow } from "@/lib/pets/map";
 import { loadBookingAllergySnapshot } from "@/lib/appointments/service";
 import { PET_SELECT } from "@/lib/pets/types";
-import { ALLERGY_PROFILE_UNAVAILABLE_MESSAGE } from "@/lib/allergies";
+import { allergySnapshotForBooking } from "@/lib/allergies";
 import {
   bookedServiceAmount,
   estimateServiceDurationMinutes,
@@ -757,12 +757,8 @@ export async function createStaffCustomerBooking(
         );
         if (!allergy.ok) {
           console.error("createStaffCustomerBooking allergy profile could not be read");
-          return {
-            error: "allergy_unavailable",
-            message: ALLERGY_PROFILE_UNAVAILABLE_MESSAGE,
-          };
         }
-        const allergySnapshot = allergy.snapshot;
+        const allergySnapshot = allergySnapshotForBooking(allergy);
         pendingAppointments.push({
           customer_id: userId,
           pet_id: petRow.id as string,

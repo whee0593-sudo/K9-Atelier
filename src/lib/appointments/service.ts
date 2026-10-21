@@ -42,7 +42,7 @@ import {
   insertGuestBooking,
 } from "@/lib/appointments/guest-booking";
 import { estimateServiceDurationMinutes } from "@/lib/services";
-import { allergySnapshotFromProfileRead } from "@/lib/allergies";
+import { allergySnapshotForBooking, allergySnapshotFromProfileRead } from "@/lib/allergies";
 import { snapshotServicePrice, visitArrivalFields } from "@/lib/visits/visit";
 import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
 import {
@@ -330,9 +330,8 @@ export async function createAppointment(
   );
   if (!allergy.ok) {
     console.error("createAppointment allergy profile could not be read");
-    return { error: "allergy_unavailable" };
   }
-  const allergySnapshot = allergy.snapshot;
+  const allergySnapshot = allergySnapshotForBooking(allergy);
   const admin = createAdminClient();
   const saved = await insertGuestBooking(
     {
