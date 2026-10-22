@@ -138,7 +138,7 @@ export function CollectCheckout({
   const [useCash, setUseCash] = useState(false);
   const [useZelle, setUseZelle] = useState(false);
   const [chargedTender, setChargedTender] = useState<ChargeTender>("card");
-  const [tipMode, setTipMode] = useState<"15" | "18" | "20" | "custom">("18");
+  const [tipMode, setTipMode] = useState<"15" | "18" | "20" | "custom" | null>(null);
   const [customTip, setCustomTip] = useState("0");
   const [step, setStep] = useState<Step>(initialStep);
   const [chargeId, setChargeId] = useState<string | null>(null);
@@ -282,7 +282,7 @@ export function CollectCheckout({
 
   const subtotal = sumLineItems(lineItems);
   const tipAmount =
-    kind === "no_show"
+    kind === "no_show" || tipMode == null
       ? 0
       : tipMode === "custom"
         ? Math.max(0, Number(customTip) || 0)
@@ -1062,7 +1062,7 @@ function PayStep({
   context: CollectContext;
   lineItems: ChargeLineItem[];
   subtotal: number;
-  tipMode: "15" | "18" | "20" | "custom";
+  tipMode: "15" | "18" | "20" | "custom" | null;
   customTip: string;
   tipAmount: number;
   total: number;
@@ -1080,7 +1080,7 @@ function PayStep({
   busy: boolean;
   clientSecret: string | null;
   chargeId: string | null;
-  onTipMode: (value: "15" | "18" | "20" | "custom") => void;
+  onTipMode: (value: "15" | "18" | "20" | "custom" | null) => void;
   onCustomTip: (value: string) => void;
   onReferralMode: (value: ReferralApplyMode) => void;
   onReferralCustom: (value: string) => void;
@@ -1146,12 +1146,13 @@ function PayStep({
       </p>
 
       <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
-        Tip
+        Tip (optional)
       </p>
       <div className="mt-3 grid grid-cols-4 gap-2">
         {TIP_PERCENTS.map((percent) => (
           <button
             key={percent}
+            aria-pressed={tipMode === String(percent)}
             type="button"
             onClick={() => onTipMode(String(percent) as "15" | "18" | "20")}
             className={`rounded-sm py-3 text-sm ${
@@ -1165,6 +1166,7 @@ function PayStep({
         ))}
         <button
           type="button"
+          aria-pressed={tipMode === "custom"}
           onClick={() => onTipMode("custom")}
           className={`rounded-sm py-3 text-sm ${
             tipMode === "custom"
@@ -1180,6 +1182,7 @@ function PayStep({
           type="number"
           min="0"
           step="0.01"
+          aria-label="Tip amount (optional)"
           value={customTip}
           onChange={(event) => onCustomTip(event.target.value)}
           className="mt-3 w-full rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm"
