@@ -1,3 +1,5 @@
+import { business } from "./business";
+
 /** Customer-facing presentation names — backend service IDs unchanged. */
 export const SERVICE_DISPLAY_NAMES: Record<string, string> = {
   "signature-bath-care": "Signature Bath",
@@ -51,7 +53,11 @@ export const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
 };
 
 export function getServiceDisplayName(serviceId: string, fallback: string) {
-  return SERVICE_DISPLAY_NAMES[serviceId] ?? fallback;
+  const service = business.serviceCategories
+    .map((category) => category.services.find((item) => item.id === serviceId))
+    .find((item) => item != null);
+  if (serviceId === "senior-comfort-care") return "Extra-Gentle Senior Care";
+  return service?.name ?? SERVICE_DISPLAY_NAMES[serviceId] ?? fallback;
 }
 
 export function getCatalogItemDisplayLabel(

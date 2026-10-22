@@ -3,7 +3,7 @@ import { formatLineItemMoney } from "@/lib/charges/list-amount";
 import { formatChargeMoney } from "@/lib/charges/money";
 import { formatReceiptServiceTime } from "@/lib/charges/receipt-view";
 import type { AppointmentChargeRecord } from "@/lib/charges/types";
-import { getCatalogItemDisplayLabel } from "@/lib/service-display";
+import { receiptItems } from "@/lib/charges/receipt-items";
 
 function formatReceiptDate(date: string) {
   const parsed = new Date(date.includes("T") ? date : `${date}T12:00:00`);
@@ -28,24 +28,9 @@ export function buildChargeReceiptParagraphs(
 ) {
   const kindLabel = chargeKindLabel(charge.kind);
   const snapshot = charge.billSnapshot;
-  const itemLines = snapshot
-    ? [
-        ...snapshot.pets.map(
-          (pet) =>
-            `${pet.petName} — ${pet.serviceName}  ${formatChargeMoney(pet.amount)}`,
-        ),
-        snapshot.travelFee > 0
-          ? `Travel fee  ${formatChargeMoney(snapshot.travelFee)}`
-          : "",
-        snapshot.discount > 0
-          ? `Discount  ${formatChargeMoney(-snapshot.discount)}`
-          : "",
-        `Subtotal  ${formatChargeMoney(snapshot.subtotal)}`,
-      ].filter(Boolean)
-    : charge.lineItems.map(
-        (item) =>
-          `${getCatalogItemDisplayLabel(item.catalogId, item.label)}  ${formatLineItemMoney(item)}`,
-      );
+  const itemLines = receiptItems(charge, appointment.petName).map(
+    (item) => `${item.label}  ${formatLineItemMoney(item)}`,
+  );
   const remaining =
     Math.round((charge.total - (charge.refundedAmount ?? 0)) * 100) / 100;
   const refunded = charge.refundedAmount ?? 0;

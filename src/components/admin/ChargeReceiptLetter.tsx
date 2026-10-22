@@ -11,7 +11,7 @@ import {
 } from "@/lib/charges/receipt-view";
 import type { AppointmentChargeRecord } from "@/lib/charges/types";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
-import { getCatalogItemDisplayLabel } from "@/lib/service-display";
+import { receiptItems } from "@/lib/charges/receipt-items";
 
 export function ChargeReceiptLetter({
   appointment,
@@ -94,28 +94,7 @@ export function ChargeReceiptLetter({
             <section>
               <SectionLabel>Service summary</SectionLabel>
               <ul className="mt-3 space-y-2">
-                {(snapshot
-                  ? [
-                      ...snapshot.pets.map((pet) => ({
-                        id: pet.appointmentId,
-                        label: `${pet.petName} — ${pet.serviceName}`,
-                        amount: pet.amount,
-                      })),
-                      ...(snapshot.travelFee > 0
-                        ? [{ id: "travel", label: "Travel fee", amount: snapshot.travelFee }]
-                        : []),
-                      ...(snapshot.discount > 0
-                        ? [{ id: "discount", label: "Discount", amount: -snapshot.discount }]
-                        : []),
-                      { id: "subtotal", label: "Subtotal", amount: snapshot.subtotal },
-                    ]
-                  : charge.lineItems.map((item) => ({
-                      id: item.id,
-                      label: getCatalogItemDisplayLabel(item.catalogId, item.label),
-                      amount: item.amount,
-                      listAmount: item.listAmount,
-                    }))
-                ).map((item) => (
+                {receiptItems(charge, appointment.petName).map((item) => (
                   <MoneyRow
                     key={item.id}
                     label={item.label}
