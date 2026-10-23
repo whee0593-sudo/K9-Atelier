@@ -1359,6 +1359,19 @@ export function PayStep({
 
       </details>
 
+      {useZelle ? (
+        <section aria-label="Zelle transfer instructions" className="mt-4 rounded-xl border border-[#8C7D95] bg-white p-4">
+          <h3 className="text-base font-semibold">Pay with Zelle</h3>
+          <p className="mt-2 text-sm leading-relaxed">Scan this code with your bank’s app to send {formatChargeMoney(total)}.</p>
+          <a href="/images/payments/zelle.jpg" target="_blank" rel="noopener noreferrer" aria-label="Open full-size Zelle payment code">
+            <img src="/images/payments/zelle.jpg" alt="Zelle payment code for JIAHUI ZUO, (561) 801-4742" width={1112} height={1448} className="mx-auto mt-3 h-auto w-full max-w-[320px] rounded-lg" />
+          </a>
+          <p className="mt-3 text-sm font-semibold">Recipient: JIAHUI ZUO · (561) 801-4742</p>
+          <p className="mt-2 text-sm leading-relaxed">Tap the image to enlarge. Complete the transfer in your bank’s app.</p>
+          <p className="mt-3 rounded-lg bg-[#F3EEF6] p-3 text-sm font-medium leading-relaxed">Staff: confirm the transfer has arrived before recording this payment. This page does not send or verify Zelle transfers.</p>
+        </section>
+      ) : null}
+
       <div className="sticky bottom-0 z-10 -mx-5 mt-5 border-t border-[#D3CAD9] bg-white px-5 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_16px_rgba(33,29,38,0.06)]">
         <div className="mb-3 flex items-center justify-between"><span className="text-sm font-medium">Total to pay</span><strong className="text-2xl tabular-nums">{formatChargeMoney(total)}</strong></div>
       {useNewCard ? (
