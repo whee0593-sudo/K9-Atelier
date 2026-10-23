@@ -11,7 +11,7 @@ describe("BookingProgress", () => {
     assert.match(html, /02 Service/);
     assert.match(html, /03 Date &amp; Time/);
     assert.match(html, /04 Your Details/);
-    assert.match(html, /05 Payment/);
+    assert.match(html, /05 Secure Your Appointment/);
     assert.match(html, /06 Confirm/);
   });
 

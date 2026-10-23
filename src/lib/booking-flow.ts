@@ -15,7 +15,7 @@ export const BOOKING_STEPS = [
   { id: 2, short: "Service", label: "02 Service" },
   { id: 3, short: "Date & Time", label: "03 Date & Time" },
   { id: 4, short: "Your Details", label: "04 Your Details" },
-  { id: 5, short: "Payment", label: "05 Payment" },
+  { id: 5, short: "Secure Your Appointment", label: "05 Secure Your Appointment" },
   { id: 6, short: "Confirm", label: "06 Confirm" },
 ] as const;
 
