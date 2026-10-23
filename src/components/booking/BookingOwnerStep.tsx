@@ -306,7 +306,7 @@ export function BookingOwnerStep({
         ← Back
       </button>
       <p className="font-body mt-8 text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
-        Your Details
+        About You
       </p>
       <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
         How may we reach you?

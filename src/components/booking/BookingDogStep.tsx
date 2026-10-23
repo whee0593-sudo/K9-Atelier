@@ -95,7 +95,7 @@ export function BookingDogStep({ draftPet, onDraftChange, onContinue }: Props) {
   return (
     <section>
       <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
-        Your Dog
+        About Your Pup
       </p>
       <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
         Who Are We Welcoming?

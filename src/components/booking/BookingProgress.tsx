@@ -8,7 +8,12 @@ type Props = {
 export function BookingProgress({ currentStep }: Props) {
   const step =
     BOOKING_STEPS.find((item) => item.id === currentStep) ?? BOOKING_STEPS[0];
-  const total = BOOKING_STEPS.length;
+  // Only the opening overview omits card setup; all six actual steps remain.
+  const openingOverview = currentStep === 1;
+  const visibleSteps = openingOverview
+    ? BOOKING_STEPS.filter((item) => item.id !== 5)
+    : BOOKING_STEPS;
+  const total = visibleSteps.length;
   const progress = Math.min(Math.max(currentStep, 1), total) / total;
 
   return (
@@ -39,7 +44,7 @@ export function BookingProgress({ currentStep }: Props) {
       </div>
 
       <ol className="hidden flex-wrap gap-x-4 gap-y-3 sm:flex">
-        {BOOKING_STEPS.map((item) => {
+        {visibleSteps.map((item, index) => {
           const completed = currentStep > item.id;
           const current = currentStep === item.id;
 
@@ -54,7 +59,7 @@ export function BookingProgress({ currentStep }: Props) {
                     : "text-taupe"
               }`}
             >
-              {item.label}
+              {openingOverview ? `${String(index + 1).padStart(2, "0")} ${item.short}` : item.label}
             </li>
           );
         })}

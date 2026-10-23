@@ -11,10 +11,10 @@ import { coloringOptionPriceLabel } from "@/lib/service-page";
 import type { PetProfile } from "@/lib/pets";
 
 export const BOOKING_STEPS = [
-  { id: 1, short: "Your Dog", label: "01 Your Dog" },
+  { id: 1, short: "About Your Pup", label: "01 About Your Pup" },
   { id: 2, short: "Service", label: "02 Service" },
   { id: 3, short: "Date & Time", label: "03 Date & Time" },
-  { id: 4, short: "Your Details", label: "04 Your Details" },
+  { id: 4, short: "About You", label: "04 About You" },
   { id: 5, short: "Secure Your Appointment", label: "05 Secure Your Appointment" },
   { id: 6, short: "Confirm", label: "06 Confirm" },
 ] as const;
