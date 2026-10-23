@@ -1363,8 +1363,8 @@ export function PayStep({
         <section aria-label="Zelle transfer instructions" className="mt-4 rounded-xl border border-[#8C7D95] bg-white p-4">
           <h3 className="text-base font-semibold">Pay with Zelle</h3>
           <p className="mt-2 text-sm leading-relaxed">Scan this code with your bank’s app to send {formatChargeMoney(total)}.</p>
-          <a href="/images/payments/zelle.jpg" target="_blank" rel="noopener noreferrer" aria-label="Open full-size Zelle payment code">
-            <img src="/images/payments/zelle.jpg" alt="Zelle payment code for JIAHUI ZUO, (561) 801-4742" width={1112} height={1448} className="mx-auto mt-3 h-auto w-full max-w-[320px] rounded-lg" />
+          <a href="/images/payments/zelle.png" target="_blank" rel="noopener noreferrer" aria-label="Open full-size Zelle payment code">
+            <img src="/images/payments/zelle.png" alt="Zelle payment code for JIAHUI ZUO, (561) 801-4742" width={389} height={426} className="mx-auto mt-3 h-auto w-full max-w-[320px] rounded-lg" />
           </a>
           <p className="mt-3 text-sm font-semibold">Recipient: JIAHUI ZUO · (561) 801-4742</p>
           <p className="mt-2 text-sm leading-relaxed">Tap the image to enlarge. Complete the transfer in your bank’s app.</p>
