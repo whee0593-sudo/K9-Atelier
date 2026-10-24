@@ -7,7 +7,11 @@ import {
   factsFromAppointments,
   merchantVisitIsConfirmed,
   notifyMerchantVisitConfirmed,
-  notifyMerchantVisitConfirmedFromAppointments,
+  notifyMerchantCustomerReplyC,
+  notifyMerchantVisitCancelled,
+  notifyMerchantReschedule,
+  notifyMerchantVisitCreated,
+  notifyMerchantVisitCreatedFromAppointments,
   replayDeferredMerchantAlerts,
   type MerchantVisitFacts,
 } from "@/lib/communications/merchant-notices";
@@ -108,11 +112,11 @@ describe("merchant from address", () => {
 });
 
 describe("merchant visit confirmation", () => {
-  it("sends one email and one SMS after every active dog is confirmed", async () => {
+  it("sends one email and one SMS per newly booked visit", async () => {
     const store = createMemoryCommunicationLogStore();
     const sent = sender();
     const bodies: string[] = [];
-    const first = await notifyMerchantVisitConfirmed(facts(), {
+    const first = await notifyMerchantVisitCreated(facts(), {
       store,
       env: baseEnv,
       sender: {
@@ -127,7 +131,7 @@ describe("merchant visit confirmation", () => {
     assert.deepEqual(sent.calls, ["email", "sms"]);
     assert.match(bodies[0] ?? "", /Lychee and Otto/);
 
-    const again = await notifyMerchantVisitConfirmed(facts(), {
+    const again = await notifyMerchantVisitCreated(facts(), {
       store,
       env: baseEnv,
       sender: {
@@ -139,19 +143,19 @@ describe("merchant visit confirmation", () => {
     assert.deepEqual(sent.calls, ["email", "sms"]);
   });
 
-  it("does not send while any active dog is still unconfirmed", async () => {
+  it("sends even while an active dog is still unconfirmed", async () => {
     const store = createMemoryCommunicationLogStore();
     const sent = sender();
     const pets = facts().pets.map((pet, index) =>
       index === 1 ? { ...pet, status: "pending_confirmation" as const } : pet,
     );
-    const result = await notifyMerchantVisitConfirmed(facts(pets), {
+    const result = await notifyMerchantVisitCreated(facts(pets), {
       store,
       env: baseEnv,
       sender: sent,
     });
-    assert.deepEqual(result, { email: "not_confirmed", sms: "not_confirmed" });
-    assert.deepEqual(sent.calls, []);
+    assert.deepEqual(result, { email: "accepted", sms: "accepted" });
+    assert.deepEqual(sent.calls, ["email", "sms"]);
     assert.equal(merchantVisitIsConfirmed(pets), false);
   });
 
@@ -165,12 +169,12 @@ describe("merchant visit confirmation", () => {
       },
       sms: async () => ({ outcome: "uncertain" as const, errorMessage: "timeout" }),
     };
-    const first = await notifyMerchantVisitConfirmed(facts(), {
+    const first = await notifyMerchantVisitCreated(facts(), {
       store,
       env: baseEnv,
       sender: uncertain,
     });
-    const second = await notifyMerchantVisitConfirmed(facts(), {
+    const second = await notifyMerchantVisitCreated(facts(), {
       store,
       env: baseEnv,
       sender: uncertain,
@@ -190,12 +194,12 @@ describe("merchant visit confirmation", () => {
       },
       sms: async () => ({ outcome: "rejected" as const, errorMessage: "invalid" }),
     };
-    await notifyMerchantVisitConfirmed(facts(), {
+    await notifyMerchantVisitCreated(facts(), {
       store,
       env: baseEnv,
       sender,
     });
-    await notifyMerchantVisitConfirmed(facts(), {
+    await notifyMerchantVisitCreated(facts(), {
       store,
       env: baseEnv,
       sender,
@@ -216,7 +220,7 @@ describe("merchant visit confirmation", () => {
         providerMessageId: "SM2",
       }),
     };
-    const missing = await notifyMerchantVisitConfirmed(facts(), {
+    const missing = await notifyMerchantVisitCreated(facts(), {
       store,
       env: testEnv({ MERCHANT_NOTIFY_FROM_EMAIL: "" }),
       sender: sent,
@@ -224,7 +228,7 @@ describe("merchant visit confirmation", () => {
     assert.equal(missing.email, "skipped");
     assert.equal(emails, 0);
 
-    const ready = await notifyMerchantVisitConfirmed(facts(), {
+    const ready = await notifyMerchantVisitCreated(facts(), {
       store,
       env: baseEnv,
       sender: sent,
@@ -250,8 +254,8 @@ describe("merchant visit confirmation", () => {
         return { outcome: "accepted" as const, providerMessageId: "SM_retry" };
       },
     };
-    await notifyMerchantVisitConfirmed(facts(), { store, env: baseEnv, sender });
-    await notifyMerchantVisitConfirmed(facts(), { store, env: baseEnv, sender });
+    await notifyMerchantVisitCreated(facts(), { store, env: baseEnv, sender });
+    await notifyMerchantVisitCreated(facts(), { store, env: baseEnv, sender });
     assert.equal(emails, 1);
     assert.equal(texts, 2);
 
@@ -271,12 +275,12 @@ describe("merchant visit confirmation", () => {
         return { outcome: "accepted" as const, providerMessageId: "SM_ok" };
       },
     };
-    await notifyMerchantVisitConfirmed(facts(), {
+    await notifyMerchantVisitCreated(facts(), {
       store: flipped,
       env: baseEnv,
       sender: flippedSender,
     });
-    await notifyMerchantVisitConfirmed(facts(), {
+    await notifyMerchantVisitCreated(facts(), {
       store: flipped,
       env: baseEnv,
       sender: flippedSender,
@@ -299,8 +303,8 @@ describe("merchant visit confirmation", () => {
         return { outcome: "uncertain" as const, errorMessage: "timeout" };
       },
     };
-    await notifyMerchantVisitConfirmed(facts(), { store, env: baseEnv, sender });
-    await notifyMerchantVisitConfirmed(facts(), { store, env: baseEnv, sender });
+    await notifyMerchantVisitCreated(facts(), { store, env: baseEnv, sender });
+    await notifyMerchantVisitCreated(facts(), { store, env: baseEnv, sender });
     assert.equal(emails, 1);
     assert.equal(texts, 1);
   });
@@ -388,11 +392,11 @@ describe("historical appointments without a visit", () => {
       null,
     );
 
-    const first = await notifyMerchantVisitConfirmedFromAppointments([one], {
+    const first = await notifyMerchantVisitCreatedFromAppointments([one], {
       customerName: "Sarah",
       replyTo: "sarah@example.com",
     }, { store, env: baseEnv, sender: sent });
-    const again = await notifyMerchantVisitConfirmedFromAppointments([one], {
+    const again = await notifyMerchantVisitCreatedFromAppointments([one], {
       customerName: "Sarah",
       replyTo: "sarah@example.com",
     }, { store, env: baseEnv, sender: sent });
@@ -405,4 +409,62 @@ describe("historical appointments without a visit", () => {
     assert.equal(key.includes("visit:"), false);
     assert.equal(store.rows()[0]?.snapshot.visitId, null);
   });
+});
+
+ it("emails once on subsequent confirmation without another SMS", async () => {
+  const store = createMemoryCommunicationLogStore();
+  const sent = sender();
+  const deps = { store, env: baseEnv, sender: sent };
+  await notifyMerchantVisitCreated(facts(), deps);
+  assert.deepEqual(await notifyMerchantVisitConfirmed(facts(), deps), { email: "accepted", sms: "skipped" });
+  assert.deepEqual(await notifyMerchantVisitConfirmed(facts(), deps), { email: "duplicate", sms: "skipped" });
+  assert.deepEqual(sent.calls, ["email", "sms", "email"]);
+ });
+
+it("uses the live provider adapters when no test sender is supplied", async () => {
+  const originalFetch = globalThis.fetch;
+  const previousKey = process.env.RESEND_API_KEY;
+  const requests: string[] = [];
+  process.env.RESEND_API_KEY = "re_test";
+  globalThis.fetch = async (url) => {
+    requests.push(String(url));
+    return new Response(JSON.stringify({ id: "email-id", sid: "sms-id" }), { status: 200 });
+  };
+  try {
+    const result = await notifyMerchantVisitCreated(facts(), {
+      store: createMemoryCommunicationLogStore(), env: baseEnv,
+    });
+    assert.deepEqual(result, { email: "accepted", sms: "accepted" });
+    assert.equal(requests.length, 2);
+    assert.match(requests[0]!, /api.resend.com/);
+    assert.match(requests[1]!, /api.twilio.com/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousKey === undefined) delete process.env.RESEND_API_KEY;
+    else process.env.RESEND_API_KEY = previousKey;
+  }
+});
+
+it("deduplicates confirmation across link and SMS reply", async () => {
+  const sent = sender();
+  const deps = { store: createMemoryCommunicationLogStore(), env: baseEnv, sender: sent };
+  await notifyMerchantVisitConfirmed(facts(), deps);
+  await notifyMerchantCustomerReplyC({
+    visitId: "visit-1", customerId: "cust-1", appointmentId: "apt-1",
+    petId: "pet-1", petName: "Lychee", serviceName: "Full Groom",
+    whenLabel: facts().whenLabel, addressLabel: facts().addressLabel,
+  }, deps);
+  assert.deepEqual(sent.calls, ["email"]);
+});
+
+it("sends email and SMS once per cancellation or reschedule", async () => {
+  const sent = sender();
+  const deps = { store: createMemoryCommunicationLogStore(), env: baseEnv, sender: sent };
+  await notifyMerchantVisitCancelled(facts(), deps);
+  await notifyMerchantVisitCancelled(facts(), deps);
+  const moved = { ...facts(), previousWhenLabel: "Monday 9 AM", fingerprint: "Monday=>Tuesday" };
+  await notifyMerchantReschedule("completed", moved, deps);
+  await notifyMerchantReschedule("completed", moved, deps);
+  await notifyMerchantReschedule("completed", { ...moved, fingerprint: "Tuesday=>Wednesday" }, deps);
+  assert.deepEqual(sent.calls, ["email", "sms", "email", "sms", "email", "sms"]);
 });

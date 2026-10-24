@@ -26,7 +26,7 @@ import {
   fetchAppointmentAdminRecord,
   fetchCustomerContact,
 } from "@/lib/email/appointment-context";
-import { notifyMerchantVisitConfirmedFromVisit } from "@/lib/communications/merchant-notices";
+import { notifyMerchantVisitCreatedFromVisit } from "@/lib/communications/merchant-notices";
 import {
   sendAppointmentCreatedEmails,
   sendAppointmentStatusEmails,
@@ -448,7 +448,7 @@ export async function createAppointment(
     }
     try {
       // A provider or log failure is contained here. The committed visit stays.
-      await notifyMerchantVisitConfirmedFromVisit(appointment.visitId, {
+      await notifyMerchantVisitCreatedFromVisit(appointment.visitId, {
         customerName: contact?.name ?? null,
         replyTo: contact?.email ?? null,
       });

@@ -35,7 +35,7 @@ export function isEmailConfigured() {
   return Boolean(process.env.RESEND_API_KEY?.trim());
 }
 
-async function postResend(input: {
+export async function postResend(input: {
   from: string;
   to: string[];
   subject: string;

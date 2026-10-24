@@ -1,3 +1,4 @@
+import { notifyMerchantVisitCreatedFromAppointments } from "@/lib/communications/merchant-notices";
 import { business } from "@/lib/business";
 import { resolveArrivalForBooking } from "@/lib/appointments/arrival-window";
 import {
@@ -816,6 +817,14 @@ export async function createStaffCustomerBooking(
     );
 
     const appointment = appointments[0]!;
+    try {
+      await notifyMerchantVisitCreatedFromAppointments(appointments, {
+        customerName: input.firstName,
+        replyTo: input.email ?? accountEmail,
+      });
+    } catch (error) {
+      console.error("staff booking merchant notify failed:", error);
+    }
     const confirmUrl = siteUrl(customerConfirmPath(confirm.token));
     const petNames = appointments.map((entry) => entry.petName);
 
