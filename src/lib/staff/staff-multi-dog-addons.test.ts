@@ -243,6 +243,6 @@ describe("staff multi-dog add-ons", () => {
     assert.equal(source.includes("add_on_ids: input.addOnIds"), false);
     assert.match(source, /firstSchedule/);
     assert.match(source, /buildSameAddressCompanionInsertion\(/);
-    assert.match(source, /travel_fee: quote\.fee/);
+    assert.match(source, /travel_fee: effectiveTravelFee\(quote\.fee, input\.travelFeeOverride\)/);
   });
 });

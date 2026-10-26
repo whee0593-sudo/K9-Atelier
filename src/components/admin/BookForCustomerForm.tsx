@@ -40,6 +40,8 @@ import {
   type StaffBookingProfilePet,
 } from "@/lib/staff/customer-booking-profile";
 import type { TravelQuote } from "@/lib/travel";
+import { TravelFeeControl } from "@/components/admin/TravelFeeControl";
+import { effectiveTravelFee, parseTravelFeeOverride } from "@/lib/visits/travel-fee";
 
 type Prefill = {
   customerId?: string;
@@ -242,6 +244,7 @@ export function BookForCustomerForm({
   const [savedQuoteRequest, setSavedQuoteRequest] =
     useState<StaffBookingProfileAddress | null>(initialAddress);
   const [quoteState, setQuoteState] = useState<QuoteState>({ status: "idle" });
+  const [travelFeeOverride, setTravelFeeOverride] = useState<string | null>(null);
   const [days, setDays] = useState<AvailabilityDay[]>(() =>
     initialScheduleDays ?? fallbackStaffScheduleDays(),
   );
@@ -345,7 +348,7 @@ export function BookForCustomerForm({
     : null;
   const estimatedTotal =
     estimatedServiceTotal != null && quoteState.status === "ready"
-      ? Math.round((estimatedServiceTotal + quoteState.quote.fee) * 100) / 100
+      ? Math.round((estimatedServiceTotal + effectiveTravelFee(quoteState.quote.fee, travelFeeOverride === null ? null : Number(travelFeeOverride))) * 100) / 100
       : null;
   const visitDurations = useMemo(() => {
     if (!everyDogServiceReady) return [];
@@ -871,6 +874,13 @@ export function BookForCustomerForm({
     setError(null);
     setCopied(false);
 
+    try {
+      if (travelFeeOverride === "") throw new Error("Enter a travel fee or restore automatic calculation.");
+      parseTravelFeeOverride(travelFeeOverride === null ? null : Number(travelFeeOverride));
+    } catch (error) {
+      setError((error as Error).message);
+      return;
+    }
     const trimmedEmail = email.trim();
     const trimmedPhone = phone.trim();
     if (!trimmedEmail && !trimmedPhone) {
@@ -964,6 +974,7 @@ export function BookForCustomerForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           firstName,
+          travelFeeOverride: travelFeeOverride === null ? null : Number(travelFeeOverride),
           lastName,
           email: trimmedEmail,
           phone: trimmedPhone,
@@ -1590,7 +1601,11 @@ export function BookForCustomerForm({
           {quoteState.status === "loading" ? "Checking address…" : "Check service area"}
         </button>
         {quoteState.status === "ready" ? (
-          <p className="mt-2 text-sm text-text-muted">{quoteState.quote.summary}</p>
+          <>
+            <p className="mt-2 text-sm text-text-muted">{quoteState.quote.summary}</p>
+            <TravelFeeControl automatic={quoteState.quote.fee} value={travelFeeOverride}
+              onChange={setTravelFeeOverride} disabled={submitting} />
+          </>
         ) : null}
         {quoteState.status === "error" ? (
           <p className="mt-2 text-sm text-red-800" role="alert">

@@ -77,7 +77,7 @@ export function VisitServiceEditor({
             ) : (
               <input
                 value={item.label}
-                disabled={disabled}
+                disabled={disabled || item.catalogId === "travel-fee"}
                 onChange={(event) =>
                   updateItem(item.id, { label: event.target.value })
                 }
@@ -91,7 +91,7 @@ export function VisitServiceEditor({
                   type="number"
                   min="0"
                   step="0.01"
-                  disabled={disabled}
+                  disabled={disabled || item.catalogId === "travel-fee"}
                   value={item.amount}
                   onChange={(event) =>
                     updateItem(item.id, {
@@ -103,7 +103,7 @@ export function VisitServiceEditor({
               </label>
               <button
                 type="button"
-                disabled={disabled || lineItems.length <= 1}
+                disabled={disabled || lineItems.length <= 1 || item.catalogId === "travel-fee"}
                 onClick={() =>
                   onChange(lineItems.filter((entry) => entry.id !== item.id))
                 }
@@ -115,6 +115,7 @@ export function VisitServiceEditor({
           </li>
         ))}
       </ul>
+      <p className="mt-2 text-xs text-taupe">Change the visit travel fee in Appointment details. It is charged once per visit.</p>
 
       <button
         type="button"

@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStaffSession } from "@/lib/staff/auth";
+import { visitTravelLinesMatch } from "@/lib/visits/travel-fee";
 import { fetchAppointmentAdminRecord } from "@/lib/email/appointment-context";
 import {
   getOrCreateStripeCustomerId,
@@ -499,6 +500,11 @@ export async function createAppointmentCharge(
       error: "conflict",
       message: visitCollect.bill.blockedMessage ?? "This visit is not ready to collect.",
     };
+  }
+
+  if (visitCollect && !("error" in visitCollect) &&
+      !visitTravelLinesMatch(lineItems, visitCollect.bill.travelFee)) {
+    return { error: "conflict", message: "Travel fee changed. Reload checkout to use the saved visit travel fee. Edit it in Appointment details." };
   }
 
   const visitId =
