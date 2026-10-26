@@ -18,7 +18,7 @@ import {
 
 function validAppointmentBody(overrides: Record<string, unknown> = {}) {
   const appointmentDate =
-    getUpcomingBookableDates(1)[0]?.value ?? "2026-09-18";
+    getUpcomingBookableDates(2)[1]?.value ?? "2026-09-18";
   return {
     petId: "11111111-1111-4111-8111-111111111111",
     serviceId: "signature-bath-care",

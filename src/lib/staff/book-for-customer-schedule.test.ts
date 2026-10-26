@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { beforeEach, describe, it } from "node:test";
 import { getUpcomingBookableDates } from "@/lib/booking-slots";
 import { listHourlyStartMinutes } from "@/lib/booking-schedule";
 import {
@@ -10,6 +10,8 @@ import {
   staffScheduleHint,
   type StaffAvailabilityDay,
 } from "@/lib/staff/book-for-customer-schedule";
+
+beforeEach((t) => t.mock.timers.enable({ apis: ["Date"], now: new Date("2026-09-18T12:00:00Z") }));
 
 const monday: StaffAvailabilityDay = {
   date: "2026-09-21",
@@ -49,6 +51,10 @@ describe("selectableStaffDays", () => {
 });
 
 describe("slotsForStaffDate", () => {
+  it("filters elapsed starts on today's staff calendar", (t) => {
+    t.mock.timers.setTime(new Date("2026-10-26T16:24:00Z").getTime());
+    assert.deepEqual(slotsForStaffDate([{ date: "2026-10-26", available: true, slots: [720, 780, 840] }], "2026-10-26"), [780, 840]);
+  });
   const days = [monday, tuesdayClosed, wednesdayEmpty];
 
   it("returns slots for an open date", () => {

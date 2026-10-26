@@ -86,7 +86,7 @@ function appointment(patch: Partial<AppointmentRecord> = {}): AppointmentRecord 
 }
 
 function bookingBody(overrides: Record<string, unknown> = {}) {
-  const appointmentDate = getUpcomingBookableDates(1)[0]?.value ?? "2026-10-20";
+  const appointmentDate = getUpcomingBookableDates(2)[1]?.value ?? "2026-10-20";
   return {
     petId: "11111111-1111-4111-8111-111111111111",
     serviceId: LUXURY_SPA_DAY_ID,
@@ -143,7 +143,7 @@ describe("phase 1 main services", () => {
   it("keeps full groom and hand stripping bookable", () => {
     assert.equal(
       getServiceDisplayName("custom-full-haircut", ""),
-      "The Atelier Full Groom",
+      "Custom Full Haircut & Styling",
     );
     assert.equal(getServiceById("hand-stripping")?.name, "Hand Stripping");
   });
