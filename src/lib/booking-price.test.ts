@@ -16,7 +16,7 @@ import {
 import { getUpcomingBookableDates } from "@/lib/booking-slots";
 
 function body(overrides: Record<string, unknown> = {}) {
-  const appointmentDate = getUpcomingBookableDates(1)[0]?.value ?? "2026-10-16";
+  const appointmentDate = getUpcomingBookableDates(2)[1]?.value ?? "2026-10-16";
   return {
     petId: "11111111-1111-4111-8111-111111111111",
     serviceId: "signature-bath-care",
@@ -348,5 +348,14 @@ describe("create appointment price gate", () => {
       BOOKING_PRICE_DISCLAIMER,
       "Your estimated total is based on your dog's weight and selected services. Final pricing may vary depending on coat condition, matting, additional handling needs, and any adjustments discussed with your groomer.",
     );
+  });
+});
+
+
+describe("same-day customer submission", () => {
+  it("accepts today's 2 PM start at 12:24 PM and rejects elapsed starts", (t) => {
+    t.mock.timers.enable({ apis: ["Date"], now: new Date("2026-10-26T16:24:00Z") });
+    assert.equal(validateCreateAppointmentInput(body({ appointmentDate: "2026-10-26", slotStartMinutes: 840 })).slotStartMinutes, 840);
+    assert.throws(() => validateCreateAppointmentInput(body({ appointmentDate: "2026-10-26", slotStartMinutes: 720 })), /has not passed/);
   });
 });

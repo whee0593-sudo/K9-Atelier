@@ -19,7 +19,7 @@ import {
   type GeoPoint,
   type RouteStop,
 } from "@/lib/booking-schedule";
-import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
+import { isBookingStartInFuture, isDateBookable, parseDateValue } from "@/lib/booking-slots";
 import {
   applyClosureToSlots,
   isSlotClosed,
@@ -441,7 +441,7 @@ export async function getAvailabilityForAddress(input: {
         stops: occupied.stops,
         durations: staffDurations,
       });
-      const gated = applyClosureToSlots(override.slots, closure);
+      const gated = applyClosureToSlots(override.slots.filter((start) => isBookingStartInFuture(date, start)), closure);
       const withBlocks = applyBlocksToSlots(gated.slots, dayBlocks, 1);
       const conflicts = retainConflicts(withBlocks.slots, override.conflicts);
       days.push({
@@ -459,7 +459,7 @@ export async function getAvailabilityForAddress(input: {
       input.point,
       input.durationMinutes,
     );
-    const gated = applyClosureToSlots(openSlots, closure);
+    const gated = applyClosureToSlots(openSlots.filter((start) => isBookingStartInFuture(date, start)), closure);
     const withBlocks = applyBlocksToSlots(
       gated.slots,
       dayBlocks,
@@ -495,6 +495,10 @@ export async function assignArrivalWindow(input: {
     !input.allowUnbookableDate &&
     !isDateBookable(parseDateValue(input.date))
   ) {
+    return { error: "slot_unavailable" as const };
+  }
+
+  if (!input.allowUnbookableDate && !isBookingStartInFuture(input.date, input.slotStartMinutes)) {
     return { error: "slot_unavailable" as const };
   }
 

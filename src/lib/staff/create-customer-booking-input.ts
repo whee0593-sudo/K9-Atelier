@@ -1,4 +1,4 @@
-import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
+import { isBookingStartInFuture, isDateBookable, parseDateValue } from "@/lib/booking-slots";
 import { isWithinServiceDay } from "@/lib/booking-schedule";
 import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
@@ -572,6 +572,10 @@ export function validateStaffCustomerBookingInput(
       );
     }
     slotStartMinutes = parsed;
+  }
+
+  if (appointmentDate && slotStartMinutes != null && !isBookingStartInFuture(appointmentDate, slotStartMinutes)) {
+    throw new StaffBookingValidationError("Please choose a start time that has not passed.", "slotStartMinutes");
   }
 
   const addressRecord = record.address;

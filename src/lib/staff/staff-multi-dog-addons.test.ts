@@ -25,7 +25,7 @@ function bookingBody(overrides: Record<string, unknown> = {}) {
     notifyEmail: true,
     notifySms: true,
     verbalConsent: true,
-    appointmentDate: getUpcomingBookableDates(1)[0]?.value ?? "2026-09-18",
+    appointmentDate: getUpcomingBookableDates(2)[1]?.value ?? "2026-09-18",
     slotStartMinutes: 600,
     address: {
       street: "100 Olive Ave",

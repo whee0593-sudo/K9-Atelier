@@ -8,7 +8,7 @@ import {
   isCustomCreativeDesignSelection,
 } from "@/lib/services";
 import type { AppointmentWriteInput } from "@/lib/appointments/types";
-import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
+import { isBookingStartInFuture, isDateBookable, parseDateValue } from "@/lib/booking-slots";
 import {
   isWithinServiceDay,
   preferenceFromStart,
@@ -131,6 +131,9 @@ export function validateCreateAppointmentInput(
       "Please choose an available start time.",
       "slotStartMinutes",
     );
+  }
+  if (!isBookingStartInFuture(appointmentDate, slotStartMinutes)) {
+    throw new AppointmentValidationError("Please choose a start time that has not passed.", "slotStartMinutes");
   }
   const timePreferenceRaw = preferenceFromStart(slotStartMinutes);
 

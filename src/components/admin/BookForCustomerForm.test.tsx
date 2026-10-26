@@ -229,7 +229,8 @@ const onFileCustomer: StaffCustomerRecord = {
 };
 
 describe("BookForCustomerForm schedule conflict", () => {
-  it("shows the estimate conflict and still offers the start time", () => {
+  it("shows the estimate conflict and still offers the start time", (t) => {
+    t.mock.timers.enable({ apis: ["Date"], now: new Date("2026-10-07T12:00:00Z") });
     const start = 9 * 60;
     const message = describeStaffScheduleConflict({
       startMinutes: start,
