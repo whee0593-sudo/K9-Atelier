@@ -34,6 +34,7 @@ import {
   allBookableServices,
 } from "@/lib/services";
 import { staffAppointmentPriceDrafts } from "@/lib/staff/staff-appointment-drafts";
+import { effectiveTravelFee } from "@/lib/visits/travel-fee";
 import { keepPrimaryIfReferralFails } from "@/lib/referrals/allocate-code";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
@@ -603,7 +604,7 @@ export async function createStaffCustomerBooking(
       addOnIds: pet.addOnIds,
       addOnOptions: pet.addOnOptions,
     })),
-    quote.fee,
+    effectiveTravelFee(quote.fee, input.travelFeeOverride),
   );
   if (!pricedVisit.ok) {
     return { error: "conflict", message: pricedVisit.message };
@@ -794,7 +795,9 @@ export async function createStaffCustomerBooking(
         address_lat: destination.lat,
         address_lon: destination.lon,
         travel_distance_miles: quote.distanceMiles,
-        travel_fee: quote.fee,
+        travel_fee: effectiveTravelFee(quote.fee, input.travelFeeOverride),
+        travel_fee_automatic: quote.fee,
+        travel_fee_override: input.travelFeeOverride,
       },
       appointments: pendingAppointments,
     });

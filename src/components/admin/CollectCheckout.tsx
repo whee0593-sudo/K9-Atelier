@@ -728,6 +728,7 @@ export function CollectCheckout({
             </p>
           ) : null}
 
+          {context.visit ? <p className="mt-4 text-sm text-taupe">Travel fee is saved for the whole visit. To change it, open Appointment details, save the fee and reload checkout.</p> : null}
           <ul className="mt-8 space-y-4">
             {lineItems.map((item, index) => (
               <li
@@ -746,6 +747,7 @@ export function CollectCheckout({
                 ) : (
                   <input
                     value={item.label}
+                    readOnly={Boolean(context.visit && item.catalogId === "travel-fee")}
                     onChange={(event) =>
                       updateItem(item.id, { label: event.target.value })
                     }
@@ -779,6 +781,7 @@ export function CollectCheckout({
                       min="0"
                       step="0.01"
                       value={item.amount}
+                      readOnly={Boolean(context.visit && item.catalogId === "travel-fee")}
                       onChange={(event) =>
                         updateItem(item.id, {
                           amount: Math.max(0, Number(event.target.value) || 0),
@@ -794,6 +797,7 @@ export function CollectCheckout({
                     Referral
                     <select
                       value={item.referralCategory ?? "other_ineligible"}
+                      disabled={Boolean(context.visit && item.catalogId === "travel-fee")}
                       onChange={(event) =>
                         updateItem(item.id, {
                           referralCategory: event.target
@@ -811,6 +815,7 @@ export function CollectCheckout({
                   </label>
                   <button
                     type="button"
+                    disabled={Boolean(context.visit && item.catalogId === "travel-fee")}
                     onClick={() =>
                       setLineItems((current) =>
                         current.filter((entry) => entry.id !== item.id),

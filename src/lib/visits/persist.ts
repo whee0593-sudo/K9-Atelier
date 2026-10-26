@@ -1,6 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type StaffVisitInsert = {
+  travel_fee_automatic?: number;
+  travel_fee_override?: number | null;
   customer_id: string;
   service_date: string;
   scheduled_start: number;
@@ -86,7 +88,7 @@ export async function createStaffVisit(input: {
 }): Promise<{ visitId: string } | { error: "server" | "slot_unavailable" }> {
   if (input.appointments.length === 0) return { error: "server" };
   const admin = createAdminClient();
-  const { data, error } = await admin.rpc("create_staff_visit", {
+  const { data, error } = await admin.rpc("create_staff_visit_with_travel_fee", {
     p_visit: input.visit,
     p_appointments: input.appointments,
   });
@@ -173,7 +175,7 @@ export async function applyVisitServiceChange(input: {
       service_name: input.service.serviceName,
       add_on_ids: input.service.addOnIds,
       add_on_options: input.service.addOnOptions,
-      travel_fee: input.service.travelFee,
+      appointment_travel_fee: input.service.travelFee,
       estimated_total: input.service.estimatedTotal,
       estimated_duration_minutes: input.service.durationMinutes,
     },

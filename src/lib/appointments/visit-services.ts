@@ -9,6 +9,7 @@ import {
   scheduleActivePetsFromVisitArrival,
 } from "@/lib/visits/visit";
 import { getStaffSession } from "@/lib/staff/auth";
+import { withTravelFee } from "@/lib/visits/travel-fee";
 import { sanitizeLineItems } from "@/lib/charges/line-items";
 import { addOnSelectionMessage } from "@/lib/services";
 import { primaryServicePriceFromLineItems } from "@/lib/appointments/stored-service-price";
@@ -56,7 +57,7 @@ export async function updateAppointmentVisitServices(input: {
   const session = await getStaffSession();
   if ("error" in session) return session;
 
-  const lineItems = sanitizeLineItems(input.lineItems);
+  let lineItems = sanitizeLineItems(input.lineItems);
   if (!lineItems) return { error: "invalid" };
   const draft = appointmentFieldsFromVisitLineItems(lineItems);
   const addonMessage = addOnSelectionMessage(
@@ -72,7 +73,7 @@ export async function updateAppointmentVisitServices(input: {
   const { data: row, error } = await admin
     .from("appointments")
     .select(
-      "id, customer_id, visit_id, status, service_id, service_name, add_on_options, appointment_date, service_ended_at, pets ( weight_lbs ), profiles ( first_name, last_name, phone )",
+      "id, customer_id, visit_id, travel_fee, status, service_id, service_name, add_on_options, appointment_date, service_ended_at, pets ( weight_lbs ), profiles ( first_name, last_name, phone )",
     )
     .eq("id", input.appointmentId)
     .maybeSingle();
@@ -82,6 +83,9 @@ export async function updateAppointmentVisitServices(input: {
     return { error: "server" };
   }
   if (!row) return { error: "not_found" };
+
+  if (row.visit_id) lineItems = withTravelFee(lineItems, Number(row.travel_fee));
+  if (lineItems.length === 0) return { error: "invalid" };
 
   const fields = appointmentFieldsFromVisitLineItems(lineItems);
   const pet = firstRelation<{ weight_lbs?: number | null }>(row.pets);

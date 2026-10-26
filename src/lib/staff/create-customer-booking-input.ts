@@ -22,6 +22,7 @@ import {
   validatePetId,
 } from "@/lib/pets/validation";
 import type { PetWriteInput } from "@/lib/pets/types";
+import { parseTravelFeeOverride } from "@/lib/visits/travel-fee";
 
 export class StaffBookingValidationError extends Error {
   readonly field?: string;
@@ -55,6 +56,7 @@ export type StaffBookingPetInput = PetWriteInput & {
 };
 
 export type StaffCustomerBookingInput = {
+  travelFeeOverride: number | null;
   firstName: string;
   lastName: string;
   email: string | null;
@@ -346,6 +348,13 @@ export function validateStaffCustomerBookingInput(
 ): StaffCustomerBookingInput {
   const record = assertPlainObject(body);
 
+  let travelFeeOverride: number | null;
+  try {
+    travelFeeOverride = parseTravelFeeOverride(record.travelFeeOverride);
+  } catch (error) {
+    throw new StaffBookingValidationError((error as Error).message, "travelFeeOverride");
+  }
+
   const firstName = readOptionalString(record, "firstName", "First name", 80);
   const lastName = readOptionalString(record, "lastName", "Last name", 80);
 
@@ -625,6 +634,7 @@ export function validateStaffCustomerBookingInput(
     notifyEmail,
     notifySms,
     mode: hasCompleteBooking ? "booking" : "invite",
+    travelFeeOverride,
     pets,
     serviceId: primaryService?.id ?? null,
     serviceName: primaryLabel ?? primaryService?.name ?? null,
