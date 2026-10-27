@@ -10,6 +10,7 @@ import {
   type TravelQuote,
 } from "@/lib/travel";
 import type { PetProfile } from "@/lib/pets";
+import { bookingDogsDuration, type BookingDogService } from "@/lib/booking/dogs";
 import {
   DateTimeStep,
   type AvailabilityDay,
@@ -30,6 +31,7 @@ const EMPTY_ADD_ON_IDS: string[] = [];
 
 type Props = {
   pet: PetProfile;
+  dogs?: BookingDogService[];
   serviceId?: string | null;
   addOnIds?: string[];
   initialAddress?: ServiceAddress | null;
@@ -50,6 +52,7 @@ type Props = {
 
 export function BookingLocationTimeStep({
   pet,
+  dogs,
   serviceId = "",
   addOnIds = EMPTY_ADD_ON_IDS,
   initialAddress,
@@ -76,6 +79,9 @@ export function BookingLocationTimeStep({
   const [scheduleError, setScheduleError] = useState<string | null>(null);
 
   const { freeRadiusMiles, standardServiceMiles } = business.serviceArea;
+  const totalDurationMinutes = dogs?.length
+    ? bookingDogsDuration(dogs)
+    : undefined;
 
   useEffect(() => {
     if (phase !== "schedule" || !quote?.lat || !quote.lon) return;
@@ -92,6 +98,7 @@ export function BookingLocationTimeStep({
           weightLbs: String(pet.weightLbs),
         });
         if (serviceId) params.set("serviceId", serviceId);
+        if (totalDurationMinutes) params.set("durationMinutes", String(totalDurationMinutes));
         if (addOnIds.length > 0) params.set("addOnIds", addOnIds.join(","));
         const res = await fetch(`/api/booking/availability?${params}`, {
           credentials: "include",
@@ -119,7 +126,7 @@ export function BookingLocationTimeStep({
     return () => {
       cancelled = true;
     };
-  }, [phase, quote, zip, serviceId, pet.weightLbs, addOnIds.join(",")]);
+  }, [phase, quote, zip, serviceId, pet.weightLbs, addOnIds.join(","), totalDurationMinutes]);
 
   async function handleCheckArea(e: React.FormEvent) {
     e.preventDefault();
@@ -174,6 +181,7 @@ export function BookingLocationTimeStep({
           zip: zip.trim(),
           serviceId,
           weightLbs: pet.weightLbs,
+          durationMinutes: totalDurationMinutes,
           addOnIds,
           date,
           slotStartMinutes,
@@ -219,8 +227,9 @@ export function BookingLocationTimeStep({
           Date &amp; Time
         </p>
         <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
-          Choose a date and start time for {pet.name}.
+          Choose a date and start time for {dogs && dogs.length > 1 ? dogs.map((dog) => dog.pet.name).join(", ") : pet.name}.
         </h2>
+        {dogs && dogs.length > 1 ? <p className="font-body mt-4 text-sm text-ink">One visit for {dogs.length} dogs · Approximately {totalDurationMinutes} minutes of care, scheduled consecutively.</p> : null}
         <p className="font-body mt-4 text-sm text-taupe">
           Monday–Friday · 9:00 AM–5:00 PM Eastern. Timing may vary due to weather
           or traffic. We will text you when we are on the way.
@@ -251,7 +260,7 @@ export function BookingLocationTimeStep({
         Date &amp; Time
       </p>
       <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
-        Where shall we visit {pet.name}?
+        Where shall we visit {dogs && dogs.length > 1 ? dogs.map((dog) => dog.pet.name).join(", ") : pet.name}?
       </h2>
       <p className="font-body mt-4 max-w-2xl text-sm leading-relaxed text-taupe">
         Enter the appointment address so we can open the calendar.{" "}

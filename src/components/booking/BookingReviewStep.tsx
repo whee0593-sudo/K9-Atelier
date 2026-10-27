@@ -724,6 +724,7 @@ export function BookingReviewStep({
 
 export function BookingConfirmationView({
   pet,
+  additionalPetNames = [],
   serviceName,
   appointmentDate,
   appointmentTime,
@@ -733,6 +734,7 @@ export function BookingConfirmationView({
   celebrate = false,
 }: {
   pet: PetProfile;
+  additionalPetNames?: string[];
   serviceName: string;
   appointmentDate: string;
   appointmentTime: string;
@@ -759,7 +761,7 @@ export function BookingConfirmationView({
       <h2 className="font-display mt-5 text-4xl text-ink md:text-5xl">
         We Look Forward
         <br />
-        to Welcoming {pet.name}.
+        to Welcoming {[pet.name, ...additionalPetNames].join(", ")}.
       </h2>
 
       <div className={`${bookingNoticeClass} mx-auto mt-10 max-w-lg text-left`}>
