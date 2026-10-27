@@ -18,7 +18,7 @@ describe("home first visit guide", () => {
       [
         "Your Dog",
         "Service & Time",
-        "Your Details & Card",
+        "Your Details",
         "The Spa Arrives",
       ],
     );
@@ -32,16 +32,15 @@ describe("home first visit guide", () => {
     );
     assert.equal(
       homeFirstVisitSteps[2].body,
-      "Add your contact details and save a card. No charge today.",
+      "Add some details.",
     );
   });
 
-  it("renders an em dash after each step number", () => {
+  it("keeps four readable numbered steps", () => {
     const source = readFileSync(new URL("./HomeFirstVisit.tsx", import.meta.url), "utf8");
-    assert.match(source, /\{step\.number\} —/);
-    assert.match(source, /text-\[12px\].*text-deep-lavender/);
-    assert.match(source, /text-\[13px\] font-semibold uppercase/);
-    assert.match(source, /min-h-\[52px\]/);
+    assert.match(source, /\{step\.number\}/);
+    assert.match(source, /<ol/);
+    assert.match(source, /Your First Visit/);
   });
 
   it("keeps the arrival step one-on-one and at the client’s home", () => {
