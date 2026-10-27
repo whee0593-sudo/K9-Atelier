@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 export default async function ServicesPage() {
   const showPrices = await viewerCanViewServicePrices();
   return (
-    <div>
+    <div className="bg-[#FAF7F2] text-[#302D33] [--color-ivory:#FAF7F2] [--color-ink:#302D33] [--color-deep-lavender:#513562] [--color-dusty-lavender:#EEE7F3] [--color-champagne:#735783] [&_h1]:text-[#382440] [&_h2]:text-[#382440] [&_h3]:text-[#382440]">
       <ServicesJsonLd />
       <ServicesHashRedirect />
       <ServicesHero />
