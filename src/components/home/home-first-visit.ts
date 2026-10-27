@@ -11,8 +11,8 @@ export const homeFirstVisitSteps = [
   },
   {
     number: "03",
-    title: "Your Details & Card",
-    body: "Add your contact details and save a card. No charge today.",
+    title: "Your Details",
+    body: "Add some details.",
   },
   {
     number: "04",

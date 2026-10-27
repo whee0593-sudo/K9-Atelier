@@ -17,7 +17,6 @@ import { getSiteChrome } from "@/lib/site-chrome";
 const REMOVED_HOME_SECTIONS = [
   "HomeAboutTeaser",
   "HomeArtistry",
-  "HomeBookingCta",
   "HomeExperience",
   "HomeExpertise",
   "HomeFaqTeaser",
@@ -78,12 +77,9 @@ describe("home page content", () => {
     assert.ok(askCta < photo);
     assert.ok(photo < mobileMeta);
     assert.ok(desktopMeta > 0);
-    assert.match(source, /max-h-\[46vh\]/);
-    assert.match(source, /md:max-h-\[80vh\]/);
-    assert.match(source, /md:!w-\[353px\]/);
-    assert.match(source, /aspect-\[4\/5\]/);
-    assert.match(source, /calc\(46vh \* 0\.8\)/);
-    assert.equal(source.includes('sizes="(min-width: 768px) 42vw, 100vw"'), false);
+    assert.match(source, /calc\(100vw - 2rem\)/);
+    assert.match(source, /!h-\[300px\]/);
+    assert.match(source, /md:!h-\[520px\]/);
     assert.match(source, /md:grid-cols-2/);
   });
 
@@ -214,6 +210,23 @@ describe("homepage SEO", () => {
     assert.match(specialtyCard?.text ?? "", /^Specialty Care\b/);
     assert.match(specialtyCard?.text ?? "", /Senior · Comfort care/);
     assert.match(byHref("/gallery")?.text ?? "", /Explore Our Work/);
+  });
+
+  it("pairs six services with portfolio photos and hides public prices", () => {
+    const html = renderToStaticMarkup(<HomePageContent />);
+    const start = html.indexOf('id="home-services-heading"');
+    const end = html.indexOf('id="home-selected-work-heading"');
+    const services = html.slice(start, end);
+    assert.equal((services.match(/<img\b/g) ?? []).length, 6);
+    assert.equal((services.match(/loading="lazy"/g) ?? []).length, 6);
+    assert.doesNotMatch(services, /\$/);
+    for (const image of services.matchAll(/<img[^>]*src="([^"]+)"/g)) {
+      const source = new URL(image[1].replace(/&amp;/g, "&"), "https://k9atelier.com");
+      const path = source.searchParams.get("url") ?? source.pathname;
+      assert.ok(readFileSync(new URL(`../../../public${path}`, import.meta.url)).length > 0);
+    }
+    assert.match(html, /Private care\. At your doorstep\./);
+    assert.match(html, /href="tel:561-593-3335"/);
   });
 
   it("places four lazy selected works between services and the first visit", () => {

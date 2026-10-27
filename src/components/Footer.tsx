@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { PhoneIcon } from "@/components/icons/PhoneIcon";
 import { Container } from "@/components/luxury/Container";
 import type { SiteChrome } from "@/lib/site-chrome";
 
@@ -24,7 +25,7 @@ export function Footer({ chrome }: { chrome: SiteChrome }) {
       <Container className="py-16 md:py-20">
         <div className="grid gap-12 md:grid-cols-[1.2fr_1fr]">
           <div>
-            <p className="font-body text-[12px] font-semibold uppercase tracking-[0.14em] text-ink">
+            <p className="font-body text-[12px] font-bold uppercase tracking-[0.14em] text-[#382440]">
               {chrome.searchName}
             </p>
             <p className="font-body mt-3 text-[12px] font-medium leading-relaxed text-taupe">
@@ -42,8 +43,9 @@ export function Footer({ chrome }: { chrome: SiteChrome }) {
             {chrome.phone && chrome.phoneHref ? (
               <a
                 href={chrome.phoneHref}
-                className="font-body mt-5 block text-sm text-ink transition hover:text-deep-lavender"
+                className="font-body mt-5 inline-flex min-h-[44px] items-center gap-2 text-sm font-bold text-[#382440] transition hover:text-deep-lavender"
               >
+                <PhoneIcon />
                 {chrome.phoneDisplay}
               </a>
             ) : null}
@@ -52,18 +54,18 @@ export function Footer({ chrome }: { chrome: SiteChrome }) {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`Instagram @${instagramHandle}`}
-              className="font-body mt-3 block text-sm text-ink transition hover:text-deep-lavender"
+              className="font-body mt-3 block text-sm font-bold text-[#382440] transition hover:text-deep-lavender"
             >
-              <span className="text-taupe">Instagram · </span>@{instagramHandle}
+              <span>Instagram · </span>@{instagramHandle}
             </a>
             <a
               href={chrome.facebookUrl}
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`Facebook ${chrome.facebookLabel}`}
-              className="font-body mt-3 block text-sm text-ink transition hover:text-deep-lavender"
+              className="font-body mt-3 block text-sm font-bold text-[#382440] transition hover:text-deep-lavender"
             >
-              <span className="text-taupe">Facebook · </span>
+              <span>Facebook · </span>
               {chrome.facebookLabel}
             </a>
             {chrome.googleReviewUrl ? (
@@ -72,14 +74,14 @@ export function Footer({ chrome }: { chrome: SiteChrome }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Review K9 Atelier on Google"
-                className="font-body mt-3 block text-sm text-ink transition hover:text-deep-lavender"
+                className="font-body mt-3 block text-sm font-bold text-[#382440] transition hover:text-deep-lavender"
               >
-                <span className="text-taupe">Google · </span>
+                <span>Google · </span>
                 Review K9 Atelier
               </a>
             ) : null}
             <p className="font-body mt-5 text-sm text-ink">
-              {chrome.daysLabel} · {chrome.hoursLabel} Eastern
+              {chrome.daysLabel} · {chrome.hoursLabel}
             </p>
           </div>
 
