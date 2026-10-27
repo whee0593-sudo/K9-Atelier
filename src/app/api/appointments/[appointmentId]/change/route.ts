@@ -36,10 +36,19 @@ export async function GET(
     return appointmentJsonError("Choose a change to preview.", 400);
   }
 
+  const slotParam = url.searchParams.get("slotStartMinutes");
+  const slotStartMinutes =
+    slotParam != null && Number.isFinite(Number(slotParam))
+      ? Number(slotParam)
+      : undefined;
+  const date = url.searchParams.get("date") ?? undefined;
   const result = await quoteAppointmentChange(
     appointmentId,
     action,
     url.searchParams.get("removeAppointmentId") ?? undefined,
+    date && slotStartMinutes != null
+      ? { date, slotStartMinutes }
+      : undefined,
   );
 
   if ("error" in result) {
@@ -69,6 +78,7 @@ export async function POST(
       petId?: unknown;
       serviceId?: unknown;
       removeAppointmentId?: unknown;
+      expectedAmount?: unknown;
     };
     const action = readAction(body.action);
     if (!action) {
@@ -96,12 +106,26 @@ export async function POST(
         typeof body.removeAppointmentId === "string"
           ? body.removeAppointmentId
           : undefined,
+      expectedAmount:
+        typeof body.expectedAmount === "number" ? body.expectedAmount : undefined,
     });
 
     if ("error" in result) {
       if (result.error === "payment_failed") {
         return appointmentJsonError(
           "We could not charge the card on file. Please update your payment method and try again.",
+          409,
+        );
+      }
+      if (result.error === "payment_pending") {
+        return appointmentJsonError(
+          "This card is waiting for confirmation. Nothing else was charged. Confirm again to finish the same payment.",
+          409,
+        );
+      }
+      if (result.error === "payment_unknown") {
+        return appointmentJsonError(
+          "We could not confirm whether this card was charged. Nothing else will be charged until this payment is reviewed. Please contact us.",
           409,
         );
       }
@@ -116,6 +140,30 @@ export async function POST(
           "Add this dog's weight before booking. Weight must be greater than 0 and at most 200 lbs.",
           409,
           "weightLbs",
+        );
+      }
+      if (result.error === "price_review_required" || result.error === "coverage_review_required") {
+        return appointmentJsonError(
+          "We need to review this visit's saved price before a change fee can be charged. Please contact us. Nothing has been charged.",
+          409,
+        );
+      }
+      if (result.error === "fee_changed") {
+        return appointmentJsonError(
+          "The fee changed. Review the amount and confirm again. Nothing new has been charged.",
+          409,
+        );
+      }
+      if (result.error === "visit_busy") {
+        return appointmentJsonError(
+          "Another change for this visit is still finishing. Please wait a moment and try again.",
+          409,
+        );
+      }
+      if (result.error === "change_review") {
+        return appointmentJsonError(
+          "This visit changed before the update could be saved. The confirmed fee was charged once, and the appointment was not changed again. Please contact us so we can review it.",
+          409,
         );
       }
       if (result.error === "conflict") {

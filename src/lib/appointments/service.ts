@@ -43,7 +43,7 @@ import {
 } from "@/lib/appointments/guest-booking";
 import { estimateServiceDurationMinutes } from "@/lib/services";
 import { allergySnapshotForBooking, allergySnapshotFromProfileRead } from "@/lib/allergies";
-import { guestBookingStoredServicePrice } from "@/lib/appointments/stored-service-price";
+import { guestBookingStoredAddOnOptions, guestBookingStoredServicePrice } from "@/lib/appointments/stored-service-price";
 import { visitArrivalFields } from "@/lib/visits/visit";
 import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
 import {
@@ -368,7 +368,7 @@ export async function createAppointment(
         service_id: quote.serviceId,
         service_name: quote.serviceName,
         add_on_ids: input.addOnIds,
-        add_on_options: input.addOnOptions,
+        add_on_options: guestBookingStoredAddOnOptions(quote, input.addOnOptions),
         spa_goals: input.spaGoals ?? [],
         allergy_snapshot: allergySnapshot,
         address_street: input.address.street,

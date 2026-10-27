@@ -105,7 +105,7 @@
   "booking": {
     "requiresPaymentMethod": true,
     "chargeAtBooking": false,
-    "paymentMethodNote": "Saving a payment method is how the appointment is reserved. You are not charged when you book — payment is settled after your appointment. Late cancellations and no-shows may be charged to that card per our policy.",
+    "paymentMethodNote": "Saving a payment method is how the appointment is reserved. You are not charged when you book — payment is settled after your appointment. Two or more calendar days before: No fee. One calendar day before: 50% of the applicable booking total. On the day of the appointment: 100%. No-Show: Groomer arrives, attempts contact, no response within 15 minutes: 100%.",
     "availableDays": [
       "monday",
       "tuesday",
@@ -175,7 +175,7 @@
       "sections": [
         {
           "heading": "1. Rescheduling & Cancellations",
-          "body": "We kindly ask for at least 48 hours' notice for any cancellation or rescheduling request. This allows us to offer the time slot to another client on our waitlist.",
+          "body": "These dates are calendar days in Eastern Time (America/New_York). The applicable booking total is the confirmed service, priced add-ons, one travel fee, and other charges already saved on the visit. Removing one dog uses that dog's confirmed charges only and does not include the travel fee that stays with the visit. An add-on that has not been priced yet is not included.",
           "table": {
             "columns": [
               "Notice Given",
@@ -183,31 +183,35 @@
             ],
             "rows": [
               [
-                "48+ hours before appointment",
-                "No fee — reschedule or cancel freely"
+                "Two or more calendar days before",
+                "No fee."
               ],
               [
-                "Less than 48 hours",
-                "50% of the scheduled service price"
+                "One calendar day before",
+                "50% of the applicable booking total."
               ],
               [
-                "Same-day cancellation or rescheduling",
-                "100% of the scheduled service price"
+                "On the day of the appointment",
+                "100%."
+              ],
+              [
+                "No-Show",
+                "Groomer arrives, attempts contact, no response within 15 minutes: 100%."
               ]
             ]
           }
         },
         {
           "heading": "2. No-Shows",
-          "body": "If we arrive at your scheduled appointment and are unable to reach you or access your dog within 15 minutes of the scheduled time, this will be considered a no-show and charged at 100% of the scheduled service price."
+          "body": "Groomer arrives, attempts contact, no response within 15 minutes: 100%. A no-show fee is 100% of the applicable booking total. It is not charged together with a cancellation fee for the same appointment. Being away from home is not, by itself, a no-show. If you have replied, or a handoff was already arranged, the time alone does not make the visit a no-show."
         },
         {
           "heading": "3. Late Arrivals",
-          "body": "We do our best to accommodate slight delays, but appointments are scheduled back-to-back to ensure every dog receives unrushed, individual attention. If you anticipate being more than 15 minutes late, please let us know as early as possible — we will do our best to adjust, though a shortened service or rescheduling may be necessary."
+          "body": "Please ensure that you, your dog, and the reserved parking space are available at the scheduled appointment time. If access is delayed, we may need to shorten or reschedule the service to avoid affecting the next client. A no-show is considered only after the groomer arrives, attempts contact, and receives no response within 15 minutes."
         },
         {
-          "heading": "4. Illness or Emergencies",
-          "body": "We understand that health emergencies — yours or your dog's — can arise without warning. Please reach out as soon as possible; these situations are handled with flexibility and are not subject to standard cancellation fees."
+          "heading": "4. Illness & Special Circumstances",
+          "body": "If your dog is unwell or an unexpected situation arises, please contact us directly as early as possible."
         },
         {
           "heading": "5. Payment Method on File",

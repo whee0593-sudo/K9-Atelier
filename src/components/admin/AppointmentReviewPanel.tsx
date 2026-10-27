@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { AdminCalendar } from "@/components/admin/AdminCalendar";
 import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
 import { AppointmentActionLinks } from "@/components/admin/AppointmentActionLinks";
+import { VisitFeeControls } from "@/components/admin/VisitFeeControls";
 import { formatStaffVisitTiming } from "@/lib/charges/hourly";
 import { appointmentStatusLabel } from "@/lib/appointments/map";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
@@ -345,6 +346,12 @@ export function AppointmentReviewPanel({
                       appointment={appointment}
                       paidKinds={paidKinds[appointment.id] ?? []}
                       onChanged={() => void loadAppointments({ silent: true })}
+                    />
+                    <VisitFeeControls
+                      appointmentId={appointment.id}
+                      visitId={appointment.visitId ?? null}
+                      appointmentDate={appointment.appointmentDate}
+                      scheduledStart={appointment.scheduledStart}
                     />
                   </div>
                 </li>

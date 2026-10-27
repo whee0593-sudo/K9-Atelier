@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
+  guestBookingStoredAddOnOptions,
   guestBookingStoredServicePrice,
   primaryServicePriceFromLineItems,
 } from "@/lib/appointments/stored-service-price";
@@ -42,6 +43,10 @@ function storedFromGuestBooking(input: {
   assert.equal(quoted.ok, true);
   if (!quoted.ok) throw new Error(quoted.message);
   const servicePrice = guestBookingStoredServicePrice(quoted.quote);
+  const addOnOptions = guestBookingStoredAddOnOptions(
+    quoted.quote,
+    input.addOnOptions ?? {},
+  );
   const pet = visitCheckoutPetFromStoredAppointment({
     id: input.appointmentId,
     status: "confirmed",
@@ -50,7 +55,7 @@ function storedFromGuestBooking(input: {
     servicePrice,
     serviceEndedAt: "2026-10-20T15:00:00.000Z",
     addOnIds: input.addOnIds,
-    addOnOptions: input.addOnOptions ?? {},
+    addOnOptions,
     petName: input.petName,
     weightLbs: input.weightLbs,
   });
@@ -285,6 +290,7 @@ describe("guest booking through visit collection", () => {
       weightLbs: 12,
     });
     assert.equal(silent.addOns?.length ?? 0, 0);
+    assert.equal(silent.priceReviewRequired, true);
 
     const confirmed = visitCheckoutPetFromStoredAppointment({
       id: "spa-confirmed",
@@ -333,6 +339,7 @@ describe("guest booking through visit collection", () => {
       "utf8",
     );
     assert.match(booking, /guestBookingStoredServicePrice\(quote\)/);
+    assert.match(booking, /guestBookingStoredAddOnOptions\(quote, input\.addOnOptions\)/);
     assert.equal(
       booking.includes("snapshotServicePrice(quote.estimatedServicePrice)"),
       false,
