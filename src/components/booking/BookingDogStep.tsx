@@ -22,9 +22,11 @@ type Props = {
   draftPet: PetProfile;
   onDraftChange: (updates: Partial<PetProfile>) => void;
   onContinue: (pet: PetProfile) => void | Promise<void>;
+  excludedPetIds?: string[];
+  onBack?: () => void;
 };
 
-export function BookingDogStep({ draftPet, onDraftChange, onContinue }: Props) {
+export function BookingDogStep({ draftPet, onDraftChange, onContinue, excludedPetIds = [], onBack }: Props) {
   const [loggedIn, setLoggedIn] = useState(false);
   const [existingPets, setExistingPets] = useState<PetProfile[]>([]);
   const [loadingPets, setLoadingPets] = useState(true);
@@ -90,10 +92,11 @@ export function BookingDogStep({ draftPet, onDraftChange, onContinue }: Props) {
     }
   }
 
-  const readyExisting = existingPets.filter((pet) => petReadyToBook(pet));
+  const readyExisting = existingPets.filter((pet) => petReadyToBook(pet) && !excludedPetIds.includes(pet.id));
 
   return (
     <section>
+      {onBack ? <button type="button" onClick={onBack} className="font-body mb-6 text-sm text-ink underline">← Back to your dogs</button> : null}
       <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
         About Your Pup
       </p>
@@ -164,7 +167,7 @@ export function BookingDogStep({ draftPet, onDraftChange, onContinue }: Props) {
           onClick={() => void handleContinue()}
           className={bookingPrimaryBtnClass}
         >
-          {submitting ? "Saving…" : "Save & Continue"}
+          {submitting ? "Continuing…" : "Continue"}
         </button>
       </div>
 

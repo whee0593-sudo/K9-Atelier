@@ -100,6 +100,7 @@ export async function POST(request: Request) {
     serviceId?: string;
     weightLbs?: unknown;
     addOnIds?: string[];
+    durationMinutes?: number;
     date?: string;
     slotStartMinutes?: number;
   };
@@ -138,6 +139,7 @@ export async function POST(request: Request) {
     serviceId,
     weightLbs: body.weightLbs,
     addOnIds,
+    durationOverride: body.durationMinutes,
   });
   if ("error" in duration) return weightRequiredResponse();
 

@@ -45,6 +45,9 @@ type Props = {
   onToggle: (id: string) => void;
   onOptionChange: (addOnId: string, optionName: string) => void;
   onContinue: () => void;
+  onAddDog?: () => void;
+  saving?: boolean;
+  saveError?: string | null;
   onBack: () => void;
   spaGoals?: SpaGoalId[];
   onSpaGoalsChange?: (goals: SpaGoalId[]) => void;
@@ -105,6 +108,9 @@ export function BookingCareOptionsStep({
   onToggle,
   onOptionChange,
   onContinue,
+  onAddDog,
+  saving = false,
+  saveError,
   onBack,
   spaGoals = [],
   onSpaGoalsChange,
@@ -134,6 +140,7 @@ export function BookingCareOptionsStep({
 
   return (
     <section>
+      <fieldset disabled={saving} className="min-w-0">
       <button type="button" onClick={onBack} className={bookingBackLinkClass}>
         ← Back
       </button>
@@ -298,13 +305,19 @@ export function BookingCareOptionsStep({
         )}
       </div>
 
+      {saveError ? <p className="font-body mt-6 text-sm text-red-700" role="alert">{saveError}</p> : null}
+      <div className="mt-10 grid grid-cols-2 items-stretch gap-3 [&>button]:px-3 sm:flex sm:flex-nowrap sm:items-center sm:[&>button]:px-6">
+      {onAddDog ? <button type="button" onClick={onAddDog} disabled={saving} className={bookingSecondaryBtnClass}>+ Add Another Dog</button> : null}
       <button
         type="button"
         onClick={onContinue}
-        className={`${bookingPrimaryBtnClass} mt-10`}
+        disabled={saving}
+        className={bookingPrimaryBtnClass}
       >
-        Continue
+        {saving ? "Saving…" : "Continue"}
       </button>
+      </div>
+      </fieldset>
     </section>
   );
 }

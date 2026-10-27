@@ -32,6 +32,8 @@ import { BookingOwnerStep, type BookingOwnerDetails } from "@/components/booking
 import { BookingPaymentStep } from "@/components/booking/BookingPaymentStep";
 import { nextIdempotencyKey } from "@/lib/booking-intent";
 import { BookingConfirmStep } from "@/components/booking/BookingConfirmStep";
+import { BookingGroupConfirmStep } from "@/components/booking/BookingGroupConfirmStep";
+import { bookingDogsIntent, validateBookingDogs, type BookingDogService } from "@/lib/booking/dogs";
 import { BookingConfirmationView } from "@/components/booking/BookingReviewStep";
 import { CreativePairingModal } from "@/components/booking/CreativePairingModal";
 import { bookingBackLinkClass } from "@/components/booking/booking-ui";
@@ -39,7 +41,7 @@ import { trackGoogleAdsBookingConversion } from "@/lib/google-ads";
 import { createDraftBookingPet, isPersistedPetId } from "@/lib/booking-flow";
 import { isLuxurySpaDay } from "@/lib/service-catalog";
 import type { SpaGoalId } from "@/lib/spa-goals";
-import { createCustomerPet } from "@/lib/pets/client";
+import { createCustomerPet, updateCustomerPet } from "@/lib/pets/client";
 import { mapPetProfileToWriteInput } from "@/lib/pets/map";
 import { createClient } from "@/lib/supabase/client";
 import type { PaymentMethodRecord } from "@/lib/payments/types";
@@ -53,6 +55,7 @@ type BookingSuccessSnapshot = {
   appointmentDate: string;
   appointmentTime: string;
   address: ServiceAddress;
+  dogs?: BookingDogService[];
 };
 
 function readBookingSuccessSnapshot(): BookingSuccessSnapshot | null {
@@ -104,6 +107,10 @@ export function BookingFlow({
 }) {
   const [draftPet, setDraftPet] = useState<PetProfile>(() => createDraftBookingPet());
   const [selectedPet, setSelectedPet] = useState<PetProfile | null>(null);
+  const [bookedDogs, setBookedDogs] = useState<BookingDogService[]>([]);
+  const [savingDogs, setSavingDogs] = useState(false);
+  const [dogsError, setDogsError] = useState<string | null>(null);
+  const savingDogsRef = useRef(false);
   const [selectedService, setSelectedService] = useState<BookableService | null>(
     null,
   );
@@ -137,6 +144,7 @@ export function BookingFlow({
     BookingPolicySectionId | undefined
   >();
   const policiesTriggerRef = useRef<HTMLButtonElement>(null);
+  const flowRef = useRef<HTMLDivElement>(null);
 
   function openPolicies(section?: BookingPolicySectionId) {
     setPoliciesSection(section);
@@ -151,6 +159,10 @@ export function BookingFlow({
       setAppointmentDate(snapshot.appointmentDate);
       setAppointmentTime(snapshot.appointmentTime);
       setAddress(snapshot.address);
+      setSlotStartMinutes(snapshot.appointment.scheduledStart);
+      if (snapshot.dogs) {
+        setBookedDogs(snapshot.dogs);
+      }
       setCreatedAppointment(snapshot.appointment);
       setReserved(true);
       return;
@@ -176,24 +188,64 @@ export function BookingFlow({
     setShowCreativePairing(false);
   }
 
-  async function handleDogContinue(pet: PetProfile) {
-    let nextPet = pet;
-    try {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user && !isPersistedPetId(pet.id)) {
-        nextPet = await createCustomerPet(mapPetProfileToWriteInput(pet));
-      }
-    } catch {
-      nextPet = pet;
-    }
-    if (!isPersistedPetId(pet.id)) {
-      setDraftPet(nextPet);
-    }
+  function currentDogs() {
+    if (!selectedPet || !selectedService) return bookedDogs;
+    const previous = bookedDogs.find((dog) => dog.pet.id === selectedPet.id);
+    const dog = { bookingKey: previous?.bookingKey ?? selectedPet.id, pet: selectedPet, service: selectedService, addOnIds: selectedAddOnIds, addOnOptions, spaGoals };
+    return bookedDogs.some((current) => current.pet.id === selectedPet.id)
+      ? bookedDogs.map((current) => current.pet.id === selectedPet.id ? dog : current)
+      : [...bookedDogs, dog];
+  }
+
+  function handleAddDog() {
+    if (!selectedPet || !selectedService) return;
+    setBookedDogs(currentDogs());
+    setDraftPet(createDraftBookingPet());
+    setSelectedPet(null);
     resetFromDog();
-    setSelectedPet(nextPet);
+    setDogsError(null);
+  }
+
+  async function handleCareContinue() {
+    if (!selectedPet || !selectedService || savingDogsRef.current) return;
+    savingDogsRef.current = true;
+    setSavingDogs(true);
+    setDogsError(null);
+    const dogs = currentDogs();
+    setBookedDogs([...dogs]);
+    try {
+      const errors = validateBookingDogs(dogs.map((dog) => dog.pet));
+      const invalid = dogs.find((dog) => errors[dog.pet.id]);
+      if (invalid) throw new Error(`${invalid.pet.name}: ${errors[invalid.pet.id]}`);
+      let signedIn = false;
+      try { signedIn = Boolean((await createClient().auth.getUser()).data.user); } catch { /* Guest drafts are kept until account creation. */ }
+      if (signedIn) {
+        for (const [index, dog] of dogs.entries()) {
+          const input = mapPetProfileToWriteInput(dog.pet);
+          const pet = isPersistedPetId(dog.pet.id)
+            ? await updateCustomerPet(dog.pet.id, input)
+            : await createCustomerPet(input);
+          dogs[index] = { ...dog, pet };
+          setBookedDogs([...dogs]);
+          if (index === dogs.length - 1) { setSelectedPet(pet); setDraftPet(pet); }
+        }
+      }
+      setCareOptionsConfirmed(true);
+    } catch (error) {
+      setDogsError(error instanceof Error ? error.message : "Could not save your dogs. Please try again.");
+    } finally {
+      savingDogsRef.current = false;
+      setSavingDogs(false);
+    }
+  }
+
+  function handleDogContinue(pet: PetProfile) {
+    if (bookedDogs.some((dog) => dog.pet.id === pet.id)) {
+      throw new Error("This dog is already included in your visit. Please choose another dog.");
+    }
+    setDraftPet(pet);
+    resetFromDog();
+    setSelectedPet(pet);
   }
 
   function handleServiceSelect(service: BookableService, optionName?: string) {
@@ -276,7 +328,7 @@ export function BookingFlow({
     slotStartMinutes != null &&
     paymentMethod
       ? [
-          selectedPet.id,
+          bookingDogsIntent(bookedDogs),
           selectedService.id,
           [...selectedAddOnIds]
             .sort()
@@ -315,6 +367,9 @@ export function BookingFlow({
               : 6;
 
   const creativeService = getCreativeColoringService();
+  useEffect(() => {
+    flowRef.current?.scrollIntoView({ block: "start" });
+  }, [currentStep, selectedPet?.id, serviceConfirmed]);
 
   if (
     reserved &&
@@ -327,7 +382,8 @@ export function BookingFlow({
     return (
       <BookingConfirmationView
         pet={selectedPet}
-        serviceName={getServiceDisplayName(
+        additionalPetNames={bookedDogs.filter((dog) => dog.pet.id !== selectedPet.id).map((dog) => dog.pet.name)}
+        serviceName={bookedDogs.length > 1 ? bookedDogs.map((dog) => `${dog.pet.name}: ${getServiceDisplayName(dog.service.id, dog.service.name)}`).join(" · ") : getServiceDisplayName(
           selectedService.id,
           selectedService.name,
         )}
@@ -346,21 +402,31 @@ export function BookingFlow({
   }
 
   return (
-    <div className="mt-8 w-full min-w-0 space-y-8">
+    <div ref={flowRef} className="mt-8 w-full min-w-0 scroll-mt-28 space-y-8">
       {currentStep <= 6 && <BookingProgress currentStep={Math.min(currentStep, 6)} />}
+      {currentStep <= 3 && bookedDogs.length > 0 ? <div className="font-body text-sm text-ink" role="status">
+        <p>Included in this visit: {bookedDogs.map((dog) => dog.pet.name).join(", ")}</p>
+      </div> : null}
 
       {currentStep === 1 && (
         <BookingDogStep
           draftPet={draftPet}
-          onDraftChange={(updates) =>
-            setDraftPet((current) => ({ ...current, ...updates }))
-          }
+          onDraftChange={(updates) => setDraftPet((current) => ({ ...current, ...updates }))}
+          excludedPetIds={bookedDogs.map((dog) => dog.pet.id)}
+          onBack={bookedDogs.length ? () => {
+            const dog = bookedDogs[bookedDogs.length - 1];
+            setBookedDogs(bookedDogs.slice(0, -1));
+            setSelectedPet(dog.pet); setDraftPet(dog.pet); setSelectedService(dog.service);
+            setSelectedAddOnIds(dog.addOnIds); setAddOnOptions(dog.addOnOptions); setSpaGoals(dog.spaGoals);
+            setServiceConfirmed(true); setCareOptionsConfirmed(false);
+          } : undefined}
           onContinue={handleDogContinue}
         />
       )}
 
       {currentStep === 2 && selectedPet && !serviceConfirmed && (
         <BookingExperienceStep
+          key={selectedPet.id}
           pet={selectedPet}
           selectedServiceId={selectedService?.id ?? null}
           selectedOptionName={
@@ -373,6 +439,8 @@ export function BookingFlow({
           onContinue={handleExperienceContinue}
           onBack={() => {
             setSelectedPet(null);
+            setDraftPet(selectedPet);
+            setBookedDogs((current) => current.filter((dog) => dog.pet.id !== selectedPet.id));
             resetFromDog();
           }}
         />
@@ -395,6 +463,7 @@ export function BookingFlow({
         serviceConfirmed &&
         !careOptionsConfirmed && (
           <BookingCareOptionsStep
+            key={selectedPet.id}
             pet={selectedPet}
             primaryService={selectedService}
             selectedIds={selectedAddOnIds}
@@ -404,7 +473,10 @@ export function BookingFlow({
             onSpaGoalsChange={setSpaGoals}
             onToggle={toggleAddOn}
             onOptionChange={handleAddOnOptionChange}
-            onContinue={() => setCareOptionsConfirmed(true)}
+            onContinue={handleCareContinue}
+            onAddDog={handleAddDog}
+            saving={savingDogs}
+            saveError={dogsError}
             onBack={() => {
               setServiceConfirmed(false);
               setSelectedAddOnIds([]);
@@ -416,6 +488,7 @@ export function BookingFlow({
 
       {currentStep === 3 && selectedPet && selectedService && (
         <BookingLocationTimeStep
+          dogs={bookedDogs}
           pet={selectedPet}
           serviceId={selectedService.id}
           addOnIds={selectedAddOnIds}
@@ -484,7 +557,36 @@ export function BookingFlow({
         appointmentDate &&
         slotStartMinutes != null &&
         owner &&
-        paymentMethod && (
+        paymentMethod && (bookedDogs.length > 1 ? (
+          <BookingGroupConfirmStep
+            dogs={bookedDogs}
+            address={address}
+            travelQuote={travelQuote}
+            appointmentDate={appointmentDate}
+            appointmentTime={appointmentTime ?? ARRIVAL_WINDOW_PENDING_LABEL}
+            slotStartMinutes={slotStartMinutes}
+            owner={owner}
+            paymentMethod={paymentMethod}
+            initialReferralCode={initialReferralCode}
+            idempotencyKey={idempotency?.key ?? ""}
+            onBack={() => setPaymentMethod(null)}
+            onDogsSaved={(dogs) => {
+              const index = bookedDogs.findIndex((dog) => dog.pet.id === selectedPet.id);
+              if (index >= 0) { setSelectedPet(dogs[index].pet); setDraftPet(dogs[index].pet); }
+              setBookedDogs(dogs);
+            }}
+            onReserved={(appointment, dogs) => {
+              const first = dogs[0];
+              trackGoogleAdsBookingConversion(appointment.id);
+              writeBookingSuccessSnapshot({ appointment, pet: first.pet, service: first.service,
+                appointmentDate, appointmentTime: appointment.appointmentTime, address, dogs });
+              setSelectedPet(first.pet);
+              setSelectedService(first.service);
+              setCreatedAppointment(appointment);
+              setReserved(true);
+            }}
+          />
+        ) : (
           <BookingConfirmStep
             key={travelQuote.distanceMiles}
             pet={selectedPet}
@@ -520,7 +622,7 @@ export function BookingFlow({
               setReserved(true);
             }}
           />
-        )}
+        ))}
 
       {currentStep <= 6 && (
         <div className="border-t border-gray-line/70 pt-6 text-center">
