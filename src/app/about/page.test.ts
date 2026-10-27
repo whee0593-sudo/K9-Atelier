@@ -49,9 +49,9 @@ describe("about page", () => {
   it("keeps career facts, awards and service links without repeated slogans", () => {
     const html = renderToStaticMarkup(React.createElement(AboutStory));
     const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
-    assert.match(text, /professional groomer since 2010/);
+    assert.match(text, /grooming professionally since 2010/);
     for (const fact of ["2014", "2017", "2019", "Best in Group", "Best in Show", "Pomeranian", "Poodle", "Bichon"]) assert.ok(text.includes(fact), fact);
-    assert.match(html, /href="\/services\/show-level-coat-care"/);
+    assert.match(html, /href="\/services"/);
     assert.match(html, /href="\/book"/);
     assert.doesNotMatch(text, /Where precision became instinct|Experience, made personal/);
     assert.equal((html.match(/<h1\b/g) ?? []).length, 1);
@@ -159,7 +159,7 @@ describe("about page content", () => {
     }));
     const services = links.filter((link) => link.href === "/services");
     assert.equal(services.length, 1);
-    assert.match(services[0].text, /Explore Grooming Services/);
+    assert.match(services[0].text, /Explore Our Services/);
     assert.match(services[0].text, /→/);
   });
 });
