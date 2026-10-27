@@ -5,7 +5,7 @@
  * Wall portraits are transparent-background framed PNGs so the museum wall shows through.
  *
  * Customer-facing wall paint is the site cream (`colors.cream` /
- * `--color-ivory`, `#FBF7EF`). Both `museum-wall-numbered.jpg` and
+ * `--color-ivory`, `#FAF7F2`). Both `museum-wall-numbered.jpg` and
  * `museum-wall.webp` contain visible placement guides and must not be shown
  * to visitors.
  */
@@ -15,7 +15,7 @@ export const GALLERY_WALL = {
   width: 1024,
   height: 682,
   /** Site page cream. Matches `colors.cream` and `--color-ivory`. */
-  background: "#FBF7EF",
+  background: "#FAF7F2",
   alt: "Dark museum gallery wall with warm ceiling lights, dark wood trim, a wood floor, and a patterned rug",
 } as const;
 

@@ -46,7 +46,7 @@ export default function UnderConstructionPage() {
   return (
     <div
       className={`${cormorant.variable} ${jost.variable} relative flex min-h-screen items-center justify-center overflow-x-hidden px-6 py-8`}
-      style={{ background: "#faf6ef", color: "#2e2a24" }}
+      style={{ background: "#FAF7F2", color: "#2e2a24" }}
     >
       <div className={styles.ambient} aria-hidden="true" />
 

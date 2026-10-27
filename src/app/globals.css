@@ -2,7 +2,7 @@
 
 @theme {
   /* Quiet luxury palette */
-  --color-ivory: #fbf7ef;
+  --color-ivory: #FAF7F2;
   --color-dusty-lavender: #d8d0dd;
   --color-deep-lavender: #6b596e;
   --color-champagne: #b99762;
@@ -12,7 +12,7 @@
   --color-gray-line: #e7e0d4;
 
   /* Legacy aliases — mapped to new palette for existing pages */
-  --color-cream: #fbf7ef;
+  --color-cream: #FAF7F2;
   --color-lavender: #d8d0dd;
   --color-lavender-light: #efeaf6;
   --color-gold: #b99762;
