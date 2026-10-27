@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { AdminStaffSignInLink } from "@/components/admin/AdminStaffSignInLink";
-import { ExitPreviewButton } from "@/components/auth/ExitPreviewButton";
+import { SiteAccessNavigation } from "@/components/auth/SiteAccessNavigation";
+import { business } from "@/lib/business";
+import { isPrivacyGateActive } from "@/lib/site-access";
 import { requireAuthenticatedUser } from "@/lib/pets/auth";
 import { getStaffSession } from "@/lib/staff/auth";
 import { getStaffAccessForEmail } from "@/lib/staff/team";
 
 export async function AdminStaffBanner() {
   const session = await getStaffSession();
+  const privacyMode = isPrivacyGateActive(business.site?.privacyMode === true);
 
   if (!("error" in session)) {
     return (
@@ -15,7 +18,7 @@ export async function AdminStaffBanner() {
           Signed in as{" "}
           <span className="font-medium">{session.user.email}</span>
         </p>
-        <ExitPreviewButton />
+        <SiteAccessNavigation privacyMode={privacyMode} />
       </div>
     );
   }
@@ -54,13 +57,15 @@ export async function AdminStaffBanner() {
         </div>
         <AdminStaffSignInLink />
       </div>
-      <p className="mt-3 text-xs text-text-muted">
-        Previewing the public site under construction?{" "}
-        <Link href="/login/admin" className="underline hover:text-gold-dark">
-          Site preview password
-        </Link>
-        {" · "}
-        <ExitPreviewButton />
+      <p className="mt-3 text-sm text-text-muted">
+        {privacyMode ? <>
+          Previewing the public site under construction?{" "}
+          <Link href="/login/admin" className="underline hover:text-gold-dark">
+            Site preview password
+          </Link>
+          {" · "}
+        </> : null}
+        <SiteAccessNavigation privacyMode={privacyMode} />
       </p>
     </div>
   );

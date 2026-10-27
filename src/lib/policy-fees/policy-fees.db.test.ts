@@ -33,6 +33,9 @@ const RECOVERY = "supabase/migrations/20261018210000_policy_fee_payment_recovery
 const CHANGE_RECOVERY = "supabase/migrations/20261018220000_policy_fee_change_recovery.sql";
 
 function pgBinary(name: string) {
+  if (process.env.K9_TEST_PG_BIN) {
+    return path.join(process.env.K9_TEST_PG_BIN, process.platform === "win32" ? `${name}.exe` : name);
+  }
   for (const version of ["18", "17", "16", "15", "14"]) {
     const candidate = `/usr/lib/postgresql/${version}/bin/${name}`;
     if (existsSync(candidate)) return candidate;
@@ -91,7 +94,7 @@ function fixtureSql() {
       scheduled_start integer,
       appointment_time text,
       time_preference text,
-      travel_fee numeric
+      travel_fee numeric DEFAULT 0
     );
     CREATE TABLE public.appointments (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -105,6 +108,8 @@ function fixtureSql() {
       service_price numeric,
       travel_fee numeric,
       estimated_total numeric,
+      visit_sequence integer,
+      add_on_options jsonb,
       cancelled_at timestamptz
     );
     CREATE TABLE public.appointment_charges (
@@ -150,7 +155,7 @@ describe("policy fee postgres controls", { concurrency: false }, () => {
     if (init.status !== 0) throw new Error(init.stderr || init.stdout || "initdb failed");
     server = spawn(
       pgBinary("postgres"),
-      ["-D", dataDir, "-k", socketDir, "-p", String(port), "-c", "listen_addresses=", "-c", "fsync=off"],
+      ["-D", dataDir, ...(process.platform === "win32" ? [] : ["-k", socketDir]), "-p", String(port), "-c", `listen_addresses=${process.platform === "win32" ? "127.0.0.1" : ""}`, "-c", "fsync=off"],
       { stdio: ["ignore", "pipe", "pipe"] },
     );
     let log = "";
@@ -163,7 +168,7 @@ describe("policy fee postgres controls", { concurrency: false }, () => {
     while (Date.now() < deadline) {
       if (server.exitCode != null) throw new Error(`postgres exited: ${log}`);
       try {
-        const probe = new Client({ host: socketDir, port, user: "postgres", database: "postgres" });
+        const probe = new Client({ host: process.platform === "win32" ? "127.0.0.1" : socketDir, port, user: "postgres", database: "postgres" });
         await probe.connect();
         await probe.end();
         ready = true;
@@ -173,11 +178,19 @@ describe("policy fee postgres controls", { concurrency: false }, () => {
       }
     }
     if (!ready) throw new Error(`postgres did not start: ${log}`);
-    left = new Client({ host: socketDir, port, user: "postgres", database: "postgres" });
-    right = new Client({ host: socketDir, port, user: "postgres", database: "postgres" });
+    left = new Client({ host: process.platform === "win32" ? "127.0.0.1" : socketDir, port, user: "postgres", database: "postgres" });
+    right = new Client({ host: process.platform === "win32" ? "127.0.0.1" : socketDir, port, user: "postgres", database: "postgres" });
     await left.connect();
     await right.connect();
     await left.query(fixtureSql());
+    // Exercise the actual production mirror, rather than a test-only imitation.
+    const travelSql = sqlFile("supabase/migrations/20261026153942_visit_travel_fee_override.sql");
+    for (const name of ["private.mirror_visit_travel_fee", "public.sync_visit_travel_fee"]) {
+      const start = travelSql.indexOf(`CREATE OR REPLACE FUNCTION ${name}(`);
+      assert.ok(start >= 0);
+      const end = travelSql.indexOf("$$;", start);
+      await left.query(travelSql.slice(start, end + 3));
+    }
     await left.query(sqlFile(CONTROLS));
     await left.query(sqlFile(FUNCTIONS));
     await left.query(sqlFile(RECOVERY));
@@ -1059,8 +1072,8 @@ describe("policy fee postgres controls", { concurrency: false }, () => {
     const pet = await prices(made.appointmentIds[0]!);
     assert.equal(pet?.status, "cancelled");
     assert.equal(pet?.service_price, "40");
-    assert.equal(pet?.travel_fee, "12");
-    assert.equal(pet?.estimated_total, "52");
+    assert.equal(pet?.travel_fee, "0");
+    assert.equal(pet?.estimated_total, "40");
     assert.equal(pet?.scheduled_start, 540);
     const marked = await left!.query<{ result: unknown }>(
       "SELECT public.mark_policy_fee_change_applied($1::uuid) AS result",
@@ -1084,6 +1097,58 @@ describe("policy fee postgres controls", { concurrency: false }, () => {
       [created.claim_id],
     );
     assert.equal(fee.rows[0]?.charged_amount, "0.00");
+  });
+
+  it("atomically moves travel after a paid removal and rolls back a failed mirror", async () => {
+    const made = await makeVisit(2);
+    const [removed, remaining] = made.appointmentIds;
+    await stampSchedule(made.appointmentIds);
+    await left!.query("UPDATE visits SET travel_fee = 20 WHERE id = $1", [made.visitId]);
+    await left!.query("UPDATE appointments SET travel_fee = 20, estimated_total = 60, visit_sequence = 1 WHERE id = $1", [removed]);
+    await left!.query("UPDATE appointments SET travel_fee = 0, estimated_total = 40, visit_sequence = 2 WHERE id = $1", [remaining]);
+    const key = `remove_dog:appointment:${removed}`;
+    const created = await begin(left!, {
+      ...removeInput(made, 0, { computed: 8, charged: 8, waiver: 0, tender: "card" }),
+      change_payload: recoveryPayload({key, action: "remove_dog", visitId: made.visitId, ids: [removed!], charged: 8}),
+    });
+    const charge = await left!.query<{id: string}>(
+      `INSERT INTO appointment_charges (appointment_id, visit_id, kind, status, total, stripe_payment_intent_id, claim_id)
+       VALUES ($1, $2, 'cancellation', 'paid', 8, 'pi_travel_once', $3) RETURNING id`,
+      [removed, made.visitId, created.claim_id],
+    );
+    await left!.query("SELECT complete_policy_fee_claim($1, $2)", [created.claim_id, charge.rows[0]!.id]);
+    await left!.query("SELECT acquire_policy_fee_change($1)", [created.claim_id]);
+    // Inject a failure specifically between cancellation and the mirror write.
+    await left!.query(`CREATE FUNCTION private.fail_travel_test() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'simulated mirror outage'; END $$;
+      CREATE TRIGGER fail_travel_test BEFORE UPDATE OF travel_fee ON appointments
+      FOR EACH ROW EXECUTE FUNCTION private.fail_travel_test();`);
+    try {
+      await assert.rejects(left!.query("SELECT apply_policy_fee_calendar($1, NULL)", [created.claim_id]), /simulated mirror outage/);
+    } finally {
+      await left!.query("DROP TRIGGER fail_travel_test ON appointments; DROP FUNCTION private.fail_travel_test()");
+    }
+    assert.equal((await prices(removed!))?.status, "confirmed");
+    assert.equal((await prices(removed!))?.travel_fee, "20");
+    assert.equal((await prices(remaining!))?.travel_fee, "0");
+    const state = await left!.query<{calendar_written_at: string | null; appointment_change_applied: boolean}>(
+      "SELECT calendar_written_at, appointment_change_applied FROM policy_fee_claims WHERE id = $1", [created.claim_id]);
+    assert.equal(state.rows[0]?.calendar_written_at, null);
+    assert.equal(state.rows[0]?.appointment_change_applied, false);
+    const write = await right!.query<{result: unknown}>("SELECT apply_policy_fee_calendar($1, NULL) AS result", [created.claim_id]);
+    assert.equal(asJson(write.rows[0]?.result).outcome, "written");
+    assert.equal((await prices(removed!))?.travel_fee, "0");
+    assert.equal((await prices(removed!))?.estimated_total, "40");
+    assert.equal((await prices(remaining!))?.travel_fee, "20");
+    assert.equal((await prices(remaining!))?.estimated_total, "60");
+    // Restart after commit, before the completion marker or notifications.
+    const retry = await left!.query<{result: unknown}>("SELECT apply_policy_fee_calendar($1, NULL) AS result", [created.claim_id]);
+    assert.equal(asJson(retry.rows[0]?.result).outcome, "already_written");
+    await left!.query("SELECT mark_policy_fee_change_applied($1)", [created.claim_id]);
+    const paid = await left!.query<{count: string; total: string; intent: string}>(
+      "SELECT count(*)::text AS count, max(total)::text AS total, max(stripe_payment_intent_id) AS intent FROM appointment_charges WHERE claim_id = $1", [created.claim_id]);
+    assert.deepEqual(paid.rows[0], {count: "1", total: "8", intent: "pi_travel_once"});
+    assert.equal((await prices(remaining!))?.estimated_total, "60");
   });
 
   it("does not mark a paid claim applied before the calendar write", async () => {

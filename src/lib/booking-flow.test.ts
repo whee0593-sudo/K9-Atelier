@@ -21,7 +21,7 @@ describe("booking flow helpers", () => {
   it("defines six public booking steps in the requested order", () => {
     assert.deepEqual(
       BOOKING_STEPS.map((step) => step.short),
-      ["Your Dog", "Service", "Date & Time", "Your Details", "Payment", "Confirm"],
+      ["About Your Pup", "Service", "Date & Time", "About You", "Secure Your Appointment", "Confirm"],
     );
   });
 

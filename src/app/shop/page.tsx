@@ -1,16 +1,11 @@
 import Link from "next/link";
-import { business } from "@/lib/business";
 
 export default function ShopPage() {
   return (
     <div className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-xl flex-col items-center justify-center px-6 py-16 text-center">
       <h1 className="text-3xl font-semibold text-gold-dark">Online Shop</h1>
       <p className="mt-6 leading-relaxed text-text-muted">
-        Our online shop is coming soon. Browse grooming products and add-ons
-        from the comfort of home.
-      </p>
-      <p className="mt-4 text-sm text-text-muted">
-        Need grooming now? Book a mobile visit — we come to you.
+        Coming soon.
       </p>
       <Link
         href="/login?next=/book"

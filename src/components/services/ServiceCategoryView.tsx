@@ -8,6 +8,7 @@ import { FullGroomEditorial } from "@/components/services/FullGroomEditorial";
 import { HandStrippingEditorial } from "@/components/services/HandStrippingEditorial";
 import { MobileBookBar } from "@/components/services/MobileBookBar";
 import { ServiceCard } from "@/components/services/ServiceCard";
+import { ServiceWorkPhoto } from "@/components/services/ServiceWorkPhoto";
 import { ServicePriceDetails } from "@/components/services/ServicePriceDetails";
 import { ServicesHashRedirect } from "@/components/services/ServicesHashRedirect";
 import { ServicesNav } from "@/components/services/ServicesNav";
@@ -44,6 +45,7 @@ function serviceGridClass(count: number) {
 export function ServiceCategoryView({ category, showPrices = false }: Props) {
   const services = getServicesByIds(category.serviceIds);
   const coloring = getServiceById("creative-accent-coloring");
+  const hasWorkPhoto = ["full-groom", "hand-stripping", "color"].includes(category.slug);
 
   return (
     <div className="pb-24 md:pb-0">
@@ -55,7 +57,7 @@ export function ServiceCategoryView({ category, showPrices = false }: Props) {
       <ServicesNav />
       <ServicesSection
         id={category.slug}
-        eyebrow={category.pageEyebrow}
+        eyebrow={category.pageEyebrow === category.pageH1 ? undefined : category.pageEyebrow}
         title={category.pageH1}
         titleAs="h1"
         titleClassName={
@@ -64,6 +66,9 @@ export function ServiceCategoryView({ category, showPrices = false }: Props) {
         intro={category.pageIntro}
         tone="white"
       >
+        <div className={hasWorkPhoto ? "grid items-start gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" : undefined}>
+        {hasWorkPhoto ? <div className="order-2 lg:order-1"><ServiceWorkPhoto slug={category.slug} /></div> : null}
+        <div className="order-1 min-w-0 lg:order-2">
         {category.layout === "coloring" && coloring ? (
           <CreativeColoringSection
             service={showPrices ? coloring : serviceWithoutMenuPrices(coloring)}
@@ -81,6 +86,8 @@ export function ServiceCategoryView({ category, showPrices = false }: Props) {
                 <ServiceCard
                   key={service.id}
                   service={displayed}
+                  showSummary={category.slug !== "full-groom" && category.slug !== "spa"}
+                  showBestFor={category.slug !== "full-groom" && category.slug !== "spa"}
                   showPrices={showPrices}
                   priceText={showPrices ? serviceCardPriceValue(named) : ""}
                   priceDetails={
@@ -122,8 +129,10 @@ export function ServiceCategoryView({ category, showPrices = false }: Props) {
             })}
           </div>
         )}
+        </div>
+        </div>
         {category.slug === "specialty-care" ? (
-          <p className="font-body mx-auto mt-10 max-w-2xl text-center text-pretty text-sm leading-relaxed text-taupe">
+          <p className="font-body mx-auto mt-10 max-w-2xl text-center text-pretty text-sm leading-relaxed text-ink">
             {SPECIALTY_CARE_AREA_SENTENCE}
           </p>
         ) : null}

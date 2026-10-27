@@ -75,10 +75,10 @@ const headingClass =
   "font-display mt-5 text-balance text-[clamp(2.15rem,4.2vw+1rem,3.7rem)] leading-[1.08] font-medium tracking-[-0.02em] text-ink";
 
 const proseClass =
-  "font-body max-w-[40rem] space-y-6 text-[16px] leading-[1.8] text-taupe md:text-[18px] md:leading-[1.85]";
+  "font-body max-w-[40rem] space-y-6 text-[16px] leading-[1.8] text-ink md:text-[18px] md:leading-[1.85]";
 
 const captionClass =
-  "font-body mt-3 text-[11px] font-medium uppercase tracking-[0.18em] text-taupe md:mt-4";
+  "font-body mt-3 text-sm font-medium uppercase tracking-[0.18em] text-ink md:mt-4";
 
 const textLinkClass =
   "font-body mt-8 inline-flex max-w-full min-h-[48px] items-center justify-center text-center text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne md:mt-10";
@@ -185,7 +185,7 @@ function AwardsTimeline() {
             <p className="font-body mt-4 text-[12px] font-medium uppercase tracking-[0.16em] text-ink">
               {award.title}
             </p>
-            <p className="font-display mt-2 text-[1.65rem] text-taupe italic">
+            <p className="font-display mt-2 text-[1.65rem] text-ink italic">
               {award.breed}
             </p>
           </li>
@@ -208,7 +208,7 @@ function AwardsTimeline() {
             <p className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-ink lg:text-[13px] lg:tracking-[0.18em]">
               {award.title}
             </p>
-            <p className="font-display mt-3 text-[1.7rem] text-taupe italic lg:text-[2rem]">
+            <p className="font-display mt-3 text-[1.7rem] text-ink italic lg:text-[2rem]">
               {award.breed}
             </p>
           </li>
@@ -222,270 +222,65 @@ export function AboutStory() {
   return (
     <div className="overflow-x-clip">
       <Container>
-        <article className="pb-20 md:pb-28 lg:pb-36">
-          <section
-            className="pt-16 md:pt-24 lg:pt-28"
-            aria-labelledby="about-penny"
-          >
-            <div className="lg:grid lg:grid-cols-[minmax(15rem,22rem)_minmax(0,1fr)] lg:items-start lg:gap-x-16 xl:gap-x-24">
-              <header className="max-w-[44rem] lg:col-start-2 lg:row-start-1">
-                <AboutEyebrow>About Penny</AboutEyebrow>
-                <h1 id="about-penny" className={headingClass}>
-                  Meet Penny
-                </h1>
-                <p className="font-display mt-8 text-[1.35rem] leading-snug text-ink italic md:text-[1.7rem]">
-                  Founder & Groomer, K9 Atelier
-                </p>
-                <p className="font-body mt-3 text-[11px] font-medium uppercase tracking-[0.2em] text-deep-lavender md:text-[12px]">
-                  Professional Groomer Since 2010
-                </p>
-              </header>
-
-              <figure className="mt-10 max-w-[17.5rem] lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:mt-1 lg:max-w-none lg:self-start">
-                <AboutPhoto
-                  {...photos.portrait}
-                  sizes="(min-width: 1024px) 352px, 280px"
-                  priority
-                  objectPosition="center center"
-                  className="h-auto w-full"
-                />
-                <figcaption className={captionClass}>
-                  Professional Groomer Since 2010
-                </figcaption>
-              </figure>
-
-              <div className={`${proseClass} mt-10 lg:col-start-2 lg:row-start-2 lg:mt-10`}>
-                <p>
-                  Penny is a multiple award-winning professional dog groomer
-                  with experience across a wide range of breeds, coat types,
-                  and grooming techniques. As the founder of K9 Atelier, she
-                  brings years of all-breed grooming experience to a private,
-                  one-on-one mobile grooming experience in Palm Beach.
-                </p>
-                <p>
-                  Her background includes breed-specific styling, hand
-                  stripping,{" "}
-                  <Link href={LONG_COAT_CARE_PATH} className={quietInlineLinkClass}>full-coat maintenance</Link>
-                  {", show grooming, creative grooming, and personalized coat care, with an emphasis on preserving coat health while bringing out the character of each breed."}
-                </p>
+        <article className="py-12 md:py-20">
+          <section aria-labelledby="about-penny" className="grid items-start gap-8 lg:grid-cols-[minmax(15rem,22rem)_minmax(0,1fr)] lg:gap-16">
+            <header className="lg:col-start-2 lg:row-start-1">
+              <AboutEyebrow>About Penny</AboutEyebrow>
+              <h1 id="about-penny" className={headingClass}>Meet Penny</h1>
+              <p className="font-display mt-5 text-2xl text-ink italic">Founder & Groomer, K9 Atelier</p>
+              <div className={`${proseClass} mt-6`}>
+                <p>I’m Penny, an award-winning groomer. I’ve worked as a professional groomer since 2010, with experience in breed styling, hand stripping and show grooming.</p>
+                <p>Today, I bring that experience to private mobile appointments in Palm Beach, including <Link href={LONG_COAT_CARE_PATH} className={quietInlineLinkClass}>full-coat maintenance</Link>. We’ll choose a style and care plan that suit your dog and your routine at home.</p>
               </div>
-            </div>
-          </section>
-
-          <section
-            className="mt-24 md:mt-32 lg:mt-40"
-            aria-labelledby="about-show-ring"
-          >
-            <header className="max-w-[42rem]">
-              <AboutEyebrow>From the Show Ring</AboutEyebrow>
-              <h2 id="about-show-ring" className={headingClass}>
-                Where precision became instinct.
-              </h2>
+              <Link href="/services" className={textLinkClass}>Explore Grooming Services →</Link>
             </header>
-            <div className={`${proseClass} mt-8 md:mt-10`}>
-              <p>
-                Years of professional grooming and competition shaped the way I
-                see every dog — from coat preparation and structure to balance,
-                proportion, and the smallest finishing details.
-              </p>
-              <p>
-                Competition taught me that a beautiful groom is never simply
-                about following a pattern. It is about understanding the
-                individual dog and bringing out what suits them best.
-              </p>
-            </div>
-
-            <div className="mt-14 grid grid-cols-1 gap-10 md:mt-20 md:grid-cols-2 md:gap-x-10 md:gap-y-14 lg:gap-x-14 lg:gap-y-16">
-              <figure>
-                <AboutPhoto
-                  {...photos.grooming}
-                  sizes={SHOW_RING_SIZES}
-                  defer
-                  objectPosition="62% center"
-                  className="aspect-[3/2] w-full object-cover"
-                />
-              </figure>
-              <figure>
-                <AboutPhoto
-                  {...photos.trophy}
-                  sizes={SHOW_RING_SIZES}
-                  defer
-                  objectPosition="72% center"
-                  className="aspect-[3/2] w-full object-cover"
-                />
-              </figure>
-              <figure>
-                <AboutPhoto
-                  {...photos.award}
-                  sizes={SHOW_RING_SIZES}
-                  defer
-                  objectPosition="center 42%"
-                  className="aspect-[6/5] w-full object-cover"
-                />
-                <figcaption className={captionClass}>
-                  2019 · Best in Show · Bichon
-                </figcaption>
-              </figure>
-              <figure>
-                <AboutPhoto
-                  {...photos.group}
-                  sizes={GROUP_PHOTO_SIZES}
-                  defer
-                  objectPosition="center center"
-                  className="aspect-[700/433] w-full object-cover"
-                />
-                <figcaption className="font-display mt-3 text-[1.2rem] leading-snug text-taupe italic md:mt-4 md:text-[1.45rem]">
-                  A life shaped by the grooming table.
-                </figcaption>
-              </figure>
-            </div>
+            <figure className="mx-auto w-full max-w-[22rem] lg:col-start-1 lg:row-start-1">
+              <AboutPhoto {...photos.portrait} sizes="(min-width: 1024px) 352px, min(352px, calc(100vw - 2rem))" priority />
+            </figure>
           </section>
 
-          <section
-            className="mt-24 md:mt-32 lg:mt-40"
-            aria-labelledby="about-awards"
-          >
-            <div className="grid items-end gap-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(16rem,26rem)] lg:gap-20">
-              <header className="max-w-[36rem]">
-                <AboutEyebrow>Award-Winning Experience</AboutEyebrow>
-                <h2 id="about-awards" className={headingClass}>
-                  Years of craft. Moments of recognition.
-                </h2>
-              </header>
-              <figure className="w-full max-w-sm lg:max-w-none lg:justify-self-end">
-                <AboutPhoto
-                  {...photos.credentials}
-                  sizes="(min-width: 1024px) 416px, min(24rem, calc(100vw - 2rem))"
-                  defer
-                  objectPosition="center center"
-                  className="aspect-[960/720] w-full"
-                />
+          <section className="mt-16 md:mt-20" aria-labelledby="about-awards">
+            <h2 id="about-awards" className="font-display text-3xl text-ink md:text-4xl">From the Show Ring</h2>
+            <p className={`${proseClass} mt-4`}>Competition shaped my approach to coat preparation, balance and finishing.</p>
+            <div className="mt-8 grid gap-8 md:grid-cols-2">
+              <figure>
+                <AboutPhoto {...photos.grooming} sizes={SHOW_RING_SIZES} defer objectPosition="62% center" className="aspect-[3/2] w-full object-cover" />
+              </figure>
+              <figure>
+                <AboutPhoto {...photos.award} sizes={SHOW_RING_SIZES} defer className="aspect-[960/801] w-full object-cover" />
+                <figcaption className={captionClass}>2019 · Best in Show · Bichon</figcaption>
               </figure>
             </div>
             <AwardsTimeline />
+            <details className="mt-8 border-y border-gray-line py-4">
+              <summary className="font-body flex min-h-12 cursor-pointer items-center text-base font-medium text-deep-lavender">More from the competition archive</summary>
+              <div className="mt-6 grid gap-8 md:grid-cols-3">
+                <AboutPhoto {...photos.trophy} sizes="(min-width: 768px) 30vw, calc(100vw - 2rem)" className="h-auto w-full" />
+                <AboutPhoto {...photos.group} sizes={GROUP_PHOTO_SIZES} className="h-auto w-full" />
+                <AboutPhoto {...photos.credentials} sizes="(min-width: 768px) 30vw, calc(100vw - 2rem)" className="h-auto w-full" />
+              </div>
+            </details>
           </section>
 
-          <section
-            className="mt-24 md:mt-32 lg:mt-40"
-            aria-labelledby="about-teaching"
-          >
-            <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-20 xl:gap-24">
-              <figure className="-mx-4 lg:mx-0">
-                <AboutPhoto
-                  {...photos.teaching}
-                  sizes="(min-width: 1024px) 58vw, 100vw"
-                  objectPosition="center 42%"
-                  className="aspect-[1016/1080] w-full object-cover"
-                />
+          <section className="mt-16 md:mt-20" aria-labelledby="about-teaching">
+            <div className="grid items-center gap-8 md:grid-cols-2 lg:gap-16">
+              <figure className="mx-auto w-full max-w-sm">
+                <AboutPhoto {...photos.teaching} sizes="(min-width: 768px) 384px, calc(100vw - 2rem)" className="h-auto w-full" />
               </figure>
-              <header>
-                <AboutEyebrow>Sharing the Craft</AboutEyebrow>
-                <h2 id="about-teaching" className={headingClass}>
-                  Experience worth sharing.
-                </h2>
-                <div className={`${proseClass} mt-8 md:mt-10`}>
-                  <p>
-                    Over the years, my work has extended beyond the grooming
-                    table to teaching and hands-on instruction — sharing
-                    techniques, helping other groomers refine their skills, and
-                    passing along the knowledge I gained through years of
-                    professional grooming and competition.
-                  </p>
-                </div>
-              </header>
+              <div>
+                <h2 id="about-teaching" className="font-display text-3xl text-ink md:text-4xl">Sharing the Craft</h2>
+                <p className={`${proseClass} mt-4`}>I also teach hands-on grooming techniques, with a focus on coat health and comfortable handling.</p>
+                <Link href="/book" className="font-body mt-6 inline-flex min-h-12 items-center justify-center rounded-sm bg-deep-lavender px-8 text-sm font-medium text-ivory hover:bg-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-deep-lavender">Book Online</Link>
+              </div>
             </div>
+            <details className="mt-8 border-y border-gray-line py-4">
+              <summary className="font-body flex min-h-12 cursor-pointer items-center text-base font-medium text-deep-lavender">More grooming photographs</summary>
+              <div className="mt-6 grid gap-8 sm:grid-cols-2">
+                <AboutPhoto {...photos.craft} sizes="(min-width: 768px) 40vw, calc(100vw - 2rem)" className="mx-auto h-auto w-full max-w-sm" />
+                <AboutPhoto {...photos.approach} sizes="(min-width: 768px) 40vw, calc(100vw - 2rem)" className="mx-auto h-auto w-full max-w-sm" />
+              </div>
+            </details>
           </section>
-
-          <section
-            className="mt-24 md:mt-32 lg:mt-40"
-            aria-labelledby="about-craft"
-          >
-            <div className="grid grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] items-center gap-4 min-[390px]:gap-5 sm:gap-8 md:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] md:gap-12 lg:gap-16">
-              <figure className="min-w-0">
-                <AboutPhoto
-                  {...photos.craft}
-                  sizes="(min-width: 768px) 42vw, 46vw"
-                  objectPosition="center center"
-                  className="aspect-[2/3] w-full object-cover"
-                />
-              </figure>
-              <header className="min-w-0">
-                <AboutEyebrow>The Craft</AboutEyebrow>
-                <h2
-                  id="about-craft"
-                  className="font-display mt-3 text-balance text-[1.45rem] leading-[1.12] font-medium tracking-[-0.02em] text-ink min-[390px]:text-[1.65rem] sm:mt-4 sm:text-[2.15rem] md:mt-5 md:text-[clamp(2.15rem,2.2vw+1rem,3.35rem)]"
-                >
-                  The details make the difference.
-                </h2>
-                <div className="font-body mt-4 max-w-[36rem] space-y-3 text-[13px] leading-[1.65] text-taupe min-[390px]:text-[14px] sm:mt-6 sm:space-y-4 sm:text-[15px] sm:leading-[1.75] md:mt-8 md:space-y-5 md:text-[17px] md:leading-[1.8]">
-                  <p>
-                    Competition taught me to look beyond the haircut — to
-                    understand balance, structure, coat, movement, and the subtle
-                    details that bring a groom together.
-                  </p>
-                  <p>
-                    That same attention to detail continues to shape every
-                    appointment today.
-                  </p>
-                </div>
-              </header>
-            </div>
-          </section>
-
-          <section
-            className="mt-24 md:mt-32 lg:mt-40"
-            aria-labelledby="about-approach"
-          >
-            <div className="grid grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)] items-center gap-4 min-[390px]:gap-5 sm:gap-8 md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] md:gap-12 lg:gap-16">
-              <header className="min-w-0">
-                <AboutEyebrow>The K9 Atelier Approach</AboutEyebrow>
-                <h2
-                  id="about-approach"
-                  className="font-display mt-3 text-balance text-[1.45rem] leading-[1.12] font-medium tracking-[-0.02em] text-ink min-[390px]:text-[1.65rem] sm:mt-4 sm:text-[2.15rem] md:mt-5 md:text-[clamp(2.15rem,2.2vw+1rem,3.35rem)]"
-                >
-                  Experience, made personal.
-                </h2>
-                <div className="font-body mt-4 max-w-[36rem] space-y-3 text-[13px] leading-[1.65] text-taupe min-[390px]:text-[14px] sm:mt-6 sm:space-y-4 sm:text-[15px] sm:leading-[1.75] md:mt-8 md:space-y-5 md:text-[17px] md:leading-[1.8]">
-                  <p>
-                    Today, I bring that experience into every K9 Atelier
-                    appointment.
-                  </p>
-                  <p>
-                    Each groom is approached individually — considering the
-                    dog’s coat, structure, lifestyle, personality, and comfort
-                    to create a look that feels polished, natural, and uniquely
-                    theirs.
-                  </p>
-                  <p>
-                    For me, thoughtful grooming is not about making every dog
-                    look the same. It is about understanding the dog in front of
-                    me.
-                  </p>
-                </div>
-              </header>
-              <figure className="min-w-0">
-                <AboutPhoto
-                  {...photos.approach}
-                  sizes="(min-width: 768px) 38vw, 44vw"
-                  objectPosition="center center"
-                  className="aspect-[1122/1402] w-full object-cover"
-                />
-              </figure>
-            </div>
-          </section>
-
-          <div className="mt-24 flex flex-col items-center px-2 text-center md:mt-36 lg:mt-44">
-            <span aria-hidden className="h-px w-12 bg-champagne/80" />
-            <p className="font-display mt-10 text-[clamp(1.9rem,2vw+1.15rem,2.85rem)] leading-tight font-normal text-ink italic md:mt-14">
-              Grooming, elevated.
-            </p>
-            <Link href="/services" className={textLinkClass}>
-              Explore Grooming Services
-              <span aria-hidden="true" className="ml-1.5">
-                →
-              </span>
-            </Link>
-          </div>
         </article>
       </Container>
     </div>

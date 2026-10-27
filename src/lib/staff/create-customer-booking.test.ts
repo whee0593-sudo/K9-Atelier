@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { beforeEach, describe, it } from "node:test";
 import {
   allBookableServices,
   getServicePriceEstimate,
@@ -102,6 +102,13 @@ describe("staffCreatedAccountBlockReason", () => {
 });
 
 describe("validateStaffCustomerBookingInput", () => {
+  beforeEach((t) => t.mock.timers.enable({ apis: ["Date"], now: new Date("2026-10-26T12:00:00Z") }));
+
+  it("accepts today's 2 PM booking at 12:24 PM and rejects elapsed starts", (t) => {
+    t.mock.timers.setTime(new Date("2026-10-26T16:24:00Z").getTime());
+    assert.equal(validateStaffCustomerBookingInput(validBody({ appointmentDate: "2026-10-26", slotStartMinutes: 840 })).mode, "booking");
+    assert.throws(() => validateStaffCustomerBookingInput(validBody({ appointmentDate: "2026-10-26", slotStartMinutes: 720 })), /has not passed/);
+  });
   it("lets an admin confirm a schedule conflict instead of treating it as missing", () => {
     assert.equal(
       validateStaffCustomerBookingInput(validBody()).acknowledgeScheduleConflict,

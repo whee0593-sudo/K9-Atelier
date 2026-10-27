@@ -1,13 +1,17 @@
 import Link from "next/link";
+import { business } from "@/lib/business";
+import { isPrivacyGateActive } from "@/lib/site-access";
 import { AdminAccessForm } from "@/components/auth/AdminAccessForm";
 
 export default function AdminLoginPage() {
+  const privacyMode = isPrivacyGateActive(business.site?.privacyMode === true);
   return (
     <div className="mx-auto max-w-xl px-6 py-16 text-center">
       <h1 className="text-3xl font-semibold text-gold-dark">Team Access</h1>
       <p className="mt-6 text-text-muted">
-        The public site is in privacy mode. Enter your team password to preview
-        the full website while we prepare for launch.
+        {privacyMode
+          ? "Enter your team password to preview the website."
+          : "Sign in with your staff account to manage the atelier."}
       </p>
 
       <div className="mt-8 rounded-2xl border border-lavender/30 bg-cream px-6 py-5 text-left text-sm">
@@ -24,13 +28,13 @@ export default function AdminLoginPage() {
         </Link>
       </div>
 
-      <AdminAccessForm />
+      {privacyMode ? <AdminAccessForm /> : null}
 
       <Link
-        href="/under-construction"
+        href={privacyMode ? "/under-construction" : "/"}
         className="mt-8 inline-block text-sm text-text-muted underline"
       >
-        Back to public page
+        {privacyMode ? "Back to public page" : "View website"}
       </Link>
     </div>
   );

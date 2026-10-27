@@ -1,3 +1,5 @@
+import { allergySnapshotForBooking } from "@/lib/allergies";
+import { randomUUID } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuthenticatedUser } from "@/lib/pets/auth";
 import { mapAppointmentRowToRecord } from "@/lib/appointments/map";
@@ -59,7 +61,6 @@ import {
   snapshotServicePrice,
 } from "@/lib/visits/visit";
 import { compactVisitChildStarts } from "@/lib/visits/compact";
-import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
 import { getServiceDisplayName } from "@/lib/service-display";
 import type { TimePreference } from "@/lib/booking-schedule";
 
@@ -472,12 +473,6 @@ async function resumeVisitChange(
       );
     },
     afterWrite: async (payload) => {
-      if (payload.action === "cancel" || payload.action === "remove_dog") {
-        const mirrored = await syncVisitTravelFeeMirror(payload.visitId);
-        if ("error" in mirrored) {
-          console.error("travel mirror after policy change failed");
-        }
-      }
       if (payload.action === "remove_dog") {
         const compacted = await compactVisitChildStarts(payload.visitId);
         if ("error" in compacted) {
@@ -924,9 +919,8 @@ async function addDogToVisit(
   );
   if (!allergy.ok) {
     console.error("addDogToVisit allergy profile could not be read");
-    return { error: "allergy_unavailable" as const };
   }
-  const allergySnapshot = allergy.snapshot;
+  const allergySnapshot = allergySnapshotForBooking(allergy);
 
   const estimate = getServicePriceEstimate(service, bookedWeight);
   const paymentMethod = await resolvePaymentMethod(

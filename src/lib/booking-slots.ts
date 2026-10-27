@@ -1,4 +1,5 @@
 import { business } from "./business";
+import { todayInBusinessTimezone, zonedDateTimeToUtc } from "./sms/schedule";
 
 const DAY_KEYS = [
   "sunday",
@@ -69,26 +70,27 @@ function startOfLocalDay(date: Date) {
   return next;
 }
 
-function tomorrowLocal() {
-  const tomorrow = startOfLocalDay(new Date());
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  return tomorrow;
-}
-
-/** Earliest calendar day that can be reserved (not today; honors firstBookableDate). */
-export function getEarliestBookableDate() {
-  const tomorrow = tomorrowLocal();
+/** Earliest calendar day in the business timezone, including today. */
+export function getEarliestBookableDate(now = new Date()) {
+  const today = parseDateValue(todayInBusinessTimezone(now));
   const configured = business.booking.firstBookableDate;
-  if (!configured) return tomorrow;
+  if (!configured) return today;
   const first = parseDateValue(configured);
-  return first > tomorrow ? first : tomorrow;
+  return first > today ? first : today;
 }
 
-/** Bookable if weekday, not today, and not before the first bookable date. */
-export function isDateBookable(date: Date) {
+/** Bookable weekday on or after today and the configured opening date. */
+export function isDateBookable(date: Date, now = new Date()) {
   const cursor = startOfLocalDay(date);
-  if (cursor < getEarliestBookableDate()) return false;
+  if (cursor < getEarliestBookableDate(now)) return false;
   return isBookableWeekday(cursor);
+}
+
+/** No advance-notice requirement: any future start in the business timezone. */
+export function isBookingStartInFuture(date: string, startMinutes: number, now = new Date()) {
+  if (!Number.isInteger(startMinutes) || startMinutes < 0 || startMinutes >= 1440) return false;
+  const clock = `${String(Math.floor(startMinutes / 60)).padStart(2, "0")}:${String(startMinutes % 60).padStart(2, "0")}:00`;
+  return zonedDateTimeToUtc(date, clock).getTime() > now.getTime();
 }
 
 /** Open time slots for a date. Replace with calendar API when live. */

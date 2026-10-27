@@ -65,7 +65,7 @@ export function ReviewCard({ item }: { item: GoogleReviewItem }) {
           ) : (
             <p className="font-body text-sm font-medium text-ink">{item.name}</p>
           )}
-          <p className="font-body mt-0.5 text-[10px] uppercase tracking-[0.16em] text-taupe">
+          <p className="font-body mt-0.5 text-sm uppercase tracking-[0.16em] text-ink">
             {item.source || "Google Maps"}
           </p>
         </div>
@@ -89,7 +89,7 @@ export function ReviewCard({ item }: { item: GoogleReviewItem }) {
       {showToggle ? (
         <button
           type="button"
-          className="font-body mt-3 self-start text-[10px] font-medium uppercase tracking-[0.14em] text-taupe hover:text-ink"
+          className="font-body mt-3 min-h-11 self-start text-sm font-medium uppercase tracking-[0.14em] text-ink hover:text-ink"
           aria-expanded={expanded}
           onClick={() => {
             setOverflowing(true);
@@ -101,7 +101,7 @@ export function ReviewCard({ item }: { item: GoogleReviewItem }) {
       ) : null}
 
       <div className="mt-6 flex items-center justify-between gap-4">
-        <p className="font-body text-[11px] text-taupe">
+        <p className="font-body text-sm text-ink">
           {item.relativePublishTimeDescription || ""}
         </p>
         {item.googleMapsUri ? (
@@ -109,7 +109,7 @@ export function ReviewCard({ item }: { item: GoogleReviewItem }) {
             href={item.googleMapsUri}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-body shrink-0 text-[10px] font-medium uppercase tracking-[0.14em] text-taupe hover:text-ink"
+            className="font-body shrink-0 text-sm font-medium uppercase tracking-[0.14em] text-ink hover:text-ink"
           >
             View on Google
           </a>

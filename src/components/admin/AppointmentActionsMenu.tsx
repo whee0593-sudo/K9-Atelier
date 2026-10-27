@@ -4,6 +4,7 @@ import React, { useEffect, useId } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { AdminCancelAppointmentButton } from "@/components/admin/AdminCancelAppointmentButton";
+import { VisitTravelFeeEditor } from "@/components/admin/VisitTravelFeeEditor";
 import { AdminRescheduleAppointmentButton } from "@/components/admin/AdminRescheduleAppointmentButton";
 import { CallCustomerButton } from "@/components/admin/CallCustomerButton";
 import { allergyStatusLabel, allergyWarning } from "@/lib/allergies";
@@ -199,7 +200,6 @@ export function AppointmentActionsMenu({
               zip: appointment.addressZip,
             })}
           />
-          <DetailRow label="Travel fee" value={formatPrice(appointment.travelFee)} />
           <DetailRow
             label="Vaccination status"
             value={
@@ -208,6 +208,7 @@ export function AppointmentActionsMenu({
                 : "—"
             }
           />
+          {!appointment.visitId ? <DetailRow label="Travel fee" value={formatPrice(appointment.travelFee)} /> : null}
           <DetailRow
             label="Appointment status"
             value={appointmentStatusLabel(
@@ -216,6 +217,7 @@ export function AppointmentActionsMenu({
             )}
           />
         </dl>
+        {appointment.visitId ? <VisitTravelFeeEditor appointmentId={appointment.id} preview={preview} onSaved={() => onChanged?.()} /> : null}
         <button
           type="button"
           className={`${menuItemClass} mt-4 border border-lavender/40`}

@@ -253,6 +253,10 @@ BEGIN
   v_payload := v_claim.change_payload;
   v_ids := v_claim.affected_appointment_ids;
 
+  -- Match the visit-first lock order used by travel-fee edits and checkout.
+  -- Keep the canonical fee stable while cancelling and moving its mirror.
+  PERFORM 1 FROM public.visits WHERE id = v_claim.visit_id FOR UPDATE;
+
   BEGIN
     IF v_claim.action NOT IN ('cancel', 'reschedule', 'remove_dog')
       OR v_payload->>'operationId' IS DISTINCT FROM v_claim.idempotency_key
@@ -362,6 +366,11 @@ BEGIN
       IF v_count <> cardinality(v_ids) THEN
         RAISE EXCEPTION 'policy fee calendar mismatch' USING ERRCODE = '23514';
       END IF;
+
+      -- This must commit with the calendar write, before calendar_written_at.
+      -- A failed mirror rolls the cancellation back, so recovery can retry
+      -- without creating another payment or sending another notification.
+      PERFORM public.sync_visit_travel_fee(v_claim.visit_id);
     ELSE
       IF (
         SELECT COALESCE(array_agg((item->>'id')::uuid ORDER BY (item->>'id')::uuid), '{}'::uuid[])

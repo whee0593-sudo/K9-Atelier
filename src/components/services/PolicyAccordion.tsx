@@ -4,7 +4,7 @@ import { useId, useState, type ReactNode } from "react";
 
 type Props = {
   title: string;
-  summary: string;
+  summary?: string;
   children: ReactNode;
 };
 
@@ -26,12 +26,12 @@ export function PolicyAccordion({ title, summary, children }: Props) {
         >
           <span>
             <span className="font-display text-xl text-ink">{title}</span>
-            <span className="font-body mt-1 block text-sm font-normal text-taupe">
+            {summary && <span className="font-body mt-1 block text-base font-normal text-ink">
               {summary}
-            </span>
+            </span>}
           </span>
-          <span className="font-body shrink-0 pt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-taupe">
-            {open ? "Hide" : "View"}
+          <span aria-hidden="true" className="font-body shrink-0 text-xl text-deep-lavender">
+            {open ? "−" : "+"}
           </span>
         </button>
       </h3>

@@ -1,5 +1,5 @@
 import { listHourlyStartMinutes } from "@/lib/booking-schedule";
-import { getUpcomingBookableDates, parseDateValue } from "@/lib/booking-slots";
+import { getUpcomingBookableDates, isBookingStartInFuture, parseDateValue } from "@/lib/booking-slots";
 
 export type StaffAvailabilityDay = {
   date: string;
@@ -12,7 +12,7 @@ export function fallbackStaffScheduleDays(count = 20): StaffAvailabilityDay[] {
   return getUpcomingBookableDates(count).map((day) => ({
     date: day.value,
     available: true,
-    slots: listHourlyStartMinutes(),
+    slots: listHourlyStartMinutes().filter((start) => isBookingStartInFuture(day.value, start)),
   }));
 }
 
@@ -24,9 +24,9 @@ export function selectableStaffDays(days: StaffAvailabilityDay[]) {
 export function slotsForStaffDate(days: StaffAvailabilityDay[], date: string) {
   if (!date) return [];
   const match = days.find((day) => day.date === date);
-  if (!match) return listHourlyStartMinutes();
+  if (!match) return listHourlyStartMinutes().filter((start) => isBookingStartInFuture(date, start));
   if (!match.available) return [];
-  return match.slots;
+  return match.slots.filter((start) => isBookingStartInFuture(date, start));
 }
 
 export function formatStaffDateOption(date: string) {

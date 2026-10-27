@@ -43,6 +43,14 @@ export function catalogChargeGroups(weightLbs: number | null): CatalogChargeGrou
               : (getServicePriceEstimate(service, pricedWeight)?.from ?? null),
         });
       }
+      if (category.id === "add-on-care") {
+        items.push({
+          id: "special-gentle-care",
+          name: "Special Gentle Care",
+          // Default price; staff can adjust each line before customer confirmation.
+          suggestedAmount: 30,
+        });
+      }
       return {
         id: category.id,
         name: category.name,

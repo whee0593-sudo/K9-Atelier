@@ -10,18 +10,11 @@ import { LONG_COAT_CARE_PATH } from "@/lib/long-coat-care-page";
 import { SPECIALTY_CARE_PATH } from "@/lib/service-page";
 
 const heroCtaClass =
-  "inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-deep-lavender px-8 text-[13px] font-medium uppercase tracking-[0.14em] text-ivory transition duration-500 hover:bg-ink sm:w-auto md:text-[12px] md:tracking-[0.16em]";
+  "inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-deep-lavender px-8 text-base font-semibold tracking-[0.01em] text-ivory transition duration-500 hover:bg-ink sm:w-auto md:text-sm";
 
-/**
- * CSS sets the box. `sizes` only picks the file for that box.
- * Desktop is the established 353px portrait. Phones stay on the 46vh cap,
- * about 303px wide at 412×823 and 311px at 390×844.
- */
-const HERO_SIZES =
-  "(max-width: 767px) min(calc(100vw - 2rem), calc(46vh * 0.8)), (max-width: 1279px) min(353px, calc((min(100vw, 1240px) - 10rem) / 2)), min(353px, calc((min(100vw, 1240px) - 14rem) / 2))";
-
-const HERO_IMAGE_CLASS =
-  "aspect-[4/5] !h-auto !w-full max-md:!max-w-[min(calc(100vw-2rem),calc(46vh*0.8))] max-h-[46vh] md:!w-[353px] md:!max-w-[353px] md:max-h-[80vh]";
+// Match the full-width mobile image and the desktop half-container panel.
+const HERO_SIZES = "(max-width: 767px) calc(100vw - 2rem), (max-width: 1279px) calc((100vw - 8rem) / 2), 508px";
+const HERO_IMAGE_CLASS = "!h-[300px] !w-full !object-contain md:!h-[520px]";
 
 const HERO_LEAD_LINKS = [
   { phrase: "show-level coat care", href: LONG_COAT_CARE_PATH },
@@ -65,7 +58,7 @@ function HeroLead({ lead }: { lead: string }) {
 function HeroServiceMeta({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`font-body max-w-xl space-y-3 text-[13px] font-medium uppercase leading-relaxed tracking-[0.12em] text-taupe md:text-[12px] md:tracking-[0.16em] ${className}`}
+      className={`font-body max-w-xl space-y-3 text-sm font-medium leading-relaxed tracking-[0.01em] text-ink md:text-sm ${className}`}
     >
       <p className="text-pretty">
         <span className="whitespace-nowrap">Serving Jupiter Island ·</span>{" "}
@@ -86,21 +79,21 @@ export function HomeHero() {
 
   return (
     <section className="relative overflow-hidden border-b border-gray-line/60">
-      <Container className="grid items-center gap-8 py-10 md:grid-cols-2 md:gap-16 md:py-20 lg:py-24">
+      <Container className="grid items-center gap-8 py-9 md:grid-cols-2 md:gap-12 md:py-16 lg:py-20">
         <div className="md:order-1">
           <Eyebrow>{business.brand.lockup}</Eyebrow>
-          <h1 className="font-display mt-5 text-[2.5rem] leading-[1.08] font-medium text-ink md:mt-6 md:text-[3.5rem] lg:text-[4.5rem]">
+          <h1 className="font-display mt-5 text-[2.75rem] leading-[1.02] font-semibold text-ink md:mt-6 md:text-[3.5rem] lg:text-[4.5rem]">
             {business.brand.tagline}
           </h1>
-          <p className="font-body mt-5 max-w-xl text-base leading-relaxed text-taupe md:mt-6 md:text-[17px]">
+          <p className="font-body mt-5 max-w-xl text-base leading-relaxed text-ink md:mt-6 md:text-[17px]">
             <HeroLead lead={business.brand.lead} />
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:items-center sm:gap-4">
             <BookServiceLink className={heroCtaClass}>
-              Book an Appointment
+              Book Online
             </BookServiceLink>
-            <Link href="/contact" className={heroCtaClass}>
-              Ask a Question
+            <Link href="/request-a-call" className="inline-flex min-h-[52px] w-full items-center justify-center rounded-sm border-2 border-deep-lavender px-7 text-base font-semibold text-deep-lavender transition-colors hover:bg-dusty-lavender/50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-deep-lavender sm:w-auto">
+              Request a Call
             </Link>
           </div>
           <HeroServiceMeta className="mt-8 hidden md:block" />
@@ -112,7 +105,7 @@ export function HomeHero() {
               src={heroPhoto.src}
               alt={heroPhoto.alt}
               priority
-              className="shadow-sm"
+              className="rounded-xl bg-dusty-lavender/50"
               imageClassName={HERO_IMAGE_CLASS}
               sizes={HERO_SIZES}
             />

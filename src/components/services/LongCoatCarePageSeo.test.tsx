@@ -122,7 +122,7 @@ describe("long-coat care page content", () => {
     }
     assert.equal(html.includes(LONG_COAT_CARE_YORKIE_HEADING), true);
     assert.match(html, /Yorkshire Terrier \(Yorkie\)/);
-    assert.match(html, /Yorkie long-coat care is private/);
+    assert.match(html, /regular conditioning, line brushing/);
     for (const paragraph of LONG_COAT_CARE_YORKIE_BODY) {
       assert.equal(html.includes(paragraph), true, paragraph);
     }
@@ -149,7 +149,7 @@ describe("long-coat care page content", () => {
     assert.ok(links.some((link) => link.href === "/services" && /Explore All Services/.test(link.text)));
     assert.ok(links.some((link) => link.href === "/about" && link.text === "Penny"));
     assert.ok(links.some((link) => link.href === "/about" && /Meet Your Groomer/.test(link.text)));
-    assert.ok(links.some((link) => link.href === "/book" && /Book an Appointment/.test(link.text)));
+    assert.ok(links.some((link) => link.href === "/book" && /Book Online/.test(link.text)));
     assert.equal(
       links.some((link) => link.href === LONG_COAT_CARE_PATH),
       false,
@@ -213,7 +213,7 @@ describe("show care card link", () => {
     const learn = links.find((link) => link.href === LONG_COAT_CARE_PATH);
     assert.ok(learn);
     assert.match(learn.text, /Show-Level Coat Care/);
-    assert.ok(links.some((link) => link.href === "/book" && /Book an Appointment/.test(link.text)));
+    assert.ok(links.some((link) => link.href === "/book" && /Book Online/.test(link.text)));
 
     const source = readFileSync(
       new URL("./ServiceCategoryView.tsx", import.meta.url),

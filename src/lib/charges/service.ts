@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStaffSession } from "@/lib/staff/auth";
+import { visitTravelLinesMatch } from "@/lib/visits/travel-fee";
 import { fetchAppointmentAdminRecord } from "@/lib/email/appointment-context";
 import {
   getOrCreateStripeCustomerId,
@@ -507,6 +508,11 @@ export async function createAppointmentCharge(
       ? await loadVisitCollect(admin, appointment.visitId)
       : null;
   if (visitCollect && "error" in visitCollect) return { error: visitCollect.error };
+
+  if (visitCollect && !("error" in visitCollect) &&
+      !visitTravelLinesMatch(lineItems, visitCollect.bill.travelFee)) {
+    return { error: "conflict", message: "Travel fee changed. Reload checkout to use the saved visit travel fee. Edit it in Appointment details." };
+  }
 
   const visitId =
     visitCollect && !("error" in visitCollect) ? visitCollect.bill.visitId : null;

@@ -39,16 +39,16 @@ export const SPECIALTY_CARE_PAGE_DESCRIPTION =
   "Private mobile senior dog grooming with patient one-on-one care, a slower pace and extra breaks for older dogs who need a gentler appointment.";
 export const SPECIALTY_CARE_PAGE_H1 = "Extra-Gentle Senior Care";
 export const SPECIALTY_CARE_PAGE_INTRO =
-  "Private mobile grooming for senior dogs who benefit from a slower pace, extra breaks and patient one-on-one handling focused on comfort and dignity.";
+  "A slower pace, extra breaks and gentle handling for older dogs.";
 export const SPECIALTY_CARE_SENIOR_NAME = "Extra-Gentle Senior Care";
 export const SPECIALTY_CARE_SENIOR_SUMMARY =
   "Extra-gentle, comfort-focused care for senior dogs who benefit from a slower pace, additional breaks and patient handling.";
 export const SPECIALTY_CARE_SENIOR_BEST_FOR =
   "Senior dogs who need a slower, gentler grooming experience.";
 export const SPECIALTY_CARE_SENIOR_DETAIL =
-  "Extra-Gentle Senior Care is designed for older dogs who benefit from a slower, more flexible grooming pace. Appointments prioritize comfort and dignity over speed, with additional resting breaks, patient handling, anti-slip support, gentle drying and adjustments for dogs who may be less steady or tire more easily.";
+  "Includes resting breaks, anti-slip support and gentle drying, adjusted to your dog’s comfort.";
 export const SPECIALTY_CARE_SENIOR_INDIVIDUAL =
-  "Care is individualized to the dog in front of us, with the grooming plan adjusted as needed throughout the appointment.";
+  "This care is added to your base grooming service.";
 export const SPECIALTY_CARE_PENNY_BEFORE =
   "Senior grooming at K9 Atelier is provided by ";
 export const SPECIALTY_CARE_PENNY_NAME = "Penny";
@@ -79,15 +79,15 @@ export const FULL_GROOM_PAGE_TITLE =
   "Full Dog Grooming in Palm Beach | K9 Atelier";
 export const FULL_GROOM_PAGE_DESCRIPTION =
   "Private mobile full grooming in Palm Beach with custom haircuts and styling tailored to your dog\u2019s coat, lifestyle and individual expression.";
-export const FULL_GROOM_PAGE_H1 = "A Complete Style, Done With Patience.";
+export const FULL_GROOM_PAGE_H1 = "Full Grooming";
 export const FULL_GROOM_PAGE_INTRO =
-  "Private mobile full grooming in Palm Beach, with custom haircuts and styling for coats that need more than a bath.";
+  "A bath, complete coat care and a haircut suited to your dog and your preferred style.";
 export const FULL_GROOM_INCLUDED_HEADING = "What\u2019s Included in a Full Groom";
 export const FULL_GROOM_INCLUDED_BODY =
-  "A Full Groom begins with complete bath and coat care, followed by a customized haircut and finishing work selected for your dog\u2019s coat, proportions, lifestyle and preferred look. Styling can range from practical maintenance trims to teddy-bear inspired finishes and breed-appropriate styling.";
+  "Includes complete bath and coat care, followed by a haircut and finishing work.";
 export const FULL_GROOM_STYLING_HEADING = "Styling Tailored to the Individual";
 export const FULL_GROOM_STYLING_BODY =
-  "Every haircut is considered individually, taking into account coat texture, body proportions, maintenance needs and the style you would like to achieve. The goal is a balanced finish that suits the dog rather than a one-style-fits-all approach.";
+  "Choose a practical trim, teddy-bear finish or breed styling. Penny will discuss what works for your dog’s coat and your home-care routine.";
 
 export const FULL_GROOM_FAQS = [
   {
@@ -103,7 +103,7 @@ export const FULL_GROOM_FAQS = [
   {
     question: "How is Full Groom pricing determined?",
     answer:
-      "This estimate reflects the starting coat price for your dog's weight. The price may vary based on your dog's coat situation, which will be discussed with you before your appointment.",
+      "The estimate for the groom you select is shown when you confirm the appointment. Coat condition can change that estimate, and we discuss it with you before the visit.",
   },
 ] as const;
 
@@ -113,10 +113,10 @@ export const HAND_STRIPPING_PAGE_DESCRIPTION =
   "Professional mobile hand stripping for wire-coated dogs, preserving natural coat texture, color and breed character with private one-on-one care.";
 export const HAND_STRIPPING_PAGE_H1 = "Hand Stripping";
 export const HAND_STRIPPING_PAGE_INTRO =
-  "Professional mobile hand stripping for wire-coated breeds, with private one-on-one care that preserves harsh texture, rich color and the coat\u2019s natural protective qualities.";
+  "Traditional coat care for suitable wire-coated dogs, charged by the hour. A bath is booked separately.";
 export const HAND_STRIPPING_WHAT_HEADING = "What Is Hand Stripping?";
 export const HAND_STRIPPING_WHAT_BODY =
-  "Hand stripping is a traditional grooming technique used to maintain certain wire coats by manually removing mature outer coat that is ready to shed. Rather than cutting the coat shorter with clippers, the finished coat is maintained through careful removal and rotation of mature hair to support its characteristic texture, color and appearance.";
+  "Mature outer coat is removed by hand to preserve the wire coat’s texture and color.";
 export const HAND_STRIPPING_GROOMER_BEFORE =
   "Hand stripping at K9 Atelier is performed by ";
 export const HAND_STRIPPING_GROOMER_NAME = "Penny";
@@ -124,17 +124,17 @@ export const HAND_STRIPPING_GROOMER_AFTER =
   ", a multiple award-winning show groomer experienced in breed-specific coat care.";
 export const HAND_STRIPPING_COMPARE_HEADING = "Hand Stripping vs. Clipping";
 export const HAND_STRIPPING_COMPARE_BODY =
-  "Hand stripping and clipping create different results on a wire coat. Clipping or shaving cuts the existing coat shorter, while hand stripping removes mature outer coat by hand to help preserve the coat\u2019s natural texture, color and breed character. For suitable coats, traditional hand stripping can help maintain the characteristic texture, color and finish associated with the breed.";
+  "Clipping cuts the hair shorter. Hand stripping removes mature hair that is ready to shed.";
 export const HAND_STRIPPING_SUITABLE_HEADING =
   "Which Coats Are Suitable for Hand Stripping?";
 export const HAND_STRIPPING_SUITABLE_BODY =
-  "Hand stripping is commonly associated with wire-coated Terriers, Schnauzers and other breeds with a suitable harsh outer coat. Coat condition, previous grooming history, age, skin condition and the desired finish all influence whether hand stripping is appropriate for an individual dog.";
+  "Suitable wire-coated Terriers and Schnauzers may benefit. Previous clipping, age, skin condition and coat texture affect suitability.";
 export const HAND_STRIPPING_SUITABLE_NOTE =
-  "Breeds commonly associated with traditional hand stripping include Norwich Terriers and other wire-coated terriers with suitable coat texture.";
+  "For breeds such as Norwich Terriers, Penny assesses the coat before recommending a grooming plan.";
 export const HAND_STRIPPING_MAINTENANCE_HEADING =
   "How Often Does a Hand-Stripped Coat Need Maintenance?";
 export const HAND_STRIPPING_MAINTENANCE_BODY =
-  "Maintenance frequency depends on the coat cycle, coverage, previous grooming and the desired finish. Some dogs benefit from regular coat rotation to maintain a consistent wire texture, while others are scheduled when sufficient mature coat is ready to be removed.";
+  "Timing depends on coat growth and the finish you want to maintain.";
 
 export const HAND_STRIPPING_FAQS = [
   {
@@ -158,19 +158,19 @@ export const BATH_COAT_PAGE_TITLE =
   "Bath & Coat Care for Dogs in Palm Beach | K9 Atelier";
 export const BATH_COAT_PAGE_DESCRIPTION =
   "Private mobile bath and coat care in Palm Beach with professional bathing, drying and coat maintenance tailored to your dog\u2019s skin, coat and grooming needs.";
-export const BATH_COAT_PAGE_H1 = "Coat Health, Kept Beautiful.";
+export const BATH_COAT_PAGE_H1 = "Bath & Coat Care";
 export const BATH_COAT_PAGE_INTRO =
-  "Private mobile grooming in Palm Beach, with professional bath and coat care tailored to your dog\u2019s coat and skin.";
+  "A bath, hand blow-dry and brush-out, with nail, ear and teeth care.";
 export const BATH_COAT_MORE_HEADING = "More Than a Bath";
 export const BATH_COAT_MORE_BODY =
-  "Professional bath and coat care is designed around the condition, texture and maintenance needs of the individual dog. Each appointment combines thorough cleansing, coat preparation, drying and finishing care to help keep the coat clean, comfortable and manageable between full grooming appointments.";
+  "Bath and coat care keeps your dog clean and comfortable between haircuts.";
 export const BATH_COAT_ROUTINE_HEADING = "Routine Coat Maintenance";
 export const BATH_COAT_ROUTINE_BODY =
-  "Regular bath and coat care can help maintain coat condition between haircuts, support easier brushing at home and reduce the buildup of dirt, oil and loose coat. The appropriate schedule depends on coat type, length, lifestyle and the level of maintenance needed.";
+  "The right schedule depends on coat type, length and your brushing routine at home.";
 export const BATH_COAT_FULL_GROOM_NOTE =
-  "Dogs that need haircutting or reshaping may be better suited to Full Grooming. That visit includes bath and coat care, then haircutting and styling where needed.";
+  "For a haircut or reshaping, choose Full Grooming.";
 export const BATH_COAT_HAND_STRIPPING_NOTE =
-  "Suitable wire-coated dogs may be maintained with traditional hand stripping when that approach fits the coat.";
+  "For a suitable wire coat, explore Hand Stripping.";
 
 export const BATH_COAT_FAQS = [
   {
@@ -240,7 +240,7 @@ export const SERVICES_DIRECTORY_DESCRIPTIONS: Record<
   string
 > = {
   "bath-coat-care": "Bathing · Coat & skin maintenance",
-  "full-groom": "Haircuts · Styling · Coat care",
+  "full-groom": "Haircuts · Styling",
   "hand-stripping": "Traditional wire-coat maintenance",
   spa: "A fully customized spa experience",
   color: "Pet-safe color artistry",

@@ -1,4 +1,4 @@
-import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
+import { isBookingStartInFuture, isDateBookable, parseDateValue } from "@/lib/booking-slots";
 import { isWithinServiceDay } from "@/lib/booking-schedule";
 import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
@@ -22,6 +22,7 @@ import {
   validatePetId,
 } from "@/lib/pets/validation";
 import type { PetWriteInput } from "@/lib/pets/types";
+import { parseTravelFeeOverride } from "@/lib/visits/travel-fee";
 
 export class StaffBookingValidationError extends Error {
   readonly field?: string;
@@ -55,6 +56,7 @@ export type StaffBookingPetInput = PetWriteInput & {
 };
 
 export type StaffCustomerBookingInput = {
+  travelFeeOverride: number | null;
   firstName: string;
   lastName: string;
   email: string | null;
@@ -346,6 +348,13 @@ export function validateStaffCustomerBookingInput(
 ): StaffCustomerBookingInput {
   const record = assertPlainObject(body);
 
+  let travelFeeOverride: number | null;
+  try {
+    travelFeeOverride = parseTravelFeeOverride(record.travelFeeOverride);
+  } catch (error) {
+    throw new StaffBookingValidationError((error as Error).message, "travelFeeOverride");
+  }
+
   const firstName = readOptionalString(record, "firstName", "First name", 80);
   const lastName = readOptionalString(record, "lastName", "Last name", 80);
 
@@ -565,6 +574,10 @@ export function validateStaffCustomerBookingInput(
     slotStartMinutes = parsed;
   }
 
+  if (appointmentDate && slotStartMinutes != null && !isBookingStartInFuture(appointmentDate, slotStartMinutes)) {
+    throw new StaffBookingValidationError("Please choose a start time that has not passed.", "slotStartMinutes");
+  }
+
   const addressRecord = record.address;
   let address: StaffCustomerBookingAddress | null = null;
   if (
@@ -625,6 +638,7 @@ export function validateStaffCustomerBookingInput(
     notifyEmail,
     notifySms,
     mode: hasCompleteBooking ? "booking" : "invite",
+    travelFeeOverride,
     pets,
     serviceId: primaryService?.id ?? null,
     serviceName: primaryLabel ?? primaryService?.name ?? null,

@@ -188,7 +188,7 @@ export function ContactBoardForm({
       <div>
         <label htmlFor="board-inquiry" className={bookingLabelClass}>
           Inquiry Type
-          <span className="text-champagne"> *</span>
+          <span className="text-deep-lavender"> *</span>
         </label>
         <select
           id="board-inquiry"
@@ -210,15 +210,12 @@ export function ContactBoardForm({
       {isConsultation ? (
         <div className="border border-gray-line/80 bg-dusty-lavender/20 px-5 py-5 md:px-6">
           <p className="font-body text-sm leading-relaxed text-ink">
-            To help me understand your dog’s coat and grooming needs, please
-            include:
+            Helpful photos:
           </p>
-          <ul className="font-body mt-3 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-taupe">
+          <ul className="font-body mt-3 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-ink">
             <li>A clear, front-facing photo of your dog’s face</li>
             <li>A full-body photo taken from the side</li>
             <li>Clear close-up photos showing the coat’s current condition</li>
-            <li>Your grooming preferences or concerns</li>
-            <li>The coat length you would like to maintain between appointments</li>
           </ul>
         </div>
       ) : null}
@@ -226,7 +223,7 @@ export function ContactBoardForm({
       <div>
         <label htmlFor="board-email" className={bookingLabelClass}>
           Email Address
-          <span className="font-normal normal-case tracking-normal text-taupe">
+          <span className="font-normal normal-case tracking-normal text-ink">
             {" "}
             (Optional)
           </span>
@@ -249,7 +246,7 @@ export function ContactBoardForm({
       <div>
         <label htmlFor="board-phone" className={bookingLabelClass}>
           Phone Number
-          <span className="font-normal normal-case tracking-normal text-taupe">
+          <span className="font-normal normal-case tracking-normal text-ink">
             {" "}
             (Optional)
           </span>
@@ -267,7 +264,7 @@ export function ContactBoardForm({
           placeholder="(561) 555-0123"
           className={inputClass()}
         />
-        <p className="font-body mt-2 text-xs leading-relaxed text-taupe">
+        <p className="font-body mt-2 text-sm leading-relaxed text-ink">
           Email address, phone number, or both.
         </p>
       </div>
@@ -276,7 +273,7 @@ export function ContactBoardForm({
         <div>
           <label htmlFor="board-subject" className={bookingLabelClass}>
             Subject
-            <span className="text-champagne"> *</span>
+            <span className="text-deep-lavender"> *</span>
           </label>
           <input
             id="board-subject"
@@ -315,7 +312,7 @@ export function ContactBoardForm({
       <div>
         <label htmlFor="board-message" className={bookingLabelClass}>
           Message
-          <span className="text-champagne"> *</span>
+          <span className="text-deep-lavender"> *</span>
         </label>
         <textarea
           id="board-message"
@@ -337,7 +334,7 @@ export function ContactBoardForm({
       <div>
         <p className={bookingLabelClass}>Upload Photos</p>
         <div className="mt-3 rounded-sm border border-dashed border-gray-line bg-ivory px-4 py-5">
-          <p className="font-body mb-4 text-center text-xs text-taupe">
+          <p className="font-body mb-4 text-center text-sm text-ink">
             Up to {MAX_SUPPORT_PHOTOS} photos · JPG, JPEG, PNG, or WEBP · 4 MB
             each
           </p>
@@ -350,7 +347,7 @@ export function ContactBoardForm({
                     alt={photo.file.name}
                     className="h-24 w-full rounded-sm object-cover"
                   />
-                  <p className="font-body mt-1 truncate text-[11px] text-taupe">
+                  <p className="font-body mt-1 truncate text-[11px] text-ink">
                     {photo.file.name}
                   </p>
                   <button
@@ -365,7 +362,7 @@ export function ContactBoardForm({
             </ul>
           ) : null}
           {photos.length < MAX_SUPPORT_PHOTOS ? (
-            <label className="font-body block min-h-11 cursor-pointer text-center text-sm text-taupe">
+            <label className="font-body block min-h-11 cursor-pointer text-center text-sm text-ink">
               <span className="underline decoration-champagne/70 underline-offset-4 hover:text-deep-lavender">
                 {photos.length === 0 ? "Add photos" : "Add another photo"}
               </span>
@@ -379,7 +376,7 @@ export function ContactBoardForm({
               />
             </label>
           ) : (
-            <p className="font-body text-center text-xs text-taupe">
+            <p className="font-body text-center text-xs text-ink">
               Maximum of {MAX_SUPPORT_PHOTOS} photos reached.
             </p>
           )}

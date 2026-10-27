@@ -25,10 +25,8 @@ export async function ReviewsShowcase() {
         </ul>
       ) : (
         <div className="mx-auto max-w-2xl border border-gray-line/80 bg-ivory px-8 py-12 text-center">
-          <p className="font-body text-sm leading-relaxed text-taupe">
-            Your feedback is invaluable to us. We cherish every experience you
-            have with K9 ATELIER and invite you to tell us how we can serve you
-            even better.
+          <p className="font-body text-sm leading-relaxed text-ink">
+            Share your experience on Google.
           </p>
         </div>
       )}

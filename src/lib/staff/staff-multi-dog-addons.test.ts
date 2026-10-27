@@ -25,7 +25,7 @@ function bookingBody(overrides: Record<string, unknown> = {}) {
     notifyEmail: true,
     notifySms: true,
     verbalConsent: true,
-    appointmentDate: getUpcomingBookableDates(1)[0]?.value ?? "2026-09-18",
+    appointmentDate: getUpcomingBookableDates(2)[1]?.value ?? "2026-09-18",
     slotStartMinutes: 600,
     address: {
       street: "100 Olive Ave",
@@ -243,6 +243,6 @@ describe("staff multi-dog add-ons", () => {
     assert.equal(source.includes("add_on_ids: input.addOnIds"), false);
     assert.match(source, /firstSchedule/);
     assert.match(source, /buildSameAddressCompanionInsertion\(/);
-    assert.match(source, /travel_fee: quote\.fee/);
+    assert.match(source, /travel_fee: effectiveTravelFee\(quote\.fee, input\.travelFeeOverride\)/);
   });
 });

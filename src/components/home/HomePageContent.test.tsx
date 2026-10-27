@@ -17,7 +17,6 @@ import { getSiteChrome } from "@/lib/site-chrome";
 const REMOVED_HOME_SECTIONS = [
   "HomeAboutTeaser",
   "HomeArtistry",
-  "HomeBookingCta",
   "HomeExperience",
   "HomeExpertise",
   "HomeFaqTeaser",
@@ -35,7 +34,7 @@ describe("home page content", () => {
 
     assert.equal(
       business.brand.lead,
-      "Multiple award-winning show groomer specializing in tailored styling, show-level coat care, extra-gentle senior care and hand stripping.",
+      "Award-winning grooming by Penny, from show-level coat care to extra-gentle senior care and hand stripping.",
     );
     assert.equal(
       business.brand.lead.includes("Private mobile pet spa in Palm Beach County"),
@@ -43,11 +42,11 @@ describe("home page content", () => {
     );
   });
 
-  it("sends the hero secondary button to the contact page", () => {
+  it("sends the hero secondary button to the callback page", () => {
     const source = readFileSync(new URL("./HomeHero.tsx", import.meta.url), "utf8");
 
-    assert.match(source, /Ask a Question/);
-    assert.match(source, /href="\/contact"/);
+    assert.match(source, /Request a Call/);
+    assert.match(source, /href="\/request-a-call"/);
     assert.match(source, /heroCtaClass/);
     assert.match(source, /business\.brand\.lead/);
     assert.equal(
@@ -65,8 +64,8 @@ describe("home page content", () => {
     const eyebrow = source.indexOf("business.brand.lockup");
     const tagline = source.indexOf("business.brand.tagline");
     const lead = source.indexOf("business.brand.lead");
-    const bookCta = source.indexOf("Book an Appointment");
-    const askCta = source.indexOf("Ask a Question");
+    const bookCta = source.indexOf("Book Online");
+    const askCta = source.indexOf("Request a Call");
     const photo = source.indexOf("<EditorialPhoto");
     const mobileMeta = source.indexOf("<HeroServiceMeta className=\"md:hidden\"");
     const desktopMeta = source.indexOf("hidden md:block");
@@ -78,12 +77,9 @@ describe("home page content", () => {
     assert.ok(askCta < photo);
     assert.ok(photo < mobileMeta);
     assert.ok(desktopMeta > 0);
-    assert.match(source, /max-h-\[46vh\]/);
-    assert.match(source, /md:max-h-\[80vh\]/);
-    assert.match(source, /md:!w-\[353px\]/);
-    assert.match(source, /aspect-\[4\/5\]/);
-    assert.match(source, /calc\(46vh \* 0\.8\)/);
-    assert.equal(source.includes('sizes="(min-width: 768px) 42vw, 100vw"'), false);
+    assert.match(source, /calc\(100vw - 2rem\)/);
+    assert.match(source, /!h-\[300px\]/);
+    assert.match(source, /md:!h-\[520px\]/);
     assert.match(source, /md:grid-cols-2/);
   });
 
@@ -148,7 +144,7 @@ describe("homepage SEO", () => {
       .replace(/\s+/g, " ");
     assert.match(
       leadText,
-      /Multiple award-winning show groomer specializing in tailored styling, show-level coat care, extra-gentle senior care and hand stripping\./,
+      /Award-winning grooming by Penny, from show-level coat care to extra-gentle senior care and hand stripping\./,
     );
     assert.match(html, /Grooming, tailored to the individual\./);
     const visibleText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
@@ -179,8 +175,8 @@ describe("homepage SEO", () => {
       anchors.find((anchor) => anchor.text === "extra-gentle senior care")?.href,
       "/services/specialty-care",
     );
-    const leadStart = html.indexOf("Multiple award-winning");
-    const leadHtml = html.slice(leadStart, html.indexOf("Book an Appointment", leadStart));
+    const leadStart = html.indexOf("Award-winning grooming");
+    const leadHtml = html.slice(leadStart, html.indexOf("Book Online", leadStart));
     const leadAnchors = [...leadHtml.matchAll(/<a([^>]*)>([\s\S]*?)<\/a>/g)].map(
       (match) => ({
         attrs: match[1],
@@ -216,6 +212,23 @@ describe("homepage SEO", () => {
     assert.match(byHref("/gallery")?.text ?? "", /Explore Our Work/);
   });
 
+  it("pairs six services with portfolio photos and hides public prices", () => {
+    const html = renderToStaticMarkup(<HomePageContent />);
+    const start = html.indexOf('id="home-services-heading"');
+    const end = html.indexOf('id="home-selected-work-heading"');
+    const services = html.slice(start, end);
+    assert.equal((services.match(/<img\b/g) ?? []).length, 6);
+    assert.equal((services.match(/loading="lazy"/g) ?? []).length, 6);
+    assert.doesNotMatch(services, /\$/);
+    for (const image of services.matchAll(/<img[^>]*src="([^"]+)"/g)) {
+      const source = new URL(image[1].replace(/&amp;/g, "&"), "https://k9atelier.com");
+      const path = source.searchParams.get("url") ?? source.pathname;
+      assert.ok(readFileSync(new URL(`../../../public${path}`, import.meta.url)).length > 0);
+    }
+    assert.match(html, /Private care\. At your doorstep\./);
+    assert.match(html, /href="tel:561-593-3335"/);
+  });
+
   it("places four lazy selected works between services and the first visit", () => {
     const html = renderToStaticMarkup(<HomePageContent />);
     const start = html.indexOf('id="home-selected-work-heading"');
@@ -225,7 +238,7 @@ describe("homepage SEO", () => {
 
     const section = html.slice(start, end);
     assert.match(section, /Selected Work/);
-    assert.match(section, /Every coat, considered individually\./);
+    assert.doesNotMatch(section, /Every coat, considered individually\./);
     assert.match(section, /href="\/gallery"/);
     assert.match(section, /Explore Our Work/);
 

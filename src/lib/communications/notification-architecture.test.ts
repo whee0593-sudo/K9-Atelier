@@ -34,12 +34,12 @@ describe("notification architecture", () => {
 
   it("loads the full visit before a self-serve merchant notice", () => {
     const booking = source("src/lib/appointments/service.ts");
-    assert.match(booking, /notifyMerchantVisitConfirmedFromVisit\(appointment\.visitId/);
+    assert.match(booking, /notifyMerchantVisitCreatedFromVisit\(appointment\.visitId/);
     assert.equal(booking.includes("notifyStaffNewAppointment"), false);
     const merchant = source("src/lib/communications/merchant-notices.ts");
     assert.match(
       merchant,
-      /export async function notifyMerchantVisitConfirmedFromVisit/,
+      /export async function notifyMerchantVisitCreatedFromVisit/,
     );
     assert.match(merchant, /loadVisitAppointments\(visitId\)/);
     assert.equal(merchant.includes("decideExisting"), false);

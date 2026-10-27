@@ -30,7 +30,7 @@ import {
 import { serviceWithoutMenuPrices } from "@/lib/public-service";
 
 const textLinkClass =
-  "font-body inline-flex min-h-[48px] max-w-full items-center justify-center text-center text-[12px] font-medium uppercase leading-snug tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne";
+  "font-body inline-flex min-h-[48px] max-w-full items-center justify-center text-center text-sm font-medium uppercase leading-snug tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne";
 
 const inlineLinkClass =
   "text-deep-lavender underline decoration-champagne/70 underline-offset-4 transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne";
@@ -38,7 +38,7 @@ const inlineLinkClass =
 const headingClass =
   "font-display text-balance text-3xl leading-[1.15] text-pretty text-ink md:text-4xl";
 
-const bodyClass = "font-body mt-4 text-sm leading-relaxed text-taupe";
+const bodyClass = "font-body mt-4 text-base leading-relaxed text-ink";
 
 function TextLink({ href, children }: { href: string; children: string }) {
   return (
@@ -53,7 +53,7 @@ function TextLink({ href, children }: { href: string; children: string }) {
 
 function AreaSentence() {
   return (
-    <p className="font-body mx-auto max-w-[28rem] text-pretty text-[13px] leading-relaxed text-taupe md:text-sm">
+    <p className="font-body mx-auto max-w-[28rem] text-pretty text-[13px] leading-relaxed text-ink md:text-sm">
       Serving{" "}
       <span className="whitespace-nowrap">Jupiter Island,</span>{" "}
       <span className="whitespace-nowrap">Jupiter,</span>{" "}
@@ -77,6 +77,24 @@ export function LongCoatCareView({ showPrices = false }: { showPrices?: boolean 
           </header>
         </Container>
       </section>
+
+      {service ? (
+        <section className="bg-white/60 py-14 md:py-16" aria-labelledby="show-care-booking">
+          <Container>
+            <div className="mx-auto max-w-2xl">
+              <ServiceCard
+                service={showPrices ? service : serviceWithoutMenuPrices(service)}
+                showPrices={showPrices}
+                priceText={showPrices ? serviceCardPriceValue(service) : ""}
+                priceDetails={showPrices ? <ServicePriceDetails service={service} /> : null}
+                headingAs="h2"
+                anchorId="show-care-booking"
+                detailsInitiallyOpen
+              />
+            </div>
+          </Container>
+        </section>
+      ) : null}
 
       <section className="bg-ivory py-14 md:py-16">
         <Container>
@@ -123,26 +141,6 @@ export function LongCoatCareView({ showPrices = false }: { showPrices?: boolean 
         </Container>
       </section>
 
-      {service ? (
-        <section className="bg-white/60 py-14 md:py-16" aria-labelledby="show-care-booking">
-          <Container>
-            <div className="mx-auto max-w-2xl">
-              <ServiceCard
-                service={showPrices ? service : serviceWithoutMenuPrices(service)}
-                showPrices={showPrices}
-                priceText={showPrices ? serviceCardPriceValue(service) : ""}
-                priceDetails={
-                  showPrices ? <ServicePriceDetails service={service} /> : null
-                }
-                headingAs="h2"
-                anchorId="show-care-booking"
-                detailsInitiallyOpen
-              />
-            </div>
-          </Container>
-        </section>
-      ) : null}
-
       <section className="bg-ivory py-14 md:py-16">
         <Container>
           <div className="mx-auto flex max-w-2xl flex-col items-center text-center">
@@ -152,7 +150,7 @@ export function LongCoatCareView({ showPrices = false }: { showPrices?: boolean 
               <TextLink href={FULL_GROOM_PATH}>Full Grooming</TextLink>
               <TextLink href="/about">Meet Your Groomer</TextLink>
               <BookServiceLink className={textLinkClass}>
-                Book an Appointment
+                Book Online
                 <span aria-hidden="true" className="ml-1.5">
                   →
                 </span>

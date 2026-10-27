@@ -72,6 +72,10 @@ export function Header({ logo, name }: { logo: string; name: string }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const isBooking = pathname === "/book";
+  // Keep the homepage chrome on the same palette as its content.
+  const headerClass = pathname === "/"
+    ? "sticky top-0 z-50 border-b border-[#E1D8E8] bg-[#FAF7F2] [--color-ivory:#FAF7F2] [--color-ink:#302D33] [--color-taupe:#382440] [--color-deep-lavender:#513562] [--color-dusty-lavender:#EEE7F3]"
+    : "sticky top-0 z-50 border-b border-gray-line/70 bg-ivory/95 backdrop-blur-sm";
 
   const closeMenu = () => setOpen(false);
 
@@ -80,7 +84,7 @@ export function Header({ logo, name }: { logo: string; name: string }) {
   }, [pathname]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-line/70 bg-ivory/95 backdrop-blur-sm">
+    <header className={headerClass}>
       <Container className="flex items-center justify-between gap-3 py-2 md:gap-4 md:py-3 xl:gap-6">
         <Link
           href="/"

@@ -17,10 +17,10 @@ import {
   buildStaffNotificationEmail,
   type StaffNotificationRow,
 } from "@/lib/email/layout";
-import { isSmsConfigured } from "@/lib/sms/twilio";
+import { postTwilioMessage, isSmsConfigured } from "@/lib/sms/twilio";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
-import { isEmailConfigured } from "@/lib/email/resend";
+import { postResend, isEmailConfigured } from "@/lib/email/resend";
 
 export type MerchantPetLine = {
   appointmentId: string;
@@ -75,6 +75,7 @@ export type MerchantNotifySummary = {
   sms: MerchantChannelOutcome | "not_confirmed";
 };
 
+const CREATED = "merchant_visit_created";
 const CONFIRMED = "merchant_visit_confirmed";
 const CANCELLED = "merchant_visit_cancelled";
 const RESCHEDULE_COMPLETED = "merchant_reschedule_completed";
@@ -180,8 +181,8 @@ function plainDetails(facts: MerchantVisitFacts) {
 }
 
 export function buildMerchantVisitConfirmedCopy(facts: MerchantVisitFacts) {
-  const subject = "New visit confirmed";
-  const intro = "A visit is confirmed.";
+  const subject = "Customer confirmed appointment";
+  const intro = "The customer confirmed this appointment.";
   const letter = staffLetter({
     subject,
     intro,
@@ -459,14 +460,14 @@ async function sendChannel(input: {
     send: async () => {
       if (input.channel === "email") {
         const send = input.deps?.sender?.email;
-        if (!send || !from.ok) {
+        if (!from.ok) {
           return {
             outcome: "rejected" as const,
             errorMessage: "merchant email sender missing",
           };
         }
         return asProviderAttempt(
-          await send({
+          await (send ?? ((value) => postResend({ ...value, to: [value.to], replyTo: value.replyTo ?? null })))({
             from: from.from,
             to: MERCHANT_NOTIFY_EMAIL,
             subject: input.subject,
@@ -477,13 +478,18 @@ async function sendChannel(input: {
         );
       }
       const send = input.deps?.sender?.sms;
-      if (!send || !phone) {
+      if (!phone) {
         return {
           outcome: "rejected" as const,
           errorMessage: "merchant sms sender missing",
         };
       }
-      return asProviderAttempt(await send({ to: phone, body: input.sms }));
+      return asProviderAttempt(await (send ?? ((value) => postTwilioMessage({
+        ...value, accountSid: env.TWILIO_ACCOUNT_SID!.trim(),
+        authToken: env.TWILIO_AUTH_TOKEN!.trim(),
+        from: env.TWILIO_FROM_NUMBER?.trim(),
+        messagingServiceSid: env.TWILIO_MESSAGING_SERVICE_SID?.trim(),
+      })))({ to: phone, body: input.sms }));
     },
   });
 
@@ -534,6 +540,45 @@ async function sendPair(input: {
   return { email, sms };
 }
 
+export async function notifyMerchantVisitCreated(
+  facts: MerchantVisitFacts,
+  deps?: MerchantNotifyDeps,
+): Promise<MerchantNotifySummary> {
+  const intro = "A new appointment has been booked.";
+  const letter = staffLetter({
+    subject: "New appointment booked",
+    intro,
+    rows: detailRows(facts),
+    textLines: [intro, "", ...plainDetails(facts)],
+  });
+  return sendPair({
+    facts, notificationType: CREATED, subject: "New appointment booked",
+    emailText: letter.text, emailHtml: letter.html,
+    sms: `K9 Atelier: New appointment booked for ${petNames(facts.pets)} on ${facts.whenLabel}. ${facts.addressLabel}`,
+    deps,
+  });
+}
+
+export async function notifyMerchantVisitCreatedFromAppointments(
+  appointments: AppointmentRecord[],
+  extra?: { customerName?: string | null; replyTo?: string | null },
+  deps?: MerchantNotifyDeps,
+) {
+  const facts = factsFromAppointments(appointments, extra);
+  if (!facts) return { email: "unrecorded" as const, sms: "unrecorded" as const };
+  return notifyMerchantVisitCreated(facts, deps);
+}
+
+export async function notifyMerchantVisitCreatedFromVisit(
+  visitId: string | null | undefined,
+  extra?: { customerName?: string | null; replyTo?: string | null },
+  deps?: MerchantNotifyDeps,
+) {
+  const appointments = visitId ? await loadVisitAppointments(visitId) : null;
+  if (!appointments) return { email: "unrecorded" as const, sms: "unrecorded" as const };
+  return notifyMerchantVisitCreatedFromAppointments(appointments, extra, deps);
+}
+
 export async function notifyMerchantVisitConfirmed(
   facts: MerchantVisitFacts,
   deps?: MerchantNotifyDeps,
@@ -545,6 +590,7 @@ export async function notifyMerchantVisitConfirmed(
   return sendPair({
     facts,
     notificationType: CONFIRMED,
+    includeSms: false,
     subject: copy.subject,
     emailText: copy.emailText,
     emailHtml: copy.emailHtml,
@@ -642,8 +688,7 @@ export async function notifyMerchantCustomerReplyC(
   const copy = buildMerchantCustomerReplyCCopy(input);
   return sendPair({
     facts,
-    notificationType: CUSTOMER_REPLY_C,
-    fingerprint: input.appointmentId,
+    notificationType: CONFIRMED,
     subject: copy.subject,
     emailText: copy.emailText,
     emailHtml: copy.emailHtml,
@@ -763,6 +808,7 @@ async function replayMerchantAlert(
   facts: MerchantVisitFacts,
   deps?: MerchantNotifyDeps,
 ): Promise<MerchantNotifySummary | null> {
+  if (parsed.notificationType === CREATED) return notifyMerchantVisitCreated(facts, deps);
   if (parsed.notificationType === CONFIRMED) {
     return notifyMerchantVisitConfirmed(facts, deps);
   }

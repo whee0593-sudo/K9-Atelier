@@ -40,7 +40,7 @@ export default function ReferralsPage() {
               key={term.title}
               className="border border-gray-line/80 bg-ivory p-6 md:p-8"
             >
-              <h2 className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-taupe">
+              <h2 className="font-body text-sm font-medium uppercase tracking-[0.16em] text-ink">
                 {term.title}
               </h2>
               <p className="font-body mt-4 text-base leading-relaxed text-ink">
@@ -51,14 +51,14 @@ export default function ReferralsPage() {
         </section>
 
         <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[10px] font-medium uppercase tracking-[0.16em] text-ivory transition hover:bg-ink">
-            Book an Appointment
+          <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-sm font-medium uppercase tracking-[0.16em] text-ivory transition hover:bg-ink">
+            Book Online
           </BookServiceLink>
           <LuxuryButton href="/account/referrals" variant="secondary">
             View My Referral Codes
           </LuxuryButton>
         </div>
-        <p className="text-center text-sm text-taupe">
+        <p className="text-center text-sm text-ink">
           Questions?{" "}
           <Link href="/faq" className="underline decoration-champagne/70 underline-offset-4">
             Read the FAQ

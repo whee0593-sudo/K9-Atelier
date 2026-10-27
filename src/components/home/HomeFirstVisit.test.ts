@@ -16,32 +16,31 @@ describe("home first visit guide", () => {
     assert.deepEqual(
       homeFirstVisitSteps.map((step) => step.title),
       [
-        "Who We’re Welcoming",
-        "Choose Time & Service",
-        "Add a Few Details",
+        "Your Dog",
+        "Service & Time",
+        "Your Details",
         "The Spa Arrives",
       ],
     );
     assert.equal(
       homeFirstVisitSteps[0].body,
-      "Tell us a little about your furry family.",
+      "Add your dog’s name, breed and weight.",
     );
     assert.equal(
       homeFirstVisitSteps[1].body,
-      "Choose your preferred date, start time, and service.",
+      "Select a service, then an available date and time.",
     );
     assert.equal(
       homeFirstVisitSteps[2].body,
-      "Complete a few details to help us prepare for your appointment.",
+      "Add some details.",
     );
   });
 
-  it("renders an em dash after each step number", () => {
+  it("keeps four readable numbered steps", () => {
     const source = readFileSync(new URL("./HomeFirstVisit.tsx", import.meta.url), "utf8");
-    assert.match(source, /\{step\.number\} —/);
-    assert.match(source, /text-\[12px\].*text-champagne/);
-    assert.match(source, /text-\[13px\] font-semibold uppercase/);
-    assert.match(source, /min-h-\[52px\]/);
+    assert.match(source, /\{step\.number\}/);
+    assert.match(source, /<ol/);
+    assert.match(source, /Your First Visit/);
   });
 
   it("keeps the arrival step one-on-one and at the client’s home", () => {

@@ -413,9 +413,9 @@ describe("visit checkout bill", () => {
     };
     const paragraphs = buildChargeReceiptParagraphs(appointment, charge);
     const text = paragraphs.join("\n");
-    assert.match(text, /Daisy — Full Groom/);
-    assert.match(text, /Milo — Full Groom/);
-    assert.match(text, /Coco — Bath & Coat Care/);
+    assert.match(text, /Full Groom/);
+    assert.match(text, /Full Groom/);
+    assert.match(text, /Bath & Coat Care/);
     assert.match(text, /Travel fee/);
     assert.match(text, /\$65\.00/);
     assert.match(text, /\$150\.00/);

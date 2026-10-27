@@ -31,7 +31,7 @@ export function isSmsConfigured() {
   );
 }
 
-async function postTwilioMessage(input: {
+export async function postTwilioMessage(input: {
   accountSid: string;
   authToken: string;
   to: string;

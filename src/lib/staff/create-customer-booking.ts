@@ -1,3 +1,4 @@
+import { notifyMerchantVisitCreatedFromAppointments } from "@/lib/communications/merchant-notices";
 import { business } from "@/lib/business";
 import { resolveArrivalForBooking } from "@/lib/appointments/arrival-window";
 import {
@@ -27,12 +28,13 @@ import { formatServiceAddress, calculateTravelFee } from "@/lib/travel";
 import { mapValidatedInputToInsertRow } from "@/lib/pets/map";
 import { loadBookingAllergySnapshot } from "@/lib/appointments/service";
 import { PET_SELECT } from "@/lib/pets/types";
-import { ALLERGY_PROFILE_UNAVAILABLE_MESSAGE } from "@/lib/allergies";
+import { allergySnapshotForBooking } from "@/lib/allergies";
 import {
   addOnSelectionMessage,
   allBookableServices,
 } from "@/lib/services";
 import { staffAppointmentPriceDrafts } from "@/lib/staff/staff-appointment-drafts";
+import { effectiveTravelFee } from "@/lib/visits/travel-fee";
 import { keepPrimaryIfReferralFails } from "@/lib/referrals/allocate-code";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
@@ -602,7 +604,7 @@ export async function createStaffCustomerBooking(
       addOnIds: pet.addOnIds,
       addOnOptions: pet.addOnOptions,
     })),
-    quote.fee,
+    effectiveTravelFee(quote.fee, input.travelFeeOverride),
   );
   if (!pricedVisit.ok) {
     return { error: "conflict", message: pricedVisit.message };
@@ -731,12 +733,8 @@ export async function createStaffCustomerBooking(
         );
         if (!allergy.ok) {
           console.error("createStaffCustomerBooking allergy profile could not be read");
-          return {
-            error: "allergy_unavailable",
-            message: ALLERGY_PROFILE_UNAVAILABLE_MESSAGE,
-          };
         }
-        const allergySnapshot = allergy.snapshot;
+        const allergySnapshot = allergySnapshotForBooking(allergy);
         pendingAppointments.push({
           customer_id: userId,
           pet_id: petRow.id as string,
@@ -797,7 +795,9 @@ export async function createStaffCustomerBooking(
         address_lat: destination.lat,
         address_lon: destination.lon,
         travel_distance_miles: quote.distanceMiles,
-        travel_fee: quote.fee,
+        travel_fee: effectiveTravelFee(quote.fee, input.travelFeeOverride),
+        travel_fee_automatic: quote.fee,
+        travel_fee_override: input.travelFeeOverride,
       },
       appointments: pendingAppointments,
     });
@@ -820,6 +820,14 @@ export async function createStaffCustomerBooking(
     );
 
     const appointment = appointments[0]!;
+    try {
+      await notifyMerchantVisitCreatedFromAppointments(appointments, {
+        customerName: input.firstName,
+        replyTo: input.email ?? accountEmail,
+      });
+    } catch (error) {
+      console.error("staff booking merchant notify failed:", error);
+    }
     const confirmUrl = siteUrl(customerConfirmPath(confirm.token));
     const petNames = appointments.map((entry) => entry.petName);
 

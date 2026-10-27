@@ -1,30 +1,24 @@
+import React from "react";
 import Link from "next/link";
 import { Container } from "@/components/luxury/Container";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
+import { PhoneIcon } from "@/components/icons/PhoneIcon";
+import { business } from "@/lib/business";
+
+const buttonClass = "inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-sm bg-ivory px-8 text-base font-semibold text-deep-lavender focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ivory sm:w-auto";
 
 export function HomeBookingCta() {
   return (
-    <section className="border-b border-gray-line/60 py-16 md:py-24">
-      <Container className="text-center">
-        <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
-          Book an Appointment
-        </p>
-        <h2 className="font-display mx-auto mt-5 max-w-3xl text-[2.5rem] leading-[1.08] text-ink md:text-5xl">
-          A Private Spa Experience, Reserved for Your Dog.
+    <section aria-labelledby="home-booking-heading" className="bg-deep-lavender py-10 text-ivory md:py-12">
+      <Container className="flex flex-col items-center justify-between gap-6 text-center lg:flex-row lg:text-left">
+        <h2 id="home-booking-heading" className="font-display text-3xl font-semibold !text-ivory md:text-4xl">
+          Private care. At your doorstep.
         </h2>
-        <p className="font-body mx-auto mt-5 max-w-2xl text-base leading-relaxed text-taupe">
-          Select a date and time, tell us about your dog, and leave a card on
-          file. Your card will not be charged when you book.
-        </p>
-        <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[11px] font-medium uppercase tracking-[0.16em] text-ivory transition duration-500 hover:bg-ink">
-            Book an Appointment
-          </BookServiceLink>
-          <Link
-            href="/contact?inquiry=grooming-consultation"
-            className="inline-flex min-h-[52px] items-center justify-center rounded-sm border border-champagne px-8 text-[11px] font-medium uppercase tracking-[0.16em] text-ink transition hover:border-ink"
-          >
-            Request a Consultation
+        <div className="flex w-full flex-col items-center gap-4 sm:w-auto sm:flex-row sm:gap-7">
+          <BookServiceLink className={buttonClass}>Book Online</BookServiceLink>
+          <Link href={`tel:${business.brand.phone}`} className={buttonClass}>
+            <PhoneIcon />
+            {business.brand.phoneDisplay}
           </Link>
         </div>
       </Container>

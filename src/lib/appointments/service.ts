@@ -26,7 +26,7 @@ import {
   fetchAppointmentAdminRecord,
   fetchCustomerContact,
 } from "@/lib/email/appointment-context";
-import { notifyMerchantVisitConfirmedFromVisit } from "@/lib/communications/merchant-notices";
+import { notifyMerchantVisitCreatedFromVisit } from "@/lib/communications/merchant-notices";
 import {
   sendAppointmentCreatedEmails,
   sendAppointmentStatusEmails,
@@ -42,11 +42,8 @@ import {
   insertGuestBooking,
 } from "@/lib/appointments/guest-booking";
 import { estimateServiceDurationMinutes } from "@/lib/services";
-import { allergySnapshotFromProfileRead } from "@/lib/allergies";
-import {
-  guestBookingStoredAddOnOptions,
-  guestBookingStoredServicePrice,
-} from "@/lib/appointments/stored-service-price";
+import { allergySnapshotForBooking, allergySnapshotFromProfileRead } from "@/lib/allergies";
+import { guestBookingStoredAddOnOptions, guestBookingStoredServicePrice } from "@/lib/appointments/stored-service-price";
 import { visitArrivalFields } from "@/lib/visits/visit";
 import { syncVisitTravelFeeMirror } from "@/lib/visits/travel-mirror";
 import {
@@ -334,9 +331,8 @@ export async function createAppointment(
   );
   if (!allergy.ok) {
     console.error("createAppointment allergy profile could not be read");
-    return { error: "allergy_unavailable" };
   }
-  const allergySnapshot = allergy.snapshot;
+  const allergySnapshot = allergySnapshotForBooking(allergy);
   const admin = createAdminClient();
   const saved = await insertGuestBooking(
     {
@@ -452,7 +448,7 @@ export async function createAppointment(
     }
     try {
       // A provider or log failure is contained here. The committed visit stays.
-      await notifyMerchantVisitConfirmedFromVisit(appointment.visitId, {
+      await notifyMerchantVisitCreatedFromVisit(appointment.visitId, {
         customerName: contact?.name ?? null,
         replyTo: contact?.email ?? null,
       });

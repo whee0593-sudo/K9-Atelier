@@ -143,7 +143,7 @@ export function CollectCheckout({
   const [useCash, setUseCash] = useState(false);
   const [useZelle, setUseZelle] = useState(false);
   const [chargedTender, setChargedTender] = useState<ChargeTender>("card");
-  const [tipMode, setTipMode] = useState<"15" | "18" | "20" | "custom">("18");
+  const [tipMode, setTipMode] = useState<"15" | "18" | "20" | "custom" | null>(null);
   const [customTip, setCustomTip] = useState("0");
   const [step, setStep] = useState<Step>(initialStep);
   const [chargeId, setChargeId] = useState<string | null>(null);
@@ -326,7 +326,7 @@ export function CollectCheckout({
 
   const subtotal = sumLineItems(lineItems);
   const tipAmount =
-    kind === "no_show"
+    kind === "no_show" || tipMode == null
       ? 0
       : tipMode === "custom"
         ? Math.max(0, Number(customTip) || 0)
@@ -837,6 +837,7 @@ export function CollectCheckout({
             </p>
           ) : null}
 
+          {context.visit ? <p className="mt-4 text-sm text-taupe">Travel fee is saved for the whole visit. To change it, open Appointment details, save the fee and reload checkout.</p> : null}
           {kind === "no_show" ? (
             <ul className="mt-8 space-y-3">
               {lineItems.map((item) => (
@@ -874,6 +875,7 @@ export function CollectCheckout({
                 ) : (
                   <input
                     value={item.label}
+                    readOnly={Boolean(context.visit && item.catalogId === "travel-fee")}
                     onChange={(event) =>
                       updateItem(item.id, { label: event.target.value })
                     }
@@ -907,6 +909,7 @@ export function CollectCheckout({
                       min="0"
                       step="0.01"
                       value={item.amount}
+                      readOnly={Boolean(context.visit && item.catalogId === "travel-fee")}
                       onChange={(event) =>
                         updateItem(item.id, {
                           amount: Math.max(0, Number(event.target.value) || 0),
@@ -922,6 +925,7 @@ export function CollectCheckout({
                     Referral
                     <select
                       value={item.referralCategory ?? "other_ineligible"}
+                      disabled={Boolean(context.visit && item.catalogId === "travel-fee")}
                       onChange={(event) =>
                         updateItem(item.id, {
                           referralCategory: event.target
@@ -939,6 +943,7 @@ export function CollectCheckout({
                   </label>
                   <button
                     type="button"
+                    disabled={Boolean(context.visit && item.catalogId === "travel-fee")}
                     onClick={() =>
                       setLineItems((current) =>
                         current.filter((entry) => entry.id !== item.id),
@@ -1173,7 +1178,7 @@ export function CollectCheckout({
   );
 }
 
-function PayStep({
+export function PayStep({
   kind,
   context,
   lineItems,
@@ -1219,7 +1224,7 @@ function PayStep({
   context: CollectContext;
   lineItems: ChargeLineItem[];
   subtotal: number;
-  tipMode: "15" | "18" | "20" | "custom";
+  tipMode: "15" | "18" | "20" | "custom" | null;
   customTip: string;
   tipAmount: number;
   total: number;
@@ -1237,7 +1242,7 @@ function PayStep({
   busy: boolean;
   clientSecret: string | null;
   chargeId: string | null;
-  onTipMode: (value: "15" | "18" | "20" | "custom") => void;
+  onTipMode: (value: "15" | "18" | "20" | "custom" | null) => void;
   onCustomTip: (value: string) => void;
   onReferralMode: (value: ReferralApplyMode) => void;
   onReferralCustom: (value: string) => void;
@@ -1262,45 +1267,45 @@ function PayStep({
   );
 
   return (
-    <section>
-      <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
-        Today’s bill
+    <section className="customer-checkout font-sans text-[#211D26]">
+      <p className="font-sans text-xs font-semibold uppercase tracking-[0.12em] text-[#514659]">
+        K9 Atelier · Checkout
       </p>
       {context.visit ? (
         <>
-          <h2 className="font-display mt-3 text-4xl text-ink">
+          <h2 className="font-sans mt-3 text-2xl text-ink">
             {context.visit.customerName}
           </h2>
-          <p className="font-body mt-2 text-sm text-taupe">
+          <p className="font-sans mt-2 text-sm text-[#514659]">
             {formatVisitBillDate(context.visit.serviceDate)} · {context.visit.arrivalLabel}
           </p>
-          <p className="font-body mt-1 text-sm text-taupe">
+          <p className="font-sans mt-1 text-sm text-[#514659]">
             {context.visit.servicedDogCount}{" "}
             {context.visit.servicedDogCount === 1 ? "dog" : "dogs"}
           </p>
           {context.visit.blockedMessage ? (
-            <p className="font-body mt-3 text-sm text-red-800">
+            <p className="font-sans mt-3 text-sm text-red-800">
               {context.visit.blockedMessage}
             </p>
           ) : null}
         </>
       ) : (
-        <h2 className="font-display mt-3 text-4xl text-ink">
+        <h2 className="font-sans mt-3 text-2xl text-ink">
           {collectBillHeading(context.appointment)}
         </h2>
       )}
-      <ul className="mt-8 space-y-3">
+      <ul className="mt-4 divide-y divide-[#E2DCE5] rounded-xl border border-[#D3CAD9] bg-white px-4">
         {lineItems.map((item) => (
           <li
             key={item.id}
-            className="flex justify-between gap-4 font-body text-sm text-ink"
+            className="flex justify-between gap-4 py-3 font-sans text-base font-medium text-[#211D26]"
           >
             <span>{getCatalogItemDisplayLabel(item.catalogId, item.label)}</span>
             <ChargeMoneyWithList item={item} />
           </li>
         ))}
       </ul>
-      <p className="font-body mt-4 flex justify-between text-sm text-taupe">
+      <p className="font-sans mt-4 flex justify-between text-sm text-[#514659]">
         <span>Subtotal</span>
         <span>{formatChargeMoney(subtotal)}</span>
       </p>
@@ -1314,19 +1319,23 @@ function PayStep({
         </>
       ) : (
       <>
-      <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
-        Tip
+      {referralQuote.discountCents > 0 ? <p className="mt-2 flex justify-between text-sm"><span>First-visit discount</span><span>-{formatChargeMoney(centsToDollars(referralQuote.discountCents))}</span></p> : null}
+      {referralQuote.creditCents > 0 ? <p className="mt-2 flex justify-between text-sm"><span>Referral credit</span><span>-{formatChargeMoney(centsToDollars(referralQuote.creditCents))}</span></p> : null}
+      <p className="font-sans mt-5 text-xs font-semibold uppercase tracking-[0.12em] text-[#514659]">
+        Gratuity
+        <span className="float-right normal-case tracking-normal text-[#211D26]">{formatChargeMoney(tipAmount)}</span>
       </p>
       <div className="mt-3 grid grid-cols-4 gap-2">
         {TIP_PERCENTS.map((percent) => (
           <button
             key={percent}
+            aria-pressed={tipMode === String(percent)}
             type="button"
             onClick={() => onTipMode(String(percent) as "15" | "18" | "20")}
-            className={`rounded-sm py-3 text-sm ${
+            className={`min-h-[44px] rounded-lg py-2 text-base font-semibold ${
               tipMode === String(percent)
-                ? "bg-deep-lavender text-ivory"
-                : "border border-lavender/50 text-ink"
+                ? "bg-[#4C3758] text-white"
+                : "border border-[#8C7D95] bg-white text-[#211D26]"
             }`}
           >
             {percent}%
@@ -1334,11 +1343,12 @@ function PayStep({
         ))}
         <button
           type="button"
+          aria-pressed={tipMode === "custom"}
           onClick={() => onTipMode("custom")}
           className={`rounded-sm py-3 text-sm ${
             tipMode === "custom"
-              ? "bg-deep-lavender text-ivory"
-              : "border border-lavender/50 text-ink"
+              ? "bg-[#4C3758] text-white"
+              : "border border-[#8C7D95] bg-white text-[#211D26]"
           }`}
         >
           Custom
@@ -1349,22 +1359,23 @@ function PayStep({
           type="number"
           min="0"
           step="0.01"
+          aria-label="Gratuity amount"
           value={customTip}
           onChange={(event) => onCustomTip(event.target.value)}
           className="mt-3 w-full rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm"
           placeholder="0"
         />
       ) : null}
-      <p className="font-body mt-2 text-sm text-taupe">
-        Tip {formatChargeMoney(tipAmount)}
-      </p>
 
+
+      <details className="mt-4 rounded-xl border border-[#D3CAD9] bg-white px-4 py-3">
+        <summary className="cursor-pointer text-sm font-semibold">Discounts &amp; referral credit{referralQuote.creditCents > 0 ? ` · ${formatChargeMoney(centsToDollars(referralQuote.creditCents))} applied` : ""}</summary>
       {shouldShowCollectReferralCode(context.referral) ? (
         <>
-          <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+          <p className="font-sans mt-5 text-xs font-semibold uppercase tracking-[0.12em] text-[#514659]">
             Referral code
           </p>
-          <label className="font-body mt-2 block text-sm text-ink" htmlFor="collect-referral-code">
+          <label className="font-sans mt-2 block text-sm text-ink" htmlFor="collect-referral-code">
             Have a friend&apos;s referral code?
           </label>
           <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -1394,7 +1405,7 @@ function PayStep({
           </div>
           {referralCodeMessage ? (
             <p
-              className={`font-body mt-2 text-sm ${
+              className={`font-sans mt-2 text-sm ${
                 referralCodeStatus === "invalid" ? "text-red-800" : "text-ink"
               }`}
             >
@@ -1404,15 +1415,15 @@ function PayStep({
         </>
       ) : null}
 
-      <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+      <p className="font-sans mt-5 text-xs font-semibold uppercase tracking-[0.12em] text-[#514659]">
         Available referral credit
       </p>
-      <p className="font-body mt-2 text-sm text-ink">
+      <p className="font-sans mt-2 text-sm text-ink">
         You have {formatChargeMoney(centsToDollars(referralQuote.availableCreditCents))} in
         referral credit.
       </p>
       {context.referral?.applyNewClientDiscount ? (
-        <p className="font-body mt-2 text-sm text-taupe">
+        <p className="font-sans mt-2 text-sm text-[#514659]">
           First-visit 10% is applied to eligible services. Referral credit cannot
           be combined with that discount.
         </p>
@@ -1451,43 +1462,12 @@ function PayStep({
           ) : null}
         </div>
       ) : (
-        <p className="font-body mt-2 text-sm text-taupe">
+        <p className="font-sans mt-2 text-sm text-[#514659]">
           No referral credit is available for this bill.
         </p>
       )}
 
-      <ul className="font-body mt-6 space-y-2 text-sm text-taupe">
-        <li className="flex justify-between gap-4">
-          <span>Original amount</span>
-          <span>{formatChargeMoney(centsToDollars(referralQuote.originalCents))}</span>
-        </li>
-        <li className="flex justify-between gap-4">
-          <span>Eligible services</span>
-          <span>{formatChargeMoney(centsToDollars(referralQuote.eligibleCents))}</span>
-        </li>
-        <li className="flex justify-between gap-4">
-          <span>Travel, handling & other excluded fees</span>
-          <span>{formatChargeMoney(centsToDollars(referralQuote.excludedCents))}</span>
-        </li>
-        <li className="flex justify-between gap-4">
-          <span>Tip</span>
-          <span>{formatChargeMoney(centsToDollars(referralQuote.tipCents))}</span>
-        </li>
-        {referralQuote.discountCents > 0 ? (
-          <li className="flex justify-between gap-4 text-ink">
-            <span>New client 10%</span>
-            <span>-{formatChargeMoney(centsToDollars(referralQuote.discountCents))}</span>
-          </li>
-        ) : null}
-        <li className="flex justify-between gap-4 text-ink">
-          <span>Referral credit applied</span>
-          <span>-{formatChargeMoney(centsToDollars(referralQuote.creditCents))}</span>
-        </li>
-      </ul>
-      <p className="font-display mt-6 text-4xl text-ink">
-        {formatChargeMoney(total)}
-      </p>
-      <p className="font-body mt-3 text-xs text-taupe">
+      <p className="font-sans mt-3 text-xs text-[#514659]">
         Referral Credit applies to eligible service charges only. Travel fees,
         special handling fees and gratuities are excluded. Referral Credit cannot
         be combined with other promotional offers.{" "}
@@ -1495,10 +1475,11 @@ function PayStep({
           View Referral Terms
         </a>
       </p>
+      </details>
       </>
       )}
 
-      <p className="font-body mt-8 text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
+      <p className="font-sans mt-5 text-xs font-semibold uppercase tracking-[0.12em] text-[#514659]">
         Payment
       </p>
       <p className="font-body mt-2 text-sm text-taupe">
@@ -1519,6 +1500,11 @@ function PayStep({
           Check payment status
         </button>
       ) : null}
+      <div className="mt-2 rounded-xl border border-[#8C7D95] bg-white px-4 py-3 text-sm font-semibold">
+        {useCash ? "Cash" : useZelle ? "Zelle" : useNewCard ? "New card" : selectedMethodId && methods.some((method) => method.id === selectedMethodId) ? formatPaymentMethodLabel(methods.find((method) => method.id === selectedMethodId)!) : "Choose a payment method"}
+      </div>
+      <details className="mt-2">
+        <summary className="cursor-pointer py-1 text-sm font-medium underline underline-offset-4">Change payment method</summary>
       <div className="mt-3 space-y-2">
         {methods.map((method) => (
           <label
@@ -1567,6 +1553,23 @@ function PayStep({
         </label>
       </div>
 
+      </details>
+
+      {useZelle ? (
+        <section aria-label="Zelle transfer instructions" className="mt-4 rounded-xl border border-[#8C7D95] bg-white p-4">
+          <h3 className="text-base font-semibold">Pay with Zelle</h3>
+          <p className="mt-2 text-sm leading-relaxed">Scan this code with your bank’s app to send {formatChargeMoney(total)}.</p>
+          <a href="/images/payments/zelle.png" target="_blank" rel="noopener noreferrer" aria-label="Open full-size Zelle payment code">
+            <img src="/images/payments/zelle.png" alt="Zelle payment code for JIAHUI ZUO, (561) 801-4742" width={389} height={426} className="mx-auto mt-3 h-auto w-full max-w-[320px] rounded-lg" />
+          </a>
+          <p className="mt-3 text-sm font-semibold">Recipient: JIAHUI ZUO · (561) 801-4742</p>
+          <p className="mt-2 text-sm leading-relaxed">Tap the image to enlarge. Complete the transfer in your bank’s app.</p>
+          <p className="mt-3 rounded-lg bg-[#F3EEF6] p-3 text-sm font-medium leading-relaxed">Staff: confirm the transfer has arrived before recording this payment. This page does not send or verify Zelle transfers.</p>
+        </section>
+      ) : null}
+
+      <div className="sticky bottom-0 z-10 -mx-5 mt-5 border-t border-[#D3CAD9] bg-white px-5 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_16px_rgba(33,29,38,0.06)]">
+        <div className="mb-3 flex items-center justify-between"><span className="text-sm font-medium">Total to pay</span><strong className="text-2xl tabular-nums">{formatChargeMoney(total)}</strong></div>
       {useNewCard ? (
         <div className="mt-4">
           {clientSecret && chargeId ? (
@@ -1586,7 +1589,7 @@ function PayStep({
               type="button"
               disabled={busy || Boolean(context.visit?.blockedMessage)}
               onClick={() => void onPay()}
-              className="mt-4 w-full rounded-sm bg-gold px-6 py-4 text-[11px] font-medium uppercase tracking-[0.16em] text-white disabled:opacity-50"
+              className="min-h-[48px] w-full rounded-xl bg-[#4C3758] px-6 py-3 text-base font-semibold text-white disabled:opacity-50"
             >
               {busy ? "Preparing…" : "Continue with new card"}
             </button>
@@ -1602,7 +1605,7 @@ function PayStep({
             (!useCash && !useZelle && !selectedMethodId)
           }
           onClick={() => void onPay()}
-          className="mt-8 w-full rounded-sm bg-gold px-6 py-4 text-[11px] font-medium uppercase tracking-[0.16em] text-white disabled:opacity-50"
+          className="min-h-[48px] w-full rounded-xl bg-[#4C3758] px-6 py-3 text-base font-semibold text-white disabled:opacity-50"
         >
           {busy
             ? useCash || useZelle
@@ -1619,10 +1622,11 @@ function PayStep({
       <button
         type="button"
         onClick={onBack}
-        className="font-body mt-4 w-full text-sm text-taupe underline"
+        className="font-sans mt-3 w-full text-sm text-[#514659] underline"
       >
         Back to review
       </button>
+      </div>
     </section>
   );
 }

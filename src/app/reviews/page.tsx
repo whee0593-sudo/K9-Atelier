@@ -14,14 +14,7 @@ export default function ReviewsPage() {
   return (
     <PageShell
       eyebrow={reviews.eyebrow}
-      title={
-        <>
-          Kind Words,
-          <br />
-          Quietly Kept.
-        </>
-      }
-      intro={reviews.intro}
+      title="Client Reviews"
     >
       <ReviewsShowcase />
       <div className="mt-16 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -29,7 +22,7 @@ export default function ReviewsPage() {
           Explore Services
         </LuxuryButton>
         <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-[12px] font-medium uppercase tracking-[0.16em] text-ivory transition hover:bg-ink">
-          Book an Appointment
+          Book Online
         </BookServiceLink>
       </div>
     </PageShell>

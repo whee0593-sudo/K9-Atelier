@@ -4,6 +4,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ServicesJsonLd } from "@/components/seo/ServicesJsonLd";
 import { ServiceDirectory } from "@/components/services/ServiceDirectory";
+import { ServiceNotes } from "@/components/services/ServiceNotes";
 import { ServicesHero } from "@/components/services/ServicesHero";
 import { ServicesIntroduction } from "@/components/services/ServicesIntroduction";
 import {
@@ -18,7 +19,7 @@ import { metadata } from "@/app/services/page";
 
 const SERVICE_LINKS = [
   ["/services/bath-coat-care", "Bath & Coat Care", "Bathing · Coat & skin maintenance"],
-  ["/services/full-groom", "Full Grooming", "Haircuts · Styling · Coat care"],
+  ["/services/full-groom", "Full Grooming", "Haircuts · Styling"],
   ["/services/hand-stripping", "Hand Stripping", "Traditional wire-coat maintenance"],
   ["/services/spa", "Luxury Spa Day", "A fully customized spa experience"],
   ["/services/color", "Creative Color", "Pet-safe color artistry"],
@@ -82,18 +83,17 @@ describe("services page content", () => {
       </>,
     );
     assert.equal((html.match(/<h1\b/g) ?? []).length, 1);
-    assert.match(html, /Grooming, Considered/);
-    assert.match(html, /Down to Every Detail\./);
+    assert.match(html, /Grooming Services/);
     const visibleText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
     assert.match(
       visibleText,
-      /Private, one-on-one mobile dog grooming, tailored to your dog\./,
+      /One-on-one mobile grooming by Penny, brought to your home\./,
     );
     assert.match(
       visibleText,
       /Jupiter Island, Jupiter, Tequesta, Palm Beach Gardens, Palm Beach and West Palm Beach\./,
     );
-    assert.match(html, /Dogs up to 45 lbs · By appointment only/);
+    assert.match(renderToStaticMarkup(<ServiceNotes />), /Dogs up to 45 lbs · By appointment only/);
   });
 
   it("keeps seven crawlable service cards and the groomer link", () => {
@@ -133,11 +133,11 @@ describe("services page content", () => {
     const booking = links.find((item) => item.href === "/book");
     const groomer = links.find((item) => item.href === "/about");
     assert.ok(booking);
-    assert.match(booking.text, /Book Your Appointment/);
+    assert.match(booking.text, /Book Online/);
     assert.ok(groomer);
     assert.match(groomer.text, /Meet Your Groomer/);
-    assert.ok(html.indexOf("Book Your Appointment") < html.indexOf("Meet Your Groomer"));
-    assert.match(html, /Care Designed Around the Individual Dog/);
+    assert.ok(html.indexOf("Book Online") < html.indexOf("Meet Your Groomer"));
+    assert.match(html, /Grooming with Penny/);
   });
 });
 

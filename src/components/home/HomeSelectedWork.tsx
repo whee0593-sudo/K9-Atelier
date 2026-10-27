@@ -44,26 +44,23 @@ export function HomeSelectedWork() {
   return (
     <section
       aria-labelledby="home-selected-work-heading"
-      className="border-b border-gray-line/60 py-16 md:py-20"
+      className="py-12 md:py-16"
     >
       <Container>
         <div className="mx-auto max-w-3xl text-center">
           <h2
             id="home-selected-work-heading"
-            className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-ink md:text-xs"
+            className="font-display text-4xl font-semibold text-ink md:text-5xl"
           >
             Selected Work
           </h2>
-          <p className="font-body mt-5 text-pretty text-base leading-relaxed text-taupe md:text-[17px]">
-            Every coat, considered individually.
-          </p>
         </div>
 
-        <ul className="mt-10 grid list-none grid-cols-2 items-center gap-x-4 gap-y-8 p-0 md:mt-14 md:grid-cols-4 md:gap-x-8 md:gap-y-0 lg:gap-x-12 xl:gap-x-14">
-          {works.map(({ slot, sizes, feature }) => (
+        <ul className="mt-10 grid list-none grid-cols-2 items-center gap-x-4 gap-y-5 p-0 md:mt-14 md:grid-cols-4 md:gap-x-8 md:gap-y-0 lg:gap-x-12 xl:gap-x-14">
+          {works.map(({ slot, sizes }) => (
             <li
               key={slot.id}
-              className={`min-w-0 ${feature ? "col-span-2 md:col-span-1" : ""}`}
+              className="min-w-0"
             >
               <Image
                 src={slot.photoSrc}
@@ -82,7 +79,7 @@ export function HomeSelectedWork() {
         <div className="mt-10 text-center md:mt-14">
           <Link
             href="/gallery"
-            className="group font-body inline-flex min-h-[48px] items-center text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition duration-500 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-champagne motion-reduce:transition-none"
+            className="group font-body inline-flex min-h-[48px] items-center text-base font-semibold text-deep-lavender transition duration-500 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-champagne motion-reduce:transition-none"
           >
             Explore Our Work
             <span
