@@ -1,9 +1,8 @@
-import React, { type ReactNode } from "react";
+import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AboutDeferredPhoto } from "@/components/about/AboutDeferredPhoto";
 import { Container } from "@/components/luxury/Container";
-import { LONG_COAT_CARE_PATH } from "@/lib/long-coat-care-page";
 
 const awards = [
   { year: "2014", title: "Best in Group", breed: "Pomeranian" },
@@ -68,9 +67,6 @@ const photos = {
   },
 } as const;
 
-const eyebrowClass =
-  "font-body text-[12px] font-medium uppercase tracking-[0.22em] text-deep-lavender md:text-[13px]";
-
 const headingClass =
   "font-display mt-5 text-balance text-[clamp(2.15rem,4.2vw+1rem,3.7rem)] leading-[1.08] font-medium tracking-[-0.02em] text-ink";
 
@@ -82,9 +78,6 @@ const captionClass =
 
 const textLinkClass =
   "font-body mt-8 inline-flex max-w-full min-h-[48px] items-center justify-center text-center text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne md:mt-10";
-
-const quietInlineLinkClass =
-  "underline decoration-champagne/80 underline-offset-[0.2em] transition-colors duration-500 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne motion-reduce:transition-none";
 
 /**
  * Show-ring column, not the viewport.
@@ -155,14 +148,6 @@ function AboutPhoto({
   );
 }
 
-function AboutEyebrow({ children, id }: { children: ReactNode; id?: string }) {
-  return (
-    <p id={id} className={eyebrowClass}>
-      {children}
-    </p>
-  );
-}
-
 function AwardsTimeline() {
   return (
     <div className="mt-16 md:mt-24 lg:mt-28">
@@ -225,14 +210,14 @@ export function AboutStory() {
         <article className="py-12 md:py-20">
           <section aria-labelledby="about-penny" className="grid items-start gap-8 lg:grid-cols-[minmax(15rem,22rem)_minmax(0,1fr)] lg:gap-16">
             <header className="lg:col-start-2 lg:row-start-1">
-              <AboutEyebrow>About Penny</AboutEyebrow>
               <h1 id="about-penny" className={headingClass}>Meet Penny</h1>
               <p className="font-display mt-5 text-2xl text-ink italic">Founder & Groomer, K9 Atelier</p>
               <div className={`${proseClass} mt-6`}>
-                <p>I’m Penny, an award-winning groomer. I’ve worked as a professional groomer since 2010, with experience in breed styling, hand stripping and show grooming.</p>
-                <p>Today, I bring that experience to private mobile appointments in Palm Beach, including <Link href={LONG_COAT_CARE_PATH} className={quietInlineLinkClass}>full-coat maintenance</Link>. We’ll choose a style and care plan that suit your dog and your routine at home.</p>
+                <p>Hi, I’m Penny. I’ve been grooming professionally since 2010, and my favorite part is getting to know the little personality behind every face.</p>
+                <p>K9 Atelier welcomes private clients for personal, one-on-one care. Your pup sees the same familiar groomer each time, helping us build trust and a comfortable routine together.</p>
+                <p>With a background in award-winning show grooming, I bring a practiced eye and a gentle touch to every visit. I’m proud to serve our local communities and care for the dogs and families who call them home, visit after visit.</p>
               </div>
-              <Link href="/services" className={textLinkClass}>Explore Grooming Services →</Link>
+              <Link href="/services" className={textLinkClass}>Explore Our Services →</Link>
             </header>
             <figure className="mx-auto w-full max-w-[22rem] lg:col-start-1 lg:row-start-1">
               <AboutPhoto {...photos.portrait} sizes="(min-width: 1024px) 352px, min(352px, calc(100vw - 2rem))" priority />
