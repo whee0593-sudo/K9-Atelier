@@ -75,7 +75,7 @@ export function Header({ logo, name }: { logo: string; name: string }) {
   // Match photo-led directory pages to their content palette.
   const headerClass = pathname === "/" || pathname === "/services"
     ? "sticky top-0 z-50 border-b border-[#E1D8E8] bg-[#FAF7F2] [--color-ivory:#FAF7F2] [--color-ink:#302D33] [--color-taupe:#382440] [--color-deep-lavender:#513562] [--color-dusty-lavender:#EEE7F3]"
-    : "sticky top-0 z-50 border-b border-gray-line/70 bg-ivory/95 backdrop-blur-sm";
+    : "sticky top-0 z-50 border-b border-gray-line/70 bg-ivory";
 
   const closeMenu = () => setOpen(false);
 
