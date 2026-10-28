@@ -7,18 +7,20 @@ export async function POST(
   context: { params: Promise<{ chargeId: string }> },
 ) {
   const { chargeId } = await context.params;
-  let body: { channel?: "email" };
+  let body: { channel?: "email"; email?: unknown };
   try {
     body = (await request.json()) as typeof body;
   } catch {
     return staffJsonError("Invalid request.", 400);
   }
+  if (!body || typeof body !== "object" || Array.isArray(body)) return staffJsonError("Invalid request.", 400);
   if (body.channel && body.channel !== "email") {
     return staffJsonError("Receipts are sent by email.", 400);
   }
 
-  const result = await sendChargeReceipt(chargeId);
+  const result = await sendChargeReceipt(chargeId, body.email);
   if ("error" in result) {
+    if (result.error === "invalid") return staffJsonError("Please enter a valid email address.", 400);
     if (result.error === "server") {
       return staffJsonError(
         "Could not send the email receipt. Check the customer email.",

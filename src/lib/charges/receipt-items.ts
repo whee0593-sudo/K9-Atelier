@@ -7,7 +7,7 @@ export function receiptItems(charge: AppointmentChargeRecord, petName?: string) 
   const items: ChargeLineItem[] = charge.lineItems.length ? charge.lineItems :
     (snapshot ? [
       ...snapshot.pets.map((pet, index) => ({
-        id: "pet-" + index, label: pet.serviceName, amount: pet.amount,
+        id: "pet-" + index, label: pet.serviceName, amount: pet.amount, appointmentId: pet.appointmentId, petName: pet.petName,
       })),
       ...(snapshot.travelFee > 0 ? [{ id: "travel", label: "Travel fee", amount: snapshot.travelFee }] : []),
     ] : []);
@@ -26,7 +26,23 @@ export function receiptItems(charge: AppointmentChargeRecord, petName?: string) 
   });
   if (snapshot) {
     if (snapshot.discount > 0) rows.push({ id: "discount", label: "Discount", amount: -snapshot.discount });
-    rows.push({ id: "subtotal", label: "Subtotal", amount: snapshot.subtotal });
+
   }
+  rows.push({ id: "subtotal", label: "Subtotal", amount: snapshot?.subtotal ?? charge.subtotal });
   return rows;
+}
+
+/** Group by dog appointment, leaving travel, totals and unassigned charges separate. */
+export function groupChargeItems(items: ChargeLineItem[], pets?: Array<{ id: string; petName: string }>, fallbackPetName?: string) {
+  const groups = new Map<string, { petName: string; items: ChargeLineItem[] }>();
+  for (const item of items) {
+    const shared = ["travel-fee"].includes(item.catalogId ?? "") || ["subtotal", "discount", "referral-credit"].includes(item.id);
+    const petName = shared ? "" : item.petName || pets?.find(pet => pet.id === item.appointmentId)?.petName || fallbackPetName || "";
+    const key = shared ? "line:" + item.id : item.appointmentId ? "pet:" + item.appointmentId : petName ? "name:" + petName : "line:" + item.id;
+    const group = groups.get(key) ?? { petName, items: [] };
+    const prefix = petName + " — ";
+    group.items.push({ ...item, label: getCatalogItemDisplayLabel(item.catalogId, petName && item.label.startsWith(prefix) ? item.label.slice(prefix.length) : item.label) });
+    groups.set(key, group);
+  }
+  return [...groups.values()];
 }

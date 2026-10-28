@@ -1,3 +1,4 @@
+import { ChargeServiceRows } from "./ChargeServiceRows";
 import Image from "next/image";
 import { ChargeReceiptBrandLinks } from "@/components/admin/ChargeReceiptBrandLinks";
 import { business } from "@/lib/business";
@@ -46,7 +47,8 @@ export function ChargeReceiptLetter({
   const paymentStatus = receiptPaymentStatus(charge);
   const phone = business.brand.phone?.trim() || null;
   const showAppointment = Boolean(appointmentDate || appointmentTime);
-  const showService = charge.lineItems.length > 0 || charge.tipAmount > 0;
+  const showService = receiptItems(charge).length > 0;
+  const paymentLabel = snapshot?.paymentMethodLabel || paymentMethodLabel;
   const thankYouBody = petName
     ? `We are truly grateful that you have entrusted ${petName}’s care to K9 Atelier.`
     : "We are truly grateful for choosing K9 Atelier.";
@@ -90,18 +92,13 @@ export function ChargeReceiptLetter({
           {showService ? (
             <section>
               <SectionLabel>Service summary</SectionLabel>
-              <ul className="mt-3 space-y-2">
-                {receiptItems(charge, appointment.petName).map((item) => (
-                  <MoneyRow
-                    key={item.id}
-                    label={item.label}
-                    item={item}
-                  />
-                ))}
+              <ChargeServiceRows lineItems={receiptItems(charge, appointment.petName)}
+                pets={snapshot?.pets.map(pet => ({id:pet.appointmentId, petName:pet.petName}))} />
+              <div className="mt-2 space-y-2">
                 {charge.tipAmount > 0 ? (
                   <MoneyRow label="Gratuity" amount={charge.tipAmount} />
                 ) : null}
-              </ul>
+              </div>
             </section>
           ) : null}
 
@@ -124,12 +121,12 @@ export function ChargeReceiptLetter({
             ) : null}
           </section>
 
-          {receiptNumber || paymentDate || paymentMethodLabel ? (
+          {receiptNumber || paymentDate || paymentLabel ? (
             <section className="space-y-2 text-base leading-[1.6] text-[#766F75]">
               {receiptNumber ? <p>Receipt number: {receiptNumber}</p> : null}
               {paymentDate ? <p>Payment date: {paymentDate}</p> : null}
-              {paymentMethodLabel ? (
-                <p>Payment method: {paymentMethodLabel}</p>
+              {paymentLabel ? (
+                <p>Payment method: {paymentLabel}</p>
               ) : null}
             </section>
           ) : null}

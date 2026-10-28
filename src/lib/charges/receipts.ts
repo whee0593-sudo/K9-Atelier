@@ -21,7 +21,7 @@ export function buildChargeReceiptEmail(
 ) {
   return {
     subject: `Your K9 Atelier receipt · ${formatChargeMoney(charge.total)}`,
-    text: buildChargeReceiptCardText(appointment, charge),
+    text: buildChargeReceiptCardText(appointment, charge, paymentMethodLabel),
     html: buildChargeReceiptCardHtml(appointment, charge, paymentMethodLabel),
   };
 }

@@ -6,7 +6,6 @@ import {
   getGoogleProfileUrl,
 } from "@/lib/business";
 import { business } from "@/lib/business";
-import { buildChargeReceiptParagraphs } from "@/lib/charges/receipt-content";
 import { formatChargeMoney } from "@/lib/charges/money";
 import {
   formatReceiptDate,
@@ -18,7 +17,7 @@ import {
 import type { AppointmentChargeRecord } from "@/lib/charges/types";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import { escapeHtml, emailLogoImg } from "@/lib/email/layout";
-import { receiptItems } from "@/lib/charges/receipt-items";
+import { groupChargeItems, receiptItems } from "@/lib/charges/receipt-items";
 import { siteUrl } from "@/lib/email/site-url";
 
 const PAGE = "#F8F4ED";
@@ -38,22 +37,11 @@ function moneyCell(amountHtml: string, size: string) {
   return `<td style="padding:4px 0;color:${INK};font-size:${size};line-height:1.6;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;">${amountHtml}</td>`;
 }
 
-function moneyRow(label: string, amount: number, emphasize = false) {
+function moneyRow(label: string, amount: number, emphasize = false, columns = 3) {
   const size = emphasize ? "18px" : "16px";
   return `<tr>
-    <td style="padding:4px 12px 4px 0;color:${INK};font-size:${size};line-height:1.6;">${escapeHtml(label)}</td>
+    <td colspan="${columns - 1}" style="padding:4px 12px 4px 0;color:${INK};font-size:${size};line-height:1.6;">${escapeHtml(label)}</td>
     ${moneyCell(escapeHtml(formatChargeMoney(amount)), size)}
-  </tr>`;
-}
-
-function lineItemMoneyRow(
-  label: string,
-  item: { amount: number; listAmount?: number },
-) {
-  const amountHtml = escapeHtml(formatChargeMoney(item.amount));
-  return `<tr>
-    <td style="padding:4px 12px 4px 0;color:${INK};font-size:16px;line-height:1.6;">${escapeHtml(label)}</td>
-    ${moneyCell(amountHtml, "16px")}
   </tr>`;
 }
 
@@ -94,8 +82,11 @@ export function buildChargeReceiptCardHtml(
   const bookAgain = getBookAgainUrl();
   const concern = siteUrl("/contact?topic=concern");
 
-  const itemRows = receiptItems(charge, appointment.petName)
-    .map((item) => lineItemMoneyRow(item.label, item)).join("");
+  const itemRows = groupChargeItems(receiptItems(charge, appointment.petName), snapshot?.pets.map(pet => ({ id: pet.appointmentId, petName: pet.petName })))
+    .flatMap(group => group.items.map((item, index) => {
+      if (!group.petName) return moneyRow(item.label, item.amount);
+      return '<tr><td style="padding:4px 10px 4px 0;vertical-align:top;color:' + INK + ';font-size:16px;">' + escapeHtml(index === 0 ? group.petName : "") + '</td><td style="padding:4px 10px 4px 0;color:' + INK + ';font-size:16px;">' + escapeHtml(item.label) + '</td>' + moneyCell(escapeHtml(formatChargeMoney(item.amount)), "16px") + '</tr>';
+    })).join("");
   const tipRow =
     charge.tipAmount > 0 ? moneyRow("Gratuity", charge.tipAmount) : "";
 
@@ -159,7 +150,7 @@ export function buildChargeReceiptCardHtml(
           </div>
           <div style="border-top:1px solid ${LINE};border-bottom:1px solid ${LINE};padding:16px 0;margin:0 0 16px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
-              ${moneyRow("TOTAL PAID", charge.total, true)}
+              ${moneyRow("TOTAL PAID", charge.total, true, 2)}
             </table>
           </div>
           ${
@@ -186,7 +177,7 @@ export function buildChargeReceiptCardHtml(
           ${buttonRows.join("")}
         </table>
         <p style="margin:20px 0 0;text-align:center;font-family:Arial,Helvetica,sans-serif;">
-          <a href="${escapeHtml(concern)}" style="color:${LAVENDER};font-size:14px;">Report a Concern</a>
+          <a href="${escapeHtml(concern)}" style="color:${LAVENDER};font-size:14px;">File a Concern</a>
         </p>
       </div>
     </div>
@@ -198,39 +189,31 @@ export function buildChargeReceiptCardHtml(
 export function buildChargeReceiptCardText(
   appointment: AdminAppointmentRecord,
   charge: AppointmentChargeRecord,
+  paymentMethodLabel?: string | null,
 ) {
-  if (charge.billSnapshot) {
-    return [
-      ...buildChargeReceiptParagraphs(appointment, charge),
-      "",
-      business.brand.phone,
-      getBrandWebsiteUrl(),
-      `Book again: ${getBookAgainUrl()}`,
-    ]
-      .filter((line) => line != null)
-      .join("\n");
-  }
+  const snapshot = charge.billSnapshot;
   const petName = receiptPetNames(appointment, charge);
-  const lines = [
-    thankYouLine(petName),
-    "",
-    formatReceiptDate(appointment.appointmentDate),
-    formatReceiptServiceTime(appointment),
-    petName ? `Pet: ${petName}` : null,
-    "",
-    ...receiptItems(charge, appointment.petName).map(
-      (item) =>
-        `${item.label}  ${formatChargeMoney(item.amount)}`,
-    ),
-    charge.tipAmount > 0
-      ? `Gratuity  ${formatChargeMoney(charge.tipAmount)}`
-      : null,
-    `TOTAL PAID  ${formatChargeMoney(charge.total)}`,
-    "",
-    business.brand.phone,
-    getBrandWebsiteUrl(),
-    `Book again: ${getBookAgainUrl()}`,
-  ].filter(Boolean);
-
-  return lines.join("\n");
+  const items = groupChargeItems(receiptItems(charge, appointment.petName), snapshot?.pets.map(pet => ({id:pet.appointmentId,petName:pet.petName})));
+  const refunded = charge.refundedAmount ?? 0;
+  return [
+    thankYouLine(petName), "", "APPOINTMENT",
+    formatReceiptDate(snapshot?.serviceDate ?? appointment.appointmentDate),
+    snapshot?.arrivalLabel || formatReceiptServiceTime(appointment),
+    "", "PET", petName, "", "SERVICE SUMMARY",
+    ...items.flatMap(group => group.items.map((item, index) =>
+      [index === 0 ? group.petName : "", item.label, formatChargeMoney(item.amount)].filter(Boolean).join("  "))),
+    charge.tipAmount > 0 ? "Gratuity  " + formatChargeMoney(charge.tipAmount) : null,
+    "TOTAL PAID  " + formatChargeMoney(charge.total),
+    "Payment status: " + receiptPaymentStatus(charge),
+    charge.paidAt ? "Payment date: " + formatReceiptPaymentDate(charge.paidAt, appointment.timezone) : null,
+    paymentMethodLabel || snapshot?.paymentMethodLabel ? "Payment method: " + (paymentMethodLabel || snapshot?.paymentMethodLabel) : null,
+    refunded > 0 ? "Refunded  " + formatChargeMoney(refunded) : null,
+    refunded > 0 ? "Remaining  " + formatChargeMoney(charge.total - refunded) : null,
+    "", "K9 ATELIER", business.brand.phone,
+    "Leave A Review: " + (getGoogleWriteReviewUrl() || getGoogleProfileUrl()),
+    "Book Again: " + getBookAgainUrl(),
+    getBrandInstagramUrl() ? "Instagram: " + getBrandInstagramUrl() : null,
+    "Website: " + getBrandWebsiteUrl(),
+    "File a Concern: " + siteUrl("/contact?topic=concern"),
+  ].filter(line => line != null).join("\n");
 }
