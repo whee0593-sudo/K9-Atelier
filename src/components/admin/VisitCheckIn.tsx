@@ -2,7 +2,8 @@
 import { HourlyVisitTimer } from "@/components/admin/HourlyVisitTimer";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { carePageTiming } from "@/lib/visits/operations";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   formatVisitClock,
   formatVisitDuration,
@@ -35,19 +36,24 @@ export function VisitCheckIn({
   const [error, setError] = useState<string | null>(null);
   const [sendCheckoutText, setSendCheckoutText] = useState(true);
   const [lineItems, setLineItems] = useState<ChargeLineItem[]>([]);
+  const [savedLineItems, setSavedLineItems] = useState<ChargeLineItem[]>([]);
+  const loadVersion = useRef(0);
+  const servicesDirty = JSON.stringify(lineItems) !== JSON.stringify(savedLineItems);
   const [savingServices, setSavingServices] = useState(false);
   const [servicesNotice, setServicesNotice] = useState<string | null>(null);
   const [confirmAddOnCharge, setConfirmAddOnCharge] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    const version = ++loadVersion.current;
     setLoading(true);
     setError(null);
     if (preview) {
       const body = buildPreviewCollectContext();
       setContext(body);
       setLineItems(body.careLineItems ?? body.lineItems);
-      setStartedAt(body.visit?.startedAt ?? body.appointment.serviceStartedAt);
-      setEndedAt(body.visit?.endedAt ?? body.appointment.serviceEndedAt);
+      setSavedLineItems(body.careLineItems ?? body.lineItems);
+      setStartedAt(carePageTiming(body).startedAt);
+      setEndedAt(carePageTiming(body).endedAt);
       setLoading(false);
       return;
     }
@@ -56,23 +62,30 @@ export function VisitCheckIn({
         credentials: "include",
       });
       const body = (await response.json()) as CollectContext & { error?: string };
+      if (version !== loadVersion.current) return;
       if (!response.ok) {
+        setContext(null);
         setError(body.error ?? "Could not load this appointment.");
         return;
       }
       setContext(body);
       setLineItems(body.careLineItems ?? body.lineItems);
-      setStartedAt(body.visit?.startedAt ?? body.appointment.serviceStartedAt);
-      setEndedAt(body.visit?.endedAt ?? body.appointment.serviceEndedAt);
+      setSavedLineItems(body.careLineItems ?? body.lineItems);
+      setStartedAt(carePageTiming(body).startedAt);
+      setEndedAt(carePageTiming(body).endedAt);
     } catch {
-      setError("Could not load this appointment.");
+      if (version === loadVersion.current) {
+        setContext(null);
+        setError("Could not load this appointment.");
+      }
     } finally {
-      setLoading(false);
+      if (version === loadVersion.current) setLoading(false);
     }
   }, [selectedPetId, preview]);
 
   useEffect(() => {
     void load();
+    return () => { loadVersion.current += 1; };
   }, [load]);
 
   useEffect(() => {
@@ -82,6 +95,7 @@ export function VisitCheckIn({
   }, [startedAt, endedAt]);
 
   async function setTiming(action: "check_in" | "check_out") {
+    if (savingServices || (action === "check_out" && servicesDirty)) return;
     const stamp = new Date().toISOString();
     if (preview) {
       if (action === "check_in") {
@@ -104,6 +118,7 @@ export function VisitCheckIn({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action,
+            scope: "visit",
             sendCheckoutText: action === "check_out" ? sendCheckoutText : undefined,
           }),
         },
@@ -127,7 +142,7 @@ export function VisitCheckIn({
   }
 
   async function saveServices(confirmIncompatibleAddOns = false) {
-    if (!context || lineItems.length === 0) return;
+    if (!context || !servicesDirty || savingServices || lineItems.length === 0) return;
     setSavingServices(true);
     setError(null);
     setServicesNotice(null);
@@ -136,12 +151,15 @@ export function VisitCheckIn({
       setContext({
         ...context,
         lineItems,
+        careLineItems: lineItems,
+        visit: context.visit ? { ...context.visit, pets: context.visit.pets?.map(pet => pet.id === selectedPetId ? { ...pet, serviceName: lineItems[0]?.label ?? pet.serviceName } : pet) } : undefined,
         appointment: {
           ...context.appointment,
           serviceName: lineItems[0]?.label ?? context.appointment.serviceName,
           estimatedTotal: total,
         },
       });
+      setSavedLineItems(lineItems);
       setServicesNotice(
         `Preview only · guest would receive: ${buildVisitServicesUpdatedSms({
           services: lineItems,
@@ -184,12 +202,15 @@ export function VisitCheckIn({
       setContext({
         ...context,
         lineItems,
+        careLineItems: lineItems,
+        visit: context.visit ? { ...context.visit, pets: context.visit.pets?.map(pet => pet.id === selectedPetId ? { ...pet, serviceName: body.serviceName ?? lineItems[0]?.label ?? pet.serviceName } : pet) } : undefined,
         appointment: {
           ...context.appointment,
           serviceName: body.serviceName ?? lineItems[0]?.label ?? context.appointment.serviceName,
           estimatedTotal: body.estimatedTotal ?? context.appointment.estimatedTotal,
         },
       });
+      setSavedLineItems(lineItems);
       setServicesNotice(
         body.smsSent
           ? "Services saved. The guest was texted the update."
@@ -305,8 +326,8 @@ export function VisitCheckIn({
             {(context.visit?.pets?.length ?? 0) > 1 ? (
               <label className="mt-6 block text-left text-sm text-taupe">
                 Care for
-                <select value={selectedPetId} disabled={busy || savingServices}
-                  onChange={event => { setSelectedPetId(event.target.value); setServicesNotice(null); setConfirmAddOnCharge(null); }}
+                <select value={selectedPetId} disabled={busy || savingServices || servicesDirty}
+                  onChange={event => { setLoading(true); setSelectedPetId(event.target.value); setServicesNotice(null); setConfirmAddOnCharge(null); }}
                   className="mt-2 w-full rounded-xl border border-lavender/40 bg-white px-3 py-2 text-ink">
                   {context.visit?.pets?.map(pet => <option key={pet.id} value={pet.id}>{pet.petName} — {pet.serviceName}</option>)}
                 </select>
@@ -315,11 +336,13 @@ export function VisitCheckIn({
             <VisitServiceEditor
               lineItems={lineItems}
               catalogGroups={context.catalogGroups ?? []}
-              disabled={busy}
+              disabled={busy || savingServices}
+              dirty={servicesDirty}
               saving={savingServices}
               notice={servicesNotice}
               onChange={(items) => {
                 setLineItems(items);
+                setServicesNotice(null);
                 setConfirmAddOnCharge(null);
               }}
               onSave={() => void saveServices(false)}
@@ -340,15 +363,16 @@ export function VisitCheckIn({
                 </button>
               </div>
             ) : null}
+            {servicesDirty ? <p className="mt-4 text-sm text-taupe" role="status">Save changes for {appointment.petName} before switching dogs or checking out.</p> : null}
             <CheckoutTextToggle
               checked={sendCheckoutText}
               onChange={setSendCheckoutText}
-              disabled={busy}
+              disabled={busy || savingServices}
               className="mt-8"
             />
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || savingServices || servicesDirty}
               onClick={() => void setTiming("check_out")}
               className="mt-4 w-full rounded-sm bg-gold px-6 py-5 text-[12px] font-medium uppercase tracking-[0.16em] text-white disabled:opacity-50"
             >

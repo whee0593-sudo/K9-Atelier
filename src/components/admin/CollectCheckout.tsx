@@ -1,4 +1,6 @@
 "use client";
+import { ChargeServiceRows as CustomerBillItems } from "./ChargeServiceRows";
+export { ChargeServiceRows as CustomerBillItems } from "./ChargeServiceRows";
 
 import {
   Elements,
@@ -32,7 +34,7 @@ import {
   noShowPaymentNotice,
   openCardPayment,
 } from "@/lib/policy-fees/stripe-lookup";
-import { collectBillHeading, formatVisitBillDate } from "@/lib/charges/receipt-view";
+import { formatVisitBillDate } from "@/lib/charges/receipt-view";
 import { manualCardWallets } from "@/lib/payments/card-wallets";
 import {
   acquirePaymentSubmission,
@@ -158,7 +160,7 @@ export function CollectCheckout({
     null,
   );
   const [chargedMethodId, setChargedMethodId] = useState<string | null>(null);
-  const [receiptSent, setReceiptSent] = useState(false);
+  const [receiptSentTo, setReceiptSentTo] = useState<string | null>(null);
   const [refundPending, setRefundPending] = useState(false);
   const [noShowConfirmed, setNoShowConfirmed] = useState(false);
   const [paymentState, setPaymentState] = useState<string | null>(null);
@@ -698,9 +700,9 @@ export function CollectCheckout({
     }
   }
 
-  async function sendReceiptEmail() {
+  async function sendReceiptEmail(email: string) {
     if (preview) {
-      setReceiptSent(true);
+      setReceiptSentTo(email);
       return;
     }
     if (!chargeId) return;
@@ -711,14 +713,14 @@ export function CollectCheckout({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel: "email" }),
+        body: JSON.stringify({ channel: "email", email }),
       });
       const body = (await response.json()) as { error?: string };
       if (!response.ok) {
         setError(body.error ?? "Could not send the email receipt.");
         return;
       }
-      setReceiptSent(true);
+      setReceiptSentTo(email);
     } catch {
       setError("Could not send the email receipt.");
     } finally {
@@ -1159,8 +1161,9 @@ export function CollectCheckout({
           <ChargeReceiptActions
             customerEmail={appointment.customerEmail}
             busy={busy}
-            sent={receiptSent}
-            onSendEmail={() => void sendReceiptEmail()}
+            key={receiptCharge.id}
+            sentTo={receiptSentTo}
+            onSendEmail={(email) => void sendReceiptEmail(email)}
           />
         </section>
       ) : null}
@@ -1272,44 +1275,18 @@ export function PayStep({
       <p className="font-sans text-xs font-semibold uppercase tracking-[0.12em] text-[#514659]">
         K9 Atelier · Checkout
       </p>
-      {context.visit ? (
-        <>
-          <h2 className="font-sans mt-3 text-2xl text-ink">
-            {context.visit.customerName}
-          </h2>
-          <p className="font-sans mt-2 text-sm text-[#514659]">
-            {formatVisitBillDate(context.visit.serviceDate)} · {context.visit.arrivalLabel}
-          </p>
-          <p className="font-sans mt-1 text-sm text-[#514659]">
-            {context.visit.servicedDogCount}{" "}
-            {context.visit.servicedDogCount === 1 ? "dog" : "dogs"}
-          </p>
-          {context.visit.blockedMessage ? (
-            <p className="font-sans mt-3 text-sm text-red-800">
-              {context.visit.blockedMessage}
-            </p>
-          ) : null}
-        </>
-      ) : (
-        <h2 className="font-sans mt-3 text-2xl text-ink">
-          {collectBillHeading(context.appointment)}
-        </h2>
-      )}
-      <ul className="mt-4 divide-y divide-[#E2DCE5] rounded-xl border border-[#D3CAD9] bg-white px-4">
-        {lineItems.map((item) => (
-          <li
-            key={item.id}
-            className="flex justify-between gap-4 py-3 font-sans text-base font-medium text-[#211D26]"
-          >
-            <span>{getCatalogItemDisplayLabel(item.catalogId, item.label)}</span>
-            <ChargeMoneyWithList item={item} showListAmount={false} />
-          </li>
-        ))}
-      </ul>
-      <p className="font-sans mt-4 flex justify-between text-sm text-[#514659]">
-        <span>Subtotal</span>
-        <span>{formatChargeMoney(subtotal)}</span>
+      <h2 className="font-sans mt-3 text-2xl text-ink">
+        {context.visit?.customerName || context.appointment.customerName || context.appointment.customerEmail || "Guest"}
+      </h2>
+      <p className="font-sans mt-2 text-sm text-[#514659]">
+        {formatVisitBillDate(context.visit?.serviceDate ?? context.appointment.appointmentDate)} · {context.visit?.arrivalLabel ?? context.appointment.appointmentTime}
       </p>
+      {context.visit?.blockedMessage ? <p className="font-sans mt-3 text-sm text-red-800">{context.visit.blockedMessage}</p> : null}
+      <CustomerBillItems lineItems={lineItems} pets={context.visit?.pets}
+        fallbackPetName={kind === "service" && !context.visit ? context.appointment.petName : undefined} />
+      {kind === "no_show" ? <p className="font-sans mt-4 flex justify-between text-sm text-[#514659]">
+        <span>Subtotal</span><span>{formatChargeMoney(subtotal)}</span>
+      </p> : null}
 
       {kind === "no_show" ? (
         <>
@@ -1320,8 +1297,6 @@ export function PayStep({
         </>
       ) : (
       <>
-      {referralQuote.discountCents > 0 ? <p className="mt-2 flex justify-between text-sm"><span>First-visit discount</span><span>-{formatChargeMoney(centsToDollars(referralQuote.discountCents))}</span></p> : null}
-      {referralQuote.creditCents > 0 ? <p className="mt-2 flex justify-between text-sm"><span>Referral credit</span><span>-{formatChargeMoney(centsToDollars(referralQuote.creditCents))}</span></p> : null}
       <p className="font-sans mt-5 text-xs font-semibold uppercase tracking-[0.12em] text-[#514659]">
         Gratuity
         <span className="float-right normal-case tracking-normal text-[#211D26]">{formatChargeMoney(tipAmount)}</span>
@@ -1371,6 +1346,9 @@ export function PayStep({
 
       <details className="mt-4 rounded-xl border border-[#D3CAD9] bg-white px-4 py-3">
         <summary className="cursor-pointer text-sm font-semibold">Discounts &amp; referral credit{referralQuote.creditCents > 0 ? ` · ${formatChargeMoney(centsToDollars(referralQuote.creditCents))} applied` : ""}</summary>
+      {referralQuote.discountCents > 0 ? <p className="mt-2 flex justify-between text-sm"><span>First-visit discount</span><span>-{formatChargeMoney(centsToDollars(referralQuote.discountCents))}</span></p> : null}
+      {referralQuote.creditCents > 0 ? <p className="mt-2 flex justify-between text-sm"><span>Referral credit</span><span>-{formatChargeMoney(centsToDollars(referralQuote.creditCents))}</span></p> : null}
+
       {shouldShowCollectReferralCode(context.referral) ? (
         <>
           <p className="font-sans mt-5 text-xs font-semibold uppercase tracking-[0.12em] text-[#514659]">

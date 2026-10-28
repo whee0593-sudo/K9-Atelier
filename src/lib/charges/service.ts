@@ -1,3 +1,4 @@
+import { receiptEmailAddress } from "@/lib/charges/receipt-recipient";
 import { hourlyRateForCatalogId } from "@/lib/charges/hourly";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStaffSession } from "@/lib/staff/auth";
@@ -1291,12 +1292,16 @@ async function markChargePaid(
 
 export async function sendChargeReceipt(
   chargeId: string,
+  recipientEmail?: unknown,
 ): Promise<
   | { ok: true }
-  | { error: "unauthenticated" | "forbidden" | "not_found" | "conflict" | "server" }
+  | { error: "unauthenticated" | "forbidden" | "not_found" | "conflict" | "server" | "invalid" }
 > {
   const session = await getStaffSession();
   if ("error" in session) return { error: session.error };
+
+  const email = recipientEmail === undefined ? undefined : receiptEmailAddress(recipientEmail);
+  if (email === null) return { error: "invalid" };
 
   const admin = createAdminClient();
   const { data: row, error } = await admin
@@ -1317,7 +1322,7 @@ export async function sendChargeReceipt(
 
   const charge = mapCharge(row as ChargeRow);
   const sent = await sendChargeReceiptEmail(
-    appointment,
+    email ? { ...appointment, customerEmail: email } : appointment,
     charge,
     charge.billSnapshot?.paymentMethodLabel,
   );

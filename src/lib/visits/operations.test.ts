@@ -21,3 +21,11 @@ it("legacy completion waits for all active dogs", () => {
   const [group] = operationalVisits([{ ...first, serviceEndedAt: "2026-10-28T14:00:00Z" }, { ...first, id: "b", serviceEndedAt: null }]);
   assert.equal(group.appointment.serviceEndedAt, null);
 });
+
+it("keeps the care page in progress when only the selected dog has finished", async () => {
+  const { carePageTiming } = await import("./operations");
+  const appointment = {serviceStartedAt:"2026-10-28T14:00:00Z", serviceEndedAt:"2026-10-28T15:00:00Z"};
+  assert.deepEqual(carePageTiming({appointment, visit:{startedAt:"2026-10-28T13:55:00Z", endedAt:null}}),
+    {startedAt:"2026-10-28T13:55:00Z", endedAt:null});
+  assert.deepEqual(carePageTiming({appointment}), {startedAt:appointment.serviceStartedAt, endedAt:appointment.serviceEndedAt});
+});

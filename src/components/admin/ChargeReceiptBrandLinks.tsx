@@ -66,7 +66,7 @@ export function ChargeReceiptBrandLinks({
           }
           className="font-body inline-flex min-h-11 items-center justify-center text-sm text-[#756578] underline decoration-[#756578]/50 underline-offset-4 hover:text-[#635366] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#756578]/40 focus-visible:ring-offset-2"
         >
-          Report a Concern
+          File a Concern
         </Link>
       </div>
     </div>

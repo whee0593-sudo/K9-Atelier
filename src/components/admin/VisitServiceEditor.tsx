@@ -18,6 +18,7 @@ export function VisitServiceEditor({
   catalogGroups,
   disabled = false,
   saving = false,
+  dirty = false,
   notice = null,
   onChange,
   onSave,
@@ -26,6 +27,7 @@ export function VisitServiceEditor({
   catalogGroups: CatalogChargeGroup[];
   disabled?: boolean;
   saving?: boolean;
+  dirty?: boolean;
   notice?: string | null;
   onChange: (items: ChargeLineItem[]) => void;
   onSave: () => void;
@@ -38,7 +40,6 @@ export function VisitServiceEditor({
   }
 
   function addCatalogItem(item: CatalogChargeItem) {
-    if (item.suggestedAmount == null) return;
     const patch = catalogLinePatch(item);
     if (patch.amount == null) return;
     onChange([
@@ -63,6 +64,7 @@ export function VisitServiceEditor({
             className="rounded-2xl border border-lavender/40 bg-cream p-4"
           >
             {index === 0 && catalogGroups.length > 0 ? (
+              <fieldset disabled={disabled || saving}>
               <ServiceCategoryPicker
                 groups={catalogGroups}
                 selectedId={item.catalogId}
@@ -74,10 +76,11 @@ export function VisitServiceEditor({
                   updateItem(item.id, { ...patch, amount: patch.amount });
                 }}
               />
+              </fieldset>
             ) : (
               <input
                 value={item.label}
-                disabled={disabled || item.catalogId === "travel-fee"}
+                disabled={disabled || saving || item.catalogId === "travel-fee"}
                 onChange={(event) =>
                   updateItem(item.id, { label: event.target.value })
                 }
@@ -90,8 +93,9 @@ export function VisitServiceEditor({
                 <input
                   type="number"
                   min="0"
+                  max="5000"
                   step="0.01"
-                  disabled={disabled || item.catalogId === "travel-fee"}
+                  disabled={disabled || saving || item.catalogId === "travel-fee"}
                   value={item.amount}
                   onChange={(event) =>
                     updateItem(item.id, {
@@ -103,7 +107,7 @@ export function VisitServiceEditor({
               </label>
               <button
                 type="button"
-                disabled={disabled || lineItems.length <= 1 || item.catalogId === "travel-fee"}
+                disabled={disabled || saving || lineItems.length <= 1 || item.catalogId === "travel-fee"}
                 onClick={() =>
                   onChange(lineItems.filter((entry) => entry.id !== item.id))
                 }
@@ -119,7 +123,7 @@ export function VisitServiceEditor({
 
       <button
         type="button"
-        disabled={disabled}
+        disabled={disabled || saving}
         onClick={() =>
           onChange([
             ...lineItems,
@@ -139,7 +143,7 @@ export function VisitServiceEditor({
         Add a service
         <select
           defaultValue=""
-          disabled={disabled}
+          disabled={disabled || saving}
           onChange={(event) => {
             const next = catalog.find((item) => item.id === event.target.value);
             if (next) addCatalogItem(next);
@@ -168,14 +172,14 @@ export function VisitServiceEditor({
       </p>
       <p className="mt-1 text-center text-xs text-taupe">Estimated total</p>
 
-      <button
+      {dirty ? <button
         type="button"
         disabled={disabled || saving || lineItems.length === 0}
         onClick={onSave}
         className="mt-5 w-full rounded-sm border border-lavender/50 bg-white px-6 py-3 text-[11px] font-medium uppercase tracking-[0.16em] text-ink disabled:opacity-50"
       >
-        {saving ? "Saving…" : "Save services"}
-      </button>
+        {saving ? "Saving…" : "Save"}
+      </button> : null}
       {notice ? (
         <p className="mt-3 text-center text-sm text-taupe" role="status">
           {notice}

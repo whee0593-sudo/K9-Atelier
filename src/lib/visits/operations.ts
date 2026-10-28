@@ -16,3 +16,13 @@ export function operationalVisits(rows: AdminAppointmentRecord[]) {
     } };
   });
 }
+
+/** The care page follows the visit clock, even when a selected dog has finished. */
+export function carePageTiming(context: {
+  appointment: { serviceStartedAt: string | null; serviceEndedAt: string | null };
+  visit?: { startedAt?: string | null; endedAt?: string | null };
+}) {
+  return context.visit
+    ? { startedAt: context.visit.startedAt ?? null, endedAt: context.visit.endedAt ?? null }
+    : { startedAt: context.appointment.serviceStartedAt, endedAt: context.appointment.serviceEndedAt };
+}
