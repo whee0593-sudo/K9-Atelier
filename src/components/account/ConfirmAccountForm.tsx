@@ -4,24 +4,23 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
-import { formatPrice } from "@/lib/format-price";
 import {
   bookingFieldClass,
   bookingLabelClass,
   bookingPrimaryBtnClass,
 } from "@/components/booking/booking-ui";
-import { ConfirmAccountNextSteps } from "@/components/account/ConfirmAccountNextSteps";
 import { ConfirmAccountPayment } from "@/components/account/ConfirmAccountPayment";
-import { ACCOUNT_SETUP_PATH, rememberSetupPetId } from "@/lib/account-setup";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 import type { PaymentMethodRecord } from "@/lib/payments/types";
 import {
   preferredPaymentMethodId,
+  usableConfirmationCards,
   SECURE_APPOINTMENT_CARD_MESSAGE,
 } from "@/lib/staff/customer-confirm-status";
 
 type Preview = {
   appointment: AppointmentRecord;
+  appointments?: AppointmentRecord[];
   customer: { email: string; firstName: string };
   requiresPassword: boolean;
   paymentMethods?: PaymentMethodRecord[];
@@ -38,7 +37,7 @@ export function ConfirmAccountForm({ token, preview }: Props) {
     | { status: "loading" }
     | { status: "ready"; preview: Preview }
     | { status: "error"; message: string }
-    | { status: "done" }
+    | { status: "done"; appointmentDate: string }
   >(
     preview
       ? { status: "ready", preview }
@@ -75,6 +74,7 @@ export function ConfirmAccountForm({ token, preview }: Props) {
           status: "ready",
           preview: {
             appointment: body.appointment,
+            appointments: body.appointments,
             customer: body.customer,
             requiresPassword: body.requiresPassword,
             paymentMethods: body.paymentMethods ?? [],
@@ -101,7 +101,7 @@ export function ConfirmAccountForm({ token, preview }: Props) {
     setError(null);
     const appointment = loadState.preview.appointment;
 
-    const selectedPaymentMethodId = preferredPaymentMethodId(paymentMethods);
+    const selectedPaymentMethodId = preferredPaymentMethodId(usableConfirmationCards(paymentMethods));
     if (!selectedPaymentMethodId) {
       setError(SECURE_APPOINTMENT_CARD_MESSAGE);
       return;
@@ -122,8 +122,7 @@ export function ConfirmAccountForm({ token, preview }: Props) {
         setError("Please confirm this appointment and agree to the service policies.");
         return;
       }
-      rememberSetupPetId(appointment.petId);
-      setLoadState({ status: "done" });
+      setLoadState({ status: "done", appointmentDate: appointment.appointmentDate });
       return;
     }
 
@@ -159,21 +158,15 @@ export function ConfirmAccountForm({ token, preview }: Props) {
         throw new Error(body.error ?? "Could not confirm this appointment.");
       }
 
+      setLoadState({ status: "done", appointmentDate: appointment.appointmentDate });
       if (body.signedInWithPassword && body.email && password) {
-        const supabase = createClient();
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: body.email,
-          password,
-        });
-        if (signInError) {
-          rememberSetupPetId(appointment.petId);
-          window.location.replace(`/login?next=${ACCOUNT_SETUP_PATH}`);
-          return;
+        try {
+          const supabase = createClient();
+          await supabase.auth.signInWithPassword({ email: body.email, password });
+        } catch (signInError) {
+          console.error("Post-confirmation sign-in failed:", signInError);
         }
       }
-
-      rememberSetupPetId(appointment.petId);
-      window.location.replace(ACCOUNT_SETUP_PATH);
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -203,22 +196,15 @@ export function ConfirmAccountForm({ token, preview }: Props) {
   }
 
   if (loadState.status === "done") {
-    return (
-      <ConfirmAccountNextSteps
-        petId={preview?.appointment.petId}
-        petName={preview?.appointment.petName}
-      />
-    );
+    return <AppointmentConfirmationSuccess appointmentDate={loadState.appointmentDate} />;
   }
 
-  const { appointment, customer, requiresPassword } = loadState.preview;
+  const { appointment, requiresPassword } = loadState.preview;
+  const appointments = loadState.preview.appointments ?? [appointment];
 
   return (
     <form onSubmit={(event) => void handleSubmit(event)} className="mt-8 space-y-5 text-left">
       <div className="border border-gray-line/80 bg-ivory p-6">
-        <p className="font-body text-sm text-ink">
-          {appointment.serviceName} for {appointment.petName}
-        </p>
         <p className="font-body mt-2 text-sm text-taupe">
           {formatAppointmentDateLabel(appointment.appointmentDate)} ·{" "}
           {appointment.appointmentTime}
@@ -227,14 +213,13 @@ export function ConfirmAccountForm({ token, preview }: Props) {
           {appointment.addressStreet}, {appointment.addressCity},{" "}
           {appointment.addressState} {appointment.addressZip}
         </p>
-        {appointment.estimatedTotal != null ? (
-          <p className="font-body mt-2 text-sm text-taupe">
-            Estimated total from {formatPrice(appointment.estimatedTotal)}
-          </p>
-        ) : null}
-        <p className="font-body mt-4 text-xs text-taupe">
-          Account: {customer.email}
-        </p>
+        <ul className="mt-4 space-y-2">
+          {appointments.map(pet => (
+            <li key={pet.id} className="font-body text-sm text-ink">
+              {pet.petName} - {pet.serviceName}
+            </li>
+          ))}
+        </ul>
       </div>
 
       <ConfirmAccountPayment
@@ -292,7 +277,7 @@ export function ConfirmAccountForm({ token, preview }: Props) {
           required
         />
         I confirm this appointment and agree to K9 Atelier’s cancellation,
-        payment, photo, and text-message policies. I will not be charged now.
+        payment, photo, and text-message policies.
       </label>
 
       {error ? (
@@ -301,9 +286,16 @@ export function ConfirmAccountForm({ token, preview }: Props) {
         </p>
       ) : null}
 
-      <button type="submit" disabled={submitting} className={bookingPrimaryBtnClass}>
-        {submitting ? "Confirming…" : "Review and Confirm"}
+      <button type="submit" disabled={submitting || usableConfirmationCards(paymentMethods).length === 0} className={bookingPrimaryBtnClass}>
+        {submitting ? "Confirming…" : "Confirm"}
       </button>
     </form>
   );
+}
+
+export function AppointmentConfirmationSuccess({ appointmentDate }: { appointmentDate: string }) {
+  return <section className="mt-8 space-y-4 text-center" role="status">
+    <h2 className="font-display text-3xl text-ink">Your appointment is confirmed.</h2>
+    <p className="font-body text-base text-taupe">Thank you, see you on {formatAppointmentDateLabel(appointmentDate)}!</p>
+  </section>;
 }

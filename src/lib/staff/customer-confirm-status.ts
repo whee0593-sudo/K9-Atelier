@@ -42,3 +42,13 @@ export function preferredPaymentMethodId(
 ) {
   return methods.find((method) => method.isDefault)?.id ?? methods[0]?.id ?? null;
 }
+
+/** Expiry is inclusive through the card's expiry month in the service timezone. */
+export function usableConfirmationCards<T extends { id: string; last4: string; expMonth: number; expYear: number }>(methods: T[], now = new Date()): T[] {
+  const parts = new Intl.DateTimeFormat("en-US", {timeZone:"America/New_York",year:"numeric",month:"numeric"}).formatToParts(now);
+  const year = Number(parts.find(part => part.type === "year")?.value);
+  const month = Number(parts.find(part => part.type === "month")?.value);
+  return methods.filter(method => Boolean(method.id) && /^\d{4}$/.test(method.last4)
+    && Number.isInteger(method.expMonth) && method.expMonth >= 1 && method.expMonth <= 12
+    && Number.isInteger(method.expYear) && (method.expYear > year || (method.expYear === year && method.expMonth >= month)));
+}

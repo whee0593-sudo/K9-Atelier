@@ -7,7 +7,6 @@ import {
   hourlyAmountFromTimes,
 } from "@/lib/charges/hourly";
 import { formatChargeMoney } from "@/lib/charges/money";
-import { CheckoutTextToggle } from "@/components/admin/CheckoutTextToggle";
 
 export function HourlyVisitTimer({
   appointmentId,
@@ -32,7 +31,6 @@ export function HourlyVisitTimer({
   const [now, setNow] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sendCheckoutText, setSendCheckoutText] = useState(true);
 
   useEffect(() => {
     if (!startedAt || endedAt) return;
@@ -62,7 +60,8 @@ export function HourlyVisitTimer({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action,
-            sendCheckoutText: action === "check_out" ? sendCheckoutText : undefined,
+            scope: "pet",
+            sendCheckoutText: false,
           }),
         },
       );
@@ -106,7 +105,7 @@ export function HourlyVisitTimer({
         </p>
       ) : (
         <p className="mt-1 text-xs text-taupe">
-          Check in when you start. {formatChargeMoney(rate)}/hr
+          Start the timer when this dog’s service begins. {formatChargeMoney(rate)}/hr
         </p>
       )}
       <div className="mt-3 flex flex-col items-start gap-3">
@@ -117,23 +116,17 @@ export function HourlyVisitTimer({
             onClick={() => void setTiming("check_in")}
             className="rounded-xl bg-deep-lavender px-4 py-2 text-sm font-medium text-ivory disabled:opacity-50"
           >
-            {endedAt ? "Start again" : "Check in"}
+            {endedAt ? "Restart service timer" : "Start service timer"}
           </button>
         ) : (
           <>
-            <CheckoutTextToggle
-              checked={sendCheckoutText}
-              onChange={setSendCheckoutText}
-              disabled={busy}
-              className="justify-start"
-            />
             <button
               type="button"
               disabled={busy}
               onClick={() => void setTiming("check_out")}
               className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
-              Check out
+              Stop service timer
             </button>
           </>
         )}

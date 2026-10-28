@@ -884,8 +884,8 @@ export function AdminCalendar({
                 ) : null}
                 <p className="mt-2 text-sm text-gold-dark">
                   {formatStaffVisitTiming(
-                    appointment.serviceStartedAt,
-                    appointment.serviceEndedAt,
+                    appointment.visitStartedAt ?? appointment.serviceStartedAt,
+                    appointment.visitEndedAt ?? appointment.serviceEndedAt,
                     appointment.timezone,
                   )}
                 </p>

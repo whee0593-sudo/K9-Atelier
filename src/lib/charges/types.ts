@@ -63,6 +63,8 @@ export type CollectContext = {
   /** Missing means suggested grooming prices were not calculated. */
   petWeightStatus: "known" | "missing";
   lineItems: ChargeLineItem[];
+  /** Selected dog’s editable care, separate from the whole household bill. */
+  careLineItems?: ChargeLineItem[];
   catalog: CatalogChargeItem[];
   catalogGroups: CatalogChargeGroup[];
   methods: PaymentMethodRecord[];
@@ -77,6 +79,11 @@ export type CollectContext = {
     serviceDate: string;
     arrivalLabel: string;
     servicedDogCount: number;
+    startedAt?: string | null;
+    endedAt?: string | null;
+    petNames?: string[];
+    pets?: Array<{ id: string; petName: string; serviceName: string }>;
+    hourlyPets?: Array<{ id: string; petName: string; rate: number; startedAt: string | null; endedAt: string | null }>;
     blockedMessage: string | null;
     paymentStatus: VisitPaymentStatus;
   };

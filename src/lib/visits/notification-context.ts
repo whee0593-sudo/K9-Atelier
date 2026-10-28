@@ -15,7 +15,7 @@ export async function loadVisitNoticePets(
   const { data, error } = await admin
     .from("appointments")
     .select(
-      "id, status, service_name, service_ended_at, visit_sequence, pets ( name, sex )",
+      "id, status, service_name, service_ended_at, visit_sequence, visits ( service_ended_at ), pets ( name, sex )",
     )
     .eq("visit_id", visitId)
     .order("visit_sequence", { ascending: true });
@@ -34,7 +34,7 @@ export async function loadVisitNoticePets(
       petName: pet?.name?.trim() || "Dog",
       serviceName: (row.service_name as string | null)?.trim() || "Service",
       status: row.status as string,
-      serviceEndedAt: (row.service_ended_at as string | null) ?? null,
+      serviceEndedAt: (row.service_ended_at as string | null) ?? firstRelation(row.visits as { service_ended_at: string | null } | { service_ended_at: string | null }[] | null)?.service_ended_at ?? null,
       sex: pet?.sex ?? null,
     };
   });

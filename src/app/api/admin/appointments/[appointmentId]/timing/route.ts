@@ -12,6 +12,7 @@ export async function POST(
     const appointmentId = validateAppointmentId(rawId);
     const body = (await request.json()) as {
       action?: string;
+      scope?: "visit" | "pet";
       sendCheckoutText?: boolean;
     };
     if (body.action !== "check_in" && body.action !== "check_out") {
@@ -20,10 +21,11 @@ export async function POST(
 
     const result = await setAppointmentVisitTiming(appointmentId, body.action, {
       sendCheckoutText: body.sendCheckoutText !== false,
+      scope: body.scope === "pet" ? "pet" : "visit",
     });
     if ("error" in result) {
       if (result.error === "conflict") {
-        return staffJsonError("Check in before you check out.", 409);
+        return staffJsonError("Check in before checking out. Finish any hourly service timers before completing the visit.", 409);
       }
       return mapStaffServiceError(result.error);
     }

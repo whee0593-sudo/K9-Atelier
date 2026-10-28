@@ -106,6 +106,8 @@ export function mapAppointmentRowToAdminRecord(
       typeof pet?.weight_lbs === "number" ? pet.weight_lbs : null,
     reminderSmsSentAt: row.reminder_sms_sent_at ?? null,
     enRouteSmsSentAt: row.en_route_sms_sent_at ?? null,
+    visitStartedAt: (Array.isArray(row.visits) ? row.visits[0] : row.visits)?.service_started_at ?? null,
+    visitEndedAt: (Array.isArray(row.visits) ? row.visits[0] : row.visits)?.service_ended_at ?? null,
     serviceStartedAt: row.service_started_at ?? null,
     serviceEndedAt: row.service_ended_at ?? null,
   };

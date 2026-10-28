@@ -134,6 +134,7 @@ const ADMIN_APPOINTMENT_SELECT = `
     "pets ( name, breed )",
     "pets ( name, breed, weight_lbs )",
   )},
+  visits ( service_started_at, service_ended_at ),
   profiles ( email, first_name, last_name, phone )
 `;
 
@@ -771,7 +772,7 @@ export async function sendAppointmentEnRouteNotification(
 export async function setAppointmentVisitTiming(
   appointmentId: string,
   action: "check_in" | "check_out",
-  options?: { sendCheckoutText?: boolean },
+  options?: { sendCheckoutText?: boolean; scope?: "visit" | "pet" },
 ): Promise<
   | { startedAt: string | null; endedAt: string | null }
   | {
@@ -791,7 +792,7 @@ export async function setAppointmentVisitTiming(
   const admin = createAdminClient();
   const { data: row, error } = await admin
     .from("appointments")
-    .select("id, service_started_at, service_ended_at")
+    .select("id, visit_id, status, service_started_at, service_ended_at, visits ( service_started_at, service_ended_at )")
     .eq("id", appointmentId)
     .maybeSingle();
 
@@ -799,8 +800,32 @@ export async function setAppointmentVisitTiming(
     console.error("setAppointmentVisitTiming load failed:", error.message);
     return { error: "server" };
   }
-  if (!row) return { error: "not_found" };
+  if (!row || row.status === "cancelled") return { error: "not_found" };
 
+  if (row.visit_id && options?.scope !== "pet") {
+    const { allBookableServices } = await import("@/lib/services");
+    const result = await admin.rpc("staff_set_visit_lifecycle", {
+      p_visit_id: row.visit_id, p_action: action,
+      p_hourly_service_ids: allBookableServices().filter(service => service.pricingType === "hourly").map(service => service.id),
+    });
+    if (result.error) {
+      console.error("setAppointmentVisitTiming visit failed:", result.error.message);
+      return { error: result.error.code === "P0001" ? "conflict" : "server" };
+    }
+    const timing = result.data as { startedAt: string | null; endedAt: string | null };
+    if (action === "check_out" && options?.sendCheckoutText !== false) {
+      try {
+        const { sendCheckoutReadySms } = await import("@/lib/sms/checkout");
+        await sendCheckoutReadySms(appointmentId);
+      } catch (error) { console.error("checkout ready SMS failed:", error); }
+    }
+    return timing;
+  }
+
+  const visitTiming = Array.isArray(row.visits) ? row.visits[0] : row.visits;
+  if (row.visit_id && options?.scope === "pet" && (!visitTiming?.service_started_at || visitTiming?.service_ended_at)) {
+    return { error: "conflict" };
+  }
   const now = new Date().toISOString();
   if (action === "check_out" && !row.service_started_at) {
     return { error: "conflict" };
@@ -829,6 +854,7 @@ export async function setAppointmentVisitTiming(
   if (
     action === "check_out" &&
     !row.service_ended_at &&
+    options?.scope !== "pet" &&
     options?.sendCheckoutText !== false
   ) {
     try {

@@ -20,6 +20,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import {
   preferredPaymentMethodId,
+  usableConfirmationCards,
   SECURE_APPOINTMENT_CARD_MESSAGE,
 } from "@/lib/staff/customer-confirm-status";
 import {
@@ -32,6 +33,7 @@ const APPOINTMENT_SELECT = `
   customer_id,
   pet_id,
   visit_id,
+  visit_sequence,
   service_id,
   service_name,
   add_on_ids,
@@ -64,6 +66,7 @@ const APPOINTMENT_SELECT = `
 
 export type CustomerConfirmPreview = {
   appointment: AppointmentRecord;
+  appointments: AppointmentRecord[];
   customer: {
     email: string;
     firstName: string;
@@ -85,6 +88,8 @@ async function loadConfirmAppointment(token: string) {
     .from("appointments")
     .select(APPOINTMENT_SELECT)
     .eq("customer_confirm_token_hash", hash)
+    .neq("status", "cancelled")
+    .order("visit_sequence", { ascending: true })
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
@@ -119,7 +124,20 @@ async function loadConfirmAppointment(token: string) {
     .eq("id", row.customer_id)
     .maybeSingle();
 
-  const appointment = mapAppointmentRowToRecord(row);
+  let appointmentRows = [row];
+  if (row.visit_id) {
+    const siblings = await admin.from("appointments").select(APPOINTMENT_SELECT)
+      .eq("visit_id", row.visit_id).eq("customer_id", row.customer_id)
+      .neq("status", "cancelled").order("visit_sequence", { ascending: true })
+      .order("scheduled_start", { ascending: true }).order("id", { ascending: true });
+    if (siblings.error || !siblings.data?.length) {
+      console.error("loadConfirmAppointment visit failed:", siblings.error?.message);
+      return { ok: false as const, error: "server" as const };
+    }
+    appointmentRows = siblings.data as AppointmentRow[];
+  }
+  const appointments = appointmentRows.map(mapAppointmentRowToRecord);
+  const appointment = appointments[0]!;
   const requiresPassword = authUser.user.app_metadata?.unclaimed === true;
   const paymentMethods = await listPaymentMethodsForCustomer(row.customer_id);
   if (!paymentMethods) return { ok: false as const, error: "server" as const };
@@ -129,9 +147,10 @@ async function loadConfirmAppointment(token: string) {
     admin,
     row,
     appointment,
+    appointments,
     user: authUser.user,
     requiresPassword,
-    paymentMethods,
+    paymentMethods: usableConfirmationCards(paymentMethods),
     email: profile?.email ?? authUser.user.email ?? "",
     firstName: profile?.first_name ?? "",
   };
@@ -149,6 +168,7 @@ export async function getCustomerConfirmPreview(
   return {
     preview: {
       appointment: result.appointment,
+      appointments: result.appointments,
       customer: {
         email: result.email,
         firstName: result.firstName,

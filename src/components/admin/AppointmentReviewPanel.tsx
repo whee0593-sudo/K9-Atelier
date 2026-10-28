@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { operationalVisits } from "@/lib/visits/operations";
 import React, { useCallback, useEffect, useState } from "react";
 import { AdminCalendar } from "@/components/admin/AdminCalendar";
 import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
@@ -127,7 +128,7 @@ export function AppointmentReviewPanel({
 
       setTodayAppointments((current) =>
         current.map((appointment) =>
-          appointment.id === appointmentId
+          appointment.id === appointmentId || Boolean(appointment.visitId && appointment.visitId === current.find(row => row.id === appointmentId)?.visitId)
             ? { ...appointment, enRouteSmsSentAt: new Date().toISOString() }
             : appointment,
         ),
@@ -261,7 +262,7 @@ export function AppointmentReviewPanel({
           </div>
         ) : (
           <ul className="mt-4 space-y-4">
-            {todayAppointments.map((appointment, index) => {
+            {operationalVisits(todayAppointments).map(({ appointment, pets }, index) => {
               const busy = busyId === appointment.id;
               const customerLabel =
                 appointment.customerName ??
@@ -277,8 +278,8 @@ export function AppointmentReviewPanel({
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <h3 className="font-medium text-gold-dark">
-                        {appointment.petName}
-                        {appointment.petBreed ? (
+                        {pets.length > 1 ? customerLabel : appointment.petName}
+                        {pets.length === 1 && appointment.petBreed ? (
                           <span className="font-normal text-text-muted">
                             {" "}
                             · {appointment.petBreed}
@@ -312,7 +313,7 @@ export function AppointmentReviewPanel({
                     </div>
                   </div>
                   <p className="mt-4 text-sm text-text">
-                    {appointment.serviceName}
+                    {pets.map(pet => `${pet.petName} — ${pet.serviceName}`).join(" · ")}
                   </p>
                   <p className="mt-1 text-sm text-text-muted">
                     {formatServiceAddress({
@@ -344,6 +345,7 @@ export function AppointmentReviewPanel({
                     </button>
                     <AppointmentActionLinks
                       appointment={appointment}
+                      preview={preview}
                       paidKinds={paidKinds[appointment.id] ?? []}
                       onChanged={() => void loadAppointments({ silent: true })}
                     />
