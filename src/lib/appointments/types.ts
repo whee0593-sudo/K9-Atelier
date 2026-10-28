@@ -84,6 +84,8 @@ export type AdminAppointmentRecord = AppointmentRecord & {
   customerPhone: string | null;
   reminderSmsSentAt: string | null;
   enRouteSmsSentAt: string | null;
+  visitStartedAt?: string | null;
+  visitEndedAt?: string | null;
   serviceStartedAt: string | null;
   serviceEndedAt: string | null;
   /** Existing pet weight, when the appointment query joined pets.weight_lbs. */
@@ -129,6 +131,7 @@ export type AppointmentRow = {
   created_at: string;
   reminder_sms_sent_at?: string | null;
   en_route_sms_sent_at?: string | null;
+  visits?: { service_started_at: string | null; service_ended_at: string | null } | { service_started_at: string | null; service_ended_at: string | null }[] | null;
   service_started_at?: string | null;
   service_ended_at?: string | null;
   followup_sent_at?: string | null;

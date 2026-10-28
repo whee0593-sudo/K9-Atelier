@@ -1,3 +1,4 @@
+import { hourlyRateForCatalogId } from "@/lib/charges/hourly";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStaffSession } from "@/lib/staff/auth";
 import { visitTravelLinesMatch } from "@/lib/visits/travel-fee";
@@ -162,7 +163,7 @@ export async function getCollectContext(
 
   const { data: appointmentRow } = await admin
     .from("appointments")
-    .select("payment_method_id")
+    .select("payment_method_id, service_price")
     .eq("id", appointmentId)
     .maybeSingle();
 
@@ -227,6 +228,9 @@ export async function getCollectContext(
       petWeightLbs: weightLbs,
       petWeightStatus,
       lineItems: defaultItems,
+      careLineItems: readStoredVisitLineItems((timing?.add_on_options as Record<string, unknown> | null) ?? null)
+        ?? buildDefaultLineItems(appointment, weightLbs).map((item) => item.catalogId === appointment.serviceId && appointmentRow?.service_price != null
+          ? { ...item, amount: Number(appointmentRow.service_price) } : item),
       catalog,
       catalogGroups: catalogChargeGroups(weightLbs),
       methods: methods.methods,
@@ -243,6 +247,11 @@ export async function getCollectContext(
               serviceDate: visitCollect.bill.serviceDate,
               arrivalLabel: visitCollect.bill.arrivalLabel,
               servicedDogCount: visitCollect.bill.servicedDogCount,
+              startedAt: visitCollect.startedAt,
+              endedAt: visitCollect.endedAt,
+              petNames: visitCollect.petNames,
+              pets: visitCollect.pets,
+              hourlyPets: visitCollect.hourlyPets,
               blockedMessage:
                 visitDecision === "legacy_paid"
                   ? "This visit already has a payment recorded on one dog. That receipt stays as it is."
@@ -276,13 +285,18 @@ async function loadVisitCollect(
   | {
       bill: ReturnType<typeof buildVisitBill>;
       appointmentIds: string[];
+      startedAt: string | null;
+      endedAt: string | null;
+      petNames: string[];
+      pets: NonNullable<NonNullable<CollectContext["visit"]>["pets"]>;
+      hourlyPets: NonNullable<NonNullable<CollectContext["visit"]>["hourlyPets"]>;
     }
   | { error: "not_found" | "server" }
 > {
   const { data: visit, error: visitError } = await admin
     .from("visits")
     .select(
-      "id, travel_fee, appointment_time, service_date, profiles ( first_name, last_name )",
+      "id, travel_fee, appointment_time, service_date, service_started_at, service_ended_at, profiles ( first_name, last_name )",
     )
     .eq("id", visitId)
     .maybeSingle();
@@ -295,7 +309,7 @@ async function loadVisitCollect(
   const { data: rows, error: rowError } = await admin
     .from("appointments")
     .select(
-      "id, status, service_name, service_id, service_price, service_ended_at, visit_sequence, add_on_ids, add_on_options, pets ( name, weight_lbs )",
+      "id, status, service_name, service_id, service_price, service_started_at, service_ended_at, visit_sequence, add_on_ids, add_on_options, pets ( name, weight_lbs )",
     )
     .eq("visit_id", visitId)
     .order("visit_sequence", { ascending: true });
@@ -326,7 +340,7 @@ async function loadVisitCollect(
       serviceId: String(row.service_id ?? ""),
       servicePrice:
         row.service_price == null ? null : Number(row.service_price),
-      serviceEndedAt: (row.service_ended_at as string | null) ?? null,
+      serviceEndedAt: (row.service_ended_at as string | null) ?? (hourlyRateForCatalogId(String(row.service_id)) ? null : (visit.service_ended_at as string | null)) ?? null,
       addOnIds: (row.add_on_ids as string[] | null) ?? [],
       addOnOptions:
         (row.add_on_options as Record<string, unknown> | null) ?? null,
@@ -346,6 +360,16 @@ async function loadVisitCollect(
   return {
     bill,
     appointmentIds: pets.map((pet) => pet.appointmentId),
+    startedAt: (visit.service_started_at as string | null) ?? null,
+    endedAt: (visit.service_ended_at as string | null) ?? null,
+    petNames: pets.filter(pet => pet.status !== "cancelled").map(pet => pet.petName),
+    pets: pets.filter(pet => pet.status !== "cancelled").map(pet => ({ id: pet.appointmentId, petName: pet.petName, serviceName: pet.serviceName })),
+    hourlyPets: (rows ?? []).flatMap(row => {
+      const rate = hourlyRateForCatalogId(String(row.service_id));
+      if (!rate || row.status === "cancelled") return [];
+      return [{ id: String(row.id), petName: pets.find(pet => pet.appointmentId === row.id)?.petName ?? "Dog", rate,
+        startedAt: (row.service_started_at as string | null) ?? null, endedAt: (row.service_ended_at as string | null) ?? null }];
+    }),
   };
 }
 

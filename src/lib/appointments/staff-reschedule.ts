@@ -75,6 +75,7 @@ const STAFF_RESCHEDULE_SELECT = `
   service_started_at,
   service_ended_at,
   pets ( name, breed, weight_lbs ),
+  visits ( service_started_at, service_ended_at ),
   profiles ( email, first_name, last_name, phone )
 `;
 
@@ -174,7 +175,8 @@ function assertOpenForReschedule(
 }
 
 function isCompletedVisit(row: LoadedAppointment) {
-  return Boolean(row.service_started_at || row.service_ended_at);
+  const visit = Array.isArray(row.visits) ? row.visits[0] : row.visits;
+  return Boolean(visit?.service_started_at || visit?.service_ended_at || row.service_started_at || row.service_ended_at);
 }
 
 export async function listStaffAppointmentAvailability(

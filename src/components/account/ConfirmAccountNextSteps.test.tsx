@@ -64,9 +64,9 @@ describe("ConfirmAccountForm payment gate", () => {
         }}
       />,
     );
-    assert.match(html, /Add a card to secure this appointment/);
+    assert.match(html.replace(/<[^>]+>/g, ""), /Add a card to secure this appointment/);
     assert.match(html, /You will not be charged now/);
     assert.match(html, /Add a card/);
-    assert.match(html, /Review and Confirm/);
+    assert.match(html, />Confirm<\/button>/);
   });
 });

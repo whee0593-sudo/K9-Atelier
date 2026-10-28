@@ -20,7 +20,7 @@ export function AppointmentActionLinks({
   onCancelled?: () => void;
   onChanged?: () => void;
 }) {
-  const completed = Boolean(appointment.serviceEndedAt);
+  const completed = Boolean(appointment.visitEndedAt ?? appointment.serviceEndedAt);
   const paidService = paidKinds.includes("service");
   const paidNoShow = paidKinds.includes("no_show");
   const collectBase = preview
@@ -48,7 +48,7 @@ export function AppointmentActionLinks({
               href={arriveHref}
               className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-cream"
             >
-              {appointment.serviceStartedAt ? "View check-in" : "Check in"}
+              {(appointment.visitStartedAt ?? appointment.serviceStartedAt) ? "View check-in" : "Check in"}
             </Link>
           )}
           <Link

@@ -8,6 +8,8 @@ import { AppointmentReviewPanel } from "@/components/admin/AppointmentReviewPane
 import { OnTheWayPreview } from "@/components/admin/OnTheWayPreview";
 import { buildPreviewOnTheWayAppointments } from "@/lib/appointments/calendar-preview";
 
+Object.assign(globalThis, { React });
+
 const testRouter: AppRouterInstance = {
   back() {},
   forward() {},
@@ -74,4 +76,20 @@ describe("on-the-way preview", () => {
     assert.match(html, /Pending Review/);
     assert.match(html, /Text: on the way/);
   });
+});
+
+it("shows one household stop and one set of actions for sibling dogs", () => {
+  const first = {...buildPreviewOnTheWayAppointments()[0]!, id:"v", visitId:"household-visit", petName:"Valentino"};
+  const second = {...first, id:"s", petName:"Stella", scheduledStart:(first.scheduledStart ?? 540)+90};
+  const html = renderReviewPanel(<AppointmentReviewPanel preview previewToday={[first, second]} />);
+  assert.match(html, /Valentino/); assert.match(html, /Stella/);
+  assert.equal((html.match(/Text: on the way/g) ?? []).length, 1);
+  assert.equal((html.match(/>Check in<\/a>/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /Stop 2/);
+});
+it("keeps separate visits for the same household separate", () => {
+  const first = {...buildPreviewOnTheWayAppointments()[0]!, id:"a", visitId:"morning"};
+  const second = {...first, id:"b", visitId:"afternoon"};
+  const html = renderReviewPanel(<AppointmentReviewPanel preview previewToday={[first, second]} />);
+  assert.equal((html.match(/Text: on the way/g) ?? []).length, 2);
 });

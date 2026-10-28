@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { ConfirmAccountForm } from "@/components/account/ConfirmAccountForm";
+import { bookingSecondaryBtnClass } from "@/components/booking/booking-ui";
+import { ACCOUNT_SETUP_PATH } from "@/lib/account-setup";
 import { Container } from "@/components/luxury/Container";
 
 type Props = {
@@ -13,16 +15,7 @@ export default async function ConfirmAccountPage({ searchParams }: Props) {
   return (
     <Container className="py-14 md:py-20">
       <div className="mx-auto max-w-xl">
-        <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
-          Appointment
-        </p>
-        <h1 className="font-display mt-4 text-4xl text-ink md:text-5xl">
-          Confirm Your Appointment
-        </h1>
-        <p className="font-body mt-6 text-sm leading-relaxed text-taupe">
-          Review the reservation K9 Atelier made for you. Add a card on this
-          page to secure the appointment. Confirming does not charge your card.
-        </p>
+        <h1 className="sr-only">Confirm your appointment</h1>
         {trimmed ? (
           <ConfirmAccountForm token={trimmed} />
         ) : (
@@ -31,11 +24,12 @@ export default async function ConfirmAccountPage({ searchParams }: Props) {
             email or text, or contact penny@k9atelier.com
           </p>
         )}
+        <p className="font-body mt-8 text-center text-sm text-taupe">Need to change something?</p>
         <Link
-          href="/"
-          className="font-body mt-10 inline-block text-[10px] font-medium uppercase tracking-[0.14em] text-taupe transition hover:text-ink"
+          href={ACCOUNT_SETUP_PATH}
+          className={`${bookingSecondaryBtnClass} mt-3 w-full`}
         >
-          Return Home
+          Go to my profile
         </Link>
       </div>
     </Container>

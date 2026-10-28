@@ -1,4 +1,5 @@
 "use client";
+import { HourlyVisitTimer } from "@/components/admin/HourlyVisitTimer";
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -24,6 +25,7 @@ export function VisitCheckIn({
   appointmentId: string;
   preview?: boolean;
 }) {
+  const [selectedPetId, setSelectedPetId] = useState(appointmentId);
   const [context, setContext] = useState<CollectContext | null>(null);
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [endedAt, setEndedAt] = useState<string | null>(null);
@@ -43,14 +45,14 @@ export function VisitCheckIn({
     if (preview) {
       const body = buildPreviewCollectContext();
       setContext(body);
-      setLineItems(body.lineItems);
-      setStartedAt(body.appointment.serviceStartedAt);
-      setEndedAt(body.appointment.serviceEndedAt);
+      setLineItems(body.careLineItems ?? body.lineItems);
+      setStartedAt(body.visit?.startedAt ?? body.appointment.serviceStartedAt);
+      setEndedAt(body.visit?.endedAt ?? body.appointment.serviceEndedAt);
       setLoading(false);
       return;
     }
     try {
-      const response = await fetch(`/api/admin/collect/${appointmentId}`, {
+      const response = await fetch(`/api/admin/collect/${selectedPetId}`, {
         credentials: "include",
       });
       const body = (await response.json()) as CollectContext & { error?: string };
@@ -59,15 +61,15 @@ export function VisitCheckIn({
         return;
       }
       setContext(body);
-      setLineItems(body.lineItems);
-      setStartedAt(body.appointment.serviceStartedAt);
-      setEndedAt(body.appointment.serviceEndedAt);
+      setLineItems(body.careLineItems ?? body.lineItems);
+      setStartedAt(body.visit?.startedAt ?? body.appointment.serviceStartedAt);
+      setEndedAt(body.visit?.endedAt ?? body.appointment.serviceEndedAt);
     } catch {
       setError("Could not load this appointment.");
     } finally {
       setLoading(false);
     }
-  }, [appointmentId, preview]);
+  }, [selectedPetId, preview]);
 
   useEffect(() => {
     void load();
@@ -151,7 +153,7 @@ export function VisitCheckIn({
     }
     try {
       const response = await fetch(
-        `/api/admin/appointments/${appointmentId}/services`,
+        `/api/admin/appointments/${selectedPetId}/services`,
         {
           method: "POST",
           credentials: "include",
@@ -241,7 +243,7 @@ export function VisitCheckIn({
       <p className="font-body text-[10px] font-medium uppercase tracking-[0.18em] text-taupe">
         Arrived
       </p>
-      <h1 className="font-display mt-4 text-5xl text-ink">{appointment.petName}</h1>
+      <h1 className="font-display mt-4 text-5xl text-ink">{context.visit?.petNames?.join(" & ") || appointment.petName}</h1>
       <p className="font-body mt-3 text-base text-taupe">
         {appointment.customerName ?? appointment.customerEmail}
       </p>
@@ -267,6 +269,16 @@ export function VisitCheckIn({
         {appointment.appointmentTime}
       </p>
 
+      {context.visit?.hourlyPets?.map(pet => (
+        <section key={pet.id} className="mt-6 rounded-xl border border-lavender/30 p-4">
+          <h2 className="font-medium text-ink">{pet.petName} · Service timer</h2>
+          <HourlyVisitTimer appointmentId={pet.id} preview={preview} rate={pet.rate}
+            startedAt={pet.startedAt} endedAt={pet.endedAt} timeZone={timeZone}
+            onTimesChange={timing => setContext(current => current?.visit ? { ...current, visit: { ...current.visit,
+              hourlyPets: current.visit.hourlyPets?.map(row => row.id === pet.id ? {...row, ...timing} : row),
+            }} : current)} />
+        </section>
+      ))}
       <div className="mt-10">
         {!startedAt ? (
           <>
@@ -290,6 +302,16 @@ export function VisitCheckIn({
             <p className="font-body mt-3 text-sm text-taupe">
               In progress · {formatVisitDuration(startedAt, null, now)}
             </p>
+            {(context.visit?.pets?.length ?? 0) > 1 ? (
+              <label className="mt-6 block text-left text-sm text-taupe">
+                Care for
+                <select value={selectedPetId} disabled={busy || savingServices}
+                  onChange={event => { setSelectedPetId(event.target.value); setServicesNotice(null); setConfirmAddOnCharge(null); }}
+                  className="mt-2 w-full rounded-xl border border-lavender/40 bg-white px-3 py-2 text-ink">
+                  {context.visit?.pets?.map(pet => <option key={pet.id} value={pet.id}>{pet.petName} — {pet.serviceName}</option>)}
+                </select>
+              </label>
+            ) : null}
             <VisitServiceEditor
               lineItems={lineItems}
               catalogGroups={context.catalogGroups ?? []}

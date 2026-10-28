@@ -55,7 +55,7 @@ export async function listAdminCalendarMonth(
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("appointments")
-    .select("appointment_date")
+    .select("id, visit_id, appointment_date")
     .gte("appointment_date", fromDate)
     .lte("appointment_date", toDate)
     .neq("status", "cancelled");
@@ -66,9 +66,13 @@ export async function listAdminCalendarMonth(
   }
 
   const counts = new Map<string, number>();
+  const visits = new Map<string, Set<string>>();
   for (const row of data ?? []) {
     const date = row.appointment_date as string;
     counts.set(date, (counts.get(date) ?? 0) + 1);
+    const ids = visits.get(date) ?? new Set<string>();
+    ids.add(row.visit_id ? `visit:${row.visit_id}` : `appointment:${row.id}`);
+    visits.set(date, ids);
   }
 
   const [closuresResult, blocksResult] = await Promise.all([
@@ -88,7 +92,7 @@ export async function listAdminCalendarMonth(
     const blocks = blocksByDate.get(date) ?? [];
     days.push({
       date,
-      appointmentCount,
+      appointmentCount: visits.get(date)?.size ?? 0,
       isPast: date < today,
       isFull: appointmentCount >= maxPerDay,
       isToday: date === today,
