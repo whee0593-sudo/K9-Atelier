@@ -214,7 +214,7 @@ export function AboutStory() {
               <p className="font-display mt-5 text-2xl text-ink italic">Founder & Groomer, K9 Atelier</p>
               <div className={`${proseClass} mt-6`}>
                 <p>Hi, I’m Penny. I’ve been grooming professionally since 2010, and my favorite part is getting to know the little personality behind every face.</p>
-                <p>K9 Atelier welcomes private clients for personal, one-on-one care. Your pup sees the same familiar groomer each time, helping us build trust and a comfortable routine together.</p>
+                <p>K9 Atelier Mobile Pet Spa welcomes private clients for personal, one-on-one care. Your pup sees the same familiar groomer each time, helping us build trust and a comfortable routine together.</p>
                 <p>With a background in award-winning show grooming, I bring a practiced eye and a gentle touch to every visit. I’m proud to serve our local communities and care for the dogs and families who call them home, visit after visit.</p>
               </div>
               <Link href="/services" className={textLinkClass}>Explore Our Services →</Link>
