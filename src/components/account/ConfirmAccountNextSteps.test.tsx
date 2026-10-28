@@ -5,16 +5,37 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { ConfirmAccountForm } from "@/components/account/ConfirmAccountForm";
 import { ConfirmAccountNextSteps } from "@/components/account/ConfirmAccountNextSteps";
 
+import { AccountSetupPaymentStatus } from "./AccountSetupChecklist";
+import { AccountSetupNotice } from "./AccountSetupNotice";
+
+describe("payment setup states", () => {
+  for (const hasCard of [true, false, null]) {
+    it(`renders only the appropriate card state: ${hasCard}`, () => {
+      const html = renderToStaticMarkup(<AccountSetupPaymentStatus hasCard={hasCard} error={null} />);
+      assert.doesNotMatch(html, /rabies|vaccination|Step [12]/i);
+      if (hasCard === true) { assert.match(html, /Your card is on file/); assert.doesNotMatch(html, /Add a card/); }
+      else if (hasCard === false) { assert.match(html, /Add a card/); assert.doesNotMatch(html, /Your card is on file/); }
+      else { assert.match(html, /Checking saved/); assert.doesNotMatch(html, /Add a card|Your card is on file/); }
+    });
+  }
+  it("does not claim a missing card when checking fails", () => {
+    const html = renderToStaticMarkup(<AccountSetupPaymentStatus hasCard={null} error="Could not check saved cards." />);
+    assert.match(html, /role="alert"/); assert.match(html, /Review payment methods/); assert.doesNotMatch(html, /Add a card|Your card is on file/);
+  });
+  it("does not request vaccination details in setup notices", () => {
+    for (const step of ["pets", "payment"] as const) assert.doesNotMatch(renderToStaticMarkup(<AccountSetupNotice step={step} />), /rabies|vaccination/i);
+  });
+});
+
 describe("ConfirmAccountNextSteps", () => {
-  it("sends confirmed customers to rabies status and payment", () => {
+  it("offers payment management without vaccination tasks", () => {
     const html = renderToStaticMarkup(
       <ConfirmAccountNextSteps petId="pet-1" petName="Bella" />,
     );
-    assert.match(html, /Rabies vaccination details for Bella are optional/);
+    assert.doesNotMatch(html, /rabies|vaccination|account\/pets/i);
     assert.match(html, /card is on file/);
     assert.match(html, /Complete your profile/);
     assert.match(html, /href="\/account\/setup"/);
-    assert.match(html, /href="\/account\/pets\?setup=1&amp;pet=pet-1"/);
     assert.match(html, /href="\/account\/payment\?setup=1"/);
     assert.match(html, /Review payment method/);
     assert.match(html, /secured/);

@@ -1,8 +1,8 @@
 "use client";
 
+import { operationalVisits } from "@/lib/visits/operations";
 import React, { useState } from "react";
 import { AppointmentActionLinks } from "@/components/admin/AppointmentActionLinks";
-import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
 import { buildPreviewOnTheWayAppointments } from "@/lib/appointments/calendar-preview";
 import { appointmentStatusLabel } from "@/lib/appointments/map";
 import { formatStaffVisitTiming } from "@/lib/charges/hourly";
@@ -58,7 +58,7 @@ export function OnTheWayPreview() {
           Today — drive order
         </h1>
         <ul className="mt-6 space-y-4">
-          {appointments.map((appointment, index) => {
+          {operationalVisits(appointments).map(({ appointment, pets }) => {
             const customerLabel =
               appointment.customerName ??
               appointment.customerEmail ??
@@ -70,45 +70,12 @@ export function OnTheWayPreview() {
                 key={appointment.id}
                 className="rounded-2xl border border-lavender/30 bg-cream p-6"
               >
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <h3 className="font-medium text-gold-dark">
-                      {appointment.petName}
-                      {appointment.petBreed ? (
-                        <span className="font-normal text-text-muted">
-                          {" "}
-                          · {appointment.petBreed}
-                        </span>
-                      ) : null}
-                    </h3>
-                    <p className="mt-1 text-sm text-text-muted">
-                      {customerLabel}
-                      {appointment.customerPhone
-                        ? ` · ${appointment.customerPhone}`
-                        : ""}
-                    </p>
+                  <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                    <h3 className="font-medium text-gold-dark">{customerLabel}</h3>
+                    {appointment.customerPhone ? <span className="text-sm text-text-muted">{appointment.customerPhone}</span> : null}
+                    <span className="text-sm text-text-muted">{appointment.appointmentTime}</span>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <AppointmentCornerMark
-                      status={appointment.status}
-                      vaccinationStatusAtBooking={
-                        appointment.vaccinationStatusAtBooking
-                      }
-                      customerConfirmedAt={appointment.customerConfirmedAt}
-                    />
-                    <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
-                      Stop {index + 1} · {appointment.appointmentTime}
-                    </span>
-                    <span className="text-xs font-medium text-gold-dark">
-                      {appointmentStatusLabel(
-                        appointment.status,
-                        appointment.awaitingCustomerConfirm,
-                      )}
-                    </span>
-                  </div>
-                </div>
-                <p className="mt-4 text-sm text-text">{appointment.serviceName}</p>
-                <p className="mt-1 text-sm text-text-muted">
+                  <p className="mt-1 text-sm text-text-muted">
                   {formatServiceAddress({
                     street: appointment.addressStreet,
                     city: appointment.addressCity,
@@ -116,6 +83,12 @@ export function OnTheWayPreview() {
                     zip: appointment.addressZip,
                   })}
                 </p>
+                  <p className="mt-2 text-xs font-medium text-gold-dark">
+                    {appointmentStatusLabel(appointment.status)}
+                  </p>
+                  <ul className="mt-3 space-y-1" aria-label="Pets and services">
+                    {pets.map(pet => <li key={pet.id} className="text-sm text-text">{pet.petName} — {pet.serviceName}</li>)}
+                  </ul>
                 <p className="mt-2 text-sm text-gold-dark">
                   {formatStaffVisitTiming(
                     appointment.serviceStartedAt,
@@ -130,7 +103,7 @@ export function OnTheWayPreview() {
                     onClick={() =>
                       setAppointments((current) =>
                         current.map((entry) =>
-                          entry.id === appointment.id
+                          entry.id === appointment.id || Boolean(entry.visitId && entry.visitId === appointment.visitId)
                             ? {
                                 ...entry,
                                 enRouteSmsSentAt: new Date().toISOString(),
@@ -148,6 +121,7 @@ export function OnTheWayPreview() {
                         : "No mobile number"}
                   </button>
                   <AppointmentActionLinks
+                      driveOrder
                     appointment={appointment}
                     paidKinds={[]}
                     preview
