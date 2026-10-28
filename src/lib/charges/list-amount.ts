@@ -31,7 +31,9 @@ export function catalogLinePatch(catalog: CatalogChargeItem) {
     catalogId: catalog.id,
     listAmount: listAmountForCatalog(catalog.id, catalog.suggestedAmount),
   };
-  if (catalog.suggestedAmount == null) return patch;
+  if (catalog.suggestedAmount == null) {
+    return catalog.id === "dematting-brush-out" ? { ...patch, amount: 0 } : patch;
+  }
   return { ...patch, amount: catalog.suggestedAmount };
 }
 

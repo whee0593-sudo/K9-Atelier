@@ -77,7 +77,7 @@ describe("checkout list price", () => {
     assert.equal(listedAmountIfChanged(filled[0]!), 140);
   });
 
-  it("prints the struck list price on receipt copy", () => {
+  it("prints only the final price on receipt copy", () => {
     const appointment = {
       petName: "Maple",
       appointmentDate: "2026-09-16",
@@ -103,14 +103,14 @@ describe("checkout list price", () => {
 
     assert.equal(
       buildChargeReceiptParagraphs(appointment, charge).some((line) =>
-        line.includes("$140.00 → $0.00"),
+        line.includes("$0.00"),
       ),
       true,
     );
-    assert.match(buildChargeReceiptCardText(appointment, charge), /\$140\.00 → \$0\.00/);
-    assert.match(
+    assert.doesNotMatch(buildChargeReceiptCardText(appointment, charge), /\$140\.00|→/);
+    assert.doesNotMatch(
       buildChargeReceiptCardHtml(appointment, charge),
-      /text-decoration:line-through[\s\S]*\$140\.00[\s\S]*\$0\.00/,
+      /text-decoration:line-through|\$140\.00/,
     );
   });
 

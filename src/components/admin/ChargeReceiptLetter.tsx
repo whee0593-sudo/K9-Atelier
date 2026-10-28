@@ -8,6 +8,7 @@ import {
   formatReceiptPaymentDate,
   formatReceiptServiceTime,
   receiptPaymentStatus,
+  receiptPetNames,
 } from "@/lib/charges/receipt-view";
 import type { AppointmentChargeRecord } from "@/lib/charges/types";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
@@ -31,11 +32,7 @@ export function ChargeReceiptLetter({
   googleReviewUrl?: string | null;
 }) {
   const snapshot = charge.billSnapshot;
-  const petName = snapshot
-    ? snapshot.pets.length === 1
-      ? snapshot.pets[0]?.petName ?? null
-      : null
-    : appointment.petName?.trim() || null;
+  const petName = receiptPetNames(appointment, charge);
   const appointmentDate = formatReceiptDate(
     snapshot?.serviceDate ?? appointment.appointmentDate,
   );
@@ -187,7 +184,7 @@ function MoneyRow({
     >
       <span className="min-w-0 break-words">{label}</span>
       {item ? (
-        <ChargeMoneyWithList item={item} />
+        <ChargeMoneyWithList item={item} showListAmount={false} />
       ) : (
         <span className="whitespace-nowrap text-right tabular-nums">
           {formatChargeMoney(amount ?? 0)}

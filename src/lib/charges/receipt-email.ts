@@ -7,13 +7,13 @@ import {
 } from "@/lib/business";
 import { business } from "@/lib/business";
 import { buildChargeReceiptParagraphs } from "@/lib/charges/receipt-content";
-import { formatLineItemMoney, listedAmountIfChanged } from "@/lib/charges/list-amount";
 import { formatChargeMoney } from "@/lib/charges/money";
 import {
   formatReceiptDate,
   formatReceiptPaymentDate,
   formatReceiptServiceTime,
   receiptPaymentStatus,
+  receiptPetNames,
 } from "@/lib/charges/receipt-view";
 import type { AppointmentChargeRecord } from "@/lib/charges/types";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
@@ -50,11 +50,7 @@ function lineItemMoneyRow(
   label: string,
   item: { amount: number; listAmount?: number },
 ) {
-  const listed = listedAmountIfChanged(item);
-  const amountHtml =
-    listed == null
-      ? escapeHtml(formatChargeMoney(item.amount))
-      : `<span style="color:${MUTED};text-decoration:line-through;padding-right:8px;">${escapeHtml(formatChargeMoney(listed))}</span>${escapeHtml(formatChargeMoney(item.amount))}`;
+  const amountHtml = escapeHtml(formatChargeMoney(item.amount));
   return `<tr>
     <td style="padding:4px 12px 4px 0;color:${INK};font-size:16px;line-height:1.6;">${escapeHtml(label)}</td>
     ${moneyCell(amountHtml, "16px")}
@@ -79,11 +75,7 @@ export function buildChargeReceiptCardHtml(
   paymentMethodLabel?: string | null,
 ) {
   const snapshot = charge.billSnapshot;
-  const petName = snapshot
-    ? snapshot.pets.length > 1
-      ? null
-      : snapshot.pets[0]?.petName ?? null
-    : appointment.petName?.trim() || null;
+  const petName = receiptPetNames(appointment, charge);
   const appointmentDate = formatReceiptDate(
     snapshot?.serviceDate ?? appointment.appointmentDate,
   );
@@ -218,7 +210,7 @@ export function buildChargeReceiptCardText(
       .filter((line) => line != null)
       .join("\n");
   }
-  const petName = appointment.petName?.trim() || null;
+  const petName = receiptPetNames(appointment, charge);
   const lines = [
     thankYouLine(petName),
     "",
@@ -228,7 +220,7 @@ export function buildChargeReceiptCardText(
     "",
     ...receiptItems(charge, appointment.petName).map(
       (item) =>
-        `${item.label}  ${formatLineItemMoney(item)}`,
+        `${item.label}  ${formatChargeMoney(item.amount)}`,
     ),
     charge.tipAmount > 0
       ? `Gratuity  ${formatChargeMoney(charge.tipAmount)}`

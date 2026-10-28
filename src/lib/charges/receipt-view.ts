@@ -128,3 +128,11 @@ export function receiptPaymentStatus(charge: AppointmentChargeRecord) {
   if (charge.status === "paid") return "Paid";
   return null;
 }
+
+/** Use the paid visit snapshot, then checkout line metadata for legacy charges. */
+export function receiptPetNames(appointment: AdminAppointmentRecord, charge: AppointmentChargeRecord) {
+  const names = charge.billSnapshot?.pets.map(pet => pet.petName)
+    ?? [appointment.petName, ...charge.lineItems.map(item => item.petName)];
+  return new Intl.ListFormat("en-US", { style: "long", type: "conjunction" })
+    .format([...new Set(names.map(name => name?.trim()).filter((name): name is string => Boolean(name)))]);
+}
