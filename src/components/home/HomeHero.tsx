@@ -1,7 +1,6 @@
 import React from "react";
 import Link from "next/link";
 import { Container } from "@/components/luxury/Container";
-import { Eyebrow } from "@/components/luxury/Eyebrow";
 import { EditorialPhoto } from "@/components/luxury/EditorialPhoto";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { business } from "@/lib/business";
@@ -81,8 +80,7 @@ export function HomeHero() {
     <section className="relative overflow-hidden border-b border-gray-line/60">
       <Container className="grid items-center gap-8 py-9 md:grid-cols-2 md:gap-12 md:py-16 lg:py-20">
         <div className="md:order-1">
-          <Eyebrow>{business.brand.lockup}</Eyebrow>
-          <h1 className="font-display mt-5 text-[2.75rem] leading-[1.02] font-semibold text-ink md:mt-6 md:text-[3.5rem] lg:text-[4.5rem]">
+          <h1 className="font-display text-[2.75rem] leading-[1.02] font-semibold text-ink md:text-[3.5rem] lg:text-[4.5rem]">
             {business.brand.tagline}
           </h1>
           <p className="font-body mt-5 max-w-xl text-base leading-relaxed text-ink md:mt-6 md:text-[17px]">

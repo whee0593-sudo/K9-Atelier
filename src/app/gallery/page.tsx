@@ -17,7 +17,6 @@ export default function GalleryPage() {
     <PageShell
       eyebrow="K9 ATELIER · OUR WORK"
       title="Groomed by Penny"
-      intro="Some photo backgrounds have been edited for presentation."
     >
       <GalleryWall />
       <div className="mt-10 text-center">

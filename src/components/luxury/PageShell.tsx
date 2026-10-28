@@ -3,7 +3,7 @@ import { Container } from "./Container";
 import { Eyebrow } from "./Eyebrow";
 
 type Props = {
-  eyebrow: string;
+  eyebrow?: string;
   title: ReactNode;
   intro?: ReactNode;
   children: ReactNode;
@@ -21,8 +21,8 @@ export function PageShell({
     <div className={`py-14 md:py-20 ${className}`}>
       <Container>
         <header className="mx-auto max-w-3xl text-center">
-          <Eyebrow>{eyebrow}</Eyebrow>
-          <h1 className="font-display mt-5 text-[2.5rem] leading-[1.08] font-medium text-ink md:text-5xl">
+          {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
+          <h1 className={`font-display ${eyebrow ? "mt-5 " : ""}text-[2.5rem] leading-[1.08] font-medium text-ink md:text-5xl`}>
             {title}
           </h1>
           {intro && (

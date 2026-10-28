@@ -30,7 +30,6 @@ export default async function ContactPage({
 
   return (
     <PageShell
-      eyebrow="Get in Touch"
       title="Contact Penny"
     >
       <div className="mx-auto max-w-xl">

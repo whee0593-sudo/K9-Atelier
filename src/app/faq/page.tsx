@@ -338,7 +338,6 @@ export default async function FaqPage() {
 
   return (
     <PageShell
-      eyebrow="FAQ"
       title="Questions About Your Appointment"
     >
       <div className="mx-auto max-w-3xl space-y-14">
