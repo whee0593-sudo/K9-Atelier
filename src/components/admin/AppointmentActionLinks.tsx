@@ -13,12 +13,14 @@ export function AppointmentActionLinks({
   preview = false,
   onCancelled,
   onChanged,
+  driveOrder = false,
 }: {
   appointment: AdminAppointmentRecord;
   paidKinds: ChargeKind[];
   preview?: boolean;
   onCancelled?: () => void;
   onChanged?: () => void;
+  driveOrder?: boolean;
 }) {
   const completed = Boolean(appointment.visitEndedAt ?? appointment.serviceEndedAt);
   const paidService = paidKinds.includes("service");
@@ -30,8 +32,7 @@ export function AppointmentActionLinks({
     ? "/admin/arrive/preview"
     : `/admin/arrive/${appointment.id}`;
 
-  return (
-    <>
+  const contacts = (<>
       <CallCustomerButton
         appointmentId={appointment.id}
         disabled={!appointment.customerPhone}
@@ -41,6 +42,11 @@ export function AppointmentActionLinks({
         customerId={appointment.customerId}
         preview={preview}
       />
+  </>);
+
+  return (
+    <>
+      {!driveOrder ? contacts : null}
       {appointment.status === "cancelled" ? null : (
         <>
           {completed ? null : (
@@ -59,6 +65,8 @@ export function AppointmentActionLinks({
           >
             {paidService ? "View payment" : "Collect payment"}
           </Link>
+          <div className={driveOrder ? "flex basis-full flex-wrap gap-3" : "contents"}>
+            {driveOrder ? contacts : null}
           {paidService || paidNoShow || paidKinds.includes("cancellation") ? (
             <Link
               href={
@@ -95,6 +103,7 @@ export function AppointmentActionLinks({
             preview={preview}
             onCancelled={onChanged ?? onCancelled}
           />
+          </div>
         </>
       )}
     </>

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { operationalVisits } from "@/lib/visits/operations";
 import React, { useCallback, useEffect, useState } from "react";
 import { AdminCalendar } from "@/components/admin/AdminCalendar";
-import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
 import { AppointmentActionLinks } from "@/components/admin/AppointmentActionLinks";
 import { VisitFeeControls } from "@/components/admin/VisitFeeControls";
 import { formatStaffVisitTiming } from "@/lib/charges/hourly";
@@ -262,7 +261,7 @@ export function AppointmentReviewPanel({
           </div>
         ) : (
           <ul className="mt-4 space-y-4">
-            {operationalVisits(todayAppointments).map(({ appointment, pets }, index) => {
+            {operationalVisits(todayAppointments).map(({ appointment, pets }) => {
               const busy = busyId === appointment.id;
               const customerLabel =
                 appointment.customerName ??
@@ -275,46 +274,11 @@ export function AppointmentReviewPanel({
                   key={appointment.id}
                   className="rounded-2xl border border-lavender/30 bg-cream p-6"
                 >
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <h3 className="font-medium text-gold-dark">
-                        {pets.length > 1 ? customerLabel : appointment.petName}
-                        {pets.length === 1 && appointment.petBreed ? (
-                          <span className="font-normal text-text-muted">
-                            {" "}
-                            · {appointment.petBreed}
-                          </span>
-                        ) : null}
-                      </h3>
-                      <p className="mt-1 text-sm text-text-muted">
-                        {customerLabel}
-                        {appointment.customerPhone
-                          ? ` · ${appointment.customerPhone}`
-                          : ""}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <AppointmentCornerMark
-                        status={appointment.status}
-                        vaccinationStatusAtBooking={
-                          appointment.vaccinationStatusAtBooking
-                        }
-                        customerConfirmedAt={appointment.customerConfirmedAt}
-                      />
-                      <span className="inline-flex w-fit rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">
-                        Stop {index + 1} · {appointment.appointmentTime}
-                      </span>
-                      <span className="text-xs font-medium text-gold-dark">
-                        {appointmentStatusLabel(
-                          appointment.status,
-                          appointment.awaitingCustomerConfirm,
-                        )}
-                      </span>
-                    </div>
+                  <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                    <h3 className="font-medium text-gold-dark">{customerLabel}</h3>
+                    {appointment.customerPhone ? <span className="text-sm text-text-muted">{appointment.customerPhone}</span> : null}
+                    <span className="text-sm text-text-muted">{appointment.appointmentTime}</span>
                   </div>
-                  <p className="mt-4 text-sm text-text">
-                    {pets.map(pet => `${pet.petName} — ${pet.serviceName}`).join(" · ")}
-                  </p>
                   <p className="mt-1 text-sm text-text-muted">
                     {formatServiceAddress({
                       street: appointment.addressStreet,
@@ -323,6 +287,12 @@ export function AppointmentReviewPanel({
                       zip: appointment.addressZip,
                     })}
                   </p>
+                  <p className="mt-2 text-xs font-medium text-gold-dark">
+                    {appointmentStatusLabel(appointment.status)}
+                  </p>
+                  <ul className="mt-3 space-y-1" aria-label="Pets and services">
+                    {pets.map(pet => <li key={pet.id} className="text-sm text-text">{pet.petName} — {pet.serviceName}</li>)}
+                  </ul>
                   <p className="mt-2 text-sm text-gold-dark">
                     {formatStaffVisitTiming(
                       appointment.serviceStartedAt,
@@ -344,6 +314,7 @@ export function AppointmentReviewPanel({
                           : "No mobile number"}
                     </button>
                     <AppointmentActionLinks
+                      driveOrder
                       appointment={appointment}
                       preview={preview}
                       paidKinds={paidKinds[appointment.id] ?? []}

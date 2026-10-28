@@ -1,117 +1,35 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useCustomerPets } from "@/lib/pets/use-customer-pets";
 import { fetchCustomerPaymentMethods } from "@/lib/payments/client";
-import {
-  paymentSetupHref,
-  petNeedsRabiesStatus,
-  petsSetupHref,
-  readRememberedSetupPetId,
-} from "@/lib/account-setup";
+import { paymentSetupHref } from "@/lib/account-setup";
+import { usableConfirmationCards } from "@/lib/staff/customer-confirm-status";
+
+export function AccountSetupPaymentStatus({ hasCard, error }: { hasCard: boolean | null; error: string | null }) {
+  return <section className="rounded-2xl border border-lavender/30 bg-cream p-5">
+    <h3 className="font-medium text-text">Payment method</h3>
+    {error ? <p className="mt-2 text-sm text-red-800" role="alert">{error}</p> :
+      <p className="mt-2 text-sm text-text-muted" role="status">{hasCard === null
+        ? "Checking saved payment methods…"
+        : hasCard ? "Your card is on file. You will not be charged now."
+        : "Add a card to secure this appointment. You will not be charged now."}</p>}
+    {hasCard !== null || error ? <Link href={paymentSetupHref()} className="mt-4 inline-flex rounded-xl border border-lavender/40 px-4 py-2 text-sm text-text hover:border-gold/40">
+      {hasCard === false && !error ? "Add a card" : "Review payment methods"}
+    </Link> : null}
+  </section>;
+}
 
 export function AccountSetupChecklist() {
-  const { pets, loading, error } = useCustomerPets();
   const [hasCard, setHasCard] = useState<boolean | null>(null);
   const [cardError, setCardError] = useState<string | null>(null);
-  const [petId, setPetId] = useState<string | null>(null);
-
-  useEffect(() => {
-    setPetId(readRememberedSetupPetId());
-  }, []);
-
   useEffect(() => {
     let cancelled = false;
-    void fetchCustomerPaymentMethods()
-      .then((result) => {
-        if (!cancelled) setHasCard(result.methods.length > 0);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setHasCard(false);
-          setCardError("Could not check saved cards.");
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
+    void fetchCustomerPaymentMethods().then(result => {
+      if (!cancelled) setHasCard(usableConfirmationCards(result.methods).length > 0);
+    }).catch(() => {
+      if (!cancelled) setCardError("Could not check saved cards. Please review your payment methods.");
+    });
+    return () => { cancelled = true; };
   }, []);
-
-  const focusPet =
-    pets.find((pet) => pet.id === petId) ??
-    pets.find(petNeedsRabiesStatus) ??
-    pets[0] ??
-    null;
-  const rabiesDone = focusPet ? !petNeedsRabiesStatus(focusPet) : false;
-  const paymentDone = hasCard === true;
-  const allDone = paymentDone;
-
-  return (
-    <div className="space-y-6">
-      <p className="text-sm text-text-muted">
-        Your visit is reserved. Save a card on file if you have not already.
-        Rabies vaccination details are optional and can be added anytime. You
-        are not charged now.
-      </p>
-
-      {loading ? (
-        <p className="text-sm text-text-muted">Loading your profile…</p>
-      ) : null}
-      {error ? (
-        <p className="text-sm text-red-800" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {cardError ? (
-        <p className="text-sm text-red-800" role="alert">
-          {cardError}
-        </p>
-      ) : null}
-
-      {allDone ? (
-        <p className="rounded-xl border border-lavender/40 bg-lavender-light/40 px-4 py-3 text-sm text-text">
-          Vaccination status and payment details are on file. Thank you.
-        </p>
-      ) : null}
-
-      <ol className="space-y-4">
-        <li className="rounded-2xl border border-lavender/30 bg-cream p-5">
-          <p className="text-xs font-medium uppercase tracking-[0.14em] text-gold-dark">
-            Step 1
-          </p>
-          <h3 className="mt-2 font-medium text-text">Rabies vaccination</h3>
-          <p className="mt-2 text-sm text-text-muted">
-            {focusPet
-              ? `You can confirm ${focusPet.name}’s rabies status or upload a certificate whenever you have it. This does not affect the reservation.`
-              : "You can add rabies details on a pet profile whenever you have them. This does not affect the reservation."}
-            {rabiesDone ? " Rabies status is already confirmed." : ""}
-          </p>
-          <Link
-            href={petsSetupHref(focusPet?.id ?? petId)}
-            className="mt-4 inline-flex rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white hover:bg-gold-dark"
-          >
-            {rabiesDone ? "Review pet profile" : "Add rabies details"}
-          </Link>
-        </li>
-        <li className="rounded-2xl border border-lavender/30 bg-cream p-5">
-          <p className="text-xs font-medium uppercase tracking-[0.14em] text-gold-dark">
-            Step 2
-          </p>
-          <h3 className="mt-2 font-medium text-text">Payment method</h3>
-          <p className="mt-2 text-sm text-text-muted">
-            Save a card for after the visit. You are not charged when you add
-            it.
-            {paymentDone ? " A card is already on file." : ""}
-          </p>
-          <Link
-            href={paymentSetupHref()}
-            className="mt-4 inline-flex rounded-xl border border-lavender/40 px-4 py-2 text-sm text-text hover:border-gold/40"
-          >
-            {paymentDone ? "Review payment methods" : "Add payment method"}
-          </Link>
-        </li>
-      </ol>
-    </div>
-  );
+  return <AccountSetupPaymentStatus hasCard={hasCard} error={cardError} />;
 }

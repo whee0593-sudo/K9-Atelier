@@ -93,3 +93,29 @@ it("keeps separate visits for the same household separate", () => {
   const html = renderReviewPanel(<AppointmentReviewPanel preview previewToday={[first, second]} />);
   assert.equal((html.match(/Text: on the way/g) ?? []).length, 2);
 });
+
+
+it("lays out a visit as owner, address, status, and one service row per dog", () => {
+  const first = {...buildPreviewOnTheWayAppointments()[0]!, id:"dog-1", visitId:"three-dog-visit", customerName:"Taylor Owner", customerPhone:"561-555-0101", petName:"Valentino", serviceName:"Full Groom", status:"confirmed" as const};
+  const pets = [first, {...first, id:"dog-2", petName:"Stella"}, {...first, id:"dog-3", petName:"Luna", serviceName:"Bath & Care"}];
+  const html = renderReviewPanel(<AppointmentReviewPanel preview previewToday={pets} />);
+  const drive = html.slice(html.indexOf("Today — drive order"), html.indexOf("Route days"));
+  assert.match(drive, /<h3[^>]*>Taylor Owner<\/h3>/);
+  assert.equal((drive.match(/Taylor Owner/g) ?? []).length, 1);
+  for (const [name, service] of [["Valentino", "Full Groom"], ["Stella", "Full Groom"], ["Luna", "Bath &amp; Care"]]) {
+    assert.ok(drive.includes(name + " — " + service + "</li>"));
+  }
+  assert.ok(drive.indexOf("561-555-0101") < drive.indexOf("Confirmed"));
+  assert.ok(drive.indexOf("Confirmed") < drive.indexOf("Valentino"));
+  assert.ok(drive.indexOf("Text: on the way") < drive.indexOf(">Check in</a>"));
+  assert.ok(drive.indexOf(">Check in</a>") < drive.indexOf(">Collect payment</a>"));
+  assert.match(drive, /flex basis-full flex-wrap gap-3/);
+  assert.equal((drive.match(/>Collect payment<\/a>/g) ?? []).length, 1);
+});
+
+it("uses the owner heading for single-dog stops too", () => {
+  const appointment = {...buildPreviewOnTheWayAppointments()[0]!, customerName:"Taylor Owner", petName:"Valentino"};
+  const html = renderReviewPanel(<AppointmentReviewPanel preview previewToday={[appointment]} />);
+  assert.match(html, /<h3[^>]*>Taylor Owner<\/h3>/);
+  assert.match(html, /Valentino — /);
+});
