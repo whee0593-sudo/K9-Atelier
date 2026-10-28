@@ -87,7 +87,7 @@ describe("services page content", () => {
     const visibleText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
     assert.match(
       visibleText,
-      /One-on-one mobile grooming by Penny, brought to your home\./,
+      /One-on-one cage-free mobile grooming by Penny, brought to your home\./,
     );
     assert.match(
       visibleText,
