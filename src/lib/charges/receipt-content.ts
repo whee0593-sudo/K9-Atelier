@@ -1,7 +1,6 @@
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
-import { formatLineItemMoney } from "@/lib/charges/list-amount";
 import { formatChargeMoney } from "@/lib/charges/money";
-import { formatReceiptServiceTime } from "@/lib/charges/receipt-view";
+import { formatReceiptServiceTime, receiptPetNames } from "@/lib/charges/receipt-view";
 import type { AppointmentChargeRecord } from "@/lib/charges/types";
 import { receiptItems } from "@/lib/charges/receipt-items";
 
@@ -29,16 +28,14 @@ export function buildChargeReceiptParagraphs(
   const kindLabel = chargeKindLabel(charge.kind);
   const snapshot = charge.billSnapshot;
   const itemLines = receiptItems(charge, appointment.petName).map(
-    (item) => `${item.label}  ${formatLineItemMoney(item)}`,
+    (item) => `${item.label}  ${formatChargeMoney(item.amount)}`,
   );
   const remaining =
     Math.round((charge.total - (charge.refundedAmount ?? 0)) * 100) / 100;
   const refunded = charge.refundedAmount ?? 0;
 
   return [
-    snapshot
-      ? `Thank you for trusting K9 Atelier. Here is your ${kindLabel.toLowerCase()} receipt.`
-      : `Thank you for trusting K9 Atelier with ${appointment.petName}. Here is your ${kindLabel.toLowerCase()} receipt.`,
+    `Thank you for trusting K9 Atelier with ${receiptPetNames(appointment, charge) || "your pet"}. Here is your ${kindLabel.toLowerCase()} receipt.`,
     snapshot
       ? `${formatReceiptDate(snapshot.serviceDate)} · ${snapshot.arrivalLabel}`
       : `${formatReceiptDate(appointment.appointmentDate)} · ${formatReceiptServiceTime(appointment) ?? appointment.appointmentTime}`,

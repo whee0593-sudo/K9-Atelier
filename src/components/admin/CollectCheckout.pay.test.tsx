@@ -8,6 +8,20 @@ import { quoteReferralApplication } from "@/lib/referrals/eligible";
 
 Object.assign(globalThis, { React });
 
+it("presents only final grooming prices and includes assessed DeMatting in the bill", () => {
+  const input = props("service");
+  const html = renderToStaticMarkup(<PayStep {...input} lineItems={[
+    { id: "v", label: "Valentino Full Groom", amount: 200, listAmount: 180 },
+    { id: "s", label: "Stella Full Groom", amount: 200, listAmount: 180 },
+    { id: "d", label: "Gentle DeMatting", amount: 25, catalogId: "dematting-brush-out" },
+  ]} subtotal={425} total={425} />);
+  assert.doesNotMatch(html, /\$180\.00|line-through/);
+  assert.equal((html.match(/\$200\.00/g) ?? []).length, 2);
+  assert.match(html, /Gentle DeMatting/);
+  assert.match(html, /\$25\.00/);
+  assert.match(html, /\$425\.00/);
+});
+
 function props(kind: "service" | "no_show"): ComponentProps<typeof PayStep> {
   const context = buildPreviewCollectContext();
   const noop = () => {};

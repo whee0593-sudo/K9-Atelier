@@ -375,7 +375,7 @@ export function CollectCheckout({
   }
 
   function addCatalogItem(catalog: CatalogChargeItem) {
-    if (catalog.suggestedAmount == null) return;
+    if (catalog.suggestedAmount == null && catalog.id !== "dematting-brush-out") return;
     const patch = catalogLinePatch(catalog);
     if (patch.amount == null) return;
     const { amount, ...rest } = patch;
@@ -907,12 +907,13 @@ export function CollectCheckout({
                     <input
                       type="number"
                       min="0"
+                      max="5000"
                       step="0.01"
                       value={item.amount}
                       readOnly={Boolean(context.visit && item.catalogId === "travel-fee")}
                       onChange={(event) =>
                         updateItem(item.id, {
-                          amount: Math.max(0, Number(event.target.value) || 0),
+                          amount: Math.min(5000, Math.max(0, Number(event.target.value) || 0)),
                         })
                       }
                     className="mt-1 w-full rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm text-ink"
@@ -1301,7 +1302,7 @@ export function PayStep({
             className="flex justify-between gap-4 py-3 font-sans text-base font-medium text-[#211D26]"
           >
             <span>{getCatalogItemDisplayLabel(item.catalogId, item.label)}</span>
-            <ChargeMoneyWithList item={item} />
+            <ChargeMoneyWithList item={item} showListAmount={false} />
           </li>
         ))}
       </ul>

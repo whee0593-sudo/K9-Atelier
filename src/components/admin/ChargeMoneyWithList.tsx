@@ -7,11 +7,13 @@ export function ChargeMoneyWithList({
   amount,
   listAmount,
   className = "",
+  showListAmount = true,
 }: {
   item?: Pick<ChargeLineItem, "amount" | "listAmount">;
   amount?: number;
   listAmount?: number;
   className?: string;
+  showListAmount?: boolean;
 }) {
   const current = item?.amount ?? amount ?? 0;
   const listed = listedAmountIfChanged({
@@ -23,7 +25,7 @@ export function ChargeMoneyWithList({
     <span
       className={`inline-flex items-baseline justify-end gap-2 whitespace-nowrap tabular-nums ${className}`}
     >
-      {listed != null ? (
+      {showListAmount && listed != null ? (
         <span className="text-[#766F75] line-through decoration-[#766F75]">
           {formatChargeMoney(listed)}
         </span>

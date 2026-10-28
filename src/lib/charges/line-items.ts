@@ -102,7 +102,8 @@ export function sanitizeLineItems(items: unknown): ChargeLineItem[] | null {
     if (!item || typeof item !== "object") return null;
     const record = item as Record<string, unknown>;
     const label = String(record.label ?? "").trim();
-    const amount = Number(record.amount);
+    if (typeof record.amount !== "number") return null;
+    const amount = record.amount;
     if (!label || label.length > 80) return null;
     if (!Number.isFinite(amount) || amount < 0 || amount > 5000) return null;
     const listAmount = normalizeListAmount(record.listAmount);
