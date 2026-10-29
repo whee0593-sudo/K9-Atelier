@@ -228,7 +228,7 @@ export function BookForCustomerForm({
   );
   const [street, setStreet] = useState(initialAddress?.street ?? "");
   const [city, setCity] = useState(initialAddress?.city ?? "");
-  const [state, setState] = useState(initialAddress?.state ?? "");
+  const [state, setState] = useState(initialAddress?.state?.trim() || "FL");
   const [zip, setZip] = useState(initialAddress?.zip ?? "");
   const [addressSource, setAddressSource] = useState<FieldSource>(
     initialAddress ? "saved" : "empty",
@@ -558,7 +558,7 @@ export function BookForCustomerForm({
   function applySavedAddress(address: StaffBookingProfileAddress | null) {
     setStreet(address?.street ?? "");
     setCity(address?.city ?? "");
-    setState(address?.state ?? "");
+    setState(address?.state?.trim() || "FL");
     setZip(address?.zip ?? "");
     setSelectedAddressKey(address ? bookingAddressKey(address) : "");
     const nextSource = address ? "saved" : "empty";
