@@ -30,12 +30,13 @@ export const homeServiceLinks = HOME_SERVICE_SLUGS.map((slug) => {
 
 // Existing portfolio photographs; do not generate or alter grooming results.
 const SERVICE_PHOTO_IDS: Record<string, string> = {
-  "full-groom": "teddy-bear-cream",
-  "bath-coat-care": "teddy-bear-silver",
+  "full-groom": "teddy-bear-silver",
+  "bath-coat-care": "teddy-bear-cream",
   "hand-stripping": "westie",
   spa: "teddy-bear-apricot",
   color: "creative-color",
   "specialty-care": "schnauzer",
+  "add-ons": "poodle-finish",
 };
 
 function HomeServiceCard({
@@ -45,7 +46,27 @@ function HomeServiceCard({
   category: ServiceCategory;
   showPrices: boolean;
 }) {
-  const photo = galleryPhotos.find((item) => item.id === SERVICE_PHOTO_IDS[category.slug]);
+  const photo = category.slug === "bath-coat-care"
+    ? {
+        src: "/images/services/bath-coat-care-shih-tzu.webp",
+        alt: "Brown and white Shih Tzu showing a smooth, brushed coat",
+      }
+    : category.slug === "color"
+      ? {
+          src: "/images/services/creative-color-art.webp",
+          alt: "White dog with yellow-orange ears and colorful creative coat artwork",
+        }
+      : category.slug === "hand-stripping"
+        ? {
+            src: "/images/services/hand-stripping-terrier.webp",
+            alt: "Red wire-coated terrier standing in a hand-stripped coat",
+          }
+        : category.slug === "spa"
+          ? {
+              src: "/images/services/luxury-spa-day.webp",
+              alt: "Fluffy apricot dog sitting after a spa grooming session",
+            }
+          : galleryPhotos.find((item) => item.id === SERVICE_PHOTO_IDS[category.slug]);
   const price = showPrices ? directoryPriceLabel(category) : null;
 
   return (
