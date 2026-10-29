@@ -49,8 +49,8 @@ function PriceLine({ price }: { price: string | null }) {
 
 // Match the homepage portfolio choices; Add-On Care has its own existing photo.
 const SERVICE_PHOTO_IDS: Record<string, string> = {
-  "full-groom": "teddy-bear-cream",
-  "bath-coat-care": "teddy-bear-silver",
+  "full-groom": "teddy-bear-silver",
+  "bath-coat-care": "teddy-bear-cream",
   "hand-stripping": "westie",
   spa: "teddy-bear-apricot",
   color: "creative-color",
