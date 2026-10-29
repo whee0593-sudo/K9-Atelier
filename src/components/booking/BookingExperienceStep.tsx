@@ -261,6 +261,8 @@ export function BookingExperienceStep({
 
   function handleServiceSelect(service: BookableService, optionName?: string) {
     onSelect(service, optionName);
+    setExpandedCategoryId(null);
+    setExpandedSpa(false);
   }
 
   return (
