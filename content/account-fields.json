@@ -39,6 +39,12 @@
           "placeholder": "(555) 123-4567"
         },
         {
+          "id": "birthday",
+          "label": "Birthday (optional)",
+          "type": "date",
+          "required": false
+        },
+        {
           "id": "preferredContact",
           "label": "Preferred Contact Method",
           "type": "select",

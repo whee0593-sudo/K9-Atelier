@@ -12,13 +12,14 @@ import {
 } from "@/lib/profiles/types";
 
 const PROFILE_SELECT =
-  "id, email, first_name, last_name, phone, preferred_contact, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship, household_allergy_status, household_allergy_details";
+  "id, email, first_name, last_name, phone, birthday, preferred_contact, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship, household_allergy_status, household_allergy_details";
 
 function toUpdateRow(input: CustomerProfileWriteInput) {
   const row: Record<string, string | null> = {
     first_name: input.firstName,
     last_name: input.lastName,
     phone: input.phone || null,
+    ...(input.birthday !== undefined ? { birthday: input.birthday } : {}),
     preferred_contact: input.preferredContact,
     emergency_contact_name: input.emergencyContactName,
     emergency_contact_phone: input.emergencyContactPhone,

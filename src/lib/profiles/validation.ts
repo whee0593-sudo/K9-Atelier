@@ -48,6 +48,20 @@ function readOptionalText(record: Record<string, unknown>, key: string, maxLengt
   return trimmed.slice(0, maxLength);
 }
 
+export function validateCustomerBirthday(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new ProfileValidationError("Please enter a valid birthday.", "birthday");
+  }
+  const date = new Date(`${value}T00:00:00Z`);
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value || value > today || value < "1900-01-01") {
+    throw new ProfileValidationError("Please enter a valid birthday that is not in the future.", "birthday");
+  }
+  return value;
+}
+
 export const CUSTOMER_ADMIN_NOTES_MAX_LENGTH = 8000;
 
 export const CUSTOMER_PROFILE_REQUIRED_FIELD_LABELS = {
@@ -236,6 +250,7 @@ export function validateProfileWriteInput(body: unknown): CustomerProfileWriteIn
     firstName,
     lastName,
     phone,
+    birthday: validateCustomerBirthday(record.birthday),
     preferredContact,
     emergencyContactName: readOptionalText(record, "emergencyContactName", 80),
     emergencyContactPhone: readOptionalText(record, "emergencyContactPhone", 32),
@@ -269,6 +284,7 @@ export type StaffCustomerCreateInput = {
   firstName: string | null;
   lastName: string | null;
   phone: string | null;
+  birthday?: string | null;
   preferredContact: string | null;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
@@ -390,6 +406,7 @@ export function validateStaffCustomerCreateInput(body: unknown): StaffCustomerCr
     firstName: readOptionalName(record, "firstName", "First Name"),
     lastName: readOptionalName(record, "lastName", "Last Name"),
     phone: readOptionalPhone(record.phone),
+    birthday: validateCustomerBirthday(record.birthday),
     preferredContact,
     emergencyContactName: readOptionalText(record, "emergencyContactName", 80),
     emergencyContactPhone: readOptionalText(record, "emergencyContactPhone", 32),

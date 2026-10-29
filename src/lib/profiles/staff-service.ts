@@ -77,7 +77,7 @@ export async function listStaffCustomers(): Promise<
       .from("profiles")
       .select(
         `
-      id, email, first_name, last_name, phone, preferred_contact,
+      id, email, first_name, last_name, phone, birthday, preferred_contact,
       emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
       household_allergy_status, household_allergy_details,
       pets (
@@ -695,7 +695,7 @@ export async function setStaffCustomerPassword(
 }
 
 const CREATED_PROFILE_SELECT =
-  "id, email, first_name, last_name, phone, preferred_contact, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship, household_allergy_status, household_allergy_details";
+  "id, email, first_name, last_name, phone, birthday, preferred_contact, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship, household_allergy_status, household_allergy_details";
 
 function isDuplicateAuthEmail(message: string) {
   return /already been registered|already exists|email address is already/i.test(
@@ -717,6 +717,7 @@ function profileUpdateRow(input: StaffCustomerCreateInput, email?: string) {
     first_name: input.firstName,
     last_name: input.lastName,
     phone: input.phone,
+    ...(input.birthday !== undefined ? { birthday: input.birthday } : {}),
     preferred_contact: input.preferredContact,
     emergency_contact_name: input.emergencyContactName,
     emergency_contact_phone: input.emergencyContactPhone,

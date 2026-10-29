@@ -23,6 +23,7 @@ type Draft = {
   firstName: string;
   lastName: string;
   phone: string;
+  birthday: string;
   preferredContact: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
@@ -37,6 +38,7 @@ function toDraft(profile: CustomerProfile): Draft {
     firstName: profile.firstName,
     lastName: profile.lastName,
     phone: profile.phone,
+    birthday: profile.birthday ?? "",
     preferredContact:
       profile.preferredContact === "Phone" ? "Email" : profile.preferredContact,
     emergencyContactName: profile.emergencyContactName,
@@ -161,6 +163,7 @@ export function CustomerProfileForm({
         firstName: draft.firstName.trim(),
         lastName: draft.lastName.trim(),
         phone: draft.phone.trim(),
+        birthday: draft.birthday,
         preferredContact: draft.preferredContact,
         emergencyContactName: draft.emergencyContactName.trim(),
         emergencyContactPhone: draft.emergencyContactPhone.trim(),
@@ -186,6 +189,7 @@ export function CustomerProfileForm({
                   firstName: draft.firstName,
                   lastName: draft.lastName,
                   phone: draft.phone,
+                  birthday: draft.birthday,
                   preferredContact: draft.preferredContact,
                   emergencyContactName: draft.emergencyContactName,
                   emergencyContactPhone: draft.emergencyContactPhone,
@@ -282,6 +286,17 @@ export function CustomerProfileForm({
         {fieldErrors.phone ? (
           <p className="mt-1.5 text-xs text-red-800">{fieldErrors.phone}</p>
         ) : null}
+      </label>
+      <label className="block text-sm font-medium text-text">
+        Birthday (optional)
+        <input
+          type="date"
+          autoComplete="bday"
+          min="1900-01-01"
+          value={draft.birthday}
+          onChange={(event) => update("birthday", event.target.value)}
+          className={inputClassName()}
+        />
       </label>
       <label className="block text-sm font-medium text-text">
         Preferred Contact Method
