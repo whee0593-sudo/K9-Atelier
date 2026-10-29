@@ -420,6 +420,20 @@ export function addOnAvailability(
   return ADD_ON_MATRIX[primary]?.[addOn] ?? "unavailable";
 }
 
+/** An appointment may contain several primary services plus care extras. */
+export function bookingSelectionAvailability(primaryId: string, selectedIds: readonly string[], candidateId: string): AddOnAvailability {
+  const candidate = getAddOnService(candidateId);
+  if (!candidate || candidate.membersOnly) return "unavailable";
+  if (candidate.bookableAsPrimary && !isCreativeColoringCategory(candidate.categoryId)) return "selectable";
+  const primaryIds = [primaryId, ...selectedIds].filter((id) => {
+    const service = getAddOnService(id);
+    return service?.bookableAsPrimary && !isCreativeColoringCategory(service.categoryId);
+  });
+  const states = primaryIds.map((id) => addOnAvailability(id, isCreativeColoringCategory(candidate.categoryId) ? CREATIVE_ACCENT_COLORING_ID : candidateId));
+  if (states.includes("included")) return "included";
+  return states.includes("selectable") ? "selectable" : "unavailable";
+}
+
 export function supportsSeniorAddOn(serviceId: string) {
   return addOnAvailability(serviceId, SENIOR_CARE_ADD_ON_ID) === "selectable";
 }
@@ -541,7 +555,7 @@ export function formatCreativeBookingPolicyForEmail(policy: BookingPolicy) {
 }
 
 export function bookingIncludesCreativeColoring(addOnIds: string[]) {
-  return addOnIds.includes(CREATIVE_ACCENT_COLORING_ID);
+  return addOnIds.some((id) => id === CREATIVE_ACCENT_COLORING_ID || id.startsWith(CREATIVE_ACCENT_COLORING_ID + "::"));
 }
 
 export function getRequiredBaseServicesForCreative() {
@@ -639,7 +653,17 @@ export function getAvailableAddOns(
   return addOns;
 }
 
-export function getAddOnService(id: string) {
+export function creativeSelectionId(optionName: string) {
+  return CREATIVE_ACCENT_COLORING_ID + "::" + encodeURIComponent(optionName);
+}
+
+export function getAddOnService(id: string): BookableService | undefined {
+  if (id.startsWith(CREATIVE_ACCENT_COLORING_ID + "::")) {
+    const service = getCreativeColoringService();
+    const option = service?.options?.find((item) => creativeSelectionId(item.name) === id);
+    if (!service || !option) return undefined;
+    return { ...service, id, name: service.name + " — " + option.name, options: [option] };
+  }
   return allBookableServices().find((s) => s.id === canonicalServiceId(id));
 }
 
@@ -677,8 +701,9 @@ export function resolveAddOnCharges(
     const id = canonicalServiceId(rawId);
     if (seen.has(id)) continue;
     seen.add(id);
-    if (addOnAvailability(primaryServiceId, id) !== "selectable") continue;
     const addOn = getAddOnService(id);
+    if (id === canonicalServiceId(primaryServiceId)) continue;
+    if (bookingSelectionAvailability(primaryServiceId, addOnIds, id) !== "selectable") continue;
     if (!addOn) continue;
     const name = getServiceDisplayName(addOn.id, addOn.name);
     if (isAssessedOnSiteService(addOn)) {
@@ -720,7 +745,7 @@ export function estimateServiceDurationMinutes(
     if (!addOn) continue;
     const addOnTier = getTierForPet(addOn, weightLbs);
     const addOnMin =
-      addOnTier?.durationMin ?? addOn.durationMin ?? addOn.durationMax ?? 0;
+      addOnTier?.durationMin ?? addOn.durationMin ?? addOn.durationMax ?? (addOn.bookableAsPrimary && !isCreativeColoringCategory(addOn.categoryId) ? 60 : 0);
     const addOnMax =
       addOnTier?.durationMax ?? addOn.durationMax ?? addOn.durationMin ?? addOnMin;
     minutes += Math.round((addOnMin + addOnMax) / 2);

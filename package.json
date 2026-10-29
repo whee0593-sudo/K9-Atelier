@@ -11,7 +11,8 @@
     "verify:supabase": "npx --yes tsx scripts/verify-supabase-schema.mts",
     "test:call-requests": "npx --yes tsx --test src/lib/call-requests/core.test.ts src/lib/call-requests/security.test.ts src/lib/call-requests/database.test.ts src/components/booking/CallRequestForm.test.tsx",
     "test:booking-permissions": "npx --yes tsx --test src/lib/booking-allergy-permissions.db.test.ts",
-    "test:signup": "npx --yes tsx --test src/lib/auth/verify-signup.test.ts src/lib/auth-email-session.test.ts"
+    "test:signup": "npx --yes tsx --test src/lib/auth/verify-signup.test.ts src/lib/auth-email-session.test.ts",
+    "test:booking-multiple": "npx --yes tsx --test src/lib/booking/multiple-services.test.ts src/components/booking/BookingExperienceStep.test.tsx src/lib/booking-price.test.ts"
   },
   "dependencies": {
     "@next/third-parties": "^15.5.21",

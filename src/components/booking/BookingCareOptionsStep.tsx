@@ -117,7 +117,7 @@ export function BookingCareOptionsStep({
 }: Props) {
   const [showCreativeOptions, setShowCreativeOptions] = useState(false);
   const [creativeNotice, setCreativeNotice] = useState<string | null>(null);
-  const addOns = getAvailableAddOns(primaryService.categoryId, primaryService.id);
+  const addOns = getAvailableAddOns(primaryService.categoryId, primaryService.id).filter((item) => item.id !== CREATIVE_ACCENT_COLORING_ID || !selectedIds.some((id) => id.startsWith(CREATIVE_ACCENT_COLORING_ID + "::")));
 
   const standardAddOns = addOns.filter((item) => item.id !== CREATIVE_ACCENT_COLORING_ID);
   const senior = addOns.find((item) => item.id === "senior-comfort-care");

@@ -195,7 +195,8 @@ describe("add-on compatibility matrix", () => {
       addOnOptions: {},
       distanceMiles: 4,
     });
-    assert.equal(spa.ok, false);
+    assert.equal(spa.ok, true);
+    if (spa.ok) assert.equal(spa.quote.addOnPrice, 0);
     assert.equal(
       addOnSelectionMessage(["luxury-spa-day"], [DESHEDDING_ADD_ON_ID]),
       DESHEDDING_ALREADY_INCLUDED_MESSAGE,
@@ -208,7 +209,8 @@ describe("add-on compatibility matrix", () => {
         addOnOptions: {},
         distanceMiles: 4,
       });
-      assert.equal(quoted.ok, false, serviceId);
+      assert.equal(quoted.ok, true, serviceId);
+      if (quoted.ok) assert.equal(quoted.quote.addOnPrice, 0, serviceId);
       assert.equal(
         addOnSelectionMessage([serviceId], [MINI_TRIM_ADD_ON_ID]),
         MINI_TRIM_ALREADY_INCLUDED_MESSAGE,

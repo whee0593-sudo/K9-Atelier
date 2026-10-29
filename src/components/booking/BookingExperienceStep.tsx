@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { bookingWeightLbs } from "@/lib/pets/weight";
 import {
+  creativeSelectionId,
+  getAddOnService,
   formatServicePrice,
   getServicePriceEstimate,
   isCreativeColoringCategory,
@@ -40,6 +42,8 @@ import {
 type Props = {
   pet: PetProfile;
   selectedServiceId: string | null;
+  selectedIds?: string[];
+  selectedOptions?: Record<string, string>;
   selectedOptionName?: string | null;
   showPrices?: boolean;
   onSelect: (service: BookableService, optionName?: string) => void;
@@ -105,15 +109,14 @@ function CareServiceCard({
           {formatServicePrice(service, weightLbs)}
         </p>
       ) : null}
-      {!service.bookableAsPrimary ? (
-        <p className="font-body mt-6 text-sm leading-relaxed text-taupe">Select a bath or grooming service first. Available add-ons can be chosen with your service.</p>
-      ) : <button
+      <button
         type="button"
+        aria-pressed={selected}
         onClick={() => onSelect(service)}
         className={`${bookingPrimaryBtnClass} mt-6`}
       >
-        {selected ? "Selected" : "Select"}
-      </button>}
+        {selected ? "Remove" : "Select"}
+      </button>
     </article>
   );
 }
@@ -168,6 +171,7 @@ function CareColorOptionCard({
       )}
       <button
         type="button"
+        aria-pressed={selected}
         onClick={() => {
           if (guestNotice) {
             setNotice(guestNotice);
@@ -177,7 +181,7 @@ function CareColorOptionCard({
         }}
         className={`${bookingPrimaryBtnClass} mt-6`}
       >
-        {selected && !guestNotice ? "Selected" : "Select"}
+        {selected && !guestNotice ? "Remove" : "Select"}
       </button>
       {notice ? (
         <p className="font-body mt-4 text-sm leading-relaxed text-ink" role="status">
@@ -191,6 +195,8 @@ function CareColorOptionCard({
 export function BookingExperienceStep({
   pet,
   selectedServiceId,
+  selectedIds = selectedServiceId ? [selectedServiceId] : [],
+  selectedOptions = {},
   selectedOptionName = null,
   showPrices = false,
   onSelect,
@@ -255,8 +261,6 @@ export function BookingExperienceStep({
 
   function handleServiceSelect(service: BookableService, optionName?: string) {
     onSelect(service, optionName);
-    setExpandedCategoryId(null);
-    setExpandedSpa(false);
   }
 
   return (
@@ -269,25 +273,20 @@ export function BookingExperienceStep({
         Choose a Grooming Service
       </h2>
 
+      <p className="font-body mt-4 text-sm text-taupe" role="status">Select as many services as you need. {selectedIds.length} selected.</p>
+
       <div className="mt-10 space-y-4">
         {categories.map((category) => {
           const expanded = expandedCategoryId === category.id;
           const selectedInCategory = category.services.find(
-            (service) => service.id === selectedServiceId,
+            (service) => selectedIds.includes(service.id) || service.options?.some((option) => selectedIds.includes(creativeSelectionId(option.name))),
           );
           const categoryName = getCategoryDisplayName(
             category.id,
             category.name,
           );
-          const selectedName = selectedInCategory
-            ? selectedOptionName &&
-              isCreativeColoringCategory(selectedInCategory.categoryId)
-              ? selectedOptionName
-              : getServiceDisplayName(
-                  selectedInCategory.id,
-                  selectedInCategory.name,
-                )
-            : null;
+          const selectedName = selectedIds.map((id) => getAddOnService(id)).filter((service) => service && (category.id === "specialty-add-on-care" ? !service.bookableAsPrimary : service.categoryId === category.id))
+            .map((service) => selectedOptions[service!.id] ?? getServiceDisplayName(service!.id, service!.name)).join(", ");
 
           return (
             <div key={category.id} className="scroll-mt-28">
@@ -386,7 +385,7 @@ export function BookingExperienceStep({
                                   pet={pet}
                                   service={service}
                                   showPrices={showPrices}
-                                  selected={selectedServiceId === service.id}
+                                  selected={selectedIds.includes(service.id)}
                                   onSelect={handleServiceSelect}
                                 />
                               ))}
@@ -409,8 +408,7 @@ export function BookingExperienceStep({
                               option={option}
                               showPrices={showPrices}
                               selected={
-                                selectedServiceId === service.id &&
-                                selectedOptionName === option.name
+                                selectedIds.includes(creativeSelectionId(option.name)) || (selectedIds.includes(service.id) && (selectedOptions[service.id] ?? selectedOptionName) === option.name)
                               }
                               onSelect={handleServiceSelect}
                             />
@@ -425,7 +423,7 @@ export function BookingExperienceStep({
                         pet={pet}
                         service={service}
                         showPrices={showPrices}
-                        selected={selectedServiceId === service.id}
+                        selected={selectedIds.includes(service.id)}
                         onSelect={handleServiceSelect}
                       />
                     );
@@ -437,7 +435,7 @@ export function BookingExperienceStep({
         })}
       </div>
 
-      {selectedServiceId && (
+      {selectedIds.length > 0 && (
         <button
           type="button"
           onClick={() => onContinue()}

@@ -6,12 +6,11 @@ import type { PetProfile } from "@/lib/pets";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 import {
   getAddOnService,
-  getCreativeColoringService,
-  getRequiredBaseServicesForCreative,
-  isCustomCreativeDesignOption,
+  creativeSelectionId,
   isCustomCreativeDesignSelection,
   type BookableService,
 } from "@/lib/services";
+import { guestBookingSelectionError } from "@/lib/booking-price";
 import { getServiceDisplayName } from "@/lib/service-display";
 import type { ServiceAddress, TravelQuote } from "@/lib/travel";
 import { ARRIVAL_WINDOW_PENDING_LABEL } from "@/lib/appointments/arrival-window";
@@ -35,7 +34,6 @@ import { BookingConfirmStep } from "@/components/booking/BookingConfirmStep";
 import { BookingGroupConfirmStep } from "@/components/booking/BookingGroupConfirmStep";
 import { bookingDogsIntent, validateBookingDogs, type BookingDogService } from "@/lib/booking/dogs";
 import { BookingConfirmationView } from "@/components/booking/BookingReviewStep";
-import { CreativePairingModal } from "@/components/booking/CreativePairingModal";
 import { bookingBackLinkClass } from "@/components/booking/booking-ui";
 import { trackGoogleAdsBookingConversion } from "@/lib/google-ads";
 import { createDraftBookingPet, isPersistedPetId } from "@/lib/booking-flow";
@@ -114,9 +112,9 @@ export function BookingFlow({
   const [selectedService, setSelectedService] = useState<BookableService | null>(
     null,
   );
+  const [selectionError, setSelectionError] = useState<string | null>(null);
   const [serviceConfirmed, setServiceConfirmed] = useState(false);
   const [careOptionsConfirmed, setCareOptionsConfirmed] = useState(false);
-  const [showCreativePairing, setShowCreativePairing] = useState(false);
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
   const [addOnOptions, setAddOnOptions] = useState<Record<string, string>>({});
   const [spaGoals, setSpaGoals] = useState<SpaGoalId[]>([]);
@@ -172,6 +170,7 @@ export function BookingFlow({
 
   function resetFromDog() {
     setSelectedService(null);
+    setSelectionError(null);
     setServiceConfirmed(false);
     setCareOptionsConfirmed(false);
     setSelectedAddOnIds([]);
@@ -185,7 +184,6 @@ export function BookingFlow({
     setSlotStartMinutes(null);
     setOwner(null);
     setPaymentMethod(null);
-    setShowCreativePairing(false);
   }
 
   function currentDogs() {
@@ -250,45 +248,38 @@ export function BookingFlow({
 
   function handleServiceSelect(service: BookableService, optionName?: string) {
     if (isCustomCreativeDesignSelection(service.id, optionName)) return;
-    setSelectedService(service);
+    if (optionName && isCreativeServiceSelection(service)) service = { ...service, id: creativeSelectionId(optionName) };
+    const ids = [...(selectedService ? [selectedService.id] : []), ...selectedAddOnIds];
+    const sameOption = !optionName || addOnOptions[service.id] === optionName;
+    const removing = ids.includes(service.id) && sameOption;
+    const nextIds = removing ? ids.filter((id) => id !== service.id) : [...new Set([...ids, service.id])];
+    const orderedIds = [...nextIds].sort((a, b) => Number(isLuxurySpaDay(b)) - Number(isLuxurySpaDay(a)));
+    const primary = orderedIds.map((id) => getAddOnService(id))
+      .find((item) => item?.bookableAsPrimary && !isCreativeServiceSelection(item));
+    setSelectedService(primary ?? null);
+    setSelectedAddOnIds(nextIds.filter((id) => id !== primary?.id));
+    setAddOnOptions((current) => {
+      const next = { ...current };
+      if (removing) delete next[service.id];
+      else if (optionName) next[service.id] = optionName;
+      return next;
+    });
+    setSelectionError(null);
     setServiceConfirmed(false);
     setCareOptionsConfirmed(false);
-    setSelectedAddOnIds([]);
-    setSpaGoals([]);
-    setAddOnOptions(
-      optionName ? { [service.id]: optionName } : {},
-    );
+    if (!nextIds.some((id) => isLuxurySpaDay(id))) setSpaGoals([]);
     setOwner(null);
     setPaymentMethod(null);
   }
 
-  function handleExperienceContinue(service?: BookableService) {
-    const nextService = service ?? selectedService;
-    if (!nextService) return;
-    if (service) {
-      setSelectedService(service);
-      setCareOptionsConfirmed(false);
-      setSelectedAddOnIds([]);
-      setAddOnOptions({});
-      if (!isLuxurySpaDay(service.id)) setSpaGoals([]);
-    }
-    if (isCreativeServiceSelection(nextService)) {
-      setShowCreativePairing(true);
+  function handleExperienceContinue() {
+    if (!selectedService) {
+      setSelectionError("Please select a bath or grooming service for this appointment.");
       return;
     }
-    setServiceConfirmed(true);
-  }
-
-  function handleCreativeComplete(baseServiceId: string, colorOption: string) {
-    if (isCustomCreativeDesignOption(colorOption)) return;
-    const base = getRequiredBaseServicesForCreative().find(
-      (s) => s.id === baseServiceId,
-    );
-    if (!base) return;
-    setSelectedService(base);
-    setSelectedAddOnIds(["creative-accent-coloring"]);
-    setAddOnOptions({ "creative-accent-coloring": colorOption });
-    setShowCreativePairing(false);
+    const error = guestBookingSelectionError({ serviceId: selectedService.id, addOnIds: selectedAddOnIds, addOnOptions });
+    if (error) { setSelectionError(error.message); return; }
+    setSelectionError(null);
     setServiceConfirmed(true);
   }
 
@@ -366,7 +357,6 @@ export function BookingFlow({
               ? 5
               : 6;
 
-  const creativeService = getCreativeColoringService();
   useEffect(() => {
     flowRef.current?.scrollIntoView({ block: "start" });
   }, [currentStep, selectedPet?.id, serviceConfirmed]);
@@ -386,7 +376,7 @@ export function BookingFlow({
         serviceName={bookedDogs.length > 1 ? bookedDogs.map((dog) => `${dog.pet.name}: ${getServiceDisplayName(dog.service.id, dog.service.name)}`).join(" · ") : getServiceDisplayName(
           selectedService.id,
           selectedService.name,
-        )}
+        ) + ((createdAppointment?.addOnIds ?? selectedAddOnIds).length ? " · " + (createdAppointment?.addOnIds ?? selectedAddOnIds).map((id) => getAddOnService(id)?.name ?? id).join(" · ") : "")}
         appointmentDate={appointmentDate}
         appointmentTime={
           createdAppointment?.appointmentTime ??
@@ -429,6 +419,8 @@ export function BookingFlow({
           key={selectedPet.id}
           pet={selectedPet}
           selectedServiceId={selectedService?.id ?? null}
+          selectedIds={[...(selectedService ? [selectedService.id] : []), ...selectedAddOnIds]}
+          selectedOptions={addOnOptions}
           selectedOptionName={
             selectedService && isCreativeServiceSelection(selectedService)
               ? addOnOptions[selectedService.id] ?? null
@@ -446,16 +438,7 @@ export function BookingFlow({
         />
       )}
 
-      {showCreativePairing && creativeService && (
-        <CreativePairingModal
-          creativeService={creativeService}
-          requiredBaseServices={getRequiredBaseServicesForCreative()}
-          initialColorOption={addOnOptions[creativeService.id] ?? null}
-          showPrices={showPrices}
-          onComplete={handleCreativeComplete}
-          onBack={() => setShowCreativePairing(false)}
-        />
-      )}
+      {selectionError && currentStep === 2 ? <p className="font-body text-sm text-red-700" role="alert">{selectionError}</p> : null}
 
       {currentStep === 2 &&
         selectedPet &&
@@ -479,9 +462,6 @@ export function BookingFlow({
             saveError={dogsError}
             onBack={() => {
               setServiceConfirmed(false);
-              setSelectedAddOnIds([]);
-              setAddOnOptions({});
-              setSpaGoals([]);
             }}
           />
         )}

@@ -6,7 +6,7 @@ import {
   CUSTOM_CREATIVE_DESIGN_GUEST_MESSAGE,
   GENTLE_DEMATTING_EXCLUSION_NOTE,
   getAddOnService,
-  getAvailableAddOns,
+  bookingSelectionAvailability,
   getServicePriceEstimate,
   isCustomCreativeDesignOption,
   isCustomCreativeDesignSelection,
@@ -169,13 +169,10 @@ export function guestBookingSelectionError(
     };
   }
 
-  const available = new Set(
-    getAvailableAddOns(service.categoryId, service.id).map((item) => item.id),
-  );
-
   for (const id of input.addOnIds) {
     const addOn = getAddOnService(id);
-    if (!addOn || !available.has(id)) {
+    const availability = bookingSelectionAvailability(service.id, input.addOnIds, id);
+    if (!addOn || id === service.id || availability === "unavailable") {
       return {
         code: "invalid_addon",
         message: "That add-on cannot be booked with this service.",
@@ -236,6 +233,12 @@ export function quoteGuestBooking(input: {
     };
   }
 
+  for (const id of input.addOnIds) {
+    const extra = getAddOnService(id);
+    if (extra?.bookableAsPrimary && extra.categoryId !== CREATIVE_ACCENT_COLORING_ID && !isServiceAvailableForPet(extra.id, input.weightLbs)) {
+      return { ok: false, code: "weight_limit", message: unavailableReason(extra.id, input.weightLbs) ?? "That service is not available for this dog's weight." };
+    }
+  }
   const travel = calculateTravelFee(input.distanceMiles);
   if (!travel.withinServiceArea) {
     return {
@@ -284,8 +287,8 @@ export function quoteGuestBooking(input: {
     addOns.push({
       id: item.id,
       name: item.name,
-      price: bookingMoney(item.amount),
-      priceLabel: formatPrice(item.amount),
+      price: bookingMoney(fixedPriceForService(input.fixedServicePrices, item.id) ?? item.amount),
+      priceLabel: formatPrice(fixedPriceForService(input.fixedServicePrices, item.id) ?? item.amount),
     });
   }
 
