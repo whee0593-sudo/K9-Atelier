@@ -147,9 +147,14 @@ function formatHistoryDate(iso: string) {
   });
 }
 
-function appointmentStatusLabel(status: string) {
-  if (status === "pending_confirmation") return "Pending Review";
-  if (status === "cancelled") return "Cancelled";
+function appointmentStatusLabel(
+  appointment: StaffCustomerHistory["appointments"][number],
+) {
+  if (appointment.status === "cancelled") return "Cancelled";
+  if (appointment.serviceEndedAt || appointment.status === "completed") {
+    return "Completed";
+  }
+  if (appointment.status === "pending_confirmation") return "Pending Review";
   return "Confirmed";
 }
 
@@ -714,7 +719,7 @@ function CustomerHistory({
                         : "text-gold-dark"
                     }
                   >
-                    {appointmentStatusLabel(appointment.status)}
+                    {appointmentStatusLabel(appointment)}
                   </span>
                 </p>
                 <p className="mt-1 text-xs text-gold-dark">
