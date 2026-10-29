@@ -1,3 +1,4 @@
+import { fixedPriceForService } from "@/lib/pets/fixed-prices";
 import { allergySnapshotForBooking } from "@/lib/allergies";
 import { randomUUID } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -977,7 +978,7 @@ async function addDogToVisit(
 
   const vaccinationStatus = vaccinationStatusSnapshotForBooking(pet);
   const status = "confirmed";
-  const servicePrice = snapshotServicePrice(estimate?.from ?? 0);
+  const servicePrice = snapshotServicePrice(fixedPriceForService(pet.fixedServicePrices, service.id) ?? estimate?.from ?? 0);
   const visitSequence = nextVisitSequence(sequences.sequences);
 
   const { data, error } = await admin

@@ -1,3 +1,4 @@
+import { fixedPriceForService, type FixedServicePrices } from "@/lib/pets/fixed-prices";
 import { snapshotServicePrice } from "@/lib/visits/visit";
 import { attachBookingPriceSnapshot } from "@/lib/charges/visit-line-items";
 import {
@@ -12,6 +13,7 @@ import {
 import { parseStaffServiceSelection } from "@/lib/staff/service-choice";
 
 export type StaffDogPricingInput = {
+  fixedServicePrices?: FixedServicePrices;
   weightLbs: number;
   serviceIds: string[];
   serviceOptionNames: (string | null)[];
@@ -122,7 +124,7 @@ export function staffAppointmentPriceDrafts(
             : [],
         ),
       );
-      const price = bookedServiceAmount(
+      const price = fixedPriceForService(pet.fixedServicePrices, service.id) ?? bookedServiceAmount(
         service,
         pet.weightLbs,
         optionName,

@@ -32,7 +32,7 @@ async function loadBookingProfile(
   const [petsResult, savedResult, visitResult] = await Promise.all([
     admin
       .from("pets")
-      .select("id, name, breed, weight_lbs")
+      .select("id, name, breed, weight_lbs, pet_service_prices ( service_id, amount )")
       .eq("customer_id", customerId)
       .is("archived_at", null)
       .order("created_at", { ascending: true }),
@@ -97,6 +97,7 @@ async function loadBookingProfile(
     },
     pets: (petsResult.data ?? []).map((pet) => ({
       id: pet.id as string,
+      pet_service_prices: pet.pet_service_prices,
       name: pet.name as string | null,
       breed: pet.breed as string | null,
       weight_lbs: pet.weight_lbs as number | string | null,

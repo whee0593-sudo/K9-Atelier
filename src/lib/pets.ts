@@ -6,6 +6,7 @@ import { bookingWeightLbs } from "@/lib/pets/weight";
 import { petProfileReadyToBook } from "@/lib/vaccinations/booking";
 
 export type PetProfile = {
+  fixedServicePrices?: import("./pets/fixed-prices").FixedServicePrices;
   id: string;
   name: string;
   breed: string;

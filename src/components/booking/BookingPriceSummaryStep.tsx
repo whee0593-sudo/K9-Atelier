@@ -37,6 +37,7 @@ export function BookingPriceSummaryStep({
       ? null
       : quoteGuestBooking({
           serviceId: service.id,
+          fixedServicePrices: pet.fixedServicePrices,
           weightLbs,
           addOnIds,
           addOnOptions,

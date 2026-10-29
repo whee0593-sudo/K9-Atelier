@@ -1,6 +1,8 @@
+import { mapFixedServicePrices, type PetServicePriceRow, type FixedServicePrices } from "@/lib/pets/fixed-prices";
 import { phonesMatch } from "@/lib/sms/phone";
 
 export type StaffBookingProfilePet = {
+  fixedServicePrices?: FixedServicePrices;
   id: string;
   name: string;
   breed: string;
@@ -150,6 +152,7 @@ type ProfileRow = {
 };
 
 type PetRow = {
+  pet_service_prices?: PetServicePriceRow[];
   id: string;
   name: string | null;
   breed: string | null;
@@ -169,7 +172,9 @@ export function mapBookingProfile(input: {
     const weightLbs = Number(pet.weight_lbs);
     const weight = Number.isFinite(weightLbs) && weightLbs > 0 ? weightLbs : 0;
     if (!name && !breed && weight <= 0) continue;
+    const prices = mapFixedServicePrices(pet.pet_service_prices);
     pets.push({
+      ...(Object.keys(prices).length ? {fixedServicePrices:prices} : {}),
       id: pet.id,
       name,
       breed,

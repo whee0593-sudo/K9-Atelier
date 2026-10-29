@@ -1,3 +1,4 @@
+import { mapFixedServicePrices } from "@/lib/pets/fixed-prices";
 import { notifyMerchantVisitCreatedFromAppointments } from "@/lib/communications/merchant-notices";
 import { business } from "@/lib/business";
 import { resolveArrivalForBooking } from "@/lib/appointments/arrival-window";
@@ -588,9 +589,16 @@ export async function createStaffCustomerBooking(
     return { error: "conflict", message: "Unknown service." };
   }
 
+  const existingPetIds = input.pets.flatMap(pet => pet.id ? [pet.id] : []);
+  const priceRows = existingPetIds.length ? await createAdminClient().from("pets")
+    .select("id, pet_service_prices ( service_id, amount )").in("id", existingPetIds).is("archived_at", null) : { data: [], error: null };
+  if (priceRows.error) return { error: "server" };
+  const fixedPricesByPet = new Map((priceRows.data ?? []).map(row => [row.id, mapFixedServicePrices(row.pet_service_prices)]));
+
   const pricedVisit = staffAppointmentPriceDrafts(
     input.pets.map((pet) => ({
       weightLbs: pet.weightLbs,
+      fixedServicePrices: pet.id ? fixedPricesByPet.get(pet.id) : undefined,
       serviceIds:
         pet.serviceIds.length > 0
           ? pet.serviceIds

@@ -1,4 +1,5 @@
 "use client";
+import { fixedPriceForService, type FixedServicePrices } from "@/lib/pets/fixed-prices";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -80,6 +81,7 @@ type SuccessState = {
 };
 
 type PetDraft = {
+  fixedServicePrices?: FixedServicePrices;
   key: string;
   id: string | null;
   name: string;
@@ -112,6 +114,7 @@ function createPetDraft(): PetDraft {
 function petDraftFromSaved(pet: StaffBookingProfilePet): PetDraft {
   return {
     key: pet.id,
+    fixedServicePrices: pet.fixedServicePrices,
     id: pet.id,
     name: pet.name,
     breed: pet.breed,
@@ -329,7 +332,7 @@ export function BookForCustomerForm({
         (sum, row) =>
           sum +
           row.selected.reduce((serviceSum, line) => {
-            const amount = bookedServiceAmount(
+            const amount = fixedPriceForService(row.pet.fixedServicePrices, line.choice.serviceId) ?? bookedServiceAmount(
               line.choice.service,
               row.weight!,
               line.choice.optionName,

@@ -88,6 +88,7 @@ export function BookingConfirmStep({
       ? null
       : quoteGuestBooking({
           serviceId: service.id,
+          fixedServicePrices: pet.fixedServicePrices,
           weightLbs,
           addOnIds,
           addOnOptions,
@@ -95,6 +96,8 @@ export function BookingConfirmStep({
         });
   const quoted = serverQuote ? { ok: true as const, quote: serverQuote } : localQuote;
   const quoteKey = [
+    pet.id,
+    JSON.stringify(pet.fixedServicePrices ?? {}),
     service.id,
     weightLbs ?? "",
     travelQuote.distanceMiles,
