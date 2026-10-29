@@ -49,8 +49,8 @@ function PriceLine({ price }: { price: string | null }) {
 
 // Match the homepage portfolio choices; Add-On Care has its own existing photo.
 const SERVICE_PHOTO_IDS: Record<string, string> = {
-  "full-groom": "teddy-bear-cream",
-  "bath-coat-care": "teddy-bear-silver",
+  "full-groom": "teddy-bear-silver",
+  "bath-coat-care": "teddy-bear-cream",
   "hand-stripping": "westie",
   spa: "teddy-bear-apricot",
   color: "creative-color",
@@ -59,7 +59,17 @@ const SERVICE_PHOTO_IDS: Record<string, string> = {
 };
 
 function DirectoryPhoto({ slug }: { slug: string }) {
-  const photo = galleryPhotos.find((item) => item.id === SERVICE_PHOTO_IDS[slug]);
+  const photo = slug === "bath-coat-care"
+    ? {
+        src: "/images/services/bath-coat-care-shih-tzu.webp",
+        alt: "Brown and white Shih Tzu showing a smooth, brushed coat",
+      }
+    : slug === "color"
+      ? {
+          src: "/images/services/creative-color-art.webp",
+          alt: "White dog with yellow-orange ears and colorful creative coat artwork",
+        }
+      : galleryPhotos.find((item) => item.id === SERVICE_PHOTO_IDS[slug]);
   if (!photo) return null;
   return (
     <Image
