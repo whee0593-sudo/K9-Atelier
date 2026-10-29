@@ -342,10 +342,9 @@ export function BookingLocationTimeStep({
               <p className="font-body text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
                 {area.heading}
               </p>
-              {quote.zone === "complimentary" ? (
-                <p className="font-display mt-3 text-2xl text-ink">{city}</p>
+              {quote.zone !== "complimentary" ? (
+                <p className="font-body mt-4 text-sm text-taupe">{area.body}</p>
               ) : null}
-              <p className="font-body mt-4 text-sm text-taupe">{area.body}</p>
               {area.showFee ? (
                 <>
                   <p className="font-body mt-4 text-sm text-ink">
@@ -359,14 +358,14 @@ export function BookingLocationTimeStep({
             </>
             );
           })()}
-          <p className="font-body mt-4 text-xs text-taupe">
+          {quote.zone !== "complimentary" ? <p className="font-body mt-4 text-xs text-taupe">
             {formatServiceAddress({
               street: street.trim(),
               city: city.trim(),
               state: state.trim(),
               zip: zip.trim(),
             })}
-          </p>
+          </p> : null}
           <button
             type="button"
             onClick={handleContinueToSchedule}
