@@ -676,10 +676,10 @@ function CustomerHistory({
           </>
         )}
       </section>
-      <section>
-        <h3 className="text-base font-medium text-gold-dark">
+      <details>
+        <summary className="cursor-pointer text-base font-medium text-gold-dark">
           Appointment history
-        </h3>
+        </summary>
         {error ? (
           <p className="mt-3 text-sm text-red-800">{error}</p>
         ) : !history ? (
@@ -733,9 +733,9 @@ function CustomerHistory({
             ))}
           </ul>
         )}
-      </section>
-      <section>
-        <h3 className="text-base font-medium text-gold-dark">Paid orders</h3>
+      </details>
+      <details>
+        <summary className="cursor-pointer text-base font-medium text-gold-dark">Paid orders</summary>
         {!history ? null : history.orders.length === 0 ? (
           <p className="mt-3 text-sm text-text-muted">No paid orders yet.</p>
         ) : (
@@ -769,7 +769,7 @@ function CustomerHistory({
             ))}
           </ul>
         )}
-      </section>
+      </details>
     </>
   );
 }
