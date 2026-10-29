@@ -249,10 +249,7 @@ export function BookingLocationTimeStep({
         ← Back
       </button>
 
-      <p className="font-body mt-8 text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
-        Date &amp; Time
-      </p>
-      <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
+      <h2 className="font-display mt-8 text-3xl text-ink md:text-4xl">
         Where shall we visit {dogs && dogs.length > 1 ? dogs.map((dog) => dog.pet.name).join(", ") : pet.name}?
       </h2>
       <form onSubmit={handleCheckArea} className="mt-8 space-y-5">
