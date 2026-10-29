@@ -6,6 +6,7 @@ export type CustomerProfile = {
   firstName: string;
   lastName: string;
   phone: string;
+  birthday?: string | null;
   preferredContact: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
@@ -18,6 +19,7 @@ export type CustomerProfileWriteInput = {
   firstName: string;
   lastName: string;
   phone: string;
+  birthday?: string | null;
   preferredContact: string | null;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
@@ -34,6 +36,7 @@ export type CustomerProfileRow = {
   first_name: string | null;
   last_name: string | null;
   phone: string | null;
+  birthday?: string | null;
   preferred_contact: string | null;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
@@ -60,6 +63,7 @@ export function mapProfileRow(row: CustomerProfileRow): CustomerProfile {
     firstName: row.first_name ?? "",
     lastName: row.last_name ?? "",
     phone: row.phone ?? "",
+    birthday: row.birthday ?? null,
     preferredContact: row.preferred_contact ?? "",
     emergencyContactName: row.emergency_contact_name ?? "",
     emergencyContactPhone: row.emergency_contact_phone ?? "",
