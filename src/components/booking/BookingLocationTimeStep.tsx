@@ -226,9 +226,9 @@ export function BookingLocationTimeStep({
           <span className="block">Choose a date and start time for</span>
           <span className="block break-words">{dogs?.length ? dogs.map((dog) => dog.pet.name).join(", ") : pet.name}</span>
         </h2>
-        {dogs && dogs.length > 1 ? <p className="font-body mt-4 text-sm text-ink">One visit for {dogs.length} dogs · Approximately {totalDurationMinutes} minutes of care, scheduled consecutively.</p> : null}
         <div className="mt-8">
           <DateTimeStep
+            compactHeader
             initialDate={initialDate}
             initialSlotStartMinutes={initialSlotStartMinutes}
             days={days}
