@@ -74,7 +74,12 @@ function DirectoryPhoto({ slug }: { slug: string }) {
             src: "/images/services/hand-stripping-terrier.webp",
             alt: "Red wire-coated terrier standing in a hand-stripped coat",
           }
-        : galleryPhotos.find((item) => item.id === SERVICE_PHOTO_IDS[slug]);
+        : slug === "spa"
+          ? {
+              src: "/images/services/luxury-spa-day.webp",
+              alt: "Fluffy apricot dog sitting after a spa grooming session",
+            }
+          : galleryPhotos.find((item) => item.id === SERVICE_PHOTO_IDS[slug]);
   if (!photo) return null;
   return (
     <Image
