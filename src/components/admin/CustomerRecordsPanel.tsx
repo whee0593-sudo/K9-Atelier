@@ -151,7 +151,7 @@ function appointmentStatusLabel(
   appointment: StaffCustomerHistory["appointments"][number],
 ) {
   if (appointment.status === "cancelled") return "Cancelled";
-  if (appointment.serviceEndedAt || appointment.status === "completed") {
+  if (appointment.serviceEndedAt) {
     return "Completed";
   }
   if (appointment.status === "pending_confirmation") return "Pending Review";
