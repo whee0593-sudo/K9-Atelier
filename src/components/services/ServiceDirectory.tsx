@@ -59,7 +59,12 @@ const SERVICE_PHOTO_IDS: Record<string, string> = {
 };
 
 function DirectoryPhoto({ slug }: { slug: string }) {
-  const photo = galleryPhotos.find((item) => item.id === SERVICE_PHOTO_IDS[slug]);
+  const photo = slug === "bath-coat-care"
+    ? {
+        src: "/images/services/bath-coat-care-shih-tzu.webp",
+        alt: "Brown and white Shih Tzu showing a smooth, brushed coat",
+      }
+    : galleryPhotos.find((item) => item.id === SERVICE_PHOTO_IDS[slug]);
   if (!photo) return null;
   return (
     <Image
