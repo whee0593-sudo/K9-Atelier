@@ -23,7 +23,7 @@ export function AddressStep({
 }: Props) {
   const [street, setStreet] = useState(initialAddress?.street ?? "");
   const [city, setCity] = useState(initialAddress?.city ?? "");
-  const [state, setState] = useState(initialAddress?.state ?? "FL");
+  const [state, setState] = useState(initialAddress?.state?.trim() || "FL");
   const [zip, setZip] = useState(initialAddress?.zip ?? "");
   const [quote, setQuote] = useState<TravelQuote | null>(initialQuote ?? null);
   const [loading, setLoading] = useState(false);
