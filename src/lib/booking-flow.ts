@@ -1,5 +1,6 @@
 import {
   CUSTOM_CREATIVE_DESIGN_GUEST_MESSAGE,
+  allBookableServices,
   estimateServiceDurationMinutes,
   getBookableServicesForPet,
   groupServicesByCategory,
@@ -59,9 +60,20 @@ export function getBookingCareCategories(
   weightLbs: number,
   options: { includeMembersOnly?: boolean } = {},
 ) {
-  return groupServicesByCategory(
+  const categories = groupServicesByCategory(
     getBookableServicesForPet(weightLbs, options),
-  );
+  ).filter((category) => category.id !== "end-of-life-care");
+  if (weightLbs <= 45) {
+    const ids = ["dematting-brush-out", "deshedding-treatment", "senior-comfort-care", "mini-trim"];
+    const services = allBookableServices();
+    categories.push({
+      id: "specialty-add-on-care",
+      name: "Specialty Add-on Care",
+      note: "Added to a bath or grooming appointment as needed. Availability depends on your selected service.",
+      services: ids.flatMap((id) => services.filter((service) => service.id === id)),
+    });
+  }
+  return categories;
 }
 
 /** Toggle one open category; selecting a service always returns to the closed list. */

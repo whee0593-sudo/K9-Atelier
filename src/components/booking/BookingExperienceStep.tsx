@@ -105,13 +105,15 @@ function CareServiceCard({
           {formatServicePrice(service, weightLbs)}
         </p>
       ) : null}
-      <button
+      {!service.bookableAsPrimary ? (
+        <p className="font-body mt-6 text-sm leading-relaxed text-taupe">Select a bath or grooming service first. Available add-ons can be chosen with your service.</p>
+      ) : <button
         type="button"
         onClick={() => onSelect(service)}
         className={`${bookingPrimaryBtnClass} mt-6`}
       >
         {selected ? "Selected" : "Select"}
-      </button>
+      </button>}
     </article>
   );
 }
@@ -263,10 +265,7 @@ export function BookingExperienceStep({
         ← Back
       </button>
 
-      <p className="font-body mt-8 text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
-        Choose a Grooming Service
-      </p>
-      <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
+      <h2 className="font-display mt-8 text-3xl text-ink md:text-4xl">
         Choose a Grooming Service
       </h2>
 
@@ -298,28 +297,28 @@ export function BookingExperienceStep({
                 aria-expanded={expanded}
                 aria-controls={`care-category-${category.id}`}
                 onClick={() => handleCategoryToggle(category.id)}
-                className={`${bookingCardClass} relative w-full scroll-mt-28 ${
+                className={`border border-deep-lavender bg-deep-lavender p-6 text-left text-ivory transition hover:bg-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-deep-lavender md:p-8 relative w-full scroll-mt-28 ${
                   selectedInCategory && !expanded
-                    ? bookingCardSelectedClass
+                    ? "ring-2 ring-champagne"
                     : ""
                 }`}
               >
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute right-6 top-6 font-display text-2xl leading-none text-ink md:right-8 md:top-8"
+                  className="pointer-events-none absolute right-6 top-6 font-display text-2xl leading-none text-ivory md:right-8 md:top-8"
                 >
                   {expanded ? "−" : "+"}
                 </span>
-                <h3 className="font-body pr-10 text-left text-[12px] font-medium uppercase tracking-[0.16em] text-deep-lavender">
+                <h3 className="font-body pr-10 text-left text-[12px] font-medium uppercase tracking-[0.16em] text-ivory">
                   {categoryName}
                 </h3>
                 {category.note && expanded && (
-                  <p className="font-body mt-3 pr-10 text-left text-sm leading-relaxed text-taupe">
+                  <p className="font-body mt-3 pr-10 text-left text-sm leading-relaxed text-ivory/90">
                     {category.note}
                   </p>
                 )}
                 {selectedName && !expanded && (
-                  <p className="font-body mt-3 pr-10 text-left text-sm text-ink">
+                  <p className="font-body mt-3 pr-10 text-left text-sm text-ivory">
                     {selectedName} selected
                   </p>
                 )}

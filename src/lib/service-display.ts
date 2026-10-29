@@ -25,9 +25,9 @@ export const SERVICE_DISPLAY_DESCRIPTIONS: Record<string, string> = {
   "custom-full-haircut":
     "Complete grooming with bespoke haircut and finishing.",
   "show-level-coat-care":
-    "An upgraded bath with show-level coat conditioning. Nail, ear, and teeth care included. Mini trim included.",
+    "An upgraded bath with show-level coat conditioning, on a weekly schedule. Nail, ear, teeth care and mini trim included.",
   "long-coat-show-care":
-    "An upgraded bath with show-level coat conditioning. Nail, ear, and teeth care included. Mini trim included.",
+    "An upgraded bath with show-level coat conditioning, on a weekly schedule. Nail, ear, teeth care and mini trim included.",
   "hand-stripping":
     "Traditional coat preservation for wire-haired breeds.",
   "luxury-spa-day":

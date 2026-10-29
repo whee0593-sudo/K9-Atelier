@@ -51,11 +51,11 @@ describe("booking flow helpers", () => {
     assert.equal(isPersistedPetId("draft-1"), false);
   });
 
-  it("groups bookable care into categories and hides add-on-only groups", () => {
+  it("groups primary services and specialty add-on information into four categories", () => {
     const categories = getBookingCareCategories(18);
     assert.deepEqual(
       categories.map((category) => category.id),
-      ["bath-show-spa", "full-grooming", "creative-accent-coloring"],
+      ["bath-show-spa", "full-grooming", "creative-accent-coloring", "specialty-add-on-care"],
     );
     assert.equal(
       categories.some((category) => category.id === "add-on-care"),
@@ -63,7 +63,7 @@ describe("booking flow helpers", () => {
     );
   });
 
-  it("shows members-only end-of-life care when the guest is signed in", () => {
+  it("keeps the same four categories when the guest is signed in", () => {
     const categories = getBookingCareCategories(18, { includeMembersOnly: true });
     assert.deepEqual(
       categories.map((category) => category.id),
@@ -71,7 +71,7 @@ describe("booking flow helpers", () => {
         "bath-show-spa",
         "full-grooming",
         "creative-accent-coloring",
-        "end-of-life-care",
+        "specialty-add-on-care",
       ],
     );
   });
