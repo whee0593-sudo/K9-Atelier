@@ -36,7 +36,7 @@ import { bookingDogsIntent, validateBookingDogs, type BookingDogService } from "
 import { BookingConfirmationView } from "@/components/booking/BookingReviewStep";
 import { bookingBackLinkClass } from "@/components/booking/booking-ui";
 import { trackGoogleAdsBookingConversion } from "@/lib/google-ads";
-import { createDraftBookingPet, isPersistedPetId } from "@/lib/booking-flow";
+import { createDraftBookingPet, isPersistedPetId, toggleBookingServiceIds } from "@/lib/booking-flow";
 import { isLuxurySpaDay } from "@/lib/service-catalog";
 import type { SpaGoalId } from "@/lib/spa-goals";
 import { createCustomerPet, updateCustomerPet } from "@/lib/pets/client";
@@ -252,9 +252,8 @@ export function BookingFlow({
     const ids = [...(selectedService ? [selectedService.id] : []), ...selectedAddOnIds];
     const sameOption = !optionName || addOnOptions[service.id] === optionName;
     const removing = ids.includes(service.id) && sameOption;
-    const nextIds = removing ? ids.filter((id) => id !== service.id) : [...new Set([...ids, service.id])];
-    const orderedIds = [...nextIds].sort((a, b) => Number(isLuxurySpaDay(b)) - Number(isLuxurySpaDay(a)));
-    const primary = orderedIds.map((id) => getAddOnService(id))
+    const nextIds = toggleBookingServiceIds(ids, service.id);
+    const primary = nextIds.map((id) => getAddOnService(id))
       .find((item) => item?.bookableAsPrimary && !isCreativeServiceSelection(item));
     setSelectedService(primary ?? null);
     setSelectedAddOnIds(nextIds.filter((id) => id !== primary?.id));

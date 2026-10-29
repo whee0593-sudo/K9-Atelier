@@ -1,6 +1,7 @@
 import {
   CUSTOM_CREATIVE_DESIGN_GUEST_MESSAGE,
   allBookableServices,
+  getAddOnService,
   estimateServiceDurationMinutes,
   getBookableServicesForPet,
   groupServicesByCategory,
@@ -133,4 +134,16 @@ export function bookingCareChoicesForService(service: BookableService): BookingC
       priceLabel: "",
     },
   ];
+}
+
+/** Bath and full-groom categories share one primary choice; extras stay selected. */
+export function toggleBookingServiceIds(selectedIds: readonly string[], serviceId: string): string[] {
+  if (selectedIds.includes(serviceId)) return selectedIds.filter((id) => id !== serviceId);
+  const service = getAddOnService(serviceId);
+  const isPrimary = service?.categoryId === "bath-show-spa" || service?.categoryId === "full-grooming";
+  const retained = isPrimary ? selectedIds.filter((id) => {
+    const item = getAddOnService(id);
+    return item?.categoryId !== "bath-show-spa" && item?.categoryId !== "full-grooming";
+  }) : [...selectedIds];
+  return [...retained, serviceId];
 }

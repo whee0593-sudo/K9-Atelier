@@ -273,7 +273,7 @@ export function BookingExperienceStep({
         Choose a Grooming Service
       </h2>
 
-      <p className="font-body mt-4 text-sm text-taupe" role="status">Select as many services as you need. {selectedIds.length} selected.</p>
+      <p className="font-body mt-4 text-sm text-taupe" role="status">Choose one bath or grooming service, then as many creative color and specialty care options as you need. {selectedIds.length} selected.</p>
 
       <div className="mt-10 space-y-4">
         {categories.map((category) => {

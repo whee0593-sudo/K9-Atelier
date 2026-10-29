@@ -171,6 +171,9 @@ export function guestBookingSelectionError(
 
   for (const id of input.addOnIds) {
     const addOn = getAddOnService(id);
+    if (addOn?.categoryId === "bath-show-spa" || addOn?.categoryId === "full-grooming") {
+      return { code: "invalid_service", message: "Choose only one bath or grooming service." };
+    }
     const availability = bookingSelectionAvailability(service.id, input.addOnIds, id);
     if (!addOn || id === service.id || availability === "unavailable") {
       return {
