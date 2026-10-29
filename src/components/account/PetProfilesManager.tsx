@@ -1,15 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PetProfileAgeSummary } from "@/components/account/PetBirthdayFields";
 import { PetProfileFieldsForm } from "@/components/account/PetProfileFieldsForm";
 import { AccountSetupNotice } from "@/components/account/AccountSetupNotice";
 import { RabiesStatusSummary } from "@/components/account/RabiesStatusSummary";
 import type { PetProfile } from "@/lib/pets";
-import {
-  parsePetRabiesStatus,
-  petProfileVaccinationLabel,
-} from "@/lib/vaccinations/booking";
 import { useCustomerPets } from "@/lib/pets/use-customer-pets";
 import { petToExpandForSetup } from "@/lib/account-setup";
 
@@ -23,13 +18,6 @@ function createDraftPet(name = "New Pet"): PetProfile {
     vaccinationBookingStatus: "missing",
     rabiesStatus: null,
   };
-}
-
-function rabiesBadgeClass(pet: PetProfile) {
-  if (parsePetRabiesStatus(pet.rabiesStatus) || pet.vaccineRecordUploaded) {
-    return "bg-lavender-light text-gold-dark";
-  }
-  return "bg-red-100 text-red-800";
 }
 
 function PetCard({
@@ -58,11 +46,15 @@ function PetCard({
       <button
         type="button"
         onClick={onToggle}
+        aria-expanded={expanded}
+        aria-controls={`pet-profile-${pet.id}`}
         className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
       >
         <div>
           <p className="font-medium text-text">{pet.name}</p>
-          <PetProfileAgeSummary pet={pet} />
+          <p className="text-sm text-text-muted">
+            {[pet.breed, pet.weightLbs != null && pet.weightLbs > 0 ? `${pet.weightLbs} lbs` : null].filter(Boolean).join(" · ")}
+          </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
           {saving && (
@@ -71,16 +63,11 @@ function PetCard({
           {uploading && (
             <span className="text-xs text-text-muted">Uploading…</span>
           )}
-          <span
-            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${rabiesBadgeClass(pet)}`}
-          >
-            {petProfileVaccinationLabel(pet)}
-          </span>
           <span className="text-sm text-gold-dark">{expanded ? "−" : "+"}</span>
         </div>
       </button>
       {expanded && (
-        <div className="border-t border-lavender/30 px-5 py-6">
+        <div id={`pet-profile-${pet.id}`} className="border-t border-lavender/30 px-5 py-6">
           <div className="mb-6 rounded-xl border border-lavender/30 bg-lavender-light/20 px-4 py-4">
             <RabiesStatusSummary pet={pet} />
           </div>
@@ -141,8 +128,9 @@ export function PetProfilesManager({
     setDraftError(null);
     setSubmittingDraft(true);
     try {
-      const created = await createPet(draftPet);
-      setExpandedId(created.id);
+      await createPet(draftPet);
+      setOpenedSetupPet(true);
+      setExpandedId(null);
       setShowNewForm(false);
       setDraftPet(createDraftPet());
     } catch {
