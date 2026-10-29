@@ -43,6 +43,7 @@ type Props = {
   pet: PetProfile;
   selectedServiceId: string | null;
   selectedIds?: string[];
+  selectionError?: string | null;
   selectedOptions?: Record<string, string>;
   selectedOptionName?: string | null;
   showPrices?: boolean;
@@ -197,6 +198,7 @@ export function BookingExperienceStep({
   selectedServiceId,
   selectedIds = selectedServiceId ? [selectedServiceId] : [],
   selectedOptions = {},
+  selectionError = null,
   selectedOptionName = null,
   showPrices = false,
   onSelect,
@@ -274,8 +276,6 @@ export function BookingExperienceStep({
       <h2 className="font-display mt-8 text-3xl text-ink md:text-4xl">
         Choose a Grooming Service
       </h2>
-
-      <p className="font-body mt-4 text-sm text-taupe" role="status">Choose one bath or grooming service, then as many creative color and specialty care options as you need. {selectedIds.length} selected.</p>
 
       <div className="mt-10 space-y-4">
         {categories.map((category) => {
@@ -437,10 +437,12 @@ export function BookingExperienceStep({
         })}
       </div>
 
-      {selectedIds.length > 0 && (
+      {selectionError ? <p id="service-selection-error" className="font-body mt-6 text-sm text-red-700" role="alert">{selectionError}</p> : null}
+      {(
         <button
           type="button"
           onClick={() => onContinue()}
+          aria-describedby={selectionError ? "service-selection-error" : undefined}
           className={`${bookingPrimaryBtnClass} mt-8`}
         >
           Continue

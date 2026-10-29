@@ -141,9 +141,10 @@ export function toggleBookingServiceIds(selectedIds: readonly string[], serviceI
   if (selectedIds.includes(serviceId)) return selectedIds.filter((id) => id !== serviceId);
   const service = getAddOnService(serviceId);
   const isPrimary = service?.categoryId === "bath-show-spa" || service?.categoryId === "full-grooming";
+  const isCreative = service?.categoryId === "creative-accent-coloring";
   const retained = isPrimary ? selectedIds.filter((id) => {
     const item = getAddOnService(id);
     return item?.categoryId !== "bath-show-spa" && item?.categoryId !== "full-grooming";
-  }) : [...selectedIds];
+  }) : isCreative ? selectedIds.filter((id) => getAddOnService(id)?.categoryId !== "creative-accent-coloring") : [...selectedIds];
   return [...retained, serviceId];
 }

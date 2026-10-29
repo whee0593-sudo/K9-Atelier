@@ -169,6 +169,9 @@ export function guestBookingSelectionError(
     };
   }
 
+  const creativeChoices = input.addOnIds.filter((id) => getAddOnService(id)?.categoryId === CREATIVE_ACCENT_COLORING_ID);
+  if (creativeChoices.length > 1) return { code: "invalid_addon", message: "Choose only one creative color option." };
+
   for (const id of input.addOnIds) {
     const addOn = getAddOnService(id);
     if (addOn?.categoryId === "bath-show-spa" || addOn?.categoryId === "full-grooming") {

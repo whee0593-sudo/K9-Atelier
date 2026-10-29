@@ -258,7 +258,7 @@ export function BookingFlow({
     setSelectedService(primary ?? null);
     setSelectedAddOnIds(nextIds.filter((id) => id !== primary?.id));
     setAddOnOptions((current) => {
-      const next = { ...current };
+      const next = Object.fromEntries(Object.entries(current).filter(([id]) => nextIds.includes(id)));
       if (removing) delete next[service.id];
       else if (optionName) next[service.id] = optionName;
       return next;
@@ -273,7 +273,7 @@ export function BookingFlow({
 
   function handleExperienceContinue() {
     if (!selectedService) {
-      setSelectionError("Please select a bath or grooming service for this appointment.");
+      setSelectionError("Please select a primary service.");
       return;
     }
     const error = guestBookingSelectionError({ serviceId: selectedService.id, addOnIds: selectedAddOnIds, addOnOptions });
@@ -420,6 +420,7 @@ export function BookingFlow({
           selectedServiceId={selectedService?.id ?? null}
           selectedIds={[...(selectedService ? [selectedService.id] : []), ...selectedAddOnIds]}
           selectedOptions={addOnOptions}
+          selectionError={selectionError}
           selectedOptionName={
             selectedService && isCreativeServiceSelection(selectedService)
               ? addOnOptions[selectedService.id] ?? null
@@ -436,8 +437,6 @@ export function BookingFlow({
           }}
         />
       )}
-
-      {selectionError && currentStep === 2 ? <p className="font-body text-sm text-red-700" role="alert">{selectionError}</p> : null}
 
       {currentStep === 2 &&
         selectedPet &&

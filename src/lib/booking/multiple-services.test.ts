@@ -46,14 +46,14 @@ it("keeps the pet weight restriction on the selected primary service", () => {
   if (!result.ok) assert.equal(result.code,"weight_limit");
 });
 
-it("allows several creative options together and prices every option separately", () => {
+it("replaces the creative choice while retaining the primary and all specialty care", () => {
  const a = creativeSelectionId("Temporary Fun");
  const b = creativeSelectionId("Ears & Tail Accent");
- const result = quoteGuestBooking({serviceId:"signature-bath-care",weightLbs:12,distanceMiles:0,addOnIds:[a,b],addOnOptions:{[a]:"Temporary Fun",[b]:"Ears & Tail Accent"}});
- assert.equal(result.ok,true);
- if (!result.ok) return;
- assert.deepEqual(result.quote.addOns.map(item => item.id),[a,b]);
- assert.equal(result.quote.addOnPrice,150);
+ const care = ["dematting-brush-out","deshedding-treatment","senior-comfort-care","mini-trim"];
+ for (const primary of [[],["signature-bath-care"]]) {
+   assert.deepEqual(toggleBookingServiceIds([...primary,...care,a],b),[...primary,...care,b]);
+ }
+ assert.ok(guestBookingSelectionError({serviceId:"signature-bath-care",addOnIds:[a,b],addOnOptions:{[a]:"Temporary Fun",[b]:"Ears & Tail Accent"}}));
 });
 
 it("preserves all priced services in the stored appointment snapshot", () => {
