@@ -52,6 +52,7 @@ export type AvailabilityDay = {
 };
 
 type Props = {
+  compactHeader?: boolean;
   initialDate?: string | null;
   initialSlotStartMinutes?: number | null;
   days: AvailabilityDay[];
@@ -71,6 +72,7 @@ function isSameDay(a: Date, b: Date) {
 }
 
 export function DateTimeStep({
+  compactHeader = false,
   initialDate,
   initialSlotStartMinutes,
   days,
@@ -164,9 +166,9 @@ export function DateTimeStep({
       className={`${playfair.variable} ${cormorant.variable} ${jost.variable}`}
     >
       <div className={styles.card}>
-        <h1 className={styles.title}>Select Date &amp; Time</h1>
+        {!compactHeader && <h1 className={styles.title}>Select Date &amp; Time</h1>}
         <p className={styles.routeNote}>
-          Choose an available start time. Timing may vary due to weather or
+          {!compactHeader && "Choose an available start time. "}Timing may vary due to weather or
           traffic. We will text you when we are on the way.
         </p>
 
