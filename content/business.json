@@ -385,7 +385,7 @@
         {
           "id": "luxury-spa-day",
           "name": "Luxury Spa Day",
-          "description": "A fully customized, relaxing spa experience for your pup. Nail, ear, and teeth care included. Mini trim included.",
+          "description": "A fully customized, relaxing spa experience for your pup. Nail, ear, teeth care and mini trim included.",
           "pricingType": "tiered",
           "tiers": [
             {
@@ -414,7 +414,7 @@
         {
           "id": "custom-full-haircut",
           "name": "Custom Full Haircut & Styling",
-          "description": "Full-service personalized grooming experience. Includes everything in the Signature Bath, followed by a customized whole-body groom styled to your preferences (e.g., teddy bear head, custom length, or breed standard).",
+          "description": "A full haircut that fits your pup's lifestyle and your satisfaction.",
           "pricingType": "tiered",
           "pricingNote": "Starting prices use the lowest coat price for each weight. The price may vary based on the dog's coat situation, which is discussed before the appointment.",
           "coatTypeNote": "Coat type reflects length, density, and overall grooming workload — not breed alone.",

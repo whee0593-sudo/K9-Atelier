@@ -23,7 +23,7 @@ export const SERVICE_DISPLAY_DESCRIPTIONS: Record<string, string> = {
   "signature-bath-care":
     "Bath, blow-dry, and brush-out. Nail, ear, and teeth care included.",
   "custom-full-haircut":
-    "Complete grooming with bespoke haircut and finishing.",
+    "A full haircut that fits your pup's lifestyle and your satisfaction.",
   "show-level-coat-care":
     "An upgraded bath with show-level coat conditioning, on a weekly schedule. Nail, ear, teeth care and mini trim included.",
   "long-coat-show-care":
@@ -31,7 +31,7 @@ export const SERVICE_DISPLAY_DESCRIPTIONS: Record<string, string> = {
   "hand-stripping":
     "Traditional coat preservation for wire-haired breeds.",
   "luxury-spa-day":
-    "A fully customized, relaxing spa experience for your pup. Nail, ear, and teeth care included. Mini trim included.",
+    "A fully customized, relaxing spa experience for your pup. Nail, ear, teeth care and mini trim included.",
   "creative-accent-coloring":
     "A bespoke pop of pet-appropriate color, tailored to your dog's coat and your preferred look.",
   "deshedding-treatment": "For coats with excess undercoat.",
