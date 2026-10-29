@@ -64,7 +64,12 @@ function DirectoryPhoto({ slug }: { slug: string }) {
         src: "/images/services/bath-coat-care-shih-tzu.webp",
         alt: "Brown and white Shih Tzu showing a smooth, brushed coat",
       }
-    : galleryPhotos.find((item) => item.id === SERVICE_PHOTO_IDS[slug]);
+    : slug === "color"
+      ? {
+          src: "/images/services/creative-color-art.webp",
+          alt: "White dog with yellow-orange ears and colorful creative coat artwork",
+        }
+      : galleryPhotos.find((item) => item.id === SERVICE_PHOTO_IDS[slug]);
   if (!photo) return null;
   return (
     <Image
