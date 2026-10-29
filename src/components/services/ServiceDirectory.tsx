@@ -69,7 +69,12 @@ function DirectoryPhoto({ slug }: { slug: string }) {
           src: "/images/services/creative-color-art.webp",
           alt: "White dog with yellow-orange ears and colorful creative coat artwork",
         }
-      : galleryPhotos.find((item) => item.id === SERVICE_PHOTO_IDS[slug]);
+      : slug === "hand-stripping"
+        ? {
+            src: "/images/services/hand-stripping-terrier.webp",
+            alt: "Red wire-coated terrier standing in a hand-stripped coat",
+          }
+        : galleryPhotos.find((item) => item.id === SERVICE_PHOTO_IDS[slug]);
   if (!photo) return null;
   return (
     <Image
