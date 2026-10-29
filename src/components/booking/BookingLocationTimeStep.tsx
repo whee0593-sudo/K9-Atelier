@@ -222,17 +222,11 @@ export function BookingLocationTimeStep({
         <button type="button" onClick={() => setPhase("address")} className={bookingBackLinkClass}>
           ← Back to address
         </button>
-        <p className="font-body mt-8 text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
-          Date &amp; Time
-        </p>
-        <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
-          Choose a date and start time for {dogs && dogs.length > 1 ? dogs.map((dog) => dog.pet.name).join(", ") : pet.name}.
+        <h2 className="font-display mt-8 text-center text-3xl text-ink md:text-4xl">
+          <span className="block">Choose a date and start time for</span>
+          <span className="block break-words">{dogs?.length ? dogs.map((dog) => dog.pet.name).join(", ") : pet.name}</span>
         </h2>
         {dogs && dogs.length > 1 ? <p className="font-body mt-4 text-sm text-ink">One visit for {dogs.length} dogs · Approximately {totalDurationMinutes} minutes of care, scheduled consecutively.</p> : null}
-        <p className="font-body mt-4 text-sm text-taupe">
-          Monday–Friday · 9:00 AM–5:00 PM Eastern. Timing may vary due to weather
-          or traffic. We will text you when we are on the way.
-        </p>
         <div className="mt-8">
           <DateTimeStep
             initialDate={initialDate}
