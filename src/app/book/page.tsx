@@ -18,9 +18,6 @@ export default async function BookPage({ searchParams }: Props) {
         <h1 className="font-display mt-4 text-4xl text-ink md:text-5xl">
           Book Online
         </h1>
-        <p className="font-body mx-auto mt-4 max-w-xl text-base leading-relaxed text-ink">
-          Save your card securely with Stripe. No charge today.
-        </p>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-sm text-ink">
           <span>Prefer to call?</span>
           <Link href="/request-a-call" className="inline-flex min-h-11 items-center justify-center rounded-sm border border-deep-lavender bg-deep-lavender px-5 text-sm font-medium text-white transition-colors hover:bg-[#4C3758] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-deep-lavender">

@@ -393,9 +393,6 @@ export function BookingFlow({
   return (
     <div ref={flowRef} className="mt-8 w-full min-w-0 scroll-mt-28 space-y-8">
       {currentStep <= 6 && <BookingProgress currentStep={Math.min(currentStep, 6)} />}
-      {currentStep <= 3 && bookedDogs.length > 0 ? <div className="font-body text-sm text-ink" role="status">
-        <p>Included in this visit: {bookedDogs.map((dog) => dog.pet.name).join(", ")}</p>
-      </div> : null}
 
       {currentStep === 1 && (
         <BookingDogStep
