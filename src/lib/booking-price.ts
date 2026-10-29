@@ -1,3 +1,4 @@
+import { fixedPriceForService, type FixedServicePrices } from "@/lib/pets/fixed-prices";
 import { formatPrice } from "@/lib/business";
 import { calculateTravelFee } from "@/lib/travel";
 import {
@@ -59,7 +60,7 @@ export type BookingAssessedAddOn = {
   note: string;
 };
 
-export type BookingPricingBasis = "starting" | "hourly";
+export type BookingPricingBasis = "starting" | "hourly" | "fixed";
 
 export type BookingPriceQuote = {
   serviceId: string;
@@ -211,6 +212,7 @@ export function quoteGuestBooking(input: {
   addOnOptions: Record<string, string>;
   distanceMiles: number;
   coatType?: string | null;
+  fixedServicePrices?: FixedServicePrices;
 }):
   | { ok: true; quote: BookingPriceQuote }
   | { ok: false; code: Exclude<BookingPriceFailureCode, "price_changed">; message: string } {
@@ -249,7 +251,8 @@ export function quoteGuestBooking(input: {
     undefined,
     input.coatType,
   );
-  if (serviceEstimate == null) {
+  const fixedPrice = fixedPriceForService(input.fixedServicePrices, service.id);
+  if (serviceEstimate == null && fixedPrice == null) {
     return {
       ok: false,
       code: "unpriced",
@@ -286,7 +289,7 @@ export function quoteGuestBooking(input: {
     });
   }
 
-  const servicePrice = bookingMoney(serviceEstimate.from);
+  const servicePrice = bookingMoney(fixedPrice ?? serviceEstimate!.from);
   const addOnPrice = bookingMoney(
     addOns.reduce((sum, item) => sum + item.price, 0),
   );
@@ -294,16 +297,16 @@ export function quoteGuestBooking(input: {
   const estimatedServicePrice = bookingMoney(servicePrice + addOnPrice);
   const estimatedTotal = bookingMoney(estimatedServicePrice + travelFee);
   const pricingBasis: BookingPricingBasis =
-    service.pricingType === "hourly" ? "hourly" : "starting";
+    fixedPrice != null ? "fixed" : service.pricingType === "hourly" ? "hourly" : "starting";
   const hourlyLabel = `From ${formatPrice(servicePrice)}/hour`;
   const servicePriceLabel =
-    service.pricingType === "free"
+    fixedPrice != null ? formatPrice(servicePrice) : service.pricingType === "free"
       ? "Complimentary"
       : pricingBasis === "hourly"
         ? hourlyLabel
         : `From ${formatPrice(servicePrice)}`;
   const totalLabel =
-    service.pricingType === "free"
+    fixedPrice != null ? formatPrice(estimatedTotal) : service.pricingType === "free"
       ? estimatedTotal === 0
         ? "Complimentary"
         : formatPrice(estimatedTotal)
@@ -321,7 +324,7 @@ export function quoteGuestBooking(input: {
       servicePrice,
       servicePriceLabel,
       estimateNote:
-        service.id === "custom-full-haircut"
+        fixedPrice != null ? null : service.id === "custom-full-haircut"
           ? FULL_GROOM_ESTIMATE_NOTE
           : service.id === "hand-stripping"
             ? HAND_STRIPPING_ESTIMATE_NOTE
@@ -355,6 +358,7 @@ export function evaluateSubmittedBookingPrice(
     estimatedTotal: number;
   },
   weightLbs: number,
+  fixedServicePrices?: FixedServicePrices,
 ):
   | { ok: true; quote: BookingPriceQuote }
   | {
@@ -369,6 +373,7 @@ export function evaluateSubmittedBookingPrice(
     addOnIds: input.addOnIds,
     addOnOptions: input.addOnOptions,
     distanceMiles: input.distanceMiles,
+    fixedServicePrices,
   });
   if (!quoted.ok) return quoted;
   if (bookingCents(input.estimatedTotal) !== bookingCents(quoted.quote.estimatedTotal)) {

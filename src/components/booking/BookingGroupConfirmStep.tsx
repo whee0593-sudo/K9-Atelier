@@ -68,6 +68,7 @@ export function BookingGroupConfirmStep(props: Props) {
     dogs.map((dog, index) => {
       const result = quoteGuestBooking({
         serviceId: dog.service.id,
+        fixedServicePrices: dog.pet.fixedServicePrices,
         weightLbs: dog.pet.weightLbs ?? 0,
         addOnIds: dog.addOnIds,
         addOnOptions: dog.addOnOptions,

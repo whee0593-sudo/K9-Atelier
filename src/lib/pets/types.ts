@@ -17,10 +17,11 @@ export function parsePetRabiesStatus(
 }
 
 export const PET_SELECT =
-  "id, customer_id, name, breed, weight_lbs, date_of_birth, approximate_age_years, sex, temperament_notes, health_comfort_notes, grooming_preferences, allergy_status, allergy_details, rabies_status, rabies_expiration_date, archived_at, created_at, updated_at";
+  "id, customer_id, name, breed, weight_lbs, date_of_birth, approximate_age_years, sex, temperament_notes, health_comfort_notes, grooming_preferences, allergy_status, allergy_details, rabies_status, rabies_expiration_date, archived_at, created_at, updated_at, pet_service_prices ( service_id, amount )";
 
 /** Database row shape (snake_case). */
 export type PetRow = {
+  pet_service_prices?: import("./fixed-prices").PetServicePriceRow[];
   id: string;
   customer_id: string;
   name: string;
@@ -43,6 +44,7 @@ export type PetRow = {
 
 /** Server/API pet record (camelCase). */
 export type PetRecord = {
+  fixedServicePrices?: import("./fixed-prices").FixedServicePrices;
   id: string;
   name: string;
   breed: string;

@@ -1,4 +1,5 @@
 "use client";
+import { StaffPetFixedPrices } from "./StaffPetFixedPrices";
 
 import React, { useEffect, useState } from "react";
 import { PetProfileFieldsForm } from "@/components/account/PetProfileFieldsForm";
@@ -619,6 +620,8 @@ export function StaffCustomerPets({
                 ) : expanded ? (
                   <StaffPetDetails pet={pet} lastService={serviceLabel} />
                 ) : null}
+                {expanded || editing ? <StaffPetFixedPrices customerId={customerId} petId={pet.id} prices={pet.fixedServicePrices} preview={preview}
+                  onSaved={prices => onPetSaved({...pet, fixedServicePrices:prices})} /> : null}
               </div>
             );
           })}

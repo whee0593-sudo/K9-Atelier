@@ -134,6 +134,7 @@ export async function createGroupAppointment(inputs: AppointmentWriteInput[]) {
     if (weight == null) return fail("weight_required");
     const priced = quoteGuestBooking({
       serviceId: input.serviceId,
+      fixedServicePrices: pet.fixedServicePrices,
       weightLbs: weight,
       addOnIds: input.addOnIds,
       addOnOptions: input.addOnOptions,

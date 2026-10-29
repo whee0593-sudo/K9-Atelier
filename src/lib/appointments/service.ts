@@ -224,6 +224,7 @@ export async function createAppointment(
       estimatedTotal: input.estimatedTotal,
     },
     bookedWeight,
+    pet.fixedServicePrices,
   );
   if (!priced.ok) {
     if (priced.code === "price_changed" && priced.quote) {

@@ -1,3 +1,4 @@
+import { mapFixedServicePrices } from "./fixed-prices";
 import { readAllergyStatus } from "@/lib/allergies";
 import { bookingWeightLbs, readStoredWeightLbs } from "@/lib/pets/weight";
 import type { PetRecord, PetRow, PetWriteInput } from "@/lib/pets/types";
@@ -26,7 +27,9 @@ export function displayedRabiesExpiration(
 }
 
 export function mapPetRowToRecord(row: PetRow): PetRecord {
+  const prices = mapFixedServicePrices(row.pet_service_prices);
   return {
+    ...(Object.keys(prices).length ? { fixedServicePrices: prices } : {}),
     id: row.id,
     name: row.name,
     breed: row.breed,
@@ -53,6 +56,7 @@ export function mapPetRowToRecord(row: PetRow): PetRecord {
 export function mapPetRecordToUiProfile(record: PetRecord): PetProfile {
   return {
     id: record.id,
+    ...(record.fixedServicePrices ? { fixedServicePrices: record.fixedServicePrices } : {}),
     name: record.name,
     breed: record.breed,
     weightLbs: record.weightLbs,
