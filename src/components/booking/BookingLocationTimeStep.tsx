@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { business, formatPrice } from "@/lib/business";
+import { formatPrice } from "@/lib/business";
 import {
   formatServiceAddress,
   formatTravelMiles,
@@ -78,7 +78,6 @@ export function BookingLocationTimeStep({
   const [assigning, setAssigning] = useState(false);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
 
-  const { freeRadiusMiles, standardServiceMiles } = business.serviceArea;
   const totalDurationMinutes = dogs?.length
     ? bookingDogsDuration(dogs)
     : undefined;
@@ -262,13 +261,6 @@ export function BookingLocationTimeStep({
       <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
         Where shall we visit {dogs && dogs.length > 1 ? dogs.map((dog) => dog.pet.name).join(", ") : pet.name}?
       </h2>
-      <p className="font-body mt-4 max-w-2xl text-sm leading-relaxed text-taupe">
-        Enter the appointment address so we can open the calendar.{" "}
-        {showPrices
-          ? `Complimentary travel is included within ${freeRadiusMiles} miles; visits up to ${standardServiceMiles} miles may include a travel fee.`
-          : "Your travel fee, if any, is shown on Review & Confirm."}
-      </p>
-
       <form onSubmit={handleCheckArea} className="mt-8 space-y-5">
         <div>
           <label htmlFor="street" className={bookingLabelClass}>
