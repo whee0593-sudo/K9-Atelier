@@ -6,12 +6,12 @@
     Confirm your email to continue
   </h1>
   <p style="font-size: 15px; line-height: 1.7; margin: 0 0 28px; text-align: center; color: #5A5055;">
-    Welcome to K9 Atelier. Use the secure link below to confirm your email and access your private grooming account.
+    Welcome to K9 Atelier. Use the secure link below to verify your email. Then sign in with your email and password to complete your profile.
   </p>
   <p style="margin: 0 0 28px; text-align: center;">
-    <a href="{{ .ConfirmationURL }}"
-       style="display: inline-block; background: #C8B8D8; color: #FBF7EF; text-decoration: none; padding: 16px 28px; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; border-radius: 2px;">
-      Access My Account
+    <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&amp;type=signup"
+       style="display: inline-block; background: #6B5971; color: #FBF7EF; text-decoration: none; padding: 16px 28px; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; border-radius: 2px;">
+      Verify My Email
     </a>
   </p>
   <p style="font-size: 12px; line-height: 1.6; margin: 0 0 24px; text-align: center; color: #7A6A71;">

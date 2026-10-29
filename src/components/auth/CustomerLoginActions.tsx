@@ -54,6 +54,7 @@ export function CustomerLoginActions({
   const [step, setStep] = useState<Step>("form");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(false);
@@ -62,6 +63,7 @@ export function CustomerLoginActions({
     setMode(nextMode);
     setStep("form");
     setPassword("");
+    setConfirmPassword("");
     setError(null);
   }
 
@@ -103,10 +105,15 @@ export function CustomerLoginActions({
       return;
     }
 
-    setRememberMePreference(rememberMe);
-    const supabase = createClient();
-    const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`;
-    const { data, error: signUpError } = await supabase.auth.signUp({
+    if (password !== confirmPassword) {
+      setLoading(false);
+      setError("Passwords do not match.");
+      return;
+    }
+
+    const supabase = createImplicitAuthClient();
+    const emailRedirectTo = `${window.location.origin}/auth/confirm`;
+    const { error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
       options: { emailRedirectTo },
@@ -119,11 +126,8 @@ export function CustomerLoginActions({
       return;
     }
 
-    if (data.session) {
-      window.location.assign(destination);
-      return;
-    }
-
+    setPassword("");
+    setConfirmPassword("");
     setStep("check-email");
   }
 
@@ -257,6 +261,25 @@ export function CustomerLoginActions({
             minLength={mode === "signup" ? MIN_PASSWORD_LENGTH : undefined}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
+            className={bookingFieldClass}
+          />
+        </div>
+      ) : null}
+
+      {mode === "signup" ? (
+        <div>
+          <label htmlFor="login-confirm-password" className={bookingLabelClass}>
+            Confirm Password
+          </label>
+          <input
+            id="login-confirm-password"
+            name="confirmPassword"
+            type="password"
+            autoComplete="new-password"
+            required
+            minLength={MIN_PASSWORD_LENGTH}
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
             className={bookingFieldClass}
           />
         </div>

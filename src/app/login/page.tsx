@@ -33,8 +33,7 @@ export default async function LoginPage({ searchParams }: Props) {
             className="font-body mx-auto mt-6 max-w-md text-sm text-red-700"
             role="alert"
           >
-            This email link only works in the browser that requested it. On
-            your phone, request a new reset and enter the 6-digit code.
+            This email link is invalid or has expired. Please sign in with your email and password.
           </p>
         )}
         {error === "signin-link" && (
@@ -60,7 +59,6 @@ export default async function LoginPage({ searchParams }: Props) {
           next={next}
           bookingFlow={bookingFlow}
           adminFlow={adminFlow}
-          startWithReset={error === "auth"}
           startWithSignup={mode === "signup"}
         />
 

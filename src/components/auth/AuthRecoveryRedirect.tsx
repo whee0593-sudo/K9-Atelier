@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { hasEmailAuthTokens, isRecoveryAuthLink } from "@/lib/auth-email-session";
 
-const AUTH_PAGES = new Set(["/auth/callback", "/auth/reset"]);
+const AUTH_PAGES = new Set(["/auth/callback", "/auth/reset", "/auth/confirm"]);
 
 /** Recovery tokens sometimes land on /login or / with a URL hash. */
 export function AuthRecoveryRedirect() {

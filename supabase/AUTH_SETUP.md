@@ -21,8 +21,10 @@
 把下面每一行都加进去：
 
 ```
+https://k9atelier.com/auth/confirm
 https://k9atelier.com/auth/callback
 https://k9atelier.com/auth/reset
+http://localhost:3000/auth/confirm
 http://localhost:3000/auth/callback
 http://localhost:3000/auth/reset
 http://localhost:3003/auth/callback
@@ -56,7 +58,7 @@ http://localhost:3004/auth/callback
 
 （邮件主题保持英文，因为会发给客人。）
 
-两个模板的按钮都用 **`{{ .ConfirmationURL }}`**，会尊重应用的 `emailRedirectTo`（任意本地端口都能用）。
+Confirm signup 使用 `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=signup`，应用传入不带查询参数的 `/auth/confirm`。Reset password 保持 `{{ .ConfirmationURL }}` 和现有 recovery 流程。两者必须分开配置；修改本地配置不会同步线上 Auth。
 
 重置密码模板另外包含 **`{{ .Token }}`**：6 位验证码，在重置密码页输入。注册确认邮件不再提供登录验证码。
 

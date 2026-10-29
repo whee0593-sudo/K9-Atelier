@@ -17,6 +17,7 @@ const PUBLIC_PATHS = [
   "/login",
   "/login/admin",
   "/auth/callback",
+  "/auth/confirm",
   "/auth/reset",
   "/api/site-access",
   "/preview",
