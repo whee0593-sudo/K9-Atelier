@@ -10,6 +10,18 @@ import { createDraftBookingPet } from "@/lib/booking-flow";
 import { allBookableServices } from "@/lib/services";
 
 describe("BookingExperienceStep", () => {
+  it("embeds four shared categories without a second booking header or Continue button", () => {
+    const html = renderToStaticMarkup(<BookingExperienceStep embedded membersOnlyAllowed
+      pet={{...createDraftBookingPet(),name:"Yoyo",weightLbs:9}}
+      selectedServiceId="signature-bath-care" selectedIds={["signature-bath-care","senior-comfort-care"]}
+      onSelect={() => {}} onContinue={() => {}} onBack={() => {}} />);
+    assert.equal((html.match(/aria-expanded="false"/g) ?? []).length,4);
+    assert.match(html,/Specialty Add-on Care/);
+    assert.match(html,/Signature Bath selected/);
+    assert.match(html,/Extra-Gentle Senior Care selected/);
+    assert.equal(html.includes("Choose a Grooming Service"),false);
+    assert.equal(html.includes("Continue"),false);
+  });
   it("shows care categories with a plus, not the individual services", () => {
     const pet = { ...createDraftBookingPet(), name: "Bella", weightLbs: 12 };
     const html = renderToStaticMarkup(
