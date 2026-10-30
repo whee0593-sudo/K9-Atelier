@@ -20,6 +20,7 @@ before(async () => {
     INSERT INTO appointments VALUES (1,'${owner}','100 Palm Ave','Palm Beach','FL','33480'),(2,'${owner}','100 Palm Ave','Palm Beach','FL','33480');`);
   await db.exec(readFileSync("supabase/migrations/20261004020000_customer_service_addresses.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/20261030115424_customer_address_book.sql", "utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261030125026_customer_address_delete.sql", "utf8"));
 });
 after(async () => { await db?.close(); });
 describe("customer address book in Postgres", () => {
@@ -40,9 +41,16 @@ describe("customer address book in Postgres", () => {
     await db.exec(`SET ROLE authenticated; SET test.uid='${other}';`);
     assert.equal((await db.query("SELECT * FROM customer_service_addresses")).rows.length, 0);
     await db.exec("UPDATE customer_service_addresses SET street='Stolen'");
+    await db.exec("DELETE FROM customer_service_addresses");
     await assert.rejects(db.exec(`INSERT INTO customer_service_addresses(customer_id,street,city,state,zip) VALUES('${owner}','Other','City','FL','33480')`), /row-level security/);
     await db.exec("RESET ROLE");
     assert.equal((await db.query("SELECT * FROM customer_service_addresses WHERE street='Stolen'")).rows.length, 0);
+    assert.equal((await db.query("SELECT * FROM customer_service_addresses")).rows.length, 2);
+  });
+  it("lets an owner delete a saved address while retaining booked appointment snapshots", async () => {
+    await db.exec(`SET ROLE authenticated; SET test.uid='${owner}'; DELETE FROM customer_service_addresses WHERE street='300 Ocean Ave'; RESET ROLE;`);
+    assert.equal((await db.query("SELECT * FROM customer_service_addresses WHERE street='300 Ocean Ave'")).rows.length, 0);
+    assert.equal((await db.query("SELECT * FROM appointments WHERE address_street='200 Ocean Ave'")).rows.length, 2);
   });
   it("does not roll back booking when remembering its address fails", async () => {
     await db.exec("REVOKE INSERT(street,city,state,zip,customer_id) ON customer_service_addresses FROM authenticated");
