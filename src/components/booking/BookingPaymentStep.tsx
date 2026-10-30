@@ -142,10 +142,7 @@ export function BookingPaymentStep({
       <button type="button" onClick={onBack} className={bookingBackLinkClass}>
         ← Back
       </button>
-      <p className="font-body mt-8 text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
-        Payment
-      </p>
-      <h2 className="font-display mt-4 text-3xl text-ink md:text-4xl">
+      <h2 className="font-display mt-8 text-3xl text-ink md:text-4xl">
         Secure Your Appointment
       </h2>
       <p className="font-body mt-3 max-w-xl text-sm leading-relaxed text-taupe">
