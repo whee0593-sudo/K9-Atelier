@@ -725,6 +725,7 @@ export function BookingReviewStep({
 export function BookingConfirmationView({
   pet,
   additionalPetNames = [],
+  dogServices,
   serviceName,
   appointmentDate,
   appointmentTime,
@@ -735,6 +736,7 @@ export function BookingConfirmationView({
 }: {
   pet: PetProfile;
   additionalPetNames?: string[];
+  dogServices?: { petName: string; serviceName: string }[];
   serviceName: string;
   appointmentDate: string;
   appointmentTime: string;
@@ -751,13 +753,13 @@ export function BookingConfirmationView({
   }, [appointmentId]);
 
   return (
-    <section className="relative text-center">
+    <section data-booking-confirmed className="relative text-center">
       <BookingConfetti active={celebrate && !pendingReview} />
-      <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
-        {pendingReview
-          ? "Appointment Received"
-          : "Your Appointment Is Confirmed"}
-      </p>
+      {pendingReview ? (
+        <p className="font-body text-[12px] font-medium uppercase tracking-[0.18em] text-taupe">
+          Appointment Received
+        </p>
+      ) : null}
       <h2 className="font-display mt-5 text-4xl text-ink md:text-5xl">
         We Look Forward
         <br />
@@ -765,10 +767,23 @@ export function BookingConfirmationView({
       </h2>
 
       <div className={`${bookingNoticeClass} mx-auto mt-10 max-w-lg text-left`}>
-        <p className="text-sm text-ink">{serviceName}</p>
-        <p className="mt-3 text-sm text-taupe">
-          {appointmentDate} · {appointmentTime}
-        </p>
+        <div className="space-y-3 text-sm text-ink">
+          {(dogServices ?? [{ petName: pet.name, serviceName }]).map((dog, index) => (
+            <div key={`${index}-${dog.petName}`} className="flex items-baseline justify-between gap-4">
+              <span className="min-w-0 break-words">{dog.petName}</span>
+              <span className="min-w-0 max-w-[70%] break-words text-right">{dog.serviceName}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 flex items-baseline justify-between gap-4 text-sm text-taupe">
+          <span className="shrink-0">
+            {appointmentDate.replace(/^(\d{4})-(\d{2})-(\d{2})$/, "$2/$3/$1")}
+          </span>
+          <span className="min-w-0 text-right">
+            Estimated Time Frame{" "}
+            <span className="inline-block whitespace-nowrap">{appointmentTime}</span>
+          </span>
+        </div>
         <p className="mt-2 text-sm text-taupe">
           {formatServiceAddress(address)}
         </p>
@@ -785,6 +800,12 @@ export function BookingConfirmationView({
         </Link>
         <Link href="/" className={bookingSecondaryBtnClass}>
           Return Home
+        </Link>
+      </div>
+      <div className="font-body mt-6 flex flex-wrap items-center justify-center gap-3 text-sm text-ink">
+        <span>Have a special note?</span>
+        <Link href="/contact" className={bookingSecondaryBtnClass}>
+          Contact Us
         </Link>
       </div>
     </section>

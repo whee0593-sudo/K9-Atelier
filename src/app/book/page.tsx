@@ -13,7 +13,7 @@ export default async function BookPage({ searchParams }: Props) {
   const showPrices = await viewerCanViewServicePrices();
 
   return (
-    <Container className="py-10 md:py-20">
+    <Container className="py-10 md:py-20 [&:has([data-booking-confirmed])>header]:hidden">
       <header className="mx-auto max-w-3xl text-center">
         <h1 className="font-display mt-4 text-4xl text-ink md:text-5xl">
           Book Online
