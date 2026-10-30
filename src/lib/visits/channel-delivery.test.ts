@@ -5,6 +5,7 @@ import { describe, it } from "node:test";
 import { deliverVisitChannels } from "@/lib/visits/channel-delivery";
 import { memoryVisitNotificationStore } from "@/lib/visits/notification-ledger";
 import type { ProviderDelivery } from "@/lib/visits/provider-delivery";
+import { staffConfirmationEventKey } from "@/lib/appointments/staff-status-notice";
 
 function scripted(steps: ProviderDelivery[]) {
   const calls: string[] = [];
@@ -36,6 +37,16 @@ async function sendPair(
 }
 
 describe("independent email and SMS delivery", () => {
+  it("delivers a later add-dog confirmation once even after the original visit confirmation", async () => {
+    const store = memoryVisitNotificationStore();
+    const sent = scripted(["delivered", "delivered", "delivered", "delivered"]);
+    const original = { visitId: "visit-1", event: "staff_confirmed", store, email: sent.email, sms: sent.sms };
+    await deliverVisitChannels(original);
+    const request = { ...original, event: staffConfirmationEventKey({ id: "new-dog", customerAddDogRequest: true }) };
+    assert.deepEqual(await deliverVisitChannels(request), { email: "sent", sms: "sent" });
+    assert.deepEqual(await deliverVisitChannels(request), { email: "skipped", sms: "skipped" });
+    assert.equal(sent.calls.length, 4);
+  });
   it("retries only SMS after email was delivered and SMS was rejected", async () => {
     const store = memoryVisitNotificationStore();
     const calls: string[] = [];

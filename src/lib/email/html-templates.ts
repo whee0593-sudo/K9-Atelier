@@ -674,7 +674,7 @@ export function buildCustomerAddDogEmail({
   const estimateNote =
     "Adding another pet is subject to availability and is not confirmed automatically.";
   const closingParagraph =
-    "We'll review the day's schedule and email you once the change has been confirmed.";
+    "We'll review the day's schedule and text you once the change has been confirmed.";
   const detailRows = customerAppointmentDetailRows(appointment);
 
   const text = [

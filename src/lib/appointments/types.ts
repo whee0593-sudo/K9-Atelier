@@ -46,6 +46,7 @@ export type AppointmentRecord = {
   petName: string;
   petBreed: string;
   petWeightLbs?: number | null;
+  customerAddDogRequest?: boolean;
   serviceId: string;
   serviceName: string;
   addOnIds: string[];

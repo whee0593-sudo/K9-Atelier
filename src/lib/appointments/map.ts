@@ -41,6 +41,7 @@ export function mapAppointmentRowToRecord(row: AppointmentRow): AppointmentRecor
     petId: row.pet_id,
     petName: pet?.name ?? "Unknown pet",
     petBreed: pet?.breed ?? "",
+    ...(row.add_on_options?.__customerAddDogRequest === "true" ? { customerAddDogRequest: true } : {}),
     petWeightLbs: pet?.weight_lbs == null ? null : Number(pet.weight_lbs),
     serviceId: row.service_id,
     serviceName: getServiceDisplayName(row.service_id, row.service_name),

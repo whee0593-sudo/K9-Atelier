@@ -14,7 +14,7 @@ import {
 } from "@/lib/email/html-templates";
 import { sendEmailDelivery } from "@/lib/email/resend";
 import type { CustomerContact } from "@/lib/email/appointment-context";
-import { resolveStaffStatusNoticeKind } from "@/lib/appointments/staff-status-notice";
+import { resolveStaffStatusNoticeKind, staffConfirmationEventKey } from "@/lib/appointments/staff-status-notice";
 import {
   sendAppointmentConfirmedSms,
   sendAppointmentDeclinedSms,
@@ -131,6 +131,7 @@ export async function notifyCustomerAppointmentConfirmed(
   appointment: AppointmentRecord,
   customer: CustomerContact,
   copy?: VisitCustomerCopy,
+  eventKey = "staff_confirmed",
 ) {
   const email = buildCustomerAppointmentConfirmedEmail(
     withVisitPetName(appointment, copy?.petNames),
@@ -138,12 +139,13 @@ export async function notifyCustomerAppointmentConfirmed(
   );
 
   await deliverEmailAndSms(
-    "staff_confirmed",
+    eventKey,
     "staff_confirmed",
     appointment,
     email,
     customer,
-    () => sendAppointmentConfirmedSms(appointment, customer, copy?.petNames),
+    () => sendAppointmentConfirmedSms(appointment, customer, copy?.petNames, eventKey === "staff_confirmed" ? undefined : eventKey),
+    eventKey === "staff_confirmed" ? undefined : eventKey,
   );
 }
 
@@ -308,7 +310,7 @@ export async function sendAppointmentStatusEmails(
   const copy = copyFromPets(plan.pets);
 
   if (plan.event === "staff_confirmed") {
-    await notifyCustomerAppointmentConfirmed(appointment, customer, copy);
+    await notifyCustomerAppointmentConfirmed(appointment, customer, copy, staffConfirmationEventKey(appointment));
     return;
   }
 

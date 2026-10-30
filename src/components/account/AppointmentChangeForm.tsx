@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BookingPoliciesModal } from "@/components/booking/BookingPoliciesModal";
 import { DateTimeStep, type AvailabilityDay } from "@/components/booking/DateTimeStep";
@@ -17,10 +18,10 @@ import {
   changeNoticeBand,
   type AppointmentChangeAction,
 } from "@/lib/appointments/change-policy";
-import { useCustomerPets } from "@/lib/pets/use-customer-pets";
-import { allBookableServices, getBookableServicesForPet } from "@/lib/services";
+import { AppointmentAddDogForm } from "@/components/account/AppointmentAddDogForm";
+import { getBookableServicesForPet } from "@/lib/services";
 import { formatServiceAddress } from "@/lib/travel";
-import { petReadyToBook } from "@/lib/pets";
+import type { PetProfile } from "@/lib/pets";
 import { bookingWeightLbs } from "@/lib/pets/weight";
 import { buildPreviewOnTheWayAppointments } from "@/lib/appointments/calendar-preview";
 
@@ -62,14 +63,17 @@ export function AppointmentChangeForm({
   appointmentId: string;
   preview?: boolean;
 }) {
-  const { pets } = useCustomerPets();
+  const router = useRouter();
+  const confirmingRef = useRef(false);
   const [appointments, setAppointments] = useState<AppointmentRecord[]>([]);
   const [visit, setVisit] = useState<VisitContext | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [action, setAction] = useState<AppointmentChangeAction | null>(null);
   const [removeId, setRemoveId] = useState<string>("");
-  const [addPetId, setAddPetId] = useState("");
+  const [selectedAddPet, setSelectedAddPet] = useState<PetProfile | null>(null);
+  const [editingAddPet, setEditingAddPet] = useState(false);
+  const addPetId = selectedAddPet?.id ?? "";
   const [addServiceId, setAddServiceId] = useState("");
   const [nextDate, setNextDate] = useState<string | null>(null);
   const [nextSlotStartMinutes, setNextSlotStartMinutes] = useState<number | null>(
@@ -220,13 +224,6 @@ export function AppointmentChangeForm({
   }, [action, visit]);
 
   const first = appointments[0];
-  const bookedPetIds = new Set(appointments.map((item) => item.petId));
-  const addablePets = pets.filter(
-    (pet) =>
-      !bookedPetIds.has(pet.id) &&
-      petReadyToBook(pet),
-  );
-  const selectedAddPet = addablePets.find((pet) => pet.id === addPetId) ?? null;
   const selectedAddWeight = selectedAddPet
     ? bookingWeightLbs(selectedAddPet.weightLbs)
     : null;
@@ -235,7 +232,8 @@ export function AppointmentChangeForm({
       ? getBookableServicesForPet(selectedAddWeight, {
           includeMembersOnly: true,
         })
-      : allBookableServices();
+      : [];
+  const validAddService = addServices.some(service => service.id === addServiceId);
 
   const feeTargets =
     action === "remove_dog"
@@ -270,7 +268,7 @@ export function AppointmentChangeForm({
     if (!action || needsPriceReview) return false;
     if (!preview && (quoteLoading || !serverQuote)) return false;
     if (action === "reschedule") return Boolean(nextDate && nextSlotStartMinutes != null);
-    if (action === "add_dog") return Boolean(addPetId && addServiceId);
+    if (action === "add_dog") return Boolean(addPetId && validAddService && !editingAddPet);
     if (action === "remove_dog") {
       return appointments.length > 1 && Boolean(removeId);
     }
@@ -279,6 +277,8 @@ export function AppointmentChangeForm({
     action,
     addPetId,
     addServiceId,
+    validAddService,
+    editingAddPet,
     appointments.length,
     needsPriceReview,
     nextDate,
@@ -290,12 +290,13 @@ export function AppointmentChangeForm({
   ]);
 
   async function confirmChange() {
-    if (!action) return;
+    if (!action || !canConfirm || busy || confirmingRef.current) return;
     if (preview) {
       setDone(true);
       return;
     }
     setBusy(true);
+    confirmingRef.current = true;
     setError(null);
     try {
       const response = await fetch(
@@ -321,9 +322,11 @@ export function AppointmentChangeForm({
         return;
       }
       setDone(true);
+      if (action === "add_dog") router.push(`/account/appointments/${appointmentId}/change-requested`);
     } catch {
       setError("Could not save this change.");
     } finally {
+      confirmingRef.current = false;
       setBusy(false);
     }
   }
@@ -343,7 +346,10 @@ export function AppointmentChangeForm({
   if (done) {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-text">Your appointment has been updated.</p>
+        {action === "add_dog" ? <div className="space-y-3" role="status">
+          <h3 className="text-xl font-semibold text-gold-dark">Thank you for letting us know!</h3>
+          <p className="text-sm text-text">We’ll review the day’s schedule and text you once the change has been confirmed.</p>
+        </div> : <p className="text-sm text-text">Your appointment has been updated.</p>}
         <Link href="/account/appointments" className={bookingPrimaryBtnClass}>
           Back to appointments
         </Link>
@@ -388,6 +394,7 @@ export function AppointmentChangeForm({
             <button
               key={item}
               type="button"
+              disabled={busy}
               onClick={() => {
                 setAction(item);
                 setServerQuote(null);
@@ -421,40 +428,24 @@ export function AppointmentChangeForm({
         />
       ) : null}
 
-      {action === "add_dog" ? (
-        <div className="space-y-4">
-          {addablePets.length === 0 ? (
-            <Link href="/account/pets" className={bookingSecondaryBtnClass}>
-              Add a dog
-            </Link>
-          ) : (
-            <label className="block">
-              <span className={bookingLabelClass}>Dog to add</span>
-              <select
-                className={bookingFieldClass}
-                value={addPetId}
-                onChange={(event) => {
-                  setAddPetId(event.target.value);
-                  setAddServiceId("");
-                }}
-              >
-                <option value="">Select a dog</option>
-                {addablePets.map((pet) => (
-                  <option key={pet.id} value={pet.id}>
-                    {pet.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          {addablePets.length > 0 ? (
+      <div hidden={action !== "add_dog"} className="space-y-4">
+          <div>
+            <p className={bookingLabelClass}>Dog to add</p>
+            <AppointmentAddDogForm preview={preview} disabled={busy}
+              onEditingChange={setEditingAddPet}
+              onSaved={pet => {
+                setSelectedAddPet(pet);
+                const weight = bookingWeightLbs(pet.weightLbs);
+                if (weight == null || !getBookableServicesForPet(weight, {includeMembersOnly:true}).some(service => service.id === addServiceId)) setAddServiceId("");
+              }} />
+          </div>
             <label className="block">
               <span className={bookingLabelClass}>Service</span>
               <select
                 className={bookingFieldClass}
-                value={addServiceId}
+                value={validAddService ? addServiceId : ""}
                 onChange={(event) => setAddServiceId(event.target.value)}
-                disabled={!selectedAddPet}
+                disabled={!selectedAddPet || editingAddPet || busy}
               >
                 <option value="">Select a service</option>
                 {addServices.map((service) => (
@@ -464,9 +455,7 @@ export function AppointmentChangeForm({
                 ))}
               </select>
             </label>
-          ) : null}
-        </div>
-      ) : null}
+      </div>
 
       {action === "remove_dog" ? (
         <label className="block">
@@ -517,7 +506,7 @@ export function AppointmentChangeForm({
           ) : (
             <p className="text-sm text-text-muted">
               {action === "add_dog"
-                ? "Adding another pet is subject to availability and is not confirmed automatically. We’ll review the day’s schedule and email you once the change has been confirmed."
+                ? "Adding another pet is subject to availability and is not confirmed automatically. We’ll review the day’s schedule and text you once the change has been confirmed."
                 : "This change does not include a cancellation fee."}
             </p>
           )}
