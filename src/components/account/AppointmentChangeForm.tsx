@@ -440,9 +440,14 @@ export function AppointmentChangeForm({
           <div>
             <p className={bookingLabelClass}>Dog to add</p>
             <AppointmentAddDogForm preview={preview} disabled={busy}
-              onEditingChange={setEditingAddPet}
+              onEditingChange={editing => {
+                setEditingAddPet(editing);
+                if (editing) setError(null);
+              }}
               onSaved={pet => {
                 setSelectedAddPet(pet);
+                setError(null);
+                if (!preview) router.refresh();
                 const weight = bookingWeightLbs(pet.weightLbs);
                 if (weight == null || (addServiceId && !quoteAddedDogServices(addSelection,weight,pet.fixedServicePrices).ok)) setAddSelection(emptyBookingServiceSelection());
               }} />
