@@ -395,7 +395,7 @@ describe("service price visibility", () => {
 
     const hiddenTravel = bookingTravelAreaCopy("extended", false);
     const shownTravel = bookingTravelAreaCopy("extended", true);
-    assert.match(hiddenTravel.body, /shown on Review & Confirm/);
+    assert.match(hiddenTravel.body, /will appear on Review & Confirm/);
     assert.equal(hiddenTravel.showFee, false);
     assert.equal(shownTravel.showFee, true);
     assert.equal(bookingTravelAreaCopy("complimentary", false).showFee, false);
