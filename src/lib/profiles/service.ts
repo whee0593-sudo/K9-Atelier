@@ -80,6 +80,39 @@ export async function updateOwnProfile(
   return { profile: mapProfileRow(data as CustomerProfileRow) };
 }
 
+/** Save only edited customer fields; email changes require Auth verification. */
+export async function updateOwnProfilePatch(input: Partial<CustomerProfileWriteInput>): Promise<{ profile: CustomerProfile; message?: string } | { error: "unauthenticated" | "server" | "not_found" | "email_update"; message?: string }> {
+  const user = await requireAuthenticatedUser();
+  if (!user) return { error: "unauthenticated" as const };
+  const db = await createAuthenticatedSupabaseClient();
+  const columns = {
+    firstName: "first_name", lastName: "last_name", phone: "phone", birthday: "birthday",
+    preferredContact: "preferred_contact", emergencyContactName: "emergency_contact_name",
+    emergencyContactPhone: "emergency_contact_phone", emergencyContactRelationship: "emergency_contact_relationship",
+    householdAllergyStatus: "household_allergy_status", householdAllergyDetails: "household_allergy_details",
+  } as const;
+  const row: Record<string, unknown> = {};
+  for (const [key, column] of Object.entries(columns)) {
+    if (Object.hasOwn(input, key)) row[column] = input[key as keyof CustomerProfileWriteInput];
+  }
+  if (Object.hasOwn(input, "householdAllergyStatus") && input.householdAllergyStatus !== "yes") row.household_allergy_details = null;
+  if (Object.keys(row).length) {
+    const { data, error } = await db.from("profiles").update(row).eq("id", user.id).select("id").maybeSingle();
+    if (error) return { error: "server" as const };
+    if (!data) return { error: "not_found" as const };
+  }
+  let message: string | undefined;
+  if (input.email && input.email !== user.email) {
+    if (input.email !== user.new_email) {
+      const { error } = await db.auth.updateUser({ email: input.email });
+      if (error) return { error: "email_update" as const, message: error.message };
+    }
+    message = "Check your email to confirm the email address change. Your login email updates after confirmation.";
+  }
+  const result = await getOwnProfile();
+  return "error" in result ? result : { ...result, message };
+}
+
 function isDuplicateAuthEmail(message: string) {
   return /already been registered|already exists|email address is already/i.test(
     message,

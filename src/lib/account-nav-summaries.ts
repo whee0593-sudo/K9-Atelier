@@ -49,7 +49,7 @@ export function isCustomerProfileComplete(
 }
 
 export function formatCompletionStatus(complete: boolean) {
-  return complete ? "Completed" : "Incomplete";
+  return complete ? null : "incompleted";
 }
 
 export function formatReferralCodeSummary(codes: string[]) {
@@ -136,12 +136,9 @@ export function buildAccountNavSummaries(input: {
   referralCodes?: string[] | null;
   availableCreditCents?: number | null;
   today?: string;
+  savedAddressCount?: number | null;
 }): AccountNavSummaries {
   const summaries = emptyAccountNavSummaries();
-
-  if (input.referralCodes) {
-    summaries.overview = formatReferralCodeSummary(input.referralCodes);
-  }
 
   if (input.profile) {
     summaries.profile = formatCompletionStatus(
@@ -161,7 +158,11 @@ export function buildAccountNavSummaries(input: {
   }
 
   if (input.pets) {
-    summaries.pets = formatPetNamesSummary(input.pets.map((pet) => pet.name));
+    summaries.pets = input.pets.length ? formatPetNamesSummary(input.pets.map((pet) => pet.name)) : "incompleted";
+  }
+
+  if (input.savedAddressCount != null) {
+    summaries.addresses = formatCompletionStatus(input.savedAddressCount > 0);
   }
 
   if (input.paymentMethodCount != null) {

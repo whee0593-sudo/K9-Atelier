@@ -126,7 +126,7 @@ const APPOINTMENT_SELECT = `
   customer_confirm_token_hash,
   customer_confirm_expires_at,
   created_at,
-  pets ( name, breed )
+  pets ( name, breed, weight_lbs )
 `;
 
 const ADMIN_APPOINTMENT_SELECT = `

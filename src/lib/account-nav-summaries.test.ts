@@ -46,8 +46,8 @@ describe("account nav summaries", () => {
       }),
       false,
     );
-    assert.equal(formatCompletionStatus(true), "Completed");
-    assert.equal(formatCompletionStatus(false), "Incomplete");
+    assert.equal(formatCompletionStatus(true), null);
+    assert.equal(formatCompletionStatus(false), "incompleted");
   });
 
   it("formats overview, pets, and referral credit summaries", () => {
@@ -139,11 +139,11 @@ describe("account nav summaries", () => {
       today: "2026-09-16",
     });
 
-    assert.equal(summaries.overview, "Referral code: BELLA-JANE-M");
-    assert.equal(summaries.profile, "Completed");
-    assert.equal(summaries.addresses, "Completed");
+    assert.equal(summaries.overview, null);
+    assert.equal(summaries.profile, null);
+    assert.equal(summaries.addresses, null);
     assert.equal(summaries.pets, "Bella, Max");
-    assert.equal(summaries.payment, "Completed");
+    assert.equal(summaries.payment, null);
     assert.equal(summaries.referrals, "$18.00");
     assert.equal(summaries.bookings, "Aug 12, 2026");
     assert.equal(summaries.password, null);

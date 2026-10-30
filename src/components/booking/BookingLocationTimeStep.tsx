@@ -10,6 +10,7 @@ import {
   type TravelQuote,
 } from "@/lib/travel";
 import type { PetProfile } from "@/lib/pets";
+import type { SavedServiceAddress } from "@/lib/profiles/customer-addresses";
 import { bookingDogsDuration, type BookingDogService } from "@/lib/booking/dogs";
 import {
   DateTimeStep,
@@ -70,6 +71,9 @@ export function BookingLocationTimeStep({
   const [city, setCity] = useState(initialAddress?.city ?? "");
   const [state, setState] = useState(initialAddress?.state?.trim() || "FL");
   const [zip, setZip] = useState(initialAddress?.zip ?? "");
+  const [savedAddresses, setSavedAddresses] = useState<SavedServiceAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [addressLoadError, setAddressLoadError] = useState<string | null>(null);
   const [quote, setQuote] = useState<TravelQuote | null>(initialQuote ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +85,23 @@ export function BookingLocationTimeStep({
   const totalDurationMinutes = dogs?.length
     ? bookingDogsDuration(dogs)
     : undefined;
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/account/addresses", { credentials: "include" }).then(async response => {
+      if (response.status === 401) return;
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error ?? "Could not load saved addresses.");
+      if (active) setSavedAddresses(body.addresses ?? []);
+    }).catch(() => { if (active) setAddressLoadError("Could not load saved addresses. You can enter your address below."); });
+    return () => { active = false; };
+  }, []);
+
+  function chooseAddress(address: SavedServiceAddress) {
+    setSelectedAddressId(address.id);
+    setStreet(address.street); setCity(address.city); setState(address.state); setZip(address.zip);
+    setQuote(null); setError(null); setDays([]);
+  }
 
   useEffect(() => {
     if (phase !== "schedule" || !quote?.lat || !quote.lon) return;
@@ -252,7 +273,18 @@ export function BookingLocationTimeStep({
       <h2 className="font-display mt-8 text-3xl text-ink md:text-4xl">
         Where shall we visit {dogs && dogs.length > 1 ? dogs.map((dog) => dog.pet.name).join(", ") : pet.name}?
       </h2>
-      <form onSubmit={handleCheckArea} className="mt-8 space-y-5">
+      {addressLoadError ? <p role="status" className="mt-5 text-sm text-text-muted">{addressLoadError}</p> : null}
+      {savedAddresses.length ? <fieldset className="mt-8 space-y-3">
+        <legend className={bookingLabelClass}>Choose a saved address</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {savedAddresses.map(address => <label key={address.id} className={`flex cursor-pointer gap-3 rounded-2xl border p-4 ${selectedAddressId === address.id ? "border-gold bg-lavender-light" : "border-lavender/40 bg-cream"}`}>
+            <input type="radio" name="saved-address" value={address.id} checked={selectedAddressId === address.id} onChange={() => chooseAddress(address)} />
+            <span className="text-sm"><span className="block font-medium">{address.street}</span><span className="block">{address.city}, {address.state} {address.zip}</span></span>
+          </label>)}
+        </div>
+        <button type="button" className="text-sm text-gold-dark underline" onClick={() => { setSelectedAddressId(null); setStreet(""); setCity(""); setState("FL"); setZip(""); setQuote(null); }}>Use another address</button>
+      </fieldset> : null}
+      <form onSubmit={handleCheckArea} className="mt-8 space-y-5" onChange={() => { setQuote(null); setSelectedAddressId(null); }}>
         <div>
           <label htmlFor="street" className={bookingLabelClass}>
             Street Address

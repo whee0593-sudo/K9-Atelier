@@ -6,6 +6,7 @@ import { PaymentMethodsManager } from "@/components/account/PaymentMethodsManage
 import { PetProfilesManager } from "@/components/account/PetProfilesManager";
 import { ReferralRewardsPanel } from "@/components/account/ReferralRewardsPanel";
 import { getAccountSection } from "@/lib/account-fields";
+import { ServiceAddresses } from "@/components/account/ServiceAddresses";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -53,16 +54,7 @@ export default async function AccountSectionPage({
         ) : slug === "profile" ? (
           <CustomerProfileSection />
         ) : slug === "addresses" ? (
-          <>
-            <AccountFieldsForm fields={section.fields} />
-            <button
-              type="button"
-              disabled
-              className="mt-6 rounded-xl border border-dashed border-gold/50 px-4 py-2 text-sm text-gold-dark opacity-60"
-            >
-              + Add another address (coming soon)
-            </button>
-          </>
+          <ServiceAddresses />
         ) : (
           <AccountFieldsForm fields={section.fields} />
         )}

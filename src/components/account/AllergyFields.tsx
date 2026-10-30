@@ -50,6 +50,7 @@ export function AllergyFields({
         <label className="block">
           <span className={labelClassName}>{ALLERGY_DETAILS_LABEL}</span>
           <textarea
+            name={`${name}-details`}
             value={details ?? ""}
             onChange={(event) => onDetailsChange(event.target.value)}
             rows={4}
