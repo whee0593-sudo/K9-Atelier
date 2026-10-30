@@ -16,13 +16,12 @@ import {
 import { isPersistedPetId } from "@/lib/booking-flow";
 import { createCustomerPet } from "@/lib/pets/client";
 import { mapPetProfileToWriteInput } from "@/lib/pets/map";
-import { formatPrice } from "@/lib/business";
 import {
   formatServiceAddress,
   type ServiceAddress,
   type TravelQuote,
 } from "@/lib/travel";
-import { BookingReviewQuote } from "@/components/booking/BookingReviewQuote";
+import { BookingGroupReviewQuote } from "@/components/booking/BookingGroupReviewQuote";
 import {
   bookingBackLinkClass,
   bookingFieldClass,
@@ -165,59 +164,22 @@ export function BookingGroupConfirmStep(props: Props) {
       <h2 className="font-display mt-8 text-3xl text-ink md:text-4xl">
         Review &amp; Confirm
       </h2>
-      <p className="font-body mt-4 text-sm text-taupe">
-        One visit for {dogs.length} dogs. Please review each dog&apos;s care
-        below.
-      </p>
       <div
         className={`${bookingNoticeClass} mt-8 space-y-3 font-body text-sm text-ink`}
       >
         <p>
-          {owner.firstName} {owner.lastName} · {owner.email} · {owner.phone}
+          <span className="font-semibold">{owner.firstName} {owner.lastName}</span> · {owner.email} · {owner.phone}
         </p>
-        <p>
+        <p className="font-semibold">
           {formatBookingDate(props.appointmentDate)} · {props.appointmentTime}
         </p>
-        <p>{formatServiceAddress(address)}</p>
+        <p className="font-semibold">{formatServiceAddress(address)}</p>
         <p>
           Payment method: {formatPaymentMethodLabel(paymentMethod)}. No charge
           today.
         </p>
       </div>
-      <div className="mt-6 space-y-6">
-        {dogs.map((dog, index) => (
-          <article
-            key={dog.pet.id}
-            className={`${bookingNoticeClass} space-y-4`}
-          >
-            <h3 className="font-display text-2xl text-ink">
-              {index + 1}. {dog.pet.name}
-            </h3>
-            <p className="font-body text-sm text-taupe">
-              {dog.pet.breed} · {dog.pet.weightLbs} lbs
-            </p>
-            {quotes[index] ? (
-              <BookingReviewQuote quote={quotes[index]} />
-            ) : (
-              <p role="alert">
-                Please check this dog&apos;s service and weight.
-              </p>
-            )}
-          </article>
-        ))}
-      </div>
-      {ready ? (
-        <p className="font-body mt-6 text-lg text-ink">
-          Estimated visit total: From{" "}
-          {formatPrice(
-            quotes.reduce(
-              (total, quote) => total + (quote?.estimatedTotal ?? 0),
-              0,
-            ),
-          )}
-          . Travel is included once per visit.
-        </p>
-      ) : null}
+      <BookingGroupReviewQuote dogs={dogs} quotes={quotes} />
       <label
         className={`${bookingLabelClass} mt-6`}
         htmlFor="group-referral-code"
