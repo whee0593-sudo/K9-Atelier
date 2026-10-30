@@ -305,8 +305,8 @@ export function BookingPoliciesModal({
           >
             <div className="space-y-4">
               <p>
-                K9 Atelier serves Jupiter Island, Jupiter, Tequesta, Palm Beach
-                Gardens, Palm Beach, and West Palm Beach.
+                K9 Atelier Mobile Pet Spa serves Jupiter Island, Jupiter,
+                Tequesta, Palm Beach Gardens, and Palm Beach.
               </p>
               <PolicyRow label={`Within ${business.serviceArea.freeRadiusMiles} driving miles`} value="Travel included" />
               {showPrices ? (
