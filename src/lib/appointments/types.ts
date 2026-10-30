@@ -73,6 +73,7 @@ export type AppointmentRecord = {
   awaitingCustomerConfirm?: boolean;
   createdAt: string;
   visitId?: string | null;
+  pricedAddOns?: import("@/lib/charges/visit-line-items").PricedAddOnSnapshot[] | null;
   estimatedDurationMinutes?: number | null;
 };
 

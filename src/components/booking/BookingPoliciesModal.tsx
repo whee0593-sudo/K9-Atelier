@@ -1,13 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type RefObject } from "react";
-import {
-  APPLICABLE_BOOKING_TOTAL_NOTE,
-  CANCELLATION_POLICY_ROWS,
-  ILLNESS_POLICY_COPY,
-  NO_SHOW_LIMITS_NOTE,
-  POLICY_CALENDAR_NOTE,
-} from "@/lib/appointments/policy-copy";
+import { CANCELLATION_POLICY_ROWS } from "@/lib/appointments/policy-copy";
 import { business, formatPrice } from "@/lib/business";
 import { bookingSecondaryBtnClass } from "@/components/booking/booking-ui";
 
@@ -42,10 +36,7 @@ const SECTIONS: Array<{
   { id: "special-handling", number: "07", title: "Additional Fee" },
 ];
 
-const incompleteServiceParagraphs =
-  business.booking.cancellationPolicy.sections
-    .find((section) => section.heading.includes("Cannot Be Completed"))
-    ?.body.split("\n\n") ?? [];
+const policyCopy = business.booking.policyModalCopy;
 
 const fleaFee = business.fees.find((fee) => fee.id === "flea-tick-fee");
 const fleaLineItems =
@@ -146,7 +137,7 @@ function AccordionPanel({
         role="region"
         aria-labelledby={headerId}
         hidden={!open}
-        className="overflow-hidden px-1 pb-5 text-center text-sm leading-relaxed text-taupe motion-reduce:transition-none"
+        className="overflow-hidden px-1 pb-5 text-left text-sm leading-relaxed text-taupe motion-reduce:transition-none"
       >
         {open ? children : null}
       </div>
@@ -239,10 +230,6 @@ export function BookingPoliciesModal({
         >
           Policies &amp; Fees
         </h2>
-        <p className="font-body mx-auto mt-3 max-w-xl text-center text-sm leading-relaxed text-taupe">
-          Everything you need to know before reserving your K9 Atelier
-          appointment.
-        </p>
 
         <div className="mt-8 border-t border-champagne/20">
           <AccordionPanel
@@ -251,21 +238,8 @@ export function BookingPoliciesModal({
             open={openSection === "payment"}
             onToggle={() => toggleSection("payment")}
           >
-            <div className="space-y-4">
-              <p>
-                A valid payment method is required before you can reserve an
-                appointment.
-              </p>
-              <p>
-                After you choose your appointment date and time, you will add
-                or select which saved card to use for that visit.
-              </p>
-              <p>
-                You are not charged when you book. Payment is settled after
-                your appointment. Late cancellations and no-shows may be
-                charged to the selected card according to our cancellation
-                policy.
-              </p>
+            <div className="space-y-3">
+              {policyCopy.payment.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
             </div>
           </AccordionPanel>
 
@@ -276,19 +250,20 @@ export function BookingPoliciesModal({
             onToggle={() => toggleSection("cancellation")}
           >
             <div className="space-y-4">
-              <p>
-                Because every K9 Atelier appointment is reserved exclusively for
-                one dog, we kindly ask for notice at least two days before the
-                appointment date. {POLICY_CALENDAR_NOTE}
-              </p>
+              <p>{policyCopy.cancellation.calendar}</p>
               <div>
                 {CANCELLATION_POLICY_ROWS.map(([label, value]) => (
                   <PolicyRow key={label} label={label} value={value} />
                 ))}
               </div>
-              <p>{APPLICABLE_BOOKING_TOTAL_NOTE}</p>
-              <p>{NO_SHOW_LIMITS_NOTE}</p>
-              <p>{ILLNESS_POLICY_COPY}</p>
+              <details>
+                <summary className="cursor-pointer font-medium text-ink">Fee details &amp; exceptions</summary>
+                <div className="mt-3 space-y-3">
+                  <p>{policyCopy.cancellation.basis}</p>
+                  <p>{policyCopy.cancellation.noShow}</p>
+                </div>
+              </details>
+              <p>{policyCopy.cancellation.contact}</p>
             </div>
           </AccordionPanel>
 
@@ -298,22 +273,14 @@ export function BookingPoliciesModal({
             open={openSection === "rescheduling"}
             onToggle={() => toggleSection("rescheduling")}
           >
-            <div className="space-y-4">
-              <p>
-                Changing your appointment date or time uses the same Eastern
-                Time calendar dates as cancellation. Fees are based on the
-                original appointment, not the new date you choose.
-              </p>
-              <div>
-                {CANCELLATION_POLICY_ROWS.slice(0, 3).map(([label, value]) => (
-                  <PolicyRow key={label} label={label} value={value} />
-                ))}
-              </div>
-              <p>
-                Same-day rescheduling includes moving a visit to another day.
-                The original reserved time cannot be offered to another client.
-              </p>
-              <p>{ILLNESS_POLICY_COPY}</p>
+            <div className="space-y-3">
+              <p>{policyCopy.rescheduling}</p>
+              <button type="button" onClick={() => {
+                setOpenSection("cancellation");
+                document.getElementById("policy-header-cancellation")?.focus();
+              }} className="font-medium text-ink underline underline-offset-4">
+                View cancellation fees
+              </button>
             </div>
           </AccordionPanel>
 
@@ -324,7 +291,7 @@ export function BookingPoliciesModal({
             onToggle={() => toggleSection("incomplete-service")}
           >
             <div className="space-y-4">
-              {incompleteServiceParagraphs.map((paragraph) => (
+              {policyCopy.incompleteService.map((paragraph) => (
                 <p key={paragraph}>{paragraph}</p>
               ))}
             </div>
@@ -338,30 +305,22 @@ export function BookingPoliciesModal({
           >
             <div className="space-y-4">
               <p>
-                K9 Atelier serves Jupiter Island, Jupiter, Tequesta, Palm Beach
-                Gardens, Palm Beach, and West Palm Beach.
+                K9 Atelier Mobile Pet Spa serves Jupiter Island, Jupiter,
+                Tequesta, Palm Beach Gardens, and Palm Beach.
               </p>
-              <p>
-                Travel within {business.serviceArea.freeRadiusMiles} driving
-                miles is included.
-              </p>
+              <PolicyRow label={`Within ${business.serviceArea.freeRadiusMiles} driving miles`} value="Travel included" />
               {showPrices ? (
-                <p>
-                  Above {business.serviceArea.freeRadiusMiles} through{" "}
-                  {business.serviceArea.maxDistanceMiles} miles, the fee is{" "}
-                  {formatPrice(business.serviceArea.travelFeePerMile)} per one-way
-                  mile beyond {business.serviceArea.freeRadiusMiles}. Above{" "}
-                  {business.serviceArea.maxDistanceMiles} through{" "}
-                  {business.serviceArea.standardServiceMiles} miles, the fee is{" "}
-                  {formatPrice(
-                    (business.serviceArea.maxDistanceMiles -
-                      business.serviceArea.freeRadiusMiles) *
-                      business.serviceArea.travelFeePerMile,
-                  )}{" "}
-                  plus {formatPrice(business.serviceArea.extendedTravelFeePerMile)}{" "}
-                  per mile beyond {business.serviceArea.maxDistanceMiles}. The
-                  amount is rounded to the nearest dollar.
-                </p>
+                <div>
+                  <PolicyRow
+                    label={`Over ${business.serviceArea.freeRadiusMiles}–${business.serviceArea.maxDistanceMiles} miles`}
+                    value={`${formatPrice(business.serviceArea.travelFeePerMile)}/mile beyond ${business.serviceArea.freeRadiusMiles}`}
+                  />
+                  <PolicyRow
+                    label={`Over ${business.serviceArea.maxDistanceMiles}–${business.serviceArea.standardServiceMiles} miles`}
+                    value={`${formatPrice((business.serviceArea.maxDistanceMiles - business.serviceArea.freeRadiusMiles) * business.serviceArea.travelFeePerMile)} + ${formatPrice(business.serviceArea.extendedTravelFeePerMile)}/mile beyond ${business.serviceArea.maxDistanceMiles}`}
+                  />
+                  <p className="mt-2">Based on one-way driving distance, rounded to the nearest dollar.</p>
+                </div>
               ) : (
                 <p>Your travel fee, if any, is shown on Review & Confirm.</p>
               )}
@@ -379,11 +338,7 @@ export function BookingPoliciesModal({
             onToggle={() => toggleSection("flea")}
           >
             <div className="space-y-4">
-              <p>
-                If fleas or ticks are discovered during the pre-groom
-                assessment, treatment and sanitation are required to protect your
-                dog and subsequent clients.
-              </p>
+              <p>{policyCopy.flea}</p>
               {showPrices ? (
                 <div>
                   <PolicyPriceRow
@@ -406,15 +361,7 @@ export function BookingPoliciesModal({
             onToggle={() => toggleSection("special-handling")}
           >
             <div className="space-y-4">
-              <p>
-                Final service items will vary based on the specific
-                circumstances.
-              </p>
-              <p>
-                If your dog requires additional time or specialized handling due
-                to matting, significant anxiety, resistance or aggression, an
-                additional handling fee may apply.
-              </p>
+              <p>{policyCopy.additionalFee}</p>
               {showPrices ? (
                 <div className="mx-auto max-w-sm text-left">
                   <PolicyPriceRow
@@ -427,10 +374,6 @@ export function BookingPoliciesModal({
                   />
                 </div>
               ) : null}
-              <p>
-                Whenever possible, we will communicate any additional care
-                requirements with you.
-              </p>
             </div>
           </AccordionPanel>
         </div>

@@ -103,6 +103,26 @@
     }
   },
   "booking": {
+    "policyModalCopy": {
+      "payment": [
+        "A valid card is required to reserve your appointment. No charge at booking; payment is due after service.",
+        "We prefer cash or Zelle. Applicable cancellation, rescheduling or no-show fees may be charged to your saved card."
+      ],
+      "cancellation": {
+        "calendar": "Fees use calendar days in Eastern Time (America/New_York).",
+        "basis": "Fees apply to confirmed services, priced add-ons, one travel fee and other saved charges. Unpriced add-ons are excluded. Removing one dog uses only that dog's confirmed charges; the visit's travel fee stays.",
+        "noShow": "No-show and cancellation fees are not combined. Being away from home alone is not a no-show; a reply or an arranged handoff is not treated as no response.",
+        "contact": "If your dog is unwell or an emergency arises, contact us as early as possible."
+      },
+      "rescheduling": "The cancellation fees also apply to rescheduling, based on the original appointment date—even when moving to a later date.",
+      "incompleteService": [
+        "If stress, health concerns, matting or another condition makes grooming unsafe, we will stop and discuss options with you.",
+        "Charges cover completed services, required extra care and a minimum of 50% of the scheduled service price. More time used may increase the charge. Travel fees still apply; remaining work needs a new appointment.",
+        "If an issue on our side prevents service, there is no charge or rescheduling penalty."
+      ],
+      "flea": "If fleas or ticks are found, treatment and vehicle sanitation are required to protect your dog and other clients.",
+      "additionalFee": "Matting, anxiety, resistance or aggression may require extra time or special handling, with additional fees. We will discuss extra care with you whenever possible."
+    },
     "requiresPaymentMethod": true,
     "chargeAtBooking": false,
     "paymentMethodNote": "Saving a payment method is how the appointment is reserved. You are not charged when you book — payment is settled after your appointment. Two or more calendar days before: No fee. One calendar day before: 50% of the applicable booking total. On the day of the appointment: 100%. No-Show: Groomer arrives, attempts contact, no response within 15 minutes: 100%.",
