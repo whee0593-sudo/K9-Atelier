@@ -27,3 +27,14 @@ export async function saveOwnServiceAddress(address: ServiceAddress, id?: string
   if (!data) return { error: "not_found" as const };
   return { address: data as SavedServiceAddress };
 }
+
+export async function deleteOwnServiceAddress(id: string): Promise<{ ok: true } | { error: "unauthenticated" | "server" | "not_found" }> {
+  const user = await requireAuthenticatedUser();
+  if (!user) return { error: "unauthenticated" };
+  const db = await createAuthenticatedSupabaseClient();
+  const { data, error } = await db.from("customer_service_addresses").delete()
+    .eq("id", id).eq("customer_id", user.id).select("id").maybeSingle();
+  if (error) return { error: "server" };
+  if (!data) return { error: "not_found" };
+  return { ok: true };
+}
