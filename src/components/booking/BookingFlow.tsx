@@ -357,8 +357,12 @@ export function BookingFlow({
               : 6;
 
   useEffect(() => {
+    if (reserved) {
+      window.scrollTo(0, 0);
+      return;
+    }
     flowRef.current?.scrollIntoView({ block: "start" });
-  }, [currentStep, selectedPet?.id, serviceConfirmed]);
+  }, [currentStep, selectedPet?.id, serviceConfirmed, reserved]);
 
   if (
     reserved &&
@@ -371,6 +375,13 @@ export function BookingFlow({
     return (
       <BookingConfirmationView
         pet={selectedPet}
+        dogServices={bookedDogs.length > 1 ? bookedDogs.map((dog) => ({
+          petName: dog.pet.name,
+          serviceName: [
+            getServiceDisplayName(dog.service.id, dog.service.name),
+            ...dog.addOnIds.map((id) => getAddOnService(id)?.name ?? id),
+          ].join(" · "),
+        })) : undefined}
         additionalPetNames={bookedDogs.filter((dog) => dog.pet.id !== selectedPet.id).map((dog) => dog.pet.name)}
         serviceName={bookedDogs.length > 1 ? bookedDogs.map((dog) => `${dog.pet.name}: ${getServiceDisplayName(dog.service.id, dog.service.name)}`).join(" · ") : getServiceDisplayName(
           selectedService.id,
