@@ -3,7 +3,7 @@ import type {
   AppointmentRecord,
   AppointmentRow,
 } from "@/lib/appointments/types";
-import { stringAddOnOptions } from "@/lib/charges/visit-line-items";
+import { readPricedAddOns, stringAddOnOptions } from "@/lib/charges/visit-line-items";
 import { parseAllergySnapshot } from "@/lib/allergies";
 import { parseSpaGoals } from "@/lib/spa-goals";
 import { getServiceDisplayName } from "@/lib/service-display";
@@ -81,6 +81,7 @@ export function mapAppointmentRowToRecord(row: AppointmentRow): AppointmentRecor
     awaitingCustomerConfirm: isAwaitingCustomerConfirm(row),
     createdAt: row.created_at,
     visitId: row.visit_id ?? null,
+    pricedAddOns: readPricedAddOns(row.add_on_options as Record<string, unknown> | null),
     estimatedDurationMinutes:
       typeof row.estimated_duration_minutes === "number"
         ? row.estimated_duration_minutes

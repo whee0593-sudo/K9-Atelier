@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { formatPrice } from "@/lib/format-price";
+import { formatReviewMoney } from "@/lib/booking-price";
+import { customerBookingVisits, customerVisitEstimate, customerAppointmentServiceLines } from "@/lib/appointments/customer-visits";
 import {
   appointmentIsUpcoming,
   appointmentStatusLabel,
@@ -21,49 +22,53 @@ function formatShortDate(iso: string): string {
   });
 }
 
-function AppointmentCard({ appointment }: { appointment: AppointmentRecord }) {
+export function CustomerVisitCard({ appointments }: { appointments: AppointmentRecord[] }) {
+  const active = appointments.filter(pet => pet.status !== "cancelled");
+  const first = active[0] ?? appointments[0];
+  if (!first) return null;
+  const mixed = new Set(appointments.map(pet => pet.status)).size > 1;
+  const status = mixed
+    ? appointments.some(pet => pet.status === "cancelled") ? "Partially cancelled" : "Pending confirmation"
+    : appointmentStatusLabel(first.status);
+  const total = customerVisitEstimate(appointments);
+  const travelFee = active.reduce((sum, pet) => sum + pet.travelFee, 0);
   return (
     <li className="rounded-xl border border-lavender/30 bg-cream px-4 py-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="font-medium text-gold-dark">{appointment.petName}</p>
-          <p className="mt-1 text-sm text-text">{appointment.serviceName}</p>
-        </div>
-        <span
-          className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
-            appointment.status === "cancelled"
-              ? "bg-lavender-light/60 text-text-muted"
-              : "bg-lavender-light text-gold-dark"
-          }`}
-        >
-          {appointmentStatusLabel(appointment.status)}
-        </span>
+      <div className="mb-4 flex justify-end">
+        <span className="inline-flex rounded-full bg-lavender-light px-3 py-1 text-xs font-medium text-gold-dark">{status}</span>
       </div>
-      <p className="mt-3 text-sm text-text">
-        {formatShortDate(appointment.appointmentDate)} ·{" "}
-        {appointment.appointmentTime}
-      </p>
-      <p className="mt-1 text-sm text-text-muted">
-        {formatServiceAddress({
-          street: appointment.addressStreet,
-          city: appointment.addressCity,
-          state: appointment.addressState,
-          zip: appointment.addressZip,
-        })}
-      </p>
-      {appointment.estimatedTotal != null ? (
-        <p className="mt-3 text-sm text-text-muted">
-          Estimated from {formatPrice(appointment.estimatedTotal)}
-        </p>
-      ) : null}
-      {appointmentIsUpcoming(appointment) ? (
-        <Link
-          href={`/account/appointments/${appointment.id}`}
-          className="mt-4 inline-flex text-sm font-medium text-gold-dark underline"
-        >
-          Change or cancel
-        </Link>
-      ) : null}
+      <div className="space-y-7">
+        {appointments.map(appointment => (
+          <article key={appointment.id} className="space-y-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h4 className="font-semibold text-gold-dark">{appointment.petName}</h4>
+              {mixed ? <span className="text-xs text-text-muted">{appointmentStatusLabel(appointment.status)}</span> : null}
+            </div>
+            {appointment.petBreed ? <p className="text-sm text-text-muted">{appointment.petBreed}</p> : null}
+            {customerAppointmentServiceLines(appointment).map((line, index) => (
+              <div key={index} className="flex items-baseline justify-between gap-4 text-sm font-semibold text-text">
+                <span className="min-w-0 break-words">{line.name}</span>
+                {line.amount != null ? <span className="shrink-0 text-right tabular-nums">{formatReviewMoney(line.amount)}</span> : null}
+              </div>
+            ))}
+          </article>
+        ))}
+      </div>
+      <p className="mt-5 text-sm font-semibold text-text">{formatShortDate(first.appointmentDate)} · {first.appointmentTime}</p>
+      <p className="mt-1 text-sm text-text-muted">{formatServiceAddress({street:first.addressStreet,city:first.addressCity,state:first.addressState,zip:first.addressZip})}</p>
+      {travelFee > 0 ? <div className="mt-5 flex justify-between gap-4 text-sm text-text"><span>Travel Fee</span><span className="shrink-0">{formatReviewMoney(travelFee)}</span></div> : null}
+      {total != null ? (
+        <div className="mt-5 flex items-baseline justify-between gap-4 border-t border-lavender/30 pt-4 text-sm font-semibold text-text">
+          <span>Estimated Total</span><span className="shrink-0 text-right tabular-nums">{formatReviewMoney(total)}</span>
+        </div>
+      ) : active.length ? <p className="mt-5 text-sm text-text-muted">Estimate to be confirmed.</p> : null}
+      <div className="mt-4 flex flex-wrap gap-x-5 gap-y-3">
+        {appointments.filter(appointmentIsUpcoming).map(appointment => (
+          <Link key={appointment.id} href={`/account/appointments/${appointment.id}`} className="inline-flex text-sm font-medium text-gold-dark underline">
+            {appointments.length > 1 ? `Change or cancel — ${appointment.petName}` : "Change or cancel"}
+          </Link>
+        ))}
+      </div>
     </li>
   );
 }
@@ -114,8 +119,9 @@ export function CustomerBookingsList() {
     );
   }
 
-  const upcoming = appointments.filter(appointmentIsUpcoming);
-  const past = appointments.filter((record) => !appointmentIsUpcoming(record));
+  const visits = customerBookingVisits(appointments);
+  const upcoming = visits.filter(pets => pets.some(appointmentIsUpcoming));
+  const past = visits.filter(pets => !pets.some(appointmentIsUpcoming));
 
   if (appointments.length === 0) {
     return (
@@ -137,8 +143,8 @@ export function CustomerBookingsList() {
           </p>
         ) : (
           <ul className="mt-4 space-y-3">
-            {upcoming.map((appointment) => (
-              <AppointmentCard key={appointment.id} appointment={appointment} />
+            {upcoming.map((pets) => (
+              <CustomerVisitCard key={pets[0].visitId ?? pets[0].id} appointments={pets} />
             ))}
           </ul>
         )}
@@ -150,8 +156,8 @@ export function CustomerBookingsList() {
           <p className="mt-3 text-sm text-text-muted">No past appointments.</p>
         ) : (
           <ul className="mt-4 space-y-3">
-            {past.map((appointment) => (
-              <AppointmentCard key={appointment.id} appointment={appointment} />
+            {past.map((pets) => (
+              <CustomerVisitCard key={pets[0].visitId ?? pets[0].id} appointments={pets} />
             ))}
           </ul>
         )}
