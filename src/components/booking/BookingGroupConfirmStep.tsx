@@ -168,12 +168,12 @@ export function BookingGroupConfirmStep(props: Props) {
         className={`${bookingNoticeClass} mt-8 space-y-3 font-body text-sm text-ink`}
       >
         <p>
-          {owner.firstName} {owner.lastName} · {owner.email} · {owner.phone}
+          <span className="font-semibold">{owner.firstName} {owner.lastName}</span> · {owner.email} · {owner.phone}
         </p>
-        <p>
+        <p className="font-semibold">
           {formatBookingDate(props.appointmentDate)} · {props.appointmentTime}
         </p>
-        <p>{formatServiceAddress(address)}</p>
+        <p className="font-semibold">{formatServiceAddress(address)}</p>
         <p>
           Payment method: {formatPaymentMethodLabel(paymentMethod)}. No charge
           today.

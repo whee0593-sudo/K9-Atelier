@@ -5,7 +5,7 @@ import { bookingNoticeClass } from "@/components/booking/booking-ui";
 
 function PriceRow({ name, amount }: { name: string; amount: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-4">
+    <div className="flex items-baseline justify-between gap-4 font-semibold">
       <span className="min-w-0 break-words">{name}</span>
       <span className="shrink-0 text-right tabular-nums">{amount}</span>
     </div>
@@ -31,7 +31,7 @@ export function BookingGroupReviewQuote({ dogs, quotes }: {
           return (
             <article key={dog.pet.id} className="space-y-4">
               <h3 className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <span className="font-display break-words text-2xl">{dog.pet.name}</span>
+                <span className="font-display break-words text-2xl font-semibold">{dog.pet.name}</span>
                 <span className="text-taupe">{dog.pet.breed} · {dog.pet.weightLbs} lbs</span>
               </h3>
               {quote ? (
@@ -42,7 +42,7 @@ export function BookingGroupReviewQuote({ dogs, quotes }: {
                   ))}
                   {quote.assessedAddOns.map((item) => (
                     <div key={item.id}>
-                      <p>{item.name}</p>
+                      <p className="font-semibold">{item.name}</p>
                       <p className="mt-2 leading-relaxed text-taupe">{item.note}</p>
                     </div>
                   ))}
