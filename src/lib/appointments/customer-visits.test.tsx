@@ -47,6 +47,12 @@ describe("customer booking visits", () => {
     assert.deepEqual(mapped.pricedAddOns,[{id:"color",label:"Temporary Fun",amount:50}]);
     assert.deepEqual(mapped.addOnOptions,{"creative-accent-coloring":"Temporary Fun"});
   });
+  it("retains add-dog request identity for later confirmation without exposing it as an add-on", () => {
+    const mapped=mapAppointmentRowToRecord({id:"added",add_on_options:{__customerAddDogRequest:"true"},status:"pending_confirmation"} as unknown as AppointmentRow);
+    assert.equal(mapped.customerAddDogRequest,true);
+    assert.equal(mapped.status,"pending_confirmation");
+    assert.deepEqual(mapped.addOnOptions,{});
+  });
   it("shows one card total, status, and change button for the entire visit", () => {
     const pets=[appointment("LYCHEE"),appointment("BELLA",{estimatedTotal:160,serviceName:"Hand Stripping",scheduledStart:623})];
     const html=renderToStaticMarkup(<CustomerVisitCard appointments={pets}/>);

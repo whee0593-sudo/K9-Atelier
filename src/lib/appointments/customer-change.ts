@@ -34,9 +34,9 @@ import { bookingWeightLbs, liveServiceDurationMinutes } from "@/lib/pets/weight"
 import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
 import { vaccinationStatusSnapshotForBooking } from "@/lib/vaccinations/booking";
 import {
-  allBookableServices,
   estimateServiceDurationMinutes,
   getServicePriceEstimate,
+  getBookableServicesForPet,
 } from "@/lib/services";
 import { canonicalServiceId, isRetiredSpaService } from "@/lib/service-catalog";
 import { spaGoalsForService } from "@/lib/spa-goals";
@@ -909,7 +909,7 @@ async function addDogToVisit(
 
   const serviceId = canonicalServiceId(input.serviceId);
   if (isRetiredSpaService(serviceId)) return { error: "conflict" as const };
-  const service = allBookableServices().find((entry) => entry.id === serviceId);
+  const service = getBookableServicesForPet(bookedWeight, { includeMembersOnly: true }).find((entry) => entry.id === serviceId);
   if (!service) return { error: "conflict" as const };
   const spaGoals = spaGoalsForService(service.id, input.spaGoals);
   if (!spaGoals.ok) return { error: "conflict" as const };
@@ -935,6 +935,13 @@ async function addDogToVisit(
 
   const family = await loadVisitSiblings(userId, visit);
   if ("error" in family) return family;
+  const existing = family.rows.find(row => row.pet_id === input.petId);
+  if (existing) {
+    if (existing.service_id === service.id && existing.add_on_options?.__customerAddDogRequest === "true") {
+      return { appointment: mapAppointmentRowToRecord(existing) };
+    }
+    return { error: "conflict" };
+  }
   const ordered = [...family.rows].sort(
     (left, right) => (left.visit_sequence ?? 0) - (right.visit_sequence ?? 0),
   );
@@ -977,7 +984,7 @@ async function addDogToVisit(
   if (!schedule) return { error: "slot_unavailable" as const };
 
   const vaccinationStatus = vaccinationStatusSnapshotForBooking(pet);
-  const status = "confirmed";
+  const status = "pending_confirmation";
   const servicePrice = snapshotServicePrice(fixedPriceForService(pet.fixedServicePrices, service.id) ?? estimate?.from ?? 0);
   const visitSequence = nextVisitSequence(sequences.sequences);
 
@@ -990,7 +997,7 @@ async function addDogToVisit(
       service_id: service.id,
       service_name: getServiceDisplayName(service.id, service.name),
       add_on_ids: [],
-      add_on_options: attachBookingPriceSnapshot({}, [], []),
+      add_on_options: { ...attachBookingPriceSnapshot({}, [], []), __customerAddDogRequest: "true" },
       spa_goals: spaGoals.goals,
       allergy_snapshot: allergySnapshot,
       address_street: visit.address_street,
@@ -1014,7 +1021,7 @@ async function addDogToVisit(
       payment_method_id: paymentMethod.id,
       vaccination_status_at_booking: vaccinationStatus,
       status,
-      confirmed_at: new Date().toISOString(),
+      confirmed_at: null,
     })
     .select(CHANGE_SELECT)
     .single();

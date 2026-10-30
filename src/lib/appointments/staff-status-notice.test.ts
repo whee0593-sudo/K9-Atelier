@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { resolveStaffStatusNoticeKind } from "@/lib/appointments/staff-status-notice";
+import { resolveStaffStatusNoticeKind, staffConfirmationEventKey } from "@/lib/appointments/staff-status-notice";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 import { buildCustomerAppointmentStaffCancelledEmail } from "@/lib/email/html-templates";
 import { buildAppointmentStaffCancelledSms } from "@/lib/notifications";
@@ -36,6 +36,12 @@ const appointment = {
 } as AppointmentRecord;
 
 describe("staff status notice routing", () => {
+  it("gives accepted add-dog requests a stable confirmation identity distinct from the original visit", () => {
+    assert.equal(staffConfirmationEventKey(appointment), "staff_confirmed");
+    const added = { ...appointment, customerAddDogRequest: true };
+    assert.equal(staffConfirmationEventKey(added), `staff_confirmed:add-dog:${appointment.id}`);
+    assert.equal(staffConfirmationEventKey({...added,id:"another-addition"}), "staff_confirmed:add-dog:another-addition");
+  });
   it("sends confirmation when staff confirms a pending appointment", () => {
     assert.equal(
       resolveStaffStatusNoticeKind("confirmed", "pending_confirmation"),

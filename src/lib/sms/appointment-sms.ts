@@ -122,12 +122,14 @@ export async function sendAppointmentConfirmedSms(
   appointment: AppointmentRecord,
   customer: CustomerContact,
   petNames?: string[],
+  fingerprint?: string,
 ) {
   return sendCustomerSms(
     "booking_confirmation",
     appointment,
     customer.phone,
     buildBookingConfirmationSms(namedDetails(appointment, customer, petNames)),
+    fingerprint ? { fingerprint } : undefined,
   );
 }
 
