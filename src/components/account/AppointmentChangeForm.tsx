@@ -423,46 +423,48 @@ export function AppointmentChangeForm({
 
       {action === "add_dog" ? (
         <div className="space-y-4">
-          <label className="block">
-            <span className={bookingLabelClass}>Dog to add</span>
-            <select
-              className={bookingFieldClass}
-              value={addPetId}
-              onChange={(event) => {
-                setAddPetId(event.target.value);
-                setAddServiceId("");
-              }}
-            >
-              <option value="">Select a dog</option>
-              {addablePets.map((pet) => (
-                <option key={pet.id} value={pet.id}>
-                  {pet.name}
-                </option>
-              ))}
-            </select>
-          </label>
           {addablePets.length === 0 ? (
-            <p className="text-sm text-text-muted">
-              Add another dog in your pet profiles, with a name, breed, and
-              weight, before attaching them to this visit.
-            </p>
+            <Link href="/account/pets" className={bookingSecondaryBtnClass}>
+              Add a dog
+            </Link>
+          ) : (
+            <label className="block">
+              <span className={bookingLabelClass}>Dog to add</span>
+              <select
+                className={bookingFieldClass}
+                value={addPetId}
+                onChange={(event) => {
+                  setAddPetId(event.target.value);
+                  setAddServiceId("");
+                }}
+              >
+                <option value="">Select a dog</option>
+                {addablePets.map((pet) => (
+                  <option key={pet.id} value={pet.id}>
+                    {pet.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {addablePets.length > 0 ? (
+            <label className="block">
+              <span className={bookingLabelClass}>Service</span>
+              <select
+                className={bookingFieldClass}
+                value={addServiceId}
+                onChange={(event) => setAddServiceId(event.target.value)}
+                disabled={!selectedAddPet}
+              >
+                <option value="">Select a service</option>
+                {addServices.map((service) => (
+                  <option key={service.id} value={service.id}>
+                    {service.name}
+                  </option>
+                ))}
+              </select>
+            </label>
           ) : null}
-          <label className="block">
-            <span className={bookingLabelClass}>Service</span>
-            <select
-              className={bookingFieldClass}
-              value={addServiceId}
-              onChange={(event) => setAddServiceId(event.target.value)}
-              disabled={!selectedAddPet}
-            >
-              <option value="">Select a service</option>
-              {addServices.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.name}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
       ) : null}
 
@@ -514,10 +516,9 @@ export function AppointmentChangeForm({
             </div>
           ) : (
             <p className="text-sm text-text-muted">
-              This change does not include a cancellation fee.
               {action === "add_dog"
-                ? " Adding another pet is subject to availability and is not confirmed automatically. We’ll review the day’s schedule and email you once the change has been confirmed."
-                : ""}
+                ? "Adding another pet is subject to availability and is not confirmed automatically. We’ll review the day’s schedule and email you once the change has been confirmed."
+                : "This change does not include a cancellation fee."}
             </p>
           )}
           <button
