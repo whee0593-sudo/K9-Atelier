@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   archiveCustomerPet,
+  CUSTOMER_PET_CREATED_EVENT,
   createCustomerPet,
   fetchCustomerPets,
   PetClientError,
@@ -54,6 +55,17 @@ export function useCustomerPets() {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    function onPetCreated(event: Event) {
+      const pet = normalizePetProfile((event as CustomEvent<PetProfile>).detail);
+      setPets(current => current.some(item => item.id === pet.id)
+        ? current.map(item => item.id === pet.id ? pet : item)
+        : [...current, pet]);
+    }
+    window.addEventListener(CUSTOMER_PET_CREATED_EVENT, onPetCreated);
+    return () => window.removeEventListener(CUSTOMER_PET_CREATED_EVENT, onPetCreated);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -138,7 +150,7 @@ export function useCustomerPets() {
     markSaving(draft.id, true);
     try {
       const created = await createCustomerPet(mapPetProfileToWriteInput(draft));
-      setPets((current) => [...current, created]);
+      setPets((current) => current.some(pet => pet.id === created.id) ? current : [...current, created]);
       return created;
     } catch (err) {
       const message =

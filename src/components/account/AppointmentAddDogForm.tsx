@@ -25,6 +25,7 @@ export function AppointmentAddDogForm({ onSaved, onEditingChange, preview = fals
 
   function edit() {
     if (disabled || saving || uploading) return;
+    setError(null);
     setExpanded(true);
     onEditingChange(true);
   }
@@ -61,7 +62,10 @@ export function AppointmentAddDogForm({ onSaved, onEditingChange, preview = fals
     </button> : !expanded ? <button type="button" disabled={disabled} onClick={edit} className={bookingSecondaryBtnClass}>Add a dog</button> : null}
     {expanded ? <form id="added-dog-form" onSubmit={event => void save(event)} className="rounded-xl border border-lavender/30 p-4" noValidate>
       <fieldset disabled={saving || uploading || disabled} className="space-y-5 disabled:opacity-60">
-        <PetProfileFieldsForm pet={draft} onPetChange={updates => setDraft(current => ({ ...current, ...updates }))}
+        <PetProfileFieldsForm pet={draft} onPetChange={updates => {
+          setDraft(current => ({ ...current, ...updates }));
+          setError(null);
+        }}
           petPersisted={isPersistedPetId(draft.id)} vaccinationUploading={uploading}
           onVaccinationUpload={async file => {
             setUploading(true); setError(null);

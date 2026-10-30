@@ -2,6 +2,8 @@ import { mapPetRecordToUiProfile } from "@/lib/pets/map";
 import type { PetRecord, PetWriteInput } from "@/lib/pets/types";
 import type { PetProfile } from "@/lib/pets";
 
+export const CUSTOMER_PET_CREATED_EVENT = "k9:customer-pet-created";
+
 export class PetClientError extends Error {
   readonly status: number;
 
@@ -31,7 +33,7 @@ async function readPetResponse<T>(response: Response): Promise<T> {
 }
 
 export async function fetchCustomerPets(): Promise<PetProfile[]> {
-  const response = await fetch("/api/pets", { credentials: "include" });
+  const response = await fetch("/api/pets", { credentials: "include", cache: "no-store" });
   const body = await readPetResponse<{ pets: PetRecord[] }>(response);
   return body.pets.map(mapPetRecordToUiProfile);
 }
@@ -46,7 +48,11 @@ export async function createCustomerPet(
     body: JSON.stringify(input),
   });
   const body = await readPetResponse<{ pet: PetRecord }>(response);
-  return mapPetRecordToUiProfile(body.pet);
+  const pet = mapPetRecordToUiProfile(body.pet);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(CUSTOMER_PET_CREATED_EVENT, { detail: pet }));
+  }
+  return pet;
 }
 
 export async function updateCustomerPet(
