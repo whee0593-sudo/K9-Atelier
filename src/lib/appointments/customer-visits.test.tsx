@@ -47,7 +47,7 @@ describe("customer booking visits", () => {
     assert.deepEqual(mapped.pricedAddOns,[{id:"color",label:"Temporary Fun",amount:50}]);
     assert.deepEqual(mapped.addOnOptions,{"creative-accent-coloring":"Temporary Fun"});
   });
-  it("shows one card total and status while retaining each dog's change link", () => {
+  it("shows one card total, status, and change button for the entire visit", () => {
     const pets=[appointment("LYCHEE"),appointment("BELLA",{estimatedTotal:160,serviceName:"Hand Stripping",scheduledStart:623})];
     const html=renderToStaticMarkup(<CustomerVisitCard appointments={pets}/>);
     assert.equal((html.match(/<li /g)??[]).length,1);
@@ -55,7 +55,9 @@ describe("customer booking visits", () => {
     assert.equal((html.match(/>Confirmed</g)??[]).length,1);
     assert.match(html,/\$300\.00/);
     assert.match(html,/href="\/account\/appointments\/LYCHEE"/);
-    assert.match(html,/href="\/account\/appointments\/BELLA"/);
+    assert.equal((html.match(/href="\/account\/appointments\//g)??[]).length,1);
+    assert.match(html,/>Change this appointment</);
+    assert.equal(html.includes("Change or cancel"),false);
     assert.equal(html.includes("Travel Fee"),false);
     assert.equal(html.includes("Estimated from"),false);
   });
