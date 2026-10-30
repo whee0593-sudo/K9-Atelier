@@ -49,7 +49,7 @@ export function AddressCard({ initial, onSaved, onDeleted }: {
 
   async function remove() {
     if (busy.current) return;
-    if (!initial.id) { onDeleted(); return; }
+    if (!initial.id) return;
     busy.current = true;
     setPending("delete");
     setError(null);
@@ -85,7 +85,7 @@ export function AddressCard({ initial, onSaved, onDeleted }: {
       {error ? <p role="alert" className="text-sm text-red-800">{error}</p> : null}
       <div className="flex items-center justify-between gap-4 pt-2">
         <button type="submit" className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white transition hover:bg-gold-dark">{pending === "save" ? "Saving…" : "Save"}</button>
-        <button type="button" onClick={() => void remove()} className="text-right text-sm font-medium text-red-800 underline hover:text-red-900">{pending === "delete" ? "Deleting…" : "Delete this address"}</button>
+        {initial.id ? <button type="button" onClick={() => void remove()} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-red-300 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:opacity-60">{pending === "delete" ? "Deleting…" : "Delete this address"}</button> : null}
       </div>
       </fieldset>
     </form>
