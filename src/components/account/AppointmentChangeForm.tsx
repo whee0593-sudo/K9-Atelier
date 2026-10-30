@@ -10,11 +10,6 @@ import {
   bookingPrimaryBtnClass,
   bookingSecondaryBtnClass,
 } from "@/components/booking/booking-ui";
-import {
-  APPLICABLE_BOOKING_TOTAL_NOTE,
-  POLICY_CALENDAR_NOTE,
-  cancellationPolicySummary,
-} from "@/lib/appointments/policy-copy";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 import {
   changeFeeAmount,
@@ -515,10 +510,6 @@ export function AppointmentChangeForm({
             <div className="space-y-2">
               <p className="text-sm font-medium text-gold-dark">
                 {changeFeeWarning(fee)}
-              </p>
-              <p className="text-sm text-text-muted">
-                {cancellationPolicySummary()} {POLICY_CALENDAR_NOTE}{" "}
-                {APPLICABLE_BOOKING_TOTAL_NOTE}
               </p>
             </div>
           ) : (
