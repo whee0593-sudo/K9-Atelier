@@ -7,7 +7,10 @@ import {
   createAppointment,
   listCustomerAppointments,
 } from "@/lib/appointments/service";
-import { validateCreateAppointmentInput } from "@/lib/appointments/validation";
+import {
+  requireBookingPolicyConsent,
+  validateCreateAppointmentInput,
+} from "@/lib/appointments/validation";
 
 export async function GET() {
   const result = await listCustomerAppointments();
@@ -22,6 +25,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body: unknown = await request.json();
+    requireBookingPolicyConsent(body);
     const input = validateCreateAppointmentInput(body);
     const result = await createAppointment(input);
 

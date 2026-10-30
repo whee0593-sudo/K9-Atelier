@@ -520,7 +520,12 @@ export function BookingFlow({
         <BookingPaymentStep
           initialPaymentMethodId={paymentMethod?.id ?? null}
           onBack={() => setOwner(null)}
-          onComplete={setPaymentMethod}
+          onComplete={(method) => {
+            setOwner((current) =>
+              current ? { ...current, servicePoliciesConsent: true } : current,
+            );
+            setPaymentMethod(method);
+          }}
         />
       ) : null}
 
@@ -601,18 +606,22 @@ export function BookingFlow({
 
       {currentStep <= 6 && (
         <div className="border-t border-gray-line/70 pt-6 text-center">
-          <p className="font-body text-[13px] text-taupe">
-            Additional care or travel fees may apply where necessary.
-          </p>
-          <button
-            ref={policiesTriggerRef}
-            type="button"
-            onClick={() => openPolicies()}
-            className={`${bookingBackLinkClass} mt-3`}
-          >
-            View Service Policies
-          </button>
-          <p className="font-body mt-4 text-[13px] text-taupe">
+          {currentStep !== 5 && (
+            <>
+              <p className="font-body text-[13px] text-taupe">
+                Additional care or travel fees may apply where necessary.
+              </p>
+              <button
+                ref={policiesTriggerRef}
+                type="button"
+                onClick={() => openPolicies()}
+                className={`${bookingBackLinkClass} mt-3`}
+              >
+                View Service Policies
+              </button>
+            </>
+          )}
+          <p className="font-body mt-4 text-sm text-ink">
             Need help?{" "}
             <Link href="/contact" className="text-ink underline">
               Contact the Atelier

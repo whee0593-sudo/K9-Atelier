@@ -5,11 +5,14 @@ import {
 } from "@/lib/appointments/errors";
 import { createGroupAppointment } from "@/lib/appointments/group-service";
 import { validateGroupBookingInput } from "@/lib/booking/group";
+import { requireBookingPolicyConsent } from "@/lib/appointments/validation";
 
 export async function POST(request: Request) {
   try {
+    const body: unknown = await request.json();
+    requireBookingPolicyConsent(body);
     const result = await createGroupAppointment(
-      validateGroupBookingInput(await request.json()),
+      validateGroupBookingInput(body),
     );
     if ("error" in result) {
       if (result.error === "price_changed")

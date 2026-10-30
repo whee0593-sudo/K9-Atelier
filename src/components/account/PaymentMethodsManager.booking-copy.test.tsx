@@ -65,20 +65,24 @@ describe("BookingPaymentStep copy", () => {
     const subtitle = html.indexOf(
       "A card on file is required to reserve your appointment. No charge today.",
     );
-    const finePrint = html.indexOf(
-      "Two or more calendar days before: No fee.",
-    );
+    const preference = html.indexOf("We prefer cash or Zelle payment. Thank you!");
+    const agreement = html.indexOf("I have read and agreed to");
     const continueButton = html.indexOf("Continue");
 
     assert.ok(title >= 0);
     assert.equal(html.includes(">Payment</p>"), false);
     assert.ok(subtitle > title);
-    assert.ok(finePrint > subtitle);
-    assert.ok(continueButton > finePrint);
+    assert.ok(preference > subtitle);
+    assert.ok(agreement > preference);
+    assert.ok(continueButton > agreement);
+    assert.match(html, /href="\/faq#fees-policies"/);
+    assert.match(html, /type="checkbox" required=""/);
+    assert.match(html, /<button[^>]*disabled=""[^>]*>Continue<\/button>/);
+    assert.equal(html.includes("Two or more calendar days before"), false);
     assert.equal(html.includes("Leave a card on file"), false);
     assert.equal(html.includes("No charge at booking"), false);
     assert.equal(html.includes("Apple Pay or Google Pay"), false);
     assert.equal(html.includes("Confirm Appointment"), false);
-    assert.match(html, /text-xs italic/);
+    assert.equal(html.includes("text-xs italic"), false);
   });
 });
