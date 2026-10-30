@@ -763,7 +763,7 @@ export function BookingConfirmationView({
       <h2 className="font-display mt-5 text-4xl text-ink md:text-5xl">
         We Look Forward
         <br />
-        to Welcoming {[pet.name, ...additionalPetNames].join(", ")}.
+        to Seeing {[pet.name, ...additionalPetNames].join(", ")}.
       </h2>
 
       <div className={`${bookingNoticeClass} mx-auto mt-10 max-w-lg text-left`}>
