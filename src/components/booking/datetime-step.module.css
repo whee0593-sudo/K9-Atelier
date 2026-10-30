@@ -207,7 +207,7 @@
 
 .dayButton:disabled {
   color: #85858d;
-  background: #f3f3f5;
+  background: transparent;
   cursor: default;
   opacity: 1;
   -webkit-text-fill-color: #85858d;
