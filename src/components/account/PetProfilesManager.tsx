@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { PetProfileFieldsForm } from "@/components/account/PetProfileFieldsForm";
 import { AccountSetupNotice } from "@/components/account/AccountSetupNotice";
 import { RabiesStatusSummary } from "@/components/account/RabiesStatusSummary";
@@ -81,7 +82,8 @@ function PetCard({
           <button
             type="button"
             onClick={onArchive}
-            className="mt-6 text-xs text-text-muted underline"
+            disabled={saving || uploading}
+            className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl border border-red-300 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:opacity-60"
           >
             Remove this pet profile
           </button>
@@ -98,6 +100,7 @@ export function PetProfilesManager({
   setup?: boolean;
   setupPetId?: string | null;
 } = {}) {
+  const router = useRouter();
   const {
     pets,
     loading,
@@ -133,6 +136,7 @@ export function PetProfilesManager({
       setExpandedId(null);
       setShowNewForm(false);
       setDraftPet(createDraftPet());
+      router.refresh();
     } catch {
       // error surfaced via hook
     } finally {
@@ -145,6 +149,7 @@ export function PetProfilesManager({
     try {
       await archivePet(id);
       setExpandedId((current) => (current === id ? null : current));
+      router.refresh();
     } catch {
       // error surfaced via hook
     }
