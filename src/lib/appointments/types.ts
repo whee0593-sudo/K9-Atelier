@@ -45,6 +45,7 @@ export type AppointmentRecord = {
   petId: string;
   petName: string;
   petBreed: string;
+  petWeightLbs?: number | null;
   serviceId: string;
   serviceName: string;
   addOnIds: string[];

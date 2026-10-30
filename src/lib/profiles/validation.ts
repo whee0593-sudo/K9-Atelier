@@ -160,6 +160,22 @@ export function validateCustomerAdminNotes(body: unknown): string {
   return notes;
 }
 
+export function validateProfilePatchInput(body: unknown): Partial<CustomerProfileWriteInput> {
+  const fields = assertPlainObject(body);
+  const validated = validateProfileWriteInput({
+    firstName: "Unchanged", lastName: "Unchanged", phone: "+12025550123", ...fields,
+  });
+  const patch: Partial<CustomerProfileWriteInput> = {};
+  for (const key of Object.keys(validated) as Array<keyof CustomerProfileWriteInput>) {
+    if (Object.hasOwn(fields, key)) Object.assign(patch, { [key]: validated[key] });
+  }
+  if (Object.hasOwn(fields, "householdAllergyDetails") && !Object.hasOwn(fields, "householdAllergyStatus")) {
+    throw new ProfileValidationError("Choose an allergy status before saving allergy details.", "householdAllergyStatus");
+  }
+  if (Object.hasOwn(fields, "email")) patch.email = validateEmailAddress(fields.email);
+  return patch;
+}
+
 export function validateProfileWriteInput(body: unknown): CustomerProfileWriteInput {
   const record = assertPlainObject(body);
   const missing = missingCustomerProfileFieldLabels({

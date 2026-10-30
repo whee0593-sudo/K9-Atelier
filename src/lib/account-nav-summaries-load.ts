@@ -7,6 +7,7 @@ import {
 import { listCustomerPaymentMethods } from "@/lib/payments/service";
 import { listPets } from "@/lib/pets/service";
 import { getOwnProfile } from "@/lib/profiles/service";
+import { listOwnServiceAddresses } from "@/lib/profiles/customer-addresses";
 import { getAccountReferralView } from "@/lib/referrals/service";
 
 export async function getAccountNavSummaries(
@@ -19,6 +20,7 @@ export async function getAccountNavSummaries(
       paymentResult,
       appointmentsResult,
       referralResult,
+      addressesResult,
     ] = await Promise.all([
       getOwnProfile(),
       listPets(),
@@ -28,9 +30,11 @@ export async function getAccountNavSummaries(
         console.error("getAccountNavSummaries referrals failed:", error);
         return null;
       }),
+      listOwnServiceAddresses(),
     ]);
 
     return buildAccountNavSummaries({
+      savedAddressCount: "addresses" in addressesResult ? addressesResult.addresses.length : null,
       profile: "profile" in profileResult ? profileResult.profile : null,
       pets: "pets" in petsResult ? petsResult.pets : null,
       paymentMethodCount:

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { getOwnProfile, updateOwnProfile } from "@/lib/profiles/service";
+import { getOwnProfile, updateOwnProfile, updateOwnProfilePatch } from "@/lib/profiles/service";
 import {
   ProfileValidationError,
   validateProfileWriteInput,
+  validateProfilePatchInput,
 } from "@/lib/profiles/validation";
 import { jsonError } from "@/lib/pets/errors";
 import { mapStaffServiceError } from "@/lib/staff/api-errors";
@@ -24,6 +25,13 @@ export async function PATCH(request: Request) {
       return jsonError("Invalid request body.", 400);
     }
 
+    if (body && typeof body === "object" && "fieldValues" in body) {
+      const result = await updateOwnProfilePatch(validateProfilePatchInput(body.fieldValues));
+      if ("error" in result) {
+        return result.error === "email_update" ? jsonError(result.message ?? "Could not update your email.", 400) : mapStaffServiceError(result.error);
+      }
+      return NextResponse.json(result);
+    }
     const input = validateProfileWriteInput(body);
     const result = await updateOwnProfile(input);
     if ("error" in result) {

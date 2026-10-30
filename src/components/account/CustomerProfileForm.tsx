@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ExpandableCard } from "@/components/account/ExpandableCard";
 import { AllergyFields } from "@/components/account/AllergyFields";
 import type { AllergyStatus } from "@/lib/allergies";
 import type { CustomerProfile } from "@/lib/profiles/types";
@@ -85,6 +87,7 @@ export function CustomerProfileForm({
   onCancel,
   audience = "customer",
   preview = false,
+  autoSave = false,
 }: {
   profile: CustomerProfile;
   emailReadOnly?: boolean;
@@ -93,6 +96,7 @@ export function CustomerProfileForm({
   onCancel?: () => void;
   audience?: "customer" | "staff";
   preview?: boolean;
+  autoSave?: boolean;
 }) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(profile));
   const [saving, setSaving] = useState(false);
@@ -110,8 +114,12 @@ export function CustomerProfileForm({
       }).length > 0,
   );
   const [saved, setSaved] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const saveQueue = useRef(Promise.resolve());
+  const savedDraft = useRef(JSON.stringify(toDraft(profile)));
 
   useEffect(() => {
+    if (autoSave) return;
     setDraft(toDraft(profile));
     setError(null);
     setRequireComplete(
@@ -123,7 +131,7 @@ export function CustomerProfileForm({
           email: profile.email,
         }).length > 0,
     );
-  }, [profile, audience]);
+  }, [profile, audience, autoSave]);
 
   const missing = missingCustomerProfileFieldLabels({
     firstName: draft.firstName,
@@ -143,9 +151,10 @@ export function CustomerProfileForm({
     setSaved(false);
   }
 
-  async function handleSave(event: React.FormEvent) {
-    event.preventDefault();
-    if (missing.length > 0) {
+  async function handleSave(event?: React.FormEvent, field?: keyof Draft) {
+    event?.preventDefault();
+    if (autoSave && savedDraft.current === JSON.stringify(draft)) return;
+    if (!autoSave && missing.length > 0) {
       setRequireComplete(true);
       setError(null);
       setSaved(false);
@@ -179,12 +188,16 @@ export function CustomerProfileForm({
     }
 
     try {
+      const fieldValues = Object.fromEntries(Object.entries(draft).filter(([key, value]) => (!field || key === field) && (!lockEmail || key !== "email") && value !== JSON.parse(savedDraft.current)[key]));
+      if (Object.hasOwn(fieldValues, "householdAllergyDetails")) fieldValues.householdAllergyStatus = draft.householdAllergyStatus;
+      if (Object.hasOwn(fieldValues, "householdAllergyStatus") && draft.householdAllergyStatus !== "yes") fieldValues.householdAllergyDetails = "";
+      if (autoSave && !Object.keys(fieldValues).length) return;
       const response = await fetch(saveUrl, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
           body: JSON.stringify(
-            lockEmail
+            autoSave ? { fieldValues } : lockEmail
               ? {
                   firstName: draft.firstName,
                   lastName: draft.lastName,
@@ -203,11 +216,14 @@ export function CustomerProfileForm({
       const body = (await response.json()) as {
         error?: string;
         profile?: CustomerProfile;
+        message?: string;
       };
       if (!response.ok || !body.profile) {
         throw new Error(body.error ?? "Could not save this profile.");
       }
       onSaved?.(body.profile);
+      setNotice(body.message ?? null);
+      savedDraft.current = JSON.stringify(autoSave ? { ...JSON.parse(savedDraft.current), ...fieldValues } : draft);
       setSaved(true);
     } catch (saveError) {
       setError(
@@ -221,13 +237,20 @@ export function CustomerProfileForm({
   }
 
   return (
-    <form className="space-y-5" onSubmit={(event) => void handleSave(event)} noValidate>
+    <form className="space-y-5" onSubmit={(event) => { event.preventDefault(); saveQueue.current = saveQueue.current.then(() => handleSave()); }} onBlur={event => {
+      if (autoSave && (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLTextAreaElement)) {
+        const name = event.target.name === "household-allergy-status" ? "householdAllergyStatus" : event.target.name === "household-allergy-status-details" ? "householdAllergyDetails" : event.target.name;
+        if (name in draft) saveQueue.current = saveQueue.current.then(() => handleSave(undefined, name as keyof Draft));
+      }
+    }} noValidate>
       <div>
         <label className="block text-sm font-medium text-text">
           Email <span className="text-gold-dark">*</span>
         </label>
         <input
           type="email"
+          name="email"
+          aria-label="Email"
           required
           readOnly={lockEmail}
           value={emailValue}
@@ -250,6 +273,7 @@ export function CustomerProfileForm({
           <input
             required
             value={draft.firstName}
+            name="firstName"
             onChange={(event) => update("firstName", event.target.value)}
             aria-invalid={Boolean(fieldErrors.firstName)}
             className={inputClassName()}
@@ -263,6 +287,7 @@ export function CustomerProfileForm({
           <input
             required
             value={draft.lastName}
+            name="lastName"
             onChange={(event) => update("lastName", event.target.value)}
             aria-invalid={Boolean(fieldErrors.lastName)}
             className={inputClassName()}
@@ -278,6 +303,7 @@ export function CustomerProfileForm({
           type="tel"
           required
           value={draft.phone}
+          name="phone"
           onChange={(event) => update("phone", event.target.value)}
           placeholder="(555) 123-4567"
           aria-invalid={Boolean(fieldErrors.phone)}
@@ -294,6 +320,7 @@ export function CustomerProfileForm({
           autoComplete="bday"
           min="1900-01-01"
           value={draft.birthday}
+          name="birthday"
           onChange={(event) => update("birthday", event.target.value)}
           className={inputClassName()}
         />
@@ -302,6 +329,7 @@ export function CustomerProfileForm({
         Preferred Contact Method
         <select
           value={draft.preferredContact}
+          name="preferredContact"
           onChange={(event) => update("preferredContact", event.target.value)}
           className={inputClassName()}
         >
@@ -320,6 +348,7 @@ export function CustomerProfileForm({
         Emergency Contact Name
         <input
           value={draft.emergencyContactName}
+          name="emergencyContactName"
           onChange={(event) => update("emergencyContactName", event.target.value)}
           className={inputClassName()}
         />
@@ -329,6 +358,7 @@ export function CustomerProfileForm({
         <input
           type="tel"
           value={draft.emergencyContactPhone}
+          name="emergencyContactPhone"
           onChange={(event) =>
             update("emergencyContactPhone", event.target.value)
           }
@@ -339,6 +369,7 @@ export function CustomerProfileForm({
         Relationship
         <select
           value={draft.emergencyContactRelationship}
+          name="emergencyContactRelationship"
           onChange={(event) =>
             update("emergencyContactRelationship", event.target.value)
           }
@@ -372,13 +403,13 @@ export function CustomerProfileForm({
         }
       />
       <div className="flex flex-wrap items-center gap-3">
-        <button
+        {!autoSave || error ? <button
           type="submit"
           disabled={saving}
           className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
         >
           {saving ? "Saving…" : "Save Profile"}
-        </button>
+        </button> : null}
         {onCancel ? (
           <button
             type="button"
@@ -389,13 +420,15 @@ export function CustomerProfileForm({
             Cancel
           </button>
         ) : null}
-        {saved && <span className="text-xs text-text-muted">Saved</span>}
+        <span role="status" className="text-xs text-text-muted">{saving ? "Saving…" : saved ? "Saved" : ""}</span>
       </div>
+      {notice ? <p role="status" className="text-sm text-text-muted">{notice}</p> : null}
     </form>
   );
 }
 
 export function CustomerProfileSection() {
+  const router = useRouter();
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -445,10 +478,16 @@ export function CustomerProfileSection() {
   }
 
   return (
-    <CustomerProfileForm
+    <ExpandableCard summary={<>
+      <span className="block font-medium">{[profile.firstName, profile.lastName].filter(Boolean).join(" ") || "Personal Information"}</span>
+      <span className="block">{profile.email}</span>
+      <span className="block">{profile.phone}</span>
+    </>}><CustomerProfileForm
       profile={profile}
       saveUrl="/api/account/profile"
-      onSaved={setProfile}
-    />
+      autoSave
+      emailReadOnly={false}
+      onSaved={saved => { setProfile(saved); router.refresh(); }}
+    /></ExpandableCard>
   );
 }
