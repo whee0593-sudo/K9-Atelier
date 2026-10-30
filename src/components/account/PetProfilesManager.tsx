@@ -85,7 +85,7 @@ function PetCard({
             disabled={saving || uploading}
             className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl border border-red-300 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:opacity-60"
           >
-            Remove this pet profile
+            Remove {pet.name}&apos;s profile
           </button>
         </div>
       )}
