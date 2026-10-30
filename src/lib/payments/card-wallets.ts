@@ -1,3 +1,11 @@
+export const customerPaymentMethodOrder = [
+  "card",
+  "apple_pay",
+  "google_pay",
+  "pix",
+  "satispay",
+];
+
 export const customerCardWallets = {
   applePay: "auto",
   googlePay: "auto",

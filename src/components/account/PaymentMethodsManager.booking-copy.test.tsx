@@ -40,6 +40,7 @@ describe("AddCardForm booking card copy", () => {
     assert.equal(html.includes("Apple Pay or Google Pay"), false);
     assert.equal(html.includes("No charge at booking"), false);
     assert.match(html, /font-medium text-ink/);
+    assert.match(html, /class="font-body text-base leading-relaxed text-ink">Cash or Zelle/);
   });
 
   it("keeps account add-card free of the booking reservation notes", () => {
@@ -70,6 +71,7 @@ describe("BookingPaymentStep copy", () => {
     const continueButton = html.indexOf("Continue");
 
     assert.ok(title >= 0);
+    assert.equal(html.includes(">Payment</p>"), false);
     assert.ok(subtitle > title);
     assert.ok(finePrint > subtitle);
     assert.ok(continueButton > finePrint);

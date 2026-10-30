@@ -14,7 +14,7 @@ import {
   fetchCustomerPaymentMethods,
   savePaymentSetupIntent,
 } from "@/lib/payments/client";
-import { customerCardWallets, manualCardWallets } from "@/lib/payments/card-wallets";
+import { customerCardWallets, customerPaymentMethodOrder, manualCardWallets } from "@/lib/payments/card-wallets";
 import {
   formatPaymentMethodLabel,
   type PaymentMethodRecord,
@@ -113,7 +113,7 @@ function AddCardForm({
           <p className="font-body text-sm font-medium text-ink">
             Payment Preference
           </p>
-          <p className="font-body text-sm leading-relaxed text-taupe">
+          <p className="font-body text-base leading-relaxed text-ink">
             Cash or Zelle is preferred. Your card is securely saved as a backup.
           </p>
         </div>
@@ -127,6 +127,9 @@ function AddCardForm({
       <PaymentElement
         options={{
           wallets: allowWallets ? customerCardWallets : manualCardWallets,
+          ...(allowWallets && bookingCardCopy
+            ? { paymentMethodOrder: customerPaymentMethodOrder }
+            : {}),
         }}
       />
       {error && (
