@@ -32,6 +32,7 @@ export function CustomerVisitCard({ appointments }: { appointments: AppointmentR
     : appointmentStatusLabel(first.status);
   const total = customerVisitEstimate(appointments);
   const travelFee = active.reduce((sum, pet) => sum + pet.travelFee, 0);
+  const manageableAppointment = appointments.find(appointmentIsUpcoming);
   return (
     <li className="rounded-xl border border-lavender/30 bg-cream px-4 py-4">
       <div className="mb-4 flex justify-end">
@@ -62,13 +63,13 @@ export function CustomerVisitCard({ appointments }: { appointments: AppointmentR
           <span>Estimated Total</span><span className="shrink-0 text-right tabular-nums">{formatReviewMoney(total)}</span>
         </div>
       ) : active.length ? <p className="mt-5 text-sm text-text-muted">Estimate to be confirmed.</p> : null}
-      <div className="mt-4 flex flex-wrap gap-x-5 gap-y-3">
-        {appointments.filter(appointmentIsUpcoming).map(appointment => (
-          <Link key={appointment.id} href={`/account/appointments/${appointment.id}`} className="inline-flex text-sm font-medium text-gold-dark underline">
-            {appointments.length > 1 ? `Change or cancel — ${appointment.petName}` : "Change or cancel"}
+      {manageableAppointment ? (
+        <div className="mt-4">
+          <Link href={`/account/appointments/${manageableAppointment.id}`} className="inline-flex items-center justify-center rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white transition hover:bg-gold-dark">
+            Change this appointment
           </Link>
-        ))}
-      </div>
+        </div>
+      ) : null}
     </li>
   );
 }
