@@ -1,4 +1,3 @@
-import { fixedPriceForService } from "@/lib/pets/fixed-prices";
 import { allergySnapshotForBooking } from "@/lib/allergies";
 import { randomUUID } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -35,14 +34,14 @@ import { attachVaccinationSummaries } from "@/lib/vaccinations/service";
 import { vaccinationStatusSnapshotForBooking } from "@/lib/vaccinations/booking";
 import {
   estimateServiceDurationMinutes,
-  getServicePriceEstimate,
   getBookableServicesForPet,
 } from "@/lib/services";
 import { canonicalServiceId, isRetiredSpaService } from "@/lib/service-catalog";
 import { spaGoalsForService } from "@/lib/spa-goals";
 import { loadBookingAllergySnapshot } from "@/lib/appointments/service";
 import { resolveAppointmentDuration } from "@/lib/visits/duration";
-import { changeFeeBase } from "@/lib/appointments/stored-service-price";
+import { changeFeeBase, guestBookingStoredAddOnOptions, guestBookingStoredServicePrice } from "@/lib/appointments/stored-service-price";
+import { quoteAddedDogServices } from "@/lib/booking/service-selection";
 import type { ChangeRecoveryPayload } from "@/lib/policy-fees/change-recovery";
 import type { ResumeResult } from "@/lib/policy-fees/change-recovery";
 import {
@@ -54,12 +53,10 @@ import {
   settleCustomerPolicyFee,
 } from "@/lib/policy-fees/customer-settle";
 import { resumeSavedAppointmentChange } from "@/lib/policy-fees/resume-change";
-import { attachBookingPriceSnapshot } from "@/lib/charges/visit-line-items";
 import {
   hasVisitSequence,
   nextVisitSequence,
   scheduleVisitPetChain,
-  snapshotServicePrice,
 } from "@/lib/visits/visit";
 import { compactVisitChildStarts } from "@/lib/visits/compact";
 import { getServiceDisplayName } from "@/lib/service-display";
@@ -136,6 +133,8 @@ export type ApplyAppointmentChangeInput = {
   slotStartMinutes?: number;
   petId?: string;
   serviceId?: string;
+  addOnIds?: string[];
+  addOnOptions?: Record<string, string>;
   spaGoals?: string[];
   removeAppointmentId?: string;
   /** Amount the customer just reviewed. The server still calculates the fee. */
@@ -923,7 +922,9 @@ async function addDogToVisit(
   }
   const allergySnapshot = allergySnapshotForBooking(allergy);
 
-  const estimate = getServicePriceEstimate(service, bookedWeight);
+  const selection = { serviceId: service.id, addOnIds: input.addOnIds ?? [], addOnOptions: input.addOnOptions ?? {} };
+  const priced = quoteAddedDogServices(selection, bookedWeight, pet.fixedServicePrices);
+  if (!priced.ok) return { error: "conflict" as const };
   const paymentMethod = await resolvePaymentMethod(
     userId,
     visit.payment_method_id,
@@ -937,8 +938,11 @@ async function addDogToVisit(
   if ("error" in family) return family;
   const existing = family.rows.find(row => row.pet_id === input.petId);
   if (existing) {
-    if (existing.service_id === service.id && existing.add_on_options?.__customerAddDogRequest === "true") {
-      return { appointment: mapAppointmentRowToRecord(existing) };
+    const record = mapAppointmentRowToRecord(existing);
+    const sameExtras = JSON.stringify([...(existing.add_on_ids ?? [])].sort()) === JSON.stringify([...selection.addOnIds].sort());
+    const sameOptions = selection.addOnIds.every(id => (record.addOnOptions[id] ?? "") === (selection.addOnOptions[id] ?? ""));
+    if (existing.service_id === service.id && sameExtras && sameOptions && existing.add_on_options?.__customerAddDogRequest === "true") {
+      return { appointment: record };
     }
     return { error: "conflict" };
   }
@@ -955,7 +959,7 @@ async function addDogToVisit(
   const durationMinutes = estimateServiceDurationMinutes(
     service.id,
     bookedWeight,
-    [],
+    selection.addOnIds,
   );
   const siblingDecisions = ordered.map(durationDecisionForRow);
   if (siblingDecisions.some((decision) => decision.unknown || decision.minutes == null)) {
@@ -985,7 +989,7 @@ async function addDogToVisit(
 
   const vaccinationStatus = vaccinationStatusSnapshotForBooking(pet);
   const status = "pending_confirmation";
-  const servicePrice = snapshotServicePrice(fixedPriceForService(pet.fixedServicePrices, service.id) ?? estimate?.from ?? 0);
+  const servicePrice = guestBookingStoredServicePrice(priced.quote);
   const visitSequence = nextVisitSequence(sequences.sequences);
 
   const { data, error } = await admin
@@ -996,8 +1000,8 @@ async function addDogToVisit(
       pet_id: input.petId,
       service_id: service.id,
       service_name: getServiceDisplayName(service.id, service.name),
-      add_on_ids: [],
-      add_on_options: { ...attachBookingPriceSnapshot({}, [], []), __customerAddDogRequest: "true" },
+      add_on_ids: selection.addOnIds,
+      add_on_options: { ...guestBookingStoredAddOnOptions(priced.quote, selection.addOnOptions), __customerAddDogRequest: "true" },
       spa_goals: spaGoals.goals,
       allergy_snapshot: allergySnapshot,
       address_street: visit.address_street,
@@ -1016,7 +1020,7 @@ async function addDogToVisit(
       address_lat: visit.address_lat,
       address_lon: visit.address_lon,
       timezone: business.booking.timezone,
-      estimated_total: servicePrice,
+      estimated_total: priced.quote.estimatedServicePrice,
       new_client_deposit: 0,
       payment_method_id: paymentMethod.id,
       vaccination_status_at_booking: vaccinationStatus,

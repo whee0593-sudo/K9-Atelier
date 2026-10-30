@@ -40,6 +40,8 @@ import {
 } from "@/components/booking/booking-ui";
 
 type Props = {
+  embedded?: boolean;
+  membersOnlyAllowed?: boolean;
   pet: PetProfile;
   selectedServiceId: string | null;
   selectedIds?: string[];
@@ -194,6 +196,8 @@ function CareColorOptionCard({
 }
 
 export function BookingExperienceStep({
+  embedded = false,
+  membersOnlyAllowed,
   pet,
   selectedServiceId,
   selectedIds = selectedServiceId ? [selectedServiceId] : [],
@@ -216,10 +220,11 @@ export function BookingExperienceStep({
     weightLbs == null
       ? []
       : getBookingCareCategories(weightLbs, {
-          includeMembersOnly,
+          includeMembersOnly: membersOnlyAllowed ?? includeMembersOnly,
         });
 
   useEffect(() => {
+    if (membersOnlyAllowed !== undefined) return;
     try {
       const supabase = createClient();
       supabase.auth.getUser().then(({ data: { user } }) => {
@@ -230,7 +235,7 @@ export function BookingExperienceStep({
     } catch {
       setIncludeMembersOnly(false);
     }
-  }, []);
+  }, [membersOnlyAllowed]);
 
   function handleCategoryToggle(categoryId: string) {
     setExpandedCategoryId((current) => {
@@ -269,15 +274,16 @@ export function BookingExperienceStep({
 
   return (
     <section>
-      <button type="button" onClick={onBack} className={bookingBackLinkClass}>
+      {!embedded ? <><button type="button" onClick={onBack} className={bookingBackLinkClass}>
         ← Back
       </button>
 
       <h2 className="font-display mt-8 text-3xl text-ink md:text-4xl">
         Choose a Grooming Service
       </h2>
+      </> : null}
 
-      <div className="mt-10 space-y-4">
+      <div className={embedded ? "space-y-3" : "mt-10 space-y-4"}>
         {categories.map((category) => {
           const expanded = expandedCategoryId === category.id;
           const selectedInCategory = category.services.find(
@@ -438,7 +444,7 @@ export function BookingExperienceStep({
       </div>
 
       {selectionError ? <p id="service-selection-error" className="font-body mt-6 text-sm text-red-700" role="alert">{selectionError}</p> : null}
-      {(
+      {!embedded ? (
         <button
           type="button"
           onClick={() => onContinue()}
@@ -447,7 +453,7 @@ export function BookingExperienceStep({
         >
           Continue
         </button>
-      )}
+      ) : null}
     </section>
   );
 }

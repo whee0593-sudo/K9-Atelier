@@ -6,7 +6,6 @@ import type { PetProfile } from "@/lib/pets";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 import {
   getAddOnService,
-  creativeSelectionId,
   isCustomCreativeDesignSelection,
   type BookableService,
 } from "@/lib/services";
@@ -36,13 +35,14 @@ import { bookingDogsIntent, validateBookingDogs, type BookingDogService } from "
 import { BookingConfirmationView } from "@/components/booking/BookingReviewStep";
 import { bookingBackLinkClass } from "@/components/booking/booking-ui";
 import { trackGoogleAdsBookingConversion } from "@/lib/google-ads";
-import { createDraftBookingPet, isPersistedPetId, toggleBookingServiceIds } from "@/lib/booking-flow";
+import { createDraftBookingPet, isPersistedPetId } from "@/lib/booking-flow";
 import { isLuxurySpaDay } from "@/lib/service-catalog";
 import type { SpaGoalId } from "@/lib/spa-goals";
 import { createCustomerPet, updateCustomerPet } from "@/lib/pets/client";
 import { mapPetProfileToWriteInput } from "@/lib/pets/map";
 import { createClient } from "@/lib/supabase/client";
 import type { PaymentMethodRecord } from "@/lib/payments/types";
+import { toggleBookingServiceSelection } from "@/lib/booking/service-selection";
 
 const BOOKING_SUCCESS_SESSION_KEY = "k9-booking-success";
 
@@ -248,25 +248,14 @@ export function BookingFlow({
 
   function handleServiceSelect(service: BookableService, optionName?: string) {
     if (isCustomCreativeDesignSelection(service.id, optionName)) return;
-    if (optionName && isCreativeServiceSelection(service)) service = { ...service, id: creativeSelectionId(optionName) };
-    const ids = [...(selectedService ? [selectedService.id] : []), ...selectedAddOnIds];
-    const sameOption = !optionName || addOnOptions[service.id] === optionName;
-    const removing = ids.includes(service.id) && sameOption;
-    const nextIds = toggleBookingServiceIds(ids, service.id);
-    const primary = nextIds.map((id) => getAddOnService(id))
-      .find((item) => item?.bookableAsPrimary && !isCreativeServiceSelection(item));
-    setSelectedService(primary ?? null);
-    setSelectedAddOnIds(nextIds.filter((id) => id !== primary?.id));
-    setAddOnOptions((current) => {
-      const next = Object.fromEntries(Object.entries(current).filter(([id]) => nextIds.includes(id)));
-      if (removing) delete next[service.id];
-      else if (optionName) next[service.id] = optionName;
-      return next;
-    });
+    const next = toggleBookingServiceSelection({serviceId:selectedService?.id ?? "",addOnIds:selectedAddOnIds,addOnOptions},service,optionName);
+    setSelectedService(getAddOnService(next.serviceId) ?? null);
+    setSelectedAddOnIds(next.addOnIds);
+    setAddOnOptions(next.addOnOptions);
     setSelectionError(null);
     setServiceConfirmed(false);
     setCareOptionsConfirmed(false);
-    if (!nextIds.some((id) => isLuxurySpaDay(id))) setSpaGoals([]);
+    if (!isLuxurySpaDay(next.serviceId)) setSpaGoals([]);
     setOwner(null);
     setPaymentMethod(null);
   }

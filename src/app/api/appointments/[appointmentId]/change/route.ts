@@ -77,12 +77,20 @@ export async function POST(
       timePreference?: unknown;
       petId?: unknown;
       serviceId?: unknown;
+      addOnIds?: unknown;
+      addOnOptions?: unknown;
       removeAppointmentId?: unknown;
       expectedAmount?: unknown;
     };
     const action = readAction(body.action);
     if (!action) {
       return appointmentJsonError("Choose a change to confirm.", 400);
+    }
+    if (body.addOnIds !== undefined && (!Array.isArray(body.addOnIds) || body.addOnIds.some(id => typeof id !== "string"))) {
+      return appointmentJsonError("Choose valid additional services.", 400);
+    }
+    if (body.addOnOptions !== undefined && (body.addOnOptions === null || typeof body.addOnOptions !== "object" || Array.isArray(body.addOnOptions) || Object.values(body.addOnOptions).some(value => typeof value !== "string"))) {
+      return appointmentJsonError("Choose valid service options.", 400);
     }
 
     const slotStartMinutes =
@@ -102,6 +110,8 @@ export async function POST(
       slotStartMinutes,
       petId: typeof body.petId === "string" ? body.petId : undefined,
       serviceId: typeof body.serviceId === "string" ? body.serviceId : undefined,
+      addOnIds: body.addOnIds as string[] | undefined,
+      addOnOptions: body.addOnOptions as Record<string, string> | undefined,
       removeAppointmentId:
         typeof body.removeAppointmentId === "string"
           ? body.removeAppointmentId

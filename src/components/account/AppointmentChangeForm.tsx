@@ -19,7 +19,10 @@ import {
   type AppointmentChangeAction,
 } from "@/lib/appointments/change-policy";
 import { AppointmentAddDogForm } from "@/components/account/AppointmentAddDogForm";
-import { getBookableServicesForPet } from "@/lib/services";
+import { getAddOnService } from "@/lib/services";
+import { BookingExperienceStep } from "@/components/booking/BookingExperienceStep";
+import { emptyBookingServiceSelection, quoteAddedDogServices, toggleBookingServiceSelection } from "@/lib/booking/service-selection";
+import { getServiceDisplayName } from "@/lib/service-display";
 import { formatServiceAddress } from "@/lib/travel";
 import type { PetProfile } from "@/lib/pets";
 import { bookingWeightLbs } from "@/lib/pets/weight";
@@ -74,7 +77,9 @@ export function AppointmentChangeForm({
   const [selectedAddPet, setSelectedAddPet] = useState<PetProfile | null>(null);
   const [editingAddPet, setEditingAddPet] = useState(false);
   const addPetId = selectedAddPet?.id ?? "";
-  const [addServiceId, setAddServiceId] = useState("");
+  const [addSelection, setAddSelection] = useState(emptyBookingServiceSelection);
+  const [servicePickerOpen, setServicePickerOpen] = useState(false);
+  const addServiceId = addSelection.serviceId;
   const [nextDate, setNextDate] = useState<string | null>(null);
   const [nextSlotStartMinutes, setNextSlotStartMinutes] = useState<number | null>(
     null,
@@ -227,13 +232,14 @@ export function AppointmentChangeForm({
   const selectedAddWeight = selectedAddPet
     ? bookingWeightLbs(selectedAddPet.weightLbs)
     : null;
-  const addServices =
-    selectedAddWeight != null
-      ? getBookableServicesForPet(selectedAddWeight, {
-          includeMembersOnly: true,
-        })
-      : [];
-  const validAddService = addServices.some(service => service.id === addServiceId);
+  const addQuote = selectedAddWeight != null && addServiceId
+    ? quoteAddedDogServices(addSelection, selectedAddWeight, selectedAddPet?.fixedServicePrices) : null;
+  const validAddService = Boolean(addQuote?.ok);
+  const selectedIds = [...(addServiceId ? [addServiceId] : []), ...addSelection.addOnIds];
+  const selectionLabel = selectedIds.map(id => {
+    const service = getAddOnService(id);
+    return addSelection.addOnOptions[id] ?? (service ? getServiceDisplayName(service.id, service.name) : id);
+  }).join(" + ");
 
   const feeTargets =
     action === "remove_dog"
@@ -311,6 +317,8 @@ export function AppointmentChangeForm({
             slotStartMinutes: nextSlotStartMinutes,
             petId: addPetId,
             serviceId: addServiceId,
+            addOnIds: addSelection.addOnIds,
+            addOnOptions: addSelection.addOnOptions,
             removeAppointmentId: removeId,
             expectedAmount: serverQuote?.fee,
           }),
@@ -436,25 +444,26 @@ export function AppointmentChangeForm({
               onSaved={pet => {
                 setSelectedAddPet(pet);
                 const weight = bookingWeightLbs(pet.weightLbs);
-                if (weight == null || !getBookableServicesForPet(weight, {includeMembersOnly:true}).some(service => service.id === addServiceId)) setAddServiceId("");
+                if (weight == null || (addServiceId && !quoteAddedDogServices(addSelection,weight,pet.fixedServicePrices).ok)) setAddSelection(emptyBookingServiceSelection());
               }} />
           </div>
-            <label className="block">
-              <span className={bookingLabelClass}>Service</span>
-              <select
-                className={bookingFieldClass}
-                value={validAddService ? addServiceId : ""}
-                onChange={(event) => setAddServiceId(event.target.value)}
-                disabled={!selectedAddPet || editingAddPet || busy}
-              >
-                <option value="">Select a service</option>
-                {addServices.map((service) => (
-                  <option key={service.id} value={service.id}>
-                    {service.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+          <div className="space-y-3">
+            <p className={bookingLabelClass}>Service</p>
+            <button type="button" aria-label="Choose services" aria-expanded={servicePickerOpen} aria-controls="add-dog-services"
+              disabled={!selectedAddPet || editingAddPet || busy} onClick={() => setServicePickerOpen(current => !current)}
+              className={`${bookingFieldClass} flex items-center justify-between gap-3 text-left disabled:opacity-60`}>
+              <span>{selectionLabel || "Select services"}</span><span aria-hidden="true">{servicePickerOpen ? "−" : "+"}</span>
+            </button>
+            {servicePickerOpen && selectedAddPet ? <fieldset id="add-dog-services" disabled={editingAddPet || busy} className="disabled:opacity-60">
+              <legend className="sr-only">Choose services for {selectedAddPet.name}</legend>
+              <BookingExperienceStep embedded membersOnlyAllowed pet={selectedAddPet}
+                selectedServiceId={addServiceId || null} selectedIds={selectedIds} selectedOptions={addSelection.addOnOptions}
+                onSelect={(service,option) => setAddSelection(current => toggleBookingServiceSelection(current,service,option))}
+                onContinue={() => {}} onBack={() => {}} />
+            </fieldset> : null}
+            {selectedIds.length && !addServiceId ? <p role="status" className="text-sm text-text-muted">Choose a primary bath or grooming service for these add-ons.</p> : null}
+            {addQuote && !addQuote.ok ? <p role="alert" className="text-sm text-red-700">{addQuote.message}</p> : null}
+          </div>
       </div>
 
       {action === "remove_dog" ? (
