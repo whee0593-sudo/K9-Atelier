@@ -1,6 +1,6 @@
 "use client";
 
-import { cancellationPolicySummary } from "@/lib/appointments/policy-copy";
+import Link from "next/link";
 import React from "react";
 import { Elements } from "@stripe/react-stripe-js";
 import { useEffect, useMemo, useState } from "react";
@@ -44,6 +44,7 @@ export function BookingPaymentStep({
   } | null>(null);
   const [addingCard, setAddingCard] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [policiesAgreed, setPoliciesAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -124,6 +125,10 @@ export function BookingPaymentStep({
   }
 
   function handleContinue() {
+    if (!policiesAgreed) {
+      setError("Please agree to the Service Policies and Fees to continue.");
+      return;
+    }
     const selected = paymentMethods.find(
       (method) => method.id === selectedPaymentMethodId,
     );
@@ -147,6 +152,9 @@ export function BookingPaymentStep({
       </h2>
       <p className="font-body mt-3 max-w-xl text-sm leading-relaxed text-taupe">
         A card on file is required to reserve your appointment. No charge today.
+      </p>
+      <p className="font-body mt-2 max-w-xl text-sm leading-relaxed text-taupe">
+        We prefer cash or Zelle payment. Thank you!
       </p>
 
       {loading ? (
@@ -239,13 +247,33 @@ export function BookingPaymentStep({
         </p>
       ) : null}
 
-      <p className="font-body mt-6 text-xs italic leading-relaxed text-taupe">
-        {cancellationPolicySummary()}
-      </p>
+      <div className="font-body mt-6 flex items-start gap-3 text-sm leading-relaxed text-ink">
+        <input
+          id="booking-policy-agreement"
+          type="checkbox"
+          required
+          checked={policiesAgreed}
+          onChange={(event) => setPoliciesAgreed(event.target.checked)}
+          className="mt-1 size-4 shrink-0 accent-deep-lavender"
+        />
+        <div className="min-w-0">
+          <label htmlFor="booking-policy-agreement" className="cursor-pointer">
+            I have read and agreed to
+          </label>{" "}
+          <Link
+            href="/faq#fees-policies"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline decoration-champagne underline-offset-4 hover:text-deep-lavender"
+          >
+            Service Policies and Fees
+          </Link>
+        </div>
+      </div>
       <button
         type="button"
         onClick={handleContinue}
-        disabled={loading}
+        disabled={loading || !policiesAgreed}
         className={`${bookingPrimaryBtnClass} mt-4`}
       >
         Continue

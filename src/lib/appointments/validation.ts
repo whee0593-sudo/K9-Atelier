@@ -28,6 +28,17 @@ export class AppointmentValidationError extends Error {
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/** Customer booking endpoints must check consent before any booking side effects. */
+export function requireBookingPolicyConsent(body: unknown): void {
+  const record = assertPlainObject(body);
+  if (record.servicePoliciesConsent !== true) {
+    throw new AppointmentValidationError(
+      "Please agree to the Service Policies and Fees to continue.",
+      "servicePoliciesConsent",
+    );
+  }
+}
+
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function assertPlainObject(value: unknown): Record<string, unknown> {

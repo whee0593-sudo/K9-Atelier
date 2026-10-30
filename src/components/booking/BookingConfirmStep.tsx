@@ -133,6 +133,10 @@ export function BookingConfirmStep({
   }, [initialReferralCode]);
 
   async function handleConfirm() {
+    if (owner.servicePoliciesConsent !== true) {
+      setError("Please go back and agree to the Service Policies and Fees.");
+      return;
+    }
     if (!idempotencyKey) {
       setError("Please review this appointment and confirm again.");
       return;

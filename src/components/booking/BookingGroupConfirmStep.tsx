@@ -79,6 +79,10 @@ export function BookingGroupConfirmStep(props: Props) {
   const ready = quotes.every((quote) => quote !== null);
 
   async function confirm() {
+    if (owner.servicePoliciesConsent !== true) {
+      setError("Please go back and agree to the Service Policies and Fees.");
+      return;
+    }
     if (pending.current || !ready || !props.idempotencyKey) return;
     pending.current = true;
     setLoading(true);
@@ -116,6 +120,7 @@ export function BookingGroupConfirmStep(props: Props) {
           travelDistanceMiles: travelQuote.distanceMiles,
           travelFee: travelQuote.fee,
           paymentMethodId: paymentMethod.id,
+          servicePoliciesConsent: owner.servicePoliciesConsent,
           customerPhone: owner.phone,
           customerFirstName: owner.firstName,
           customerLastName: owner.lastName,
