@@ -6,6 +6,7 @@ import { isEmailConfigured, sendEmail, siteUrl } from "@/lib/email/resend";
 import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
 import { formatChargeMoney } from "@/lib/charges/money";
+import { receiptPetNames } from "@/lib/charges/receipt-view";
 import { chargeKindLabel } from "@/lib/charges/receipt-content";
 import {
   buildChargeReceiptCardHtml,
@@ -20,7 +21,7 @@ export function buildChargeReceiptEmail(
   paymentMethodLabel?: string | null,
 ) {
   return {
-    subject: `Your K9 Atelier receipt · ${formatChargeMoney(charge.total)}`,
+    subject: `Receipt for ${receiptPetNames(appointment, charge) || "your pet"}`,
     text: buildChargeReceiptCardText(appointment, charge, paymentMethodLabel),
     html: buildChargeReceiptCardHtml(appointment, charge, paymentMethodLabel),
   };
