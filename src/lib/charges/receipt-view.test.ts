@@ -5,6 +5,54 @@ import { buildAfterVisitThankYouSms, buildChargeReceiptEmail } from "./receipts"
 import { buildChargeReceiptCardHtml, buildChargeReceiptCardText } from "./receipt-email";
 import { buildPreviewCollectContext } from "./preview";
 import type { AppointmentChargeRecord } from "./types";
+import { sendAutomaticReceipt } from "./automatic-receipt";
+
+describe("automatic paid receipt", () => {
+  const appointment = buildPreviewCollectContext().appointment;
+  const paid = () => ({ id: "paid-charge", appointmentId: appointment.id, status: "paid", receiptChannel: null }) as AppointmentChargeRecord;
+
+  it("emails the customer automatically and records delivery once", async () => {
+    const charge = paid();
+    const calls: string[] = [];
+    const deps = {
+      loadAppointment: async () => ({ ...appointment, customerEmail: "customer@example.com" }),
+      sendReceipt: async (record: typeof appointment, sentCharge: AppointmentChargeRecord) => {
+        assert.equal(record.customerEmail, "customer@example.com");
+        assert.equal(sentCharge.id, charge.id);
+        calls.push("send");
+        return true;
+      },
+      markSent: async (id: string) => { assert.equal(id, charge.id); calls.push("record"); },
+    };
+    assert.equal(await sendAutomaticReceipt(charge, deps), true);
+    assert.equal(charge.receiptChannel, "email");
+    assert.equal(await sendAutomaticReceipt(charge, deps), false);
+    assert.deepEqual(calls, ["send", "record"]);
+  });
+
+  it("does not email unpaid charges or customers without an email", async () => {
+    const deps = {
+      loadAppointment: async () => ({ ...appointment, customerEmail: "" }),
+      sendReceipt: async () => { assert.fail("must not send"); },
+      markSent: async () => { assert.fail("must not mark sent"); },
+    };
+    assert.equal(await sendAutomaticReceipt({ ...paid(), status: "pending" }, deps), false);
+    assert.equal(await sendAutomaticReceipt(paid(), deps), false);
+  });
+
+  for (const failure of ["provider", "lookup", "record"] as const) {
+    it(`keeps payment paid when ${failure} fails`, async () => {
+      const charge = paid();
+      assert.equal(await sendAutomaticReceipt(charge, {
+        loadAppointment: async () => { if (failure === "lookup") throw new Error("lookup unavailable"); return appointment; },
+        sendReceipt: async () => failure !== "provider",
+        markSent: async () => { if (failure === "record") throw new Error("record unavailable"); },
+      }), false);
+      assert.equal(charge.status, "paid");
+      assert.equal(charge.receiptChannel, null);
+    });
+  }
+});
 
 describe("receipt email subject", () => {
   const appointment = buildPreviewCollectContext().appointment;
@@ -40,9 +88,11 @@ describe("receipt email subject", () => {
         assert.match(email.text, /\$48\.00/);
         const sms = buildAfterVisitThankYouSms(record, charge);
         assert.equal(sms, [
-          `K9 ATELIER: We keep a record of all tools and products used at every appointment for ${expected}.`,
+          [
+          `We keep a record of all tools and products used, along with your service requests, at every appointment for ${expected}.`,
           "If you have any questions about the service or would prefer a different fragrance, please feel free to contact us anytime. We have a full range of show dog grooming products and can tailor the products and fragrance to your preferences.",
-          "Thank you for trusting K9 Atelier. We look forward to seeing you again!",
+          `Thank you for trusting your ${names.length > 1 ? "pups" : "pup"} with K9 Atelier. We look forward to seeing you again!`,
+          ].join(" "),
           "Reply STOP to opt out.",
         ].join("\n"));
       });

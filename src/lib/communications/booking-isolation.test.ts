@@ -135,7 +135,8 @@ describe("booking and payment isolation", () => {
     const charges = source("src/lib/charges/service.ts");
     assert.match(
       charges,
-      /await sendAfterVisitThankYouSms\(\s*appointment,\s*charge,[\s\S]*catch \(smsError\)[\s\S]*return charge/,
+      /try \{\s*const appointment = await fetchAppointmentAdminRecord\(charge.appointmentId\);\s*if \(appointment\) await sendAfterVisitThankYouSms\(appointment, charge\);[\s\S]*catch \(smsError\)[\s\S]*return charge/,
     );
+    assert.match(charges, /await sendAutomaticReceipt\(charge,\s*\{\s*loadAppointment: fetchAppointmentAdminRecord,\s*sendReceipt: sendChargeReceiptEmail/);
   });
 });

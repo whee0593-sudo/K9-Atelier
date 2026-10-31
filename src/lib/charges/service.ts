@@ -57,6 +57,7 @@ import {
   sendAfterVisitThankYouSms,
   sendChargeReceiptEmail,
 } from "@/lib/charges/receipts";
+import { sendAutomaticReceipt } from "@/lib/charges/automatic-receipt";
 import { householdVisitKey } from "@/lib/referrals/address";
 import { centsToDollars } from "@/lib/referrals/eligible";
 import {
@@ -1250,16 +1251,17 @@ async function markChargePaid(
           : null,
       );
     }
+    charge.billSnapshot = {
+      ...charge.billSnapshot,
+      paidAt: charge.paidAt,
+      tip: charge.tipAmount,
+      total: charge.total,
+      paymentMethodLabel,
+    };
     await admin
       .from("appointment_charges")
       .update({
-        bill_snapshot: {
-          ...charge.billSnapshot,
-          paidAt: charge.paidAt,
-          tip: charge.tipAmount,
-          total: charge.total,
-          paymentMethodLabel,
-        },
+        bill_snapshot: charge.billSnapshot,
       })
       .eq("id", chargeId);
   }
@@ -1276,14 +1278,20 @@ async function markChargePaid(
   } catch (issueError) {
     console.error("issueReferralRewardForPaidCharge failed:", issueError);
   }
+  await sendAutomaticReceipt(charge, {
+    loadAppointment: fetchAppointmentAdminRecord,
+    sendReceipt: sendChargeReceiptEmail,
+    markSent: async (id) => {
+      const { error } = await admin
+        .from("appointment_charges")
+        .update({ receipt_channel: "email", receipt_sent_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw new Error(error.message);
+    },
+  });
   try {
     const appointment = await fetchAppointmentAdminRecord(charge.appointmentId);
-    if (appointment) {
-      await sendAfterVisitThankYouSms(
-        appointment,
-        charge,
-      );
-    }
+    if (appointment) await sendAfterVisitThankYouSms(appointment, charge);
   } catch (smsError) {
     console.error("after-visit thank-you SMS failed:", smsError);
   }

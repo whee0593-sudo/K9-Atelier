@@ -100,10 +100,17 @@ export function buildAfterVisitThankYouSms(
   charge?: AppointmentChargeRecord,
 ) {
   const petName = (charge ? receiptPetNames(appointment, charge) : appointment.petName?.trim()) || "your pet";
+  const petCount = charge?.billSnapshot
+    ? new Set(charge.billSnapshot.pets.map((pet) => pet.appointmentId)).size
+    : new Set([appointment.petName, ...(charge?.lineItems.map((item) => item.petName) ?? [])]
+        .map((name) => name?.trim()).filter(Boolean)).size;
+  const pups = petCount > 1 ? "pups" : "pup";
   return [
-    `K9 ATELIER: We keep a record of all tools and products used at every appointment for ${petName}.`,
+    [
+    `We keep a record of all tools and products used, along with your service requests, at every appointment for ${petName}.`,
     "If you have any questions about the service or would prefer a different fragrance, please feel free to contact us anytime. We have a full range of show dog grooming products and can tailor the products and fragrance to your preferences.",
-    "Thank you for trusting K9 Atelier. We look forward to seeing you again!",
+    `Thank you for trusting your ${pups} with K9 Atelier. We look forward to seeing you again!`,
+    ].join(" "),
     "Reply STOP to opt out.",
   ].join("\n");
 }
