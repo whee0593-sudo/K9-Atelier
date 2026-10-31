@@ -128,6 +128,7 @@ export async function sendNextDayFollowUp(
     const names = {
       firstName: anchor.customerFirstName,
       petName: formatVisitPetNames(petNames, anchor.petName),
+      petCount: petNames.length,
     };
     const email = anchor.customerEmail.trim();
     const phone = normalizePhoneToE164(anchor.customerPhone ?? "");

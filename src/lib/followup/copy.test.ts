@@ -9,6 +9,32 @@ import {
 } from "./copy";
 
 describe("next-day follow-up copy", () => {
+  for (const [petName, petCount] of [
+    ["Daisy and Milo", 2],
+    ["LYCHEE, BELLA and yoyo", 3],
+    ["Daisy", 2],
+  ] as const) {
+    it(`uses plural grammar for ${petCount} dogs (${petName})`, () => {
+      const input = { firstName: "Maya", petName, petCount };
+      assert.ok(buildNextDayFollowUpSms(input).includes(`${petName} are doing`));
+      const email = buildNextDayFollowUpEmail(input);
+      for (const body of [email.text, email.html]) {
+        assert.ok(body.includes(`${petName} are doing`));
+        assert.ok(body.includes("you're all enjoying"));
+        assert.ok(body.includes("seeing you all again"));
+        assert.ok(!body.includes("you both"));
+      }
+    });
+  }
+
+  it("keeps singular grammar for one dog or a missing name", () => {
+    for (const input of [{ petName: "Rock and Roll", petCount: 1 }, {}]) {
+      const petName = followUpPetName(input.petName);
+      assert.ok(buildNextDayFollowUpSms(input).includes(`${petName} is doing`));
+      assert.ok(buildNextDayFollowUpEmail(input).text.includes(`${petName} is doing`));
+    }
+  });
+
   it("uses the client's first name and the dog's name", () => {
     assert.equal(followUpGreetingName("Maya"), "Maya");
     assert.equal(followUpGreetingName("  "), "there");

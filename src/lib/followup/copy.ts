@@ -9,6 +9,7 @@ const SMS_OPT_OUT = "Reply STOP to opt out.";
 export type FollowUpNames = {
   firstName?: string | null;
   petName?: string | null;
+  petCount?: number;
 };
 
 export function followUpGreetingName(firstName?: string | null) {
@@ -32,8 +33,9 @@ export function followUpReviewUrl() {
 export function buildNextDayFollowUpSms(input: FollowUpNames) {
   const firstName = followUpGreetingName(input.firstName);
   const petName = followUpPetName(input.petName);
+  const verb = (input.petCount ?? 1) > 1 ? "are" : "is";
   return [
-    `Hi ${firstName}! This is Penny from K9 Atelier. Just checking in to see how ${petName} is doing after yesterday's groom. 💜`,
+    `Hi ${firstName}! This is Penny from K9 Atelier. Just checking in to see how ${petName} ${verb} doing after yesterday's groom. 💜`,
     "",
     `If you have any questions or feedback, please feel free to text me anytime. And if you loved ${petName}'s experience, I'd really appreciate a quick Google review:`,
     "",
@@ -48,13 +50,16 @@ export function buildNextDayFollowUpSms(input: FollowUpNames) {
 export function buildNextDayFollowUpEmail(input: FollowUpNames) {
   const firstName = followUpGreetingName(input.firstName);
   const petName = followUpPetName(input.petName);
+  const multiplePets = (input.petCount ?? 1) > 1;
+  const verb = multiplePets ? "are" : "is";
+  const everyone = multiplePets ? "all" : "both";
   const reviewUrl = followUpReviewUrl();
   const introParagraphs = [
-    `I just wanted to check in and see how ${petName} is doing after yesterday's grooming appointment. I hope you're both enjoying the fresh new look!`,
+    `I just wanted to check in and see how ${petName} ${verb} doing after yesterday's grooming appointment. I hope you're ${everyone} enjoying the fresh new look!`,
     `Your experience—and ${petName}'s comfort—are very important to me. If you have any questions or feedback about the groom, coat, or at-home care, please feel free to reach out anytime.`,
     `If you were happy with your experience, I'd truly appreciate it if you would take a moment to share a Google review. Your feedback means a lot to us and helps other local pet parents feel confident choosing K9 Atelier.`,
   ];
-  const closingParagraph = `Thank you again for trusting me with ${petName}. I look forward to seeing you both again.`;
+  const closingParagraph = `Thank you again for trusting me with ${petName}. I look forward to seeing you ${everyone} again.`;
   const signoffLines = [
     "K9 Atelier",
     "Private Mobile Pet Spa",
