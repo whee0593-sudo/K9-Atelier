@@ -17,7 +17,7 @@ const HERO_IMAGE_CLASS = "!h-[300px] !w-full !object-contain md:!h-[520px]";
 
 const HERO_LEAD_LINKS = [
   { phrase: "show-level coat care", href: LONG_COAT_CARE_PATH },
-  { phrase: "extra-gentle senior care", href: SPECIALTY_CARE_PATH },
+  { phrase: "gentlest senior care", href: SPECIALTY_CARE_PATH },
 ] as const;
 
 const quietInlineLinkClass =
