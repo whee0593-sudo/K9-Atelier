@@ -1,7 +1,3 @@
-import {
-  cancellationPolicySummary,
-  POLICY_CALENDAR_NOTE,
-} from "@/lib/appointments/policy-copy";
 import { business } from "@/lib/business";
 import { streetNameForSms } from "@/lib/sms/street-name";
 
@@ -34,20 +30,9 @@ export type BookingConfirmationDetails = {
   signoffName?: string;
 };
 
-function isNewClient(details: BookingConfirmationDetails) {
-  return details.isNewClient !== false;
-}
-
 /** Prefer phone for contact copy, falling back to email. */
 function contactMethod() {
   return business.brand.phone ?? business.brand.email;
-}
-
-/** Footer contact line, e.g. "penny@k9atelier.com | https://k9atelier.com". */
-function contactFooter() {
-  const parts = [business.brand.phone ?? business.brand.email];
-  if (business.brand.website) parts.push(business.brand.website);
-  return parts.join(" | ");
 }
 
 export const smsConsentCopy =
@@ -171,69 +156,37 @@ export function buildBookingConfirmationEmail(
   details: BookingConfirmationDetails,
 ): { subject: string; body: string } {
   const greetingName = details.customerName ?? "there";
-  const subject = "Your Appointment Is Confirmed";
-
-  if (!isNewClient(details)) {
-    const lines = [
-      `Hi ${greetingName},`,
+  const policyUrl = `${(business.brand.website ?? "https://k9atelier.com").replace(/\/$/, "")}/faq#cancellations-rescheduling`;
+  return {
+    subject: "Your Appointment Is Confirmed",
+    body: [
+      `Dear ${greetingName}, we look forward to caring for ${details.petName}.`,
       "",
-      `Your appointment for ${details.petName} is confirmed for ${details.dateLabel} between ${details.timeLabel}.`,
-      "",
+      `Date: ${details.dateLabel}`,
+      `Estimated Arrival Time: ${details.timeLabel}`,
       `Service: ${details.serviceName}`,
-      details.addressLabel ? `Location: ${details.addressLabel}` : null,
-      details.durationLabel
-        ? `Estimated Duration: ${details.durationLabel}`
-        : null,
-      details.priceLabel ? `Estimated Total: ${details.priceLabel}` : null,
-      details.priceLabel ? "" : null,
-      details.priceLabel ? estimateNote : null,
+      `Location: ${details.addressLabel ?? ""}`,
+      `Estimated duration: ${details.durationLabel ?? ""}`,
+      `Estimated total: ${details.priceLabel ?? ""}`,
       "",
-      `Need to reschedule? ${cancellationPolicySummary()} ${POLICY_CALENDAR_NOTE} Reply to this email or contact us at ` +
-        `${contactMethod()}.`,
+      "This estimate is based on your dog's typical size and coat. Final pricing may vary depending on coat condition, matting, and temperament.",
+      "",
+      `Cancellation Policy: ${policyUrl}`,
+      "",
+      "We do our best to arrive at your scheduled time, and every confirmed appointment will be completed. Because this is a mobile service, arrival time may vary due to weather, traffic, and the appointment before yours. We will text you when we are on the way.",
+      "",
+      "How should I prepare for my appointment?",
+      "",
+      `- A bathroom break for ${details.petName} shortly before our arrival is appreciated`,
+      "- A nearby parking spot for our grooming van is greatly appreciated",
+      "- Please let us know in advance of any allergies, sensitivities, or behavioral notes",
+      "",
+      `Please reply to this email or reach us at ${contactMethod()} for anything we can help with.`,
       "",
       "Warmly,",
-      details.signoffName ?? business.brand.name,
       business.brand.name,
-      contactFooter(),
-    ];
-    return { subject, body: lines.filter((l) => l !== null).join("\n") };
-  }
-
-  const lines = [
-    `Hi ${greetingName},`,
-    "",
-    `Welcome to K9 Atelier. Your appointment for ${details.petName} is confirmed for ${details.dateLabel} between ${details.timeLabel}.`,
-    "",
-    "Here are your appointment details:",
-    "",
-    `Date: ${details.dateLabel}`,
-    `Time: ${details.timeLabel}`,
-    `Service: ${details.serviceName}`,
-    `Location: ${details.addressLabel ?? ""}`,
-    `Estimated Duration: ${details.durationLabel ?? ""}`,
-    `Estimated Total: ${details.priceLabel ?? ""}`,
-    "",
-    estimateNote,
-    "",
-    "Payment",
-    "You are not charged when you book. Payment is settled after your appointment. Late cancellations and no-shows may be charged to the card you selected, according to our cancellation policy.",
-    "",
-    "What to Expect",
-    "We do our best to arrive at your scheduled time, and every confirmed appointment will be completed. Because this is a mobile service, arrival time may vary due to weather, traffic, and the appointment before yours. We will text you when we are on the way. A quick health and coat check will take place before we begin.",
-    "",
-    "How to Prepare",
-    `- Please ensure ${details.petName} has had a bathroom break shortly before our arrival`,
-    "- A parking spot near your home for our grooming van is greatly appreciated",
-    `- Please let us know in advance about any allergies, sensitivities, medical conditions, or behavioral notes for ${details.petName}`,
-    "",
-    "Need to Reschedule?",
-    `${cancellationPolicySummary()} ${POLICY_CALENDAR_NOTE} You can reply directly to this email or contact us at ${contactMethod()}.`,
-    "",
-    "Warmly,",
-    details.signoffName ?? business.brand.name,
-    business.brand.name,
-    contactFooter(),
-  ];
-
-  return { subject, body: lines.join("\n") };
+      "",
+      `${business.brand.name} · ${business.brand.phone} · k9atelier.com`,
+    ].join("\n"),
+  };
 }
