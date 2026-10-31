@@ -21,7 +21,7 @@ const details = {
 };
 
 describe("appointment SMS copy", () => {
-  it("sends the approved booking success text with the full address", () => {
+  it("sends the approved booking success text without the state or ZIP", () => {
     const body = buildBookingConfirmationSms({
       ...details,
       isNewClient: true,
@@ -30,11 +30,12 @@ describe("appointment SMS copy", () => {
     });
     assert.equal(
       body,
-      "K9 Atelier: You have an appointment for Bella on Tuesday, August 18, 2026, 10–11 AM, at 123 Palm Avenue, West Palm Beach, FL 33401. See you then!💜 Reply to talk to Penny about anything. Reply STOP to opt out.",
+      "K9 Atelier: You have an appointment for Bella on Tuesday, August 18, 2026, 10–11 AM, at 123 Palm Avenue, West Palm Beach. See you then!💜 Reply to talk to Penny about anything. Reply STOP to opt out.",
     );
     assert.equal(body.includes("Reply C"), false);
     assert.equal(body.includes("West Palm Beach"), true);
-    assert.equal(body.includes("33401"), true);
+    assert.equal(body.includes("33401"), false);
+    assert.equal(body.includes(", FL"), false);
   });
 
   it("keeps confirmed SMS concise for returning clients", () => {
