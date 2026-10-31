@@ -1279,9 +1279,9 @@ async function markChargePaid(
   try {
     const appointment = await fetchAppointmentAdminRecord(charge.appointmentId);
     if (appointment) {
-      const petCount = charge.billSnapshot?.pets.length ?? 0;
       await sendAfterVisitThankYouSms(
-        petCount > 1 ? { ...appointment, petName: "your pets" } : appointment,
+        appointment,
+        charge,
       );
     }
   } catch (smsError) {

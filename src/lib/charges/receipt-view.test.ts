@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { formatReceiptServiceTime } from "./receipt-view";
-import { buildChargeReceiptEmail } from "./receipts";
+import { buildAfterVisitThankYouSms, buildChargeReceiptEmail } from "./receipts";
 import { buildChargeReceiptCardHtml, buildChargeReceiptCardText } from "./receipt-email";
 import { buildPreviewCollectContext } from "./preview";
 import type { AppointmentChargeRecord } from "./types";
@@ -38,12 +38,21 @@ describe("receipt email subject", () => {
         assert.equal(email.text, buildChargeReceiptCardText(record, charge, "Visa ending in 1234"));
         assert.equal(email.html, buildChargeReceiptCardHtml(record, charge, "Visa ending in 1234"));
         assert.match(email.text, /\$48\.00/);
+        const sms = buildAfterVisitThankYouSms(record, charge);
+        assert.equal(sms, [
+          `K9 ATELIER: We keep a record of all tools and products used at every appointment for ${expected}.`,
+          "If you have any questions about the service or would prefer a different fragrance, please feel free to contact us anytime. We have a full range of show dog grooming products and can tailor the products and fragrance to your preferences.",
+          "Thank you for trusting K9 Atelier. We look forward to seeing you again!",
+          "Reply STOP to opt out.",
+        ].join("\n"));
       });
     }
   }
 
   it("uses a readable fallback when no pet name is available", () => {
     assert.equal(buildChargeReceiptEmail({ ...appointment, petName: " " }, baseCharge).subject, "Receipt for your pet");
+    assert.match(buildAfterVisitThankYouSms({ ...appointment, petName: " " }), /appointment for your pet\./);
+    assert.match(buildAfterVisitThankYouSms({ ...appointment, petName: " Daisy " }), /appointment for Daisy\./);
   });
 });
 

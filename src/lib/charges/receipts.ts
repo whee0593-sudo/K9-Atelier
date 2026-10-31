@@ -1,8 +1,8 @@
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
-import { getBookAgainUrl, getGoogleWriteReviewUrl } from "@/lib/business";
+import { getBookAgainUrl } from "@/lib/business";
 import { buildCommunicationContext } from "@/lib/communications/context";
 import { isCommunicationAccepted } from "@/lib/communications/result";
-import { isEmailConfigured, sendEmail, siteUrl } from "@/lib/email/resend";
+import { isEmailConfigured, sendEmail } from "@/lib/email/resend";
 import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
 import { formatChargeMoney } from "@/lib/charges/money";
@@ -95,27 +95,22 @@ export async function sendChargeReceiptSms(
   );
 }
 
-export function buildAfterVisitThankYouSms(appointment: AdminAppointmentRecord) {
-  const petName = appointment.petName?.trim() || "your pet";
-  const google = getGoogleWriteReviewUrl() ?? "";
+export function buildAfterVisitThankYouSms(
+  appointment: AdminAppointmentRecord,
+  charge?: AppointmentChargeRecord,
+) {
+  const petName = (charge ? receiptPetNames(appointment, charge) : appointment.petName?.trim()) || "your pet";
   return [
-    `K9 ATELIER: Thank you for entrusting ${petName}’s care to us. We truly appreciate your business.`,
-    "",
-    "Share your experience on Google:",
-    google,
-    "",
-    "Reserve your next appointment:",
-    getBookAgainUrl(),
-    "",
-    "Share a concern with us:",
-    siteUrl("/contact?topic=concern"),
-    "",
+    `K9 ATELIER: We keep a record of all tools and products used at every appointment for ${petName}.`,
+    "If you have any questions about the service or would prefer a different fragrance, please feel free to contact us anytime. We have a full range of show dog grooming products and can tailor the products and fragrance to your preferences.",
+    "Thank you for trusting K9 Atelier. We look forward to seeing you again!",
     "Reply STOP to opt out.",
   ].join("\n");
 }
 
 export async function sendAfterVisitThankYouSms(
   appointment: AdminAppointmentRecord,
+  charge?: AppointmentChargeRecord,
 ) {
   if (!appointment.customerPhone || !isSmsConfigured()) return false;
   const to = normalizePhoneToE164(appointment.customerPhone);
@@ -123,7 +118,7 @@ export async function sendAfterVisitThankYouSms(
   return isCommunicationAccepted(
     await sendSms({
       to,
-      body: buildAfterVisitThankYouSms(appointment),
+      body: buildAfterVisitThankYouSms(appointment, charge),
       communication: buildCommunicationContext({
         notificationType: "payment_thank_you",
         recipient: to,
