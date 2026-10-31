@@ -1461,11 +1461,6 @@ export function PayStep({
       <p className="font-sans mt-5 text-xs font-semibold uppercase tracking-[0.12em] text-[#514659]">
         Payment
       </p>
-      <p className="font-body mt-2 text-sm text-taupe">
-        {kind === "no_show"
-          ? "Use the card on file, cash, or Zelle."
-          : "Choose a saved card, a different card, cash, or Zelle."}
-      </p>
       {paymentNotice ? (
         <p className="font-body mt-3 text-sm text-ink">{paymentNotice}</p>
       ) : null}
@@ -1479,12 +1474,15 @@ export function PayStep({
           Check payment status
         </button>
       ) : null}
-      <div className="mt-2 rounded-xl border border-[#8C7D95] bg-white px-4 py-3 text-sm font-semibold">
-        {useCash ? "Cash" : useZelle ? "Zelle" : useNewCard ? "New card" : selectedMethodId && methods.some((method) => method.id === selectedMethodId) ? formatPaymentMethodLabel(methods.find((method) => method.id === selectedMethodId)!) : "Choose a payment method"}
-      </div>
-      <details className="mt-2">
-        <summary className="cursor-pointer py-1 text-sm font-medium underline underline-offset-4">Change payment method</summary>
-      <div className="mt-3 space-y-2">
+      <div role="group" aria-label="Payment method" className="mt-3 space-y-2">
+        <label className="flex items-center gap-3 rounded-2xl border border-lavender/40 bg-cream px-4 py-3 text-sm">
+          <input type="radio" name="collect-card" checked={useCash} onChange={onUseCash} />
+          Cash
+        </label>
+        <label className="flex items-center gap-3 rounded-2xl border border-lavender/40 bg-cream px-4 py-3 text-sm">
+          <input type="radio" name="collect-card" checked={useZelle} onChange={onUseZelle} />
+          Zelle
+        </label>
         {methods.map((method) => (
           <label
             key={method.id}
@@ -1512,27 +1510,7 @@ export function PayStep({
           Use a different card
         </label>
         )}
-        <label className="flex items-center gap-3 rounded-2xl border border-lavender/40 bg-cream px-4 py-3 text-sm">
-          <input
-            type="radio"
-            name="collect-card"
-            checked={useCash}
-            onChange={onUseCash}
-          />
-          Cash
-        </label>
-        <label className="flex items-center gap-3 rounded-2xl border border-lavender/40 bg-cream px-4 py-3 text-sm">
-          <input
-            type="radio"
-            name="collect-card"
-            checked={useZelle}
-            onChange={onUseZelle}
-          />
-          Zelle
-        </label>
       </div>
-
-      </details>
 
       {useZelle ? (
         <section aria-label="Zelle transfer instructions" className="mt-4 rounded-xl border border-[#8C7D95] bg-white p-4">

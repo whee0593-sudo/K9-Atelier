@@ -45,7 +45,14 @@ it("preserves the current service checkout, referral controls and payment select
   const html = renderToStaticMarkup(<PayStep {...props("service")} />);
   assert.match(html, /Gratuity/);
   assert.match(html, /Discounts &amp; referral credit/);
-  assert.match(html, /Change payment method/);
+  assert.match(html, /aria-label="Payment method"/);
+  assert.doesNotMatch(html, /Choose a saved card|Use the card on file|Change payment method/);
+  const options = html.match(/<div role="group" aria-label="Payment method"[\s\S]*?<\/div>/)?.[0] ?? "";
+  const labels = [...options.matchAll(/<label\b[^>]*>([\s\S]*?)<\/label>/g)]
+    .map((match) => match[1].replace(/<[^>]*>/g, "").trim());
+  assert.equal(labels[0], "Cash");
+  assert.equal(labels[1], "Zelle");
+  assert.match(labels[2], /Visa|Mastercard|Amex|Discover|Card/i);
   assert.match(html, /Use a different card/);
 });
 
@@ -57,6 +64,22 @@ it("keeps no-show fees fixed and the unknown payment blocked after the merge", (
   assert.match(html, /Check payment status/);
   assert.match(html, /manual check/);
   assert.match(html, /<button[^>]*disabled=""[^>]*>Pay \$140/);
+});
+
+it("shows the selected cash, Zelle, or saved card without expanding a selector", () => {
+  for (const selected of ["cash", "zelle", "card"] as const) {
+    const html = renderToStaticMarkup(<PayStep {...props("service")} useCash={selected === "cash"} useZelle={selected === "zelle"} />);
+    const options = html.match(/<div role="group" aria-label="Payment method"[\s\S]*?<\/div>/)?.[0] ?? "";
+    const labels = [...options.matchAll(/<label\b[^>]*>([\s\S]*?)<\/label>/g)];
+    const selectedIndex = selected === "cash" ? 0 : selected === "zelle" ? 1 : 2;
+    labels.forEach((label, index) => assert.equal(/checked=""/.test(label[1]), index === selectedIndex));
+    assert.equal(html.includes('aria-label="Zelle transfer instructions"'), selected === "zelle");
+  }
+});
+
+it("keeps cash and Zelle visible when no saved card exists", () => {
+  const html = renderToStaticMarkup(<PayStep {...props("service")} methods={[]} selectedMethodId={null} />);
+  assert.match(html, /Payment method[\s\S]*Cash[\s\S]*Zelle[\s\S]*Use a different card/);
 });
 
 
@@ -75,7 +98,7 @@ it("presents the two-dog bill in the requested order with the final total", () =
   assert.match(text, /Stella.*The Atelier Full Groom.*\$200\.00.*Gentle DeMatting.*\$25\.00.*Valentino.*The Atelier Full Groom.*\$200\.00.*Gentle care.*\$40\.00/);
   assert.doesNotMatch(html, /\$180\.00|line-through|Subtotal|2 dogs/);
   assert.match(text, /Gratuity.*\$0\.00/);
-  assert.match(text, /15%.*18%.*20%.*Custom.*Discounts &amp; referral credit.*Payment.*Change payment method.*Total to pay.*\$465\.00.*Pay \$465\.00.*Back to review/);
+  assert.match(text, /15%.*18%.*20%.*Custom.*Discounts &amp; referral credit.*Payment.*Cash.*Zelle.*Total to pay.*\$465\.00.*Pay \$465\.00.*Back to review/);
 });
 
 it("keeps same-name dogs separate and visit charges unassigned", () => {
