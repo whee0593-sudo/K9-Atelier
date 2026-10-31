@@ -245,7 +245,7 @@ function FaqParagraphs({ paragraphs }: { paragraphs: readonly string[] }) {
 
 function CancellationAnswer() {
   return (
-    <div className="space-y-5">
+    <div id="cancellations-rescheduling" className="scroll-mt-32 space-y-5">
       <p>{cancellationPolicy.intro}</p>
       {cancellationPolicy.sections.map((section) => {
         const table = "table" in section ? section.table : undefined;
