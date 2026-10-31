@@ -34,7 +34,7 @@ describe("home page content", () => {
 
     assert.equal(
       business.brand.lead,
-      "Award-winning grooming by Penny, from show-level coat care to extra-gentle senior care and hand stripping.",
+      "White-glove grooming, brought to your doorstep. Personally tailored by Penny, from award-winning show-level coat care and hand stripping to the gentlest senior care.",
     );
     assert.equal(
       business.brand.lead.includes("Private mobile pet spa in Palm Beach County"),
@@ -144,7 +144,7 @@ describe("homepage SEO", () => {
       .replace(/\s+/g, " ");
     assert.match(
       leadText,
-      /Award-winning grooming by Penny, from show-level coat care to extra-gentle senior care and hand stripping\./,
+      /White-glove grooming, brought to your doorstep. Personally tailored by Penny, from award-winning show-level coat care and hand stripping to the gentlest senior care\./,
     );
     assert.match(html, /Grooming, tailored to the individual\./);
     const visibleText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
@@ -172,10 +172,10 @@ describe("homepage SEO", () => {
 
     assert.equal(byHref("/services/show-level-coat-care")?.text, "show-level coat care");
     assert.equal(
-      anchors.find((anchor) => anchor.text === "extra-gentle senior care")?.href,
+      anchors.find((anchor) => anchor.text === "gentlest senior care")?.href,
       "/services/specialty-care",
     );
-    const leadStart = html.indexOf("Award-winning grooming");
+    const leadStart = html.indexOf("White-glove grooming");
     const leadHtml = html.slice(leadStart, html.indexOf("Book Online", leadStart));
     const leadAnchors = [...leadHtml.matchAll(/<a([^>]*)>([\s\S]*?)<\/a>/g)].map(
       (match) => ({
@@ -185,7 +185,7 @@ describe("homepage SEO", () => {
     );
     assert.deepEqual(
       leadAnchors.map((anchor) => anchor.text),
-      ["show-level coat care", "extra-gentle senior care"],
+      ["show-level coat care", "gentlest senior care"],
     );
     const className = (attrs: string) => attrs.match(/class="([^"]*)"/)?.[1] ?? "";
     assert.equal(className(leadAnchors[0]?.attrs ?? ""), className(leadAnchors[1]?.attrs ?? ""));
