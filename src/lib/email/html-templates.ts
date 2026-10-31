@@ -1,4 +1,3 @@
-import { cancellationPolicySummary } from "@/lib/appointments/policy-copy";
 import { allergyWarning } from "@/lib/allergies";
 import { business, formatDuration, formatPrice } from "@/lib/business";
 import { formatChargeMoney } from "@/lib/charges/money";
@@ -75,7 +74,7 @@ function confirmedAppointmentDetailRows(
       label: "Date",
       value: formatAppointmentDateLabel(appointment.appointmentDate),
     },
-    { label: "Time", value: appointment.appointmentTime },
+    { label: "Estimated Arrival Time", value: appointment.appointmentTime },
     { label: "Service", value: appointment.serviceName },
     { label: "Location", value: formatAppointmentAddress(appointment) },
     {
@@ -433,7 +432,7 @@ export function buildCustomerAppointmentConfirmedEmail(
   const { subject, body: text } = buildBookingConfirmationEmail(details);
   const greetingName = customer.name ?? "Client";
   const estimateDisclaimer =
-    "This estimate is based on your dog's typical size and coat. Final pricing may vary depending on coat condition, matting, and temperament, and will always be confirmed with you before we begin.";
+    "This estimate is based on your dog's typical size and coat. Final pricing may vary depending on coat condition, matting, and temperament.";
 
   return buildCustomerConfirmedEmail(
     {
@@ -442,8 +441,6 @@ export function buildCustomerAppointmentConfirmedEmail(
       petName: appointment.petName,
       detailRows: confirmedAppointmentDetailRows(appointment),
       estimateNote: estimateDisclaimer,
-      paymentNote:
-        `You are not charged when you book. Payment is settled after your appointment. ${cancellationPolicySummary()}`,
     },
     text,
   );

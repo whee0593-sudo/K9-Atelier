@@ -1,5 +1,4 @@
 import { EMAIL_FONT_FAMILY } from "@/lib/email/typography";
-import { cancellationPolicySummary, POLICY_CALENDAR_NOTE } from "@/lib/appointments/policy-copy";
 import { business } from "@/lib/business";
 
 export function escapeHtml(value: string) {
@@ -442,11 +441,6 @@ export function buildCustomerConfirmedEmailHtml(content: CustomerConfirmedEmailC
     .map(({ label, value }) => customerLetterDetailRow(label, value))
     .join("");
   const petName = escapeHtml(content.petName);
-  const paymentSection = content.paymentNote
-    ? customerConfirmedSection(
-        `<p style="margin:0; font-size:16px; color:#5A5347;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(content.paymentNote)}</p>`,
-      )
-    : "";
 
   return `${customerLetterHeader(content.subject)}
       <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:16px; line-height:1.65; background:#ffffff;font-family:${EMAIL_FONT_FAMILY};">
@@ -458,19 +452,19 @@ export function buildCustomerConfirmedEmailHtml(content: CustomerConfirmedEmailC
           </table>
         </div>
         <p style="margin:0 0 18px; font-size:12px; color:${STAFF_EMAIL.muted};font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(content.estimateNote)}</p>
-        ${paymentSection}
+        <p style="margin:18px 0;font-family:${EMAIL_FONT_FAMILY};"><a href="${escapeHtml((business.brand.website ?? "https://k9atelier.com").replace(/\/$/, "") + "/faq#cancellations-rescheduling")}" style="display:inline-block;padding:12px 22px;background:#513562;color:#ffffff;text-decoration:none;border-radius:4px;font-family:${EMAIL_FONT_FAMILY};font-size:14px;">Cancellation Policy</a></p>
         ${customerConfirmedSection(
-          `<p style="margin:0; font-size:16px; color:#5A5347;font-family:${EMAIL_FONT_FAMILY};">We do our best to arrive at your scheduled time, and every confirmed appointment will be completed. Because this is a mobile service, arrival time may vary due to weather, traffic, and the appointment before yours. We will text you when we are on the way. A brief health and coat check takes place before we begin.</p>`,
+          `<p style="margin:0; font-size:16px; color:#5A5347;font-family:${EMAIL_FONT_FAMILY};">We do our best to arrive at your scheduled time, and every confirmed appointment will be completed. Because this is a mobile service, arrival time may vary due to weather, traffic, and the appointment before yours. We will text you when we are on the way.</p>`,
         )}
         ${customerConfirmedSection(
-          `<ul style="margin:0; padding-left:18px; font-size:16px; color:#5A5347;font-family:${EMAIL_FONT_FAMILY};">
+          `<p style="margin:0 0 12px;font-size:16px;font-weight:bold;font-family:${EMAIL_FONT_FAMILY};">How should I prepare for my appointment?</p><ul style="margin:0; padding-left:18px; font-size:16px; color:#5A5347;font-family:${EMAIL_FONT_FAMILY};">
           <li style="margin-bottom:6px;font-family:${EMAIL_FONT_FAMILY};">A bathroom break for ${petName} shortly before our arrival is appreciated</li>
           <li style="margin-bottom:6px;font-family:${EMAIL_FONT_FAMILY};">A nearby parking spot for our grooming van is greatly appreciated</li>
           <li>Please let us know in advance of any allergies, sensitivities, or behavioral notes</li>
         </ul>`,
         )}
         ${customerConfirmedSection(
-          `<p style="margin:0; font-size:16px; color:#5A5347;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(cancellationPolicySummary())} ${escapeHtml(POLICY_CALENDAR_NOTE)} Please reply to this email or reach us at ${escapeHtml(business.brand.phone ?? business.brand.email)}.</p>`,
+          `<p style="margin:0; font-size:16px; color:#5A5347;font-family:${EMAIL_FONT_FAMILY};">Please reply to this email or reach us at ${escapeHtml(business.brand.phone ?? business.brand.email)} for anything we can help with.</p>`,
         )}
         <p style="margin:22px 0 0;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">Warmly,</p>
         <p style="margin:2px 0 0;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">${escapeHtml(business.brand.name)}</p>

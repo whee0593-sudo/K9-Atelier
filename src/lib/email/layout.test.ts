@@ -175,3 +175,16 @@ describe("customer email logo", () => {
     }
   });
 });
+
+
+it("keeps confirmed appointment HTML and text concise with the policy link", () => {
+  const email = buildCustomerAppointmentConfirmedEmail(appointment(), { name: "Alex", email: "alex@example.com" });
+  for (const body of [email.html, email.text]) {
+    assert.match(body, /Estimated Arrival Time/);
+    assert.match(body, /How should I prepare for my appointment\?/);
+    assert.match(body, /for anything we can help with/);
+    assert.match(body, /https:\/\/k9atelier\.com\/faq#cancellations-rescheduling/);
+    assert.doesNotMatch(body, /You are not charged|No-Show|50%|health and coat check|confirmed with you before we begin/);
+  }
+  assert.match(email.html, /<a[^>]*href="https:\/\/k9atelier\.com\/faq#cancellations-rescheduling"[^>]*>Cancellation Policy<\/a>/);
+});
