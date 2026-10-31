@@ -21,7 +21,7 @@ const details = {
 };
 
 describe("appointment SMS copy", () => {
-  it("asks the guest to reply C with the pet, time, and street name", () => {
+  it("sends the approved booking success text with the full address", () => {
     const body = buildBookingConfirmationSms({
       ...details,
       isNewClient: true,
@@ -30,15 +30,11 @@ describe("appointment SMS copy", () => {
     });
     assert.equal(
       body,
-      [
-        "Bella's appointment on Tuesday, August 18, 2026, 10–11 AM, Palm Avenue. Reply C to confirm.",
-        "",
-        "Reply STOP to opt out.",
-      ].join("\n"),
+      "K9 Atelier: You have an appointment for Bella on Tuesday, August 18, 2026, 10–11 AM, at 123 Palm Avenue, West Palm Beach, FL 33401. See you then!💜 Reply to talk to Penny about anything. Reply STOP to opt out.",
     );
-    assert.equal(body.includes("123"), false);
-    assert.equal(body.includes("West Palm Beach"), false);
-    assert.equal(body.includes("33401"), false);
+    assert.equal(body.includes("Reply C"), false);
+    assert.equal(body.includes("West Palm Beach"), true);
+    assert.equal(body.includes("33401"), true);
   });
 
   it("keeps confirmed SMS concise for returning clients", () => {
@@ -47,9 +43,9 @@ describe("appointment SMS copy", () => {
       isNewClient: false,
       streetName: "88 Oak Street Apt 4",
     });
-    assert.match(body, /Bella's appointment on/);
+    assert.match(body, /K9 Atelier: You have an appointment for Bella on/);
     assert.match(body, /Oak Street/);
-    assert.equal(body.includes("Apt"), false);
+    assert.equal(body.includes("Apt 4"), true);
     assert.equal(body.includes("deposit"), false);
   });
 
