@@ -161,6 +161,17 @@ describe("customer email logo", () => {
 
     for (const html of templates) {
       assertCustomerEmailLogo(html);
+      assert.doesNotMatch(html, /<h1\b|>Appointment confirmed<|>Vaccination approved<|>Action Needed<|>What to expect<|>In preparation</);
+      assert.ok(!html.includes("${EMAIL_FONT_FAMILY}"));
+      const families = [...html.matchAll(/font-family:([^;"]+);/g)];
+      assert.ok(families.length > 0);
+      for (const [, family] of families) {
+        assert.equal(family, "Georgia,'Times New Roman',Times,serif");
+      }
+      assert.match(html, /font-size:16px/);
+      for (const [tag] of html.matchAll(/<(?:table|td)\b[^>]*>/g)) {
+        assert.match(tag, /font-family:Georgia,'Times New Roman',Times,serif;/);
+      }
     }
   });
 });

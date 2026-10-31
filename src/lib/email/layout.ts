@@ -1,3 +1,4 @@
+import { EMAIL_FONT_FAMILY } from "@/lib/email/typography";
 import { cancellationPolicySummary, POLICY_CALENDAR_NOTE } from "@/lib/appointments/policy-copy";
 import { business } from "@/lib/business";
 
@@ -62,7 +63,7 @@ export function emailDetailTable(rows: DetailRow[]) {
   return rows
     .map(
       ([label, value]) =>
-        `<tr><td style="padding:6px 0;color:${c.textMuted};width:150px;vertical-align:top;font-size:14px;">${escapeHtml(label)}</td><td style="padding:6px 0;color:${c.text};font-weight:600;font-size:14px;line-height:1.5;">${escapeHtml(value)}</td></tr>`,
+        `<tr><td style="padding:6px 0;color:${c.textMuted};width:150px;vertical-align:top;font-size:16px;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(label)}</td><td style="padding:6px 0;color:${c.text};font-weight:600;font-size:16px;line-height:1.5;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(value)}</td></tr>`,
     )
     .join("");
 }
@@ -89,26 +90,26 @@ export function emailNoticeBox(message: string, variant: NoticeVariant = "info")
     },
   }[variant];
 
-  return `<div style="margin:24px 0;padding:16px 20px;background:${styles.bg};border:1px solid ${styles.border};border-radius:12px;">
-    <p style="margin:0;color:${styles.text};font-size:14px;line-height:1.6;">${message}</p>
+  return `<div style="margin:24px 0;padding:16px 20px;background:${styles.bg};border:1px solid ${styles.border};border-radius:12px;font-family:${EMAIL_FONT_FAMILY};">
+    <p style="margin:0;color:${styles.text};font-size:16px;line-height:1.65;font-family:${EMAIL_FONT_FAMILY};">${message}</p>
   </div>`;
 }
 
 export function emailSectionTitle(title: string) {
   const { c } = getEmailBrand();
-  return `<h3 style="margin:24px 0 8px;color:${c.goldDark};font-size:16px;">${escapeHtml(title)}</h3>`;
+  return `<h3 style="margin:24px 0 8px;color:${c.goldDark};font-size:16px;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(title)}</h3>`;
 }
 
 export function emailParagraph(text: string) {
   const { c } = getEmailBrand();
-  return `<p style="margin:0 0 16px;color:${c.text};font-size:14px;line-height:1.6;">${text}</p>`;
+  return `<p style="margin:0 0 16px;color:${c.text};font-size:16px;line-height:1.65;font-family:${EMAIL_FONT_FAMILY};">${text}</p>`;
 }
 
 export function emailButton(href: string, label: string) {
   const { c } = getEmailBrand();
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px 0 8px;">
-    <tr><td style="border-radius:8px;background:${c.goldDark};">
-      <a href="${escapeHtml(href)}" style="display:inline-block;padding:14px 28px;color:#ffffff;font-size:13px;font-weight:600;letter-spacing:0.08em;text-decoration:none;text-transform:uppercase;">${escapeHtml(label)}</a>
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px 0 8px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
+    <tr><td style="border-radius:8px;background:${c.goldDark};font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
+      <a href="${escapeHtml(href)}" style="display:inline-block;padding:14px 28px;color:#ffffff;font-size:13px;font-weight:600;letter-spacing:0.08em;text-decoration:none;text-transform:uppercase;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(label)}</a>
     </td></tr>
   </table>`;
 }
@@ -134,24 +135,24 @@ export function buildBrandedEmailHtml(content: BrandedEmailContent) {
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>${escapeHtml(content.subject)}</title>
 </head>
-<body style="margin:0;padding:0;background:${c.cream};font-family:Georgia,'Times New Roman',Times,serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${c.cream};padding:32px 16px;">
-    <tr><td align="center">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border:1px solid ${c.lavender};border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(77,67,72,0.08);">
-        <tr><td style="padding:32px 32px 24px;text-align:center;background:linear-gradient(180deg, ${c.lavenderLight} 0%, #ffffff 100%);">
+<body style="margin:0;padding:0;background:${c.cream};font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${c.cream};padding:32px 16px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
+    <tr><td align="center" style="font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border:1px solid ${c.lavender};border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(77,67,72,0.08);font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
+        <tr><td style="padding:32px 32px 24px;text-align:center;background:linear-gradient(180deg, ${c.lavenderLight} 0%, #ffffff 100%);font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
           ${emailLogoImg({ display: "inline-block" })}
         </td></tr>
-        <tr><td style="padding:32px;">
-          <h1 style="margin:0 0 18px;color:${c.goldDark};font-size:26px;line-height:1.3;font-weight:600;">${escapeHtml(content.headline)}</h1>
-          <p style="margin:0 0 16px;color:${c.text};font-size:15px;line-height:1.6;">Hi ${greetingName},</p>
+        <tr><td style="padding:32px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
+
+          <p style="margin:0 0 16px;color:${c.text};font-size:16px;line-height:1.65;font-family:${EMAIL_FONT_FAMILY};">Hi ${greetingName},</p>
           ${content.introHtml}
           ${content.bodyHtml ?? ""}
           ${content.cta ? emailButton(content.cta.href, content.cta.label) : ""}
-          <p style="margin:28px 0 0;color:${c.text};font-size:14px;line-height:1.6;">Warmly,<br/>${escapeHtml(brandName)}</p>
+          <p style="margin:28px 0 0;color:${c.text};font-size:16px;line-height:1.65;font-family:${EMAIL_FONT_FAMILY};">Warmly,<br/>${escapeHtml(brandName)}</p>
         </td></tr>
-        <tr><td style="padding:22px 32px;background:${c.lavenderLight};text-align:center;color:${c.textMuted};font-size:12px;line-height:1.6;">
-          <div style="font-weight:600;color:${c.goldDark};letter-spacing:0.06em;">${escapeHtml(brandName)}</div>
-          <div style="margin-top:6px;">${footerLine}</div>
+        <tr><td style="padding:22px 32px;background:${c.lavenderLight};text-align:center;color:${c.textMuted};font-size:12px;line-height:1.6;font-family:${EMAIL_FONT_FAMILY};">
+          <div style="font-weight:600;color:${c.goldDark};letter-spacing:0.06em;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(brandName)}</div>
+          <div style="margin-top:6px;font-family:${EMAIL_FONT_FAMILY};">${footerLine}</div>
         </td></tr>
       </table>
     </td></tr>
@@ -193,8 +194,8 @@ export type CustomerLetterEmailContent = {
 
 function customerLetterDetailRow(label: string, value: string) {
   return `<tr>
-    <td style="padding:5px 0;color:${STAFF_EMAIL.muted};">${escapeHtml(label)}</td>
-    <td style="padding:5px 0;text-align:right;color:${STAFF_EMAIL.ink};">${escapeHtml(value)}</td>
+    <td style="padding:5px 0;color:${STAFF_EMAIL.muted};font-family:${EMAIL_FONT_FAMILY};font-size:16px;">${escapeHtml(label)}</td>
+    <td style="padding:5px 0;text-align:right;color:${STAFF_EMAIL.ink};font-family:${EMAIL_FONT_FAMILY};font-size:16px;">${escapeHtml(value)}</td>
   </tr>`;
 }
 
@@ -217,27 +218,27 @@ export function buildCustomerLetterEmailHtml(content: CustomerLetterEmailContent
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>${escapeHtml(content.subject)}</title>
 </head>
-<body style="margin:0;padding:0;background-color:${STAFF_EMAIL.cream};">
-  <div style="background-color:${STAFF_EMAIL.cream}; padding:40px 20px; font-family: Georgia, 'Times New Roman', serif;">
-    <div style="max-width:480px; margin:0 auto; background-color:#ffffff; border:1px solid ${STAFF_EMAIL.border};">
-      <div style="background-color:${STAFF_EMAIL.cream}; padding:32px 32px 20px; text-align:center; border-bottom:1px solid ${STAFF_EMAIL.gold};">
+<body style="margin:0;padding:0;background-color:${STAFF_EMAIL.cream};font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
+  <div style="background-color:${STAFF_EMAIL.cream}; padding:40px 20px; font-family:${EMAIL_FONT_FAMILY};">
+    <div style="max-width:480px; margin:0 auto; background-color:#ffffff; border:1px solid ${STAFF_EMAIL.border};font-family:${EMAIL_FONT_FAMILY};">
+      <div style="background-color:${STAFF_EMAIL.cream}; padding:32px 32px 20px; text-align:center; border-bottom:1px solid ${STAFF_EMAIL.gold};font-family:${EMAIL_FONT_FAMILY};">
         ${emailLogoImg()}
       </div>
-      <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:14px; line-height:1.8; background:#ffffff;">
-        <p style="margin:0 0 14px;">Dear ${escapeHtml(content.greetingName)},</p>
-        <p style="margin:0 0 14px;">${escapeHtml(content.introParagraph)}</p>
-        <div style="padding:14px 0; font-size:13px; margin:18px 0; border-top:1px solid ${STAFF_EMAIL.border}; border-bottom:1px solid ${STAFF_EMAIL.border};">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; font-size:13px;">
+      <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:16px; line-height:1.65; background:#ffffff;font-family:${EMAIL_FONT_FAMILY};">
+        <p style="margin:0 0 14px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">Dear ${escapeHtml(content.greetingName)},</p>
+        <p style="margin:0 0 14px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">${escapeHtml(content.introParagraph)}</p>
+        <div style="padding:14px 0; font-size:16px; margin:18px 0; border-top:1px solid ${STAFF_EMAIL.border}; border-bottom:1px solid ${STAFF_EMAIL.border};font-family:${EMAIL_FONT_FAMILY};">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; font-size:16px;font-family:${EMAIL_FONT_FAMILY};">
             ${detailsHtml}
           </table>
         </div>
-        <p style="margin:0 0 14px; font-size:12px; color:${STAFF_EMAIL.muted};">${escapeHtml(content.estimateNote)}</p>
-        <p style="margin:0 0 22px;">${escapeHtml(content.closingParagraph)}</p>
-        <div style="text-align:center;">
-          <a href="${escapeHtml(content.cta.href)}" style="display:inline-block; border:1px solid ${STAFF_EMAIL.gold}; color:${STAFF_EMAIL.gold}; padding:10px 28px; text-decoration:none; font-size:11px; letter-spacing:2px;">${escapeHtml(content.cta.label)}</a>
+        <p style="margin:0 0 14px; font-size:12px; color:${STAFF_EMAIL.muted};font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(content.estimateNote)}</p>
+        <p style="margin:0 0 22px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">${escapeHtml(content.closingParagraph)}</p>
+        <div style="text-align:center;font-family:${EMAIL_FONT_FAMILY};">
+          <a href="${escapeHtml(content.cta.href)}" style="display:inline-block; border:1px solid ${STAFF_EMAIL.gold}; color:${STAFF_EMAIL.gold}; padding:10px 28px; text-decoration:none; font-size:11px; letter-spacing:2px;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(content.cta.label)}</a>
         </div>
       </div>
-      <div style="background-color:${STAFF_EMAIL.cream}; padding:22px 32px; text-align:center; font-size:11px; color:${STAFF_EMAIL.muted}; letter-spacing:0.5px; font-family:Georgia,'Times New Roman',serif;">
+      <div style="background-color:${STAFF_EMAIL.cream}; padding:22px 32px; text-align:center; font-size:11px; color:${STAFF_EMAIL.muted}; letter-spacing:0.5px; font-family:${EMAIL_FONT_FAMILY};">
         ${escapeHtml(footerLine)}
       </div>
     </div>
@@ -271,16 +272,16 @@ export function buildCustomerSimpleLetterEmailHtml(
     .map((paragraph, index) => {
       const marginBottom =
         index === content.bodyParagraphs.length - 1 ? "22px" : "14px";
-      return `<p style="margin:0 0 ${marginBottom};">${escapeHtml(paragraph)}</p>`;
+      return `<p style="margin:0 0 ${marginBottom};font-family:${EMAIL_FONT_FAMILY};font-size:16px;">${escapeHtml(paragraph)}</p>`;
     })
     .join("");
 
   return `${customerLetterHeader(content.subject)}
-      <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:14px; line-height:1.8; background:#ffffff;">
-        <p style="margin:0 0 14px;">Dear ${escapeHtml(content.greetingName)},</p>
+      <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:16px; line-height:1.65; background:#ffffff;font-family:${EMAIL_FONT_FAMILY};">
+        <p style="margin:0 0 14px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">Dear ${escapeHtml(content.greetingName)},</p>
         ${bodyParagraphsHtml}
-        <div style="text-align:center;">
-          <a href="${escapeHtml(content.cta.href)}" style="display:inline-block; border:1px solid ${STAFF_EMAIL.gold}; color:${STAFF_EMAIL.gold}; padding:10px 28px; text-decoration:none; font-size:11px; letter-spacing:2px;">${escapeHtml(content.cta.label)}</a>
+        <div style="text-align:center;font-family:${EMAIL_FONT_FAMILY};">
+          <a href="${escapeHtml(content.cta.href)}" style="display:inline-block; border:1px solid ${STAFF_EMAIL.gold}; color:${STAFF_EMAIL.gold}; padding:10px 28px; text-decoration:none; font-size:11px; letter-spacing:2px;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(content.cta.label)}</a>
         </div>
       </div>
       ${customerLetterFooter()}`;
@@ -313,7 +314,7 @@ export function buildCustomerFollowUpEmailHtml(
   const introHtml = content.introParagraphs
     .map(
       (paragraph) =>
-        `<p style="margin:0 0 14px;">${escapeHtml(paragraph)}</p>`,
+        `<p style="margin:0 0 14px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">${escapeHtml(paragraph)}</p>`,
     )
     .join("");
   const signoffHtml = [content.signoffName, ...content.signoffLines]
@@ -321,14 +322,14 @@ export function buildCustomerFollowUpEmailHtml(
     .join("<br/>");
 
   return `${customerLetterHeader(content.subject)}
-      <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:14px; line-height:1.8; background:#ffffff;">
-        <p style="margin:0 0 14px;">Hi ${escapeHtml(content.greetingName)},</p>
+      <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:16px; line-height:1.65; background:#ffffff;font-family:${EMAIL_FONT_FAMILY};">
+        <p style="margin:0 0 14px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">Hi ${escapeHtml(content.greetingName)},</p>
         ${introHtml}
-        <div style="text-align:center; margin:8px 0 22px;">
-          <a href="${escapeHtml(content.cta.href)}" style="display:inline-block; border:1px solid ${STAFF_EMAIL.gold}; color:${STAFF_EMAIL.gold}; padding:10px 28px; text-decoration:none; font-size:11px; letter-spacing:2px;">${escapeHtml(content.cta.label)}</a>
+        <div style="text-align:center; margin:8px 0 22px;font-family:${EMAIL_FONT_FAMILY};">
+          <a href="${escapeHtml(content.cta.href)}" style="display:inline-block; border:1px solid ${STAFF_EMAIL.gold}; color:${STAFF_EMAIL.gold}; padding:10px 28px; text-decoration:none; font-size:11px; letter-spacing:2px;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(content.cta.label)}</a>
         </div>
-        <p style="margin:0 0 22px;">${escapeHtml(content.closingParagraph)}</p>
-        <p style="margin:0;">Warmly,<br/>${signoffHtml}</p>
+        <p style="margin:0 0 22px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">${escapeHtml(content.closingParagraph)}</p>
+        <p style="margin:0;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">Warmly,<br/>${signoffHtml}</p>
       </div>
       ${customerLetterFooter()}`;
 }
@@ -360,19 +361,19 @@ export function buildCustomerVaccinationApprovedEmailHtml(
   const petName = escapeHtml(content.petName);
 
   return `${customerLetterHeader(content.subject)}
-      <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:14px; line-height:1.8; background:#ffffff;">
-        <p style="margin:0 0 4px; font-size:15px; letter-spacing:0.5px; color:${STAFF_EMAIL.gold};">Vaccination approved</p>
-        <p style="margin:0 0 14px;">Dear ${escapeHtml(content.greetingName)}, ${petName}&apos;s vaccination record has been reviewed and approved.</p>
-        <div style="padding:14px 0; font-size:13px; margin:18px 0; border-top:1px solid ${STAFF_EMAIL.border}; border-bottom:1px solid ${STAFF_EMAIL.border};">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; font-size:13px;">
+      <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:16px; line-height:1.65; background:#ffffff;font-family:${EMAIL_FONT_FAMILY};">
+
+        <p style="margin:0 0 14px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">Dear ${escapeHtml(content.greetingName)}, ${petName}&apos;s vaccination record has been reviewed and approved.</p>
+        <div style="padding:14px 0; font-size:16px; margin:18px 0; border-top:1px solid ${STAFF_EMAIL.border}; border-bottom:1px solid ${STAFF_EMAIL.border};font-family:${EMAIL_FONT_FAMILY};">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; font-size:16px;font-family:${EMAIL_FONT_FAMILY};">
             ${customerLetterDetailRow("Expiration on file", content.expirationLabel)}
           </table>
         </div>
-        <p style="margin:0 0 22px;">${escapeHtml(content.closingParagraph)}</p>
-        <div style="text-align:center;">
-          <a href="${escapeHtml(content.bookUrl)}" style="display:inline-block; border:1px solid ${STAFF_EMAIL.gold}; color:${STAFF_EMAIL.gold}; padding:10px 28px; text-decoration:none; font-size:11px; letter-spacing:2px;">BOOK AN APPOINTMENT</a>
+        <p style="margin:0 0 22px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">${escapeHtml(content.closingParagraph)}</p>
+        <div style="text-align:center;font-family:${EMAIL_FONT_FAMILY};">
+          <a href="${escapeHtml(content.bookUrl)}" style="display:inline-block; border:1px solid ${STAFF_EMAIL.gold}; color:${STAFF_EMAIL.gold}; padding:10px 28px; text-decoration:none; font-size:11px; letter-spacing:2px;font-family:${EMAIL_FONT_FAMILY};">BOOK AN APPOINTMENT</a>
         </div>
-        <p style="margin:18px 0 0; text-align:center; font-size:12px;"><a href="${escapeHtml(content.accountUrl)}" style="color:${STAFF_EMAIL.muted};">View your account</a></p>
+        <p style="margin:18px 0 0; text-align:center; font-size:12px;font-family:${EMAIL_FONT_FAMILY};"><a href="${escapeHtml(content.accountUrl)}" style="color:${STAFF_EMAIL.muted};font-family:${EMAIL_FONT_FAMILY};">View your account</a></p>
       </div>
       ${customerLetterFooter()}`;
 }
@@ -405,10 +406,10 @@ function customerLetterHeader(subject: string) {
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>${escapeHtml(subject)}</title>
 </head>
-<body style="margin:0;padding:0;background-color:${STAFF_EMAIL.cream};">
-  <div style="background-color:${STAFF_EMAIL.cream}; padding:40px 20px; font-family: Georgia, 'Times New Roman', serif;">
-    <div style="max-width:480px; margin:0 auto; background-color:#ffffff; border:1px solid ${STAFF_EMAIL.border};">
-      <div style="background-color:${STAFF_EMAIL.cream}; padding:32px 32px 20px; text-align:center; border-bottom:1px solid ${STAFF_EMAIL.gold};">
+<body style="margin:0;padding:0;background-color:${STAFF_EMAIL.cream};font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
+  <div style="background-color:${STAFF_EMAIL.cream}; padding:40px 20px; font-family:${EMAIL_FONT_FAMILY};">
+    <div style="max-width:480px; margin:0 auto; background-color:#ffffff; border:1px solid ${STAFF_EMAIL.border};font-family:${EMAIL_FONT_FAMILY};">
+      <div style="background-color:${STAFF_EMAIL.cream}; padding:32px 32px 20px; text-align:center; border-bottom:1px solid ${STAFF_EMAIL.gold};font-family:${EMAIL_FONT_FAMILY};">
         ${emailLogoImg()}
       </div>`;
 }
@@ -421,7 +422,7 @@ function customerLetterFooter() {
   ]
     .filter(Boolean)
     .join(" · ");
-  return `<div style="background-color:${STAFF_EMAIL.cream}; padding:22px 32px; text-align:center; font-size:11px; color:${STAFF_EMAIL.muted}; letter-spacing:0.5px; font-family:Georgia,'Times New Roman',serif;">
+  return `<div style="background-color:${STAFF_EMAIL.cream}; padding:22px 32px; text-align:center; font-size:11px; color:${STAFF_EMAIL.muted}; letter-spacing:0.5px; font-family:${EMAIL_FONT_FAMILY};">
         ${escapeHtml(footerLine)}
       </div>
     </div>
@@ -430,9 +431,8 @@ function customerLetterFooter() {
 </html>`;
 }
 
-function customerConfirmedSection(title: string, bodyHtml: string) {
-  return `<div style="margin:18px 0; padding-top:16px; border-top:1px solid ${STAFF_EMAIL.border};">
-        <p style="margin:0 0 4px; color:${STAFF_EMAIL.ink}; font-size:13px; letter-spacing:0.5px;">${escapeHtml(title)}</p>
+function customerConfirmedSection(bodyHtml: string) {
+  return `<div style="margin:18px 0; padding-top:16px; border-top:1px solid ${STAFF_EMAIL.border};font-family:${EMAIL_FONT_FAMILY};">
         ${bodyHtml}
       </div>`;
 }
@@ -444,40 +444,36 @@ export function buildCustomerConfirmedEmailHtml(content: CustomerConfirmedEmailC
   const petName = escapeHtml(content.petName);
   const paymentSection = content.paymentNote
     ? customerConfirmedSection(
-        "Payment",
-        `<p style="margin:0; font-size:13px; color:#5A5347;">${escapeHtml(content.paymentNote)}</p>`,
+        `<p style="margin:0; font-size:16px; color:#5A5347;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(content.paymentNote)}</p>`,
       )
     : "";
 
   return `${customerLetterHeader(content.subject)}
-      <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:14px; line-height:1.8; background:#ffffff;">
-        <p style="margin:0 0 4px; font-size:15px; letter-spacing:0.5px; color:${STAFF_EMAIL.gold};">Appointment confirmed</p>
-        <p style="margin:0 0 14px;">Dear ${escapeHtml(content.greetingName)}, we look forward to caring for ${petName}.</p>
-        <div style="padding:14px 0; font-size:13px; margin:18px 0; border-top:1px solid ${STAFF_EMAIL.border}; border-bottom:1px solid ${STAFF_EMAIL.border};">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; font-size:13px;">
+      <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:16px; line-height:1.65; background:#ffffff;font-family:${EMAIL_FONT_FAMILY};">
+
+        <p style="margin:0 0 14px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">Dear ${escapeHtml(content.greetingName)}, we look forward to caring for ${petName}.</p>
+        <div style="padding:14px 0; font-size:16px; margin:18px 0; border-top:1px solid ${STAFF_EMAIL.border}; border-bottom:1px solid ${STAFF_EMAIL.border};font-family:${EMAIL_FONT_FAMILY};">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; font-size:16px;font-family:${EMAIL_FONT_FAMILY};">
             ${detailsHtml}
           </table>
         </div>
-        <p style="margin:0 0 18px; font-size:12px; color:${STAFF_EMAIL.muted};">${escapeHtml(content.estimateNote)}</p>
+        <p style="margin:0 0 18px; font-size:12px; color:${STAFF_EMAIL.muted};font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(content.estimateNote)}</p>
         ${paymentSection}
         ${customerConfirmedSection(
-          "What to expect",
-          `<p style="margin:0; font-size:13px; color:#5A5347;">We do our best to arrive at your scheduled time, and every confirmed appointment will be completed. Because this is a mobile service, arrival time may vary due to weather, traffic, and the appointment before yours. We will text you when we are on the way. A brief health and coat check takes place before we begin.</p>`,
+          `<p style="margin:0; font-size:16px; color:#5A5347;font-family:${EMAIL_FONT_FAMILY};">We do our best to arrive at your scheduled time, and every confirmed appointment will be completed. Because this is a mobile service, arrival time may vary due to weather, traffic, and the appointment before yours. We will text you when we are on the way. A brief health and coat check takes place before we begin.</p>`,
         )}
         ${customerConfirmedSection(
-          "In preparation",
-          `<ul style="margin:0; padding-left:18px; font-size:13px; color:#5A5347;">
-          <li style="margin-bottom:6px;">A bathroom break for ${petName} shortly before our arrival is appreciated</li>
-          <li style="margin-bottom:6px;">A nearby parking spot for our grooming van is greatly appreciated</li>
+          `<ul style="margin:0; padding-left:18px; font-size:16px; color:#5A5347;font-family:${EMAIL_FONT_FAMILY};">
+          <li style="margin-bottom:6px;font-family:${EMAIL_FONT_FAMILY};">A bathroom break for ${petName} shortly before our arrival is appreciated</li>
+          <li style="margin-bottom:6px;font-family:${EMAIL_FONT_FAMILY};">A nearby parking spot for our grooming van is greatly appreciated</li>
           <li>Please let us know in advance of any allergies, sensitivities, or behavioral notes</li>
         </ul>`,
         )}
         ${customerConfirmedSection(
-          "Need to reschedule?",
-          `<p style="margin:0; font-size:13px; color:#5A5347;">${escapeHtml(cancellationPolicySummary())} ${escapeHtml(POLICY_CALENDAR_NOTE)} Please reply to this email or reach us at ${escapeHtml(business.brand.phone ?? business.brand.email)}.</p>`,
+          `<p style="margin:0; font-size:16px; color:#5A5347;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(cancellationPolicySummary())} ${escapeHtml(POLICY_CALENDAR_NOTE)} Please reply to this email or reach us at ${escapeHtml(business.brand.phone ?? business.brand.email)}.</p>`,
         )}
-        <p style="margin:22px 0 0;">Warmly,</p>
-        <p style="margin:2px 0 0;">${escapeHtml(business.brand.name)}</p>
+        <p style="margin:22px 0 0;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">Warmly,</p>
+        <p style="margin:2px 0 0;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">${escapeHtml(business.brand.name)}</p>
       </div>
       ${customerLetterFooter()}`;
 }

@@ -1,3 +1,4 @@
+import { EMAIL_FONT_FAMILY } from "@/lib/email/typography";
 import { business, getBrandWebsiteLabel } from "@/lib/business";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 import { formatAppointmentTimeRange } from "@/lib/appointments/time-label";
@@ -126,7 +127,7 @@ function emphasizeAmount(paragraph: string, amountLabel: string | null) {
   if (!amountLabel) return safe;
   return safe.replace(
     escapeHtml(amountLabel),
-    `<span style="font-weight:600;color:${COLORS.ink};">${escapeHtml(amountLabel)}</span>`,
+    `<span style="font-weight:600;color:${COLORS.ink};font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(amountLabel)}</span>`,
   );
 }
 
@@ -134,12 +135,12 @@ export function buildCancelFeeFailedEmailHtml(input: CancelFeeFailedInput) {
   const content = buildCancelFeeFailedEmailContent(input);
   const lockup = business.brand.lockup;
   const timeRow = content.timeLabel
-    ? `<div class="k9-fail-time" style="margin:0;font-size:16px;line-height:1.5;color:${COLORS.ink};white-space:nowrap;">${escapeHtml(content.timeLabel)}</div>`
+    ? `<div class="k9-fail-time" style="margin:0;font-size:16px;line-height:1.5;color:${COLORS.ink};white-space:nowrap;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(content.timeLabel)}</div>`
     : "";
   const feeHtml = content.fee.paragraphs
     .map(
       (paragraph) =>
-        `<p style="margin:0 0 20px;font-size:16px;line-height:1.6;color:${COLORS.ink};">${emphasizeAmount(paragraph, content.fee.amountLabel)}</p>`,
+        `<p style="margin:0 0 20px;font-size:16px;line-height:1.6;color:${COLORS.ink};font-family:${EMAIL_FONT_FAMILY};">${emphasizeAmount(paragraph, content.fee.amountLabel)}</p>`,
     )
     .join("");
   const primaryHref = content.paymentUrl ?? content.contactUrl;
@@ -167,56 +168,56 @@ export function buildCancelFeeFailedEmailHtml(input: CancelFeeFailedInput) {
     }
   </style>
 </head>
-<body style="margin:0;padding:0;background-color:${COLORS.page};">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+<body style="margin:0;padding:0;background-color:${COLORS.page};font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;font-family:${EMAIL_FONT_FAMILY};">
     ${escapeHtml(`Action needed: the cancellation fee for ${content.pets} remains outstanding.`)}
   </div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:${COLORS.page};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:${COLORS.page};font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
     <tr>
-      <td align="center" class="k9-fail-pad" style="padding:32px 20px;">
+      <td align="center" class="k9-fail-pad" style="padding:32px 20px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
         <!--[if mso]>
-        <table role="presentation" width="580" cellpadding="0" cellspacing="0" border="0"><tr><td>
+        <table role="presentation" width="580" cellpadding="0" cellspacing="0" border="0" style="font-family:${EMAIL_FONT_FAMILY};font-size:16px;"><tr><td style="font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
         <![endif]-->
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:580px;background-color:${COLORS.card};border:1px solid ${COLORS.line};box-shadow:0 8px 24px rgba(47,41,48,0.04);">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:580px;background-color:${COLORS.card};border:1px solid ${COLORS.line};box-shadow:0 8px 24px rgba(47,41,48,0.04);font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
           <tr>
-            <td align="center" class="k9-fail-pad" style="padding:32px 36px 20px;background-color:${COLORS.page};">
+            <td align="center" class="k9-fail-pad" style="padding:32px 36px 20px;background-color:${COLORS.page};font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
               ${emailLogoImg({ className: "k9-fail-logo" })}
             </td>
           </tr>
           <tr>
-            <td style="height:1px;line-height:1px;font-size:1px;background-color:${COLORS.gold};">&nbsp;</td>
+            <td style="height:1px;line-height:1px;font-size:1px;background-color:${COLORS.gold};font-family:${EMAIL_FONT_FAMILY};">&nbsp;</td>
           </tr>
           <tr>
-            <td class="k9-fail-pad" style="padding:32px 36px 40px;font-family:Georgia,'Times New Roman',Times,serif;color:${COLORS.ink};word-break:break-word;">
-              <p style="margin:0 0 10px;font-size:16px;line-height:1.6;text-align:left;">Dear ${escapeHtml(content.greetingName)},</p>
-              <p style="margin:0 0 8px;font-size:12px;line-height:1.4;letter-spacing:0.08em;text-transform:uppercase;color:${COLORS.lavender};text-align:center;">Action Needed</p>
-              <h1 style="margin:0 0 20px;font-family:Georgia,'Times New Roman',Times,serif;font-size:26px;line-height:1.3;font-weight:400;color:${COLORS.lavender};text-align:center;">Appointment Canceled</h1>
-              <p style="margin:0 0 24px;font-size:16px;line-height:1.6;text-align:left;">Your appointment for ${escapeHtml(content.pets)} has been canceled.</p>
-              <p style="margin:0 0 8px;font-size:11px;line-height:1.4;letter-spacing:0.08em;text-transform:uppercase;color:${COLORS.lavender};text-align:left;">Appointment</p>
-              <div style="margin:0 0 24px;padding:0 0 24px;border-bottom:1px solid ${COLORS.line};">
-                <div style="margin:0;font-size:16px;line-height:1.5;color:${COLORS.ink};white-space:nowrap;">${escapeHtml(content.dateLabel)}</div>
+            <td class="k9-fail-pad" style="padding:32px 36px 40px;font-family:${EMAIL_FONT_FAMILY};color:${COLORS.ink};word-break:break-word;font-size:16px;">
+              <p style="margin:0 0 10px;font-size:16px;line-height:1.6;text-align:left;font-family:${EMAIL_FONT_FAMILY};">Dear ${escapeHtml(content.greetingName)},</p>
+
+
+              <p style="margin:0 0 24px;font-size:16px;line-height:1.6;text-align:left;font-family:${EMAIL_FONT_FAMILY};">Your appointment for ${escapeHtml(content.pets)} has been canceled.</p>
+              <p style="margin:0 0 8px;font-size:11px;line-height:1.4;letter-spacing:0.08em;text-transform:uppercase;color:${COLORS.lavender};text-align:left;font-family:${EMAIL_FONT_FAMILY};">Appointment</p>
+              <div style="margin:0 0 24px;padding:0 0 24px;border-bottom:1px solid ${COLORS.line};font-family:${EMAIL_FONT_FAMILY};">
+                <div style="margin:0;font-size:16px;line-height:1.5;color:${COLORS.ink};white-space:nowrap;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(content.dateLabel)}</div>
                 ${timeRow}
               </div>
               ${feeHtml}
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px auto 20px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px auto 20px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
                 <tr>
-                  <td align="center" bgcolor="${COLORS.lavender}" style="background-color:${COLORS.lavender};border-radius:4px;">
-                    <a class="k9-fail-cta" href="${escapeHtml(primaryHref)}" style="display:inline-block;min-width:220px;padding:14px 28px;font-family:Georgia,'Times New Roman',Times,serif;font-size:16px;line-height:1.25;color:#ffffff;text-decoration:none;text-align:center;">${escapeHtml(primaryLabel)}</a>
+                  <td align="center" bgcolor="${COLORS.lavender}" style="background-color:${COLORS.lavender};border-radius:4px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
+                    <a class="k9-fail-cta" href="${escapeHtml(primaryHref)}" style="display:inline-block;min-width:220px;padding:14px 28px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;line-height:1.25;color:#ffffff;text-decoration:none;text-align:center;">${escapeHtml(primaryLabel)}</a>
                   </td>
                 </tr>
               </table>
               ${
                 content.paymentUrl
-                  ? `<p style="margin:0 0 10px;font-size:16px;line-height:1.6;text-align:center;"><a class="k9-fail-link" href="${escapeHtml(content.contactUrl)}" style="color:${COLORS.lavender};text-decoration:underline;">Contact K9 ATELIER</a></p>`
+                  ? `<p style="margin:0 0 10px;font-size:16px;line-height:1.6;text-align:center;font-family:${EMAIL_FONT_FAMILY};"><a class="k9-fail-link" href="${escapeHtml(content.contactUrl)}" style="color:${COLORS.lavender};text-decoration:underline;font-family:${EMAIL_FONT_FAMILY};">Contact K9 ATELIER</a></p>`
                   : ""
               }
-              <p style="margin:0 0 28px;font-size:16px;line-height:1.6;text-align:center;">
-                <a class="k9-fail-link" href="${escapeHtml(content.bookUrl)}" style="color:${COLORS.lavender};text-decoration:underline;">Book Another Appointment</a>
+              <p style="margin:0 0 28px;font-size:16px;line-height:1.6;text-align:center;font-family:${EMAIL_FONT_FAMILY};">
+                <a class="k9-fail-link" href="${escapeHtml(content.bookUrl)}" style="color:${COLORS.lavender};text-decoration:underline;font-family:${EMAIL_FONT_FAMILY};">Book Another Appointment</a>
               </p>
-              <p style="margin:0;font-size:16px;line-height:1.6;color:${COLORS.ink};">Warmly,</p>
-              <p style="margin:8px 0 0;font-size:16px;line-height:1.5;letter-spacing:0.12em;color:${COLORS.ink};">K9 ATELIER</p>
-              <p style="margin:6px 0 0;font-size:14px;line-height:1.5;color:${COLORS.muted};">${escapeHtml(lockup)}</p>
-              <p style="margin:6px 0 0;font-size:14px;line-height:1.5;color:${COLORS.muted};">${escapeHtml(business.brand.phone)} · ${escapeHtml(getBrandWebsiteLabel())}</p>
+              <p style="margin:0;font-size:16px;line-height:1.6;color:${COLORS.ink};font-family:${EMAIL_FONT_FAMILY};">Warmly,</p>
+              <p style="margin:8px 0 0;font-size:16px;line-height:1.5;letter-spacing:0.12em;color:${COLORS.ink};font-family:${EMAIL_FONT_FAMILY};">K9 ATELIER</p>
+              <p style="margin:6px 0 0;font-size:14px;line-height:1.5;color:${COLORS.muted};font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(lockup)}</p>
+              <p style="margin:6px 0 0;font-size:14px;line-height:1.5;color:${COLORS.muted};font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(business.brand.phone)} · ${escapeHtml(getBrandWebsiteLabel())}</p>
             </td>
           </tr>
         </table>

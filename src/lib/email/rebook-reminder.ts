@@ -1,3 +1,4 @@
+import { EMAIL_FONT_FAMILY } from "@/lib/email/typography";
 import { business } from "@/lib/business";
 import { COLORS } from "@/lib/email/cancel-confirmation";
 import { escapeHtml, emailLogoImg } from "@/lib/email/layout";
@@ -58,7 +59,7 @@ export function buildRebookReminderEmailHtml(input: RebookReminderEmailInput) {
   const paragraphsHtml = content.paragraphs
     .map(
       (paragraph) =>
-        `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;font-weight:400;color:${COLORS.ink};text-align:left;">${escapeHtml(paragraph)}</p>`,
+        `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;font-weight:400;color:${COLORS.ink};text-align:left;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(paragraph)}</p>`,
     )
     .join("");
 
@@ -78,42 +79,42 @@ export function buildRebookReminderEmailHtml(input: RebookReminderEmailInput) {
     }
   </style>
 </head>
-<body style="margin:0;padding:0;background-color:${COLORS.page};">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+<body style="margin:0;padding:0;background-color:${COLORS.page};font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;font-family:${EMAIL_FONT_FAMILY};">
     ${escapeHtml(content.paragraphs[0] ?? "")}
   </div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:${COLORS.page};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:${COLORS.page};font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
     <tr>
-      <td align="center" class="k9-rebook-pad" style="padding:32px 20px;">
+      <td align="center" class="k9-rebook-pad" style="padding:32px 20px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
         <!--[if mso]>
-        <table role="presentation" width="580" cellpadding="0" cellspacing="0" border="0"><tr><td>
+        <table role="presentation" width="580" cellpadding="0" cellspacing="0" border="0" style="font-family:${EMAIL_FONT_FAMILY};font-size:16px;"><tr><td style="font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
         <![endif]-->
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:580px;background-color:${COLORS.card};border:1px solid ${COLORS.line};box-shadow:0 8px 24px rgba(47,41,48,0.04);">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:580px;background-color:${COLORS.card};border:1px solid ${COLORS.line};box-shadow:0 8px 24px rgba(47,41,48,0.04);font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
           <tr>
-            <td align="center" class="k9-rebook-pad" style="padding:32px 36px 20px;background-color:${COLORS.page};">
+            <td align="center" class="k9-rebook-pad" style="padding:32px 36px 20px;background-color:${COLORS.page};font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
               ${emailLogoImg({ className: "k9-rebook-logo" })}
             </td>
           </tr>
           <tr>
-            <td style="height:1px;line-height:1px;font-size:1px;background-color:${COLORS.gold};">&nbsp;</td>
+            <td style="height:1px;line-height:1px;font-size:1px;background-color:${COLORS.gold};font-family:${EMAIL_FONT_FAMILY};">&nbsp;</td>
           </tr>
           <tr>
-            <td class="k9-rebook-pad" style="padding:32px 36px 40px;font-family:Georgia,'Times New Roman',Times,serif;font-weight:400;color:${COLORS.ink};word-break:break-word;">
-              <p style="margin:0 0 20px;font-size:16px;line-height:1.6;font-weight:400;text-align:left;">Hi ${escapeHtml(content.firstName)},</p>
+            <td class="k9-rebook-pad" style="padding:32px 36px 40px;font-family:${EMAIL_FONT_FAMILY};font-weight:400;color:${COLORS.ink};word-break:break-word;font-size:16px;">
+              <p style="margin:0 0 20px;font-size:16px;line-height:1.6;font-weight:400;text-align:left;font-family:${EMAIL_FONT_FAMILY};">Hi ${escapeHtml(content.firstName)},</p>
               ${paragraphsHtml}
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:12px auto 28px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:12px auto 28px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
                 <tr>
-                  <td align="center" bgcolor="${COLORS.lavender}" style="background-color:${COLORS.lavender};border-radius:4px;">
-                    <a class="k9-rebook-cta" href="${escapeHtml(content.bookUrl)}" style="display:inline-block;min-width:220px;padding:14px 28px;font-family:Georgia,'Times New Roman',Times,serif;font-size:16px;line-height:1.25;font-weight:400;color:#ffffff;text-decoration:none;text-align:center;">BOOK NEXT APPOINTMENT</a>
+                  <td align="center" bgcolor="${COLORS.lavender}" style="background-color:${COLORS.lavender};border-radius:4px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
+                    <a class="k9-rebook-cta" href="${escapeHtml(content.bookUrl)}" style="display:inline-block;min-width:220px;padding:14px 28px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;line-height:1.25;font-weight:400;color:#ffffff;text-decoration:none;text-align:center;">BOOK NEXT APPOINTMENT</a>
                   </td>
                 </tr>
               </table>
-              <p style="margin:0 0 28px;font-size:16px;line-height:1.6;font-weight:400;text-align:left;">${escapeHtml(content.closing)}</p>
-              <p style="margin:0;font-size:16px;line-height:1.6;font-weight:400;color:${COLORS.ink};">Warmly,</p>
-              <p style="margin:8px 0 0;font-size:16px;line-height:1.5;font-weight:400;color:${COLORS.ink};">Penny</p>
-              <p style="margin:6px 0 0;font-size:16px;line-height:1.5;font-weight:400;color:${COLORS.ink};">${escapeHtml(business.brand.name)}</p>
-              <p style="margin:6px 0 0;font-size:14px;line-height:1.5;font-weight:400;color:${COLORS.muted};">Private Mobile Pet Spa</p>
-              <p style="margin:6px 0 0;font-size:14px;line-height:1.5;font-weight:400;color:${COLORS.muted};">Palm Beach</p>
+              <p style="margin:0 0 28px;font-size:16px;line-height:1.6;font-weight:400;text-align:left;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(content.closing)}</p>
+              <p style="margin:0;font-size:16px;line-height:1.6;font-weight:400;color:${COLORS.ink};font-family:${EMAIL_FONT_FAMILY};">Warmly,</p>
+              <p style="margin:8px 0 0;font-size:16px;line-height:1.5;font-weight:400;color:${COLORS.ink};font-family:${EMAIL_FONT_FAMILY};">Penny</p>
+              <p style="margin:6px 0 0;font-size:16px;line-height:1.5;font-weight:400;color:${COLORS.ink};font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(business.brand.name)}</p>
+              <p style="margin:6px 0 0;font-size:14px;line-height:1.5;font-weight:400;color:${COLORS.muted};font-family:${EMAIL_FONT_FAMILY};">Private Mobile Pet Spa</p>
+              <p style="margin:6px 0 0;font-size:14px;line-height:1.5;font-weight:400;color:${COLORS.muted};font-family:${EMAIL_FONT_FAMILY};">Palm Beach</p>
             </td>
           </tr>
         </table>

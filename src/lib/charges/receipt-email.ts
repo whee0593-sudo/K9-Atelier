@@ -1,3 +1,4 @@
+import { EMAIL_FONT_FAMILY } from "@/lib/email/typography";
 import {
   getBookAgainUrl,
   getBrandInstagramUrl,
@@ -34,25 +35,25 @@ function thankYouLine(petName: string | null) {
 }
 
 function moneyCell(amountHtml: string, size: string) {
-  return `<td style="padding:4px 0;color:${INK};font-size:${size};line-height:1.6;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;">${amountHtml}</td>`;
+  return `<td style="padding:4px 0;color:${INK};font-size:${size};line-height:1.6;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-family:${EMAIL_FONT_FAMILY};">${amountHtml}</td>`;
 }
 
 function moneyRow(label: string, amount: number, emphasize = false, columns = 3) {
   const size = emphasize ? "18px" : "16px";
   return `<tr>
-    <td colspan="${columns - 1}" style="padding:4px 12px 4px 0;color:${INK};font-size:${size};line-height:1.6;">${escapeHtml(label)}</td>
+    <td colspan="${columns - 1}" style="padding:4px 12px 4px 0;color:${INK};font-size:${size};line-height:1.6;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(label)}</td>
     ${moneyCell(escapeHtml(formatChargeMoney(amount)), size)}
   </tr>`;
 }
 
 function sectionLabel(label: string) {
-  return `<p style="margin:0 0 10px;color:${LAVENDER};font-size:11px;letter-spacing:2px;text-transform:uppercase;">${escapeHtml(label)}</p>`;
+  return `<p style="margin:0 0 10px;color:${LAVENDER};font-size:11px;letter-spacing:2px;text-transform:uppercase;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(label)}</p>`;
 }
 
 function emailButton(href: string, label: string) {
   return `<tr>
-    <td align="center" style="padding:4px 0;">
-      <a href="${escapeHtml(href)}" style="display:block;max-width:264px;margin:0 auto;background:#6b596e;border-radius:8px;color:#FFFDFC;text-decoration:none;text-align:center;padding:12px 8px;font-size:13px;">${escapeHtml(label)}</a>
+    <td align="center" style="padding:4px 0;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
+      <a href="${escapeHtml(href)}" style="display:block;max-width:264px;margin:0 auto;background:#6b596e;border-radius:8px;color:#FFFDFC;text-decoration:none;text-align:center;padding:12px 8px;font-size:13px;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(label)}</a>
     </td>
   </tr>`;
 }
@@ -85,7 +86,7 @@ export function buildChargeReceiptCardHtml(
   const itemRows = groupChargeItems(receiptItems(charge, appointment.petName), snapshot?.pets.map(pet => ({ id: pet.appointmentId, petName: pet.petName })))
     .flatMap(group => group.items.map((item, index) => {
       if (!group.petName) return moneyRow(item.label, item.amount);
-      return '<tr><td style="padding:4px 10px 4px 0;vertical-align:top;color:' + INK + ';font-size:16px;">' + escapeHtml(index === 0 ? group.petName : "") + '</td><td style="padding:4px 10px 4px 0;color:' + INK + ';font-size:16px;">' + escapeHtml(item.label) + '</td>' + moneyCell(escapeHtml(formatChargeMoney(item.amount)), "16px") + '</tr>';
+      return `<tr><td style="padding:4px 10px 4px 0;vertical-align:top;color:${INK};font-size:16px;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(index === 0 ? group.petName : "")}</td><td style="padding:4px 10px 4px 0;color:${INK};font-size:16px;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(item.label)}</td>${moneyCell(escapeHtml(formatChargeMoney(item.amount)), "16px")}</tr>`;
     })).join("");
   const tipRow =
     charge.tipAmount > 0 ? moneyRow("Gratuity", charge.tipAmount) : "";
@@ -94,17 +95,17 @@ export function buildChargeReceiptCardHtml(
     appointmentDate || appointmentTime
       ? `${sectionLabel("Appointment")}${
           appointmentDate
-            ? `<p style="margin:0 0 4px;color:${INK};font-size:16px;line-height:1.6;">${escapeHtml(appointmentDate)}</p>`
+            ? `<p style="margin:0 0 4px;color:${INK};font-size:16px;line-height:1.6;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(appointmentDate)}</p>`
             : ""
         }${
           appointmentTime
-            ? `<p style="margin:0;color:${INK};font-size:16px;line-height:1.6;">${escapeHtml(appointmentTime)}</p>`
+            ? `<p style="margin:0;color:${INK};font-size:16px;line-height:1.6;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(appointmentTime)}</p>`
             : ""
         }`
       : "";
 
   const petBlock = petName
-    ? `${sectionLabel("Pet")}<p style="margin:0;color:${INK};font-size:16px;line-height:1.6;">${escapeHtml(petName)}</p>`
+    ? `${sectionLabel("Pet")}<p style="margin:0;color:${INK};font-size:16px;line-height:1.6;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(petName)}</p>`
     : "";
 
   const extras = [
@@ -126,58 +127,58 @@ export function buildChargeReceiptCardHtml(
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Your K9 Atelier receipt</title>
 </head>
-<body style="margin:0;padding:0;background:${PAGE};">
-  <div style="background:${PAGE};padding:32px 16px;font-family:Georgia,'Times New Roman',serif;">
-    <div style="max-width:560px;margin:0 auto;background:${CARD};border-radius:8px;overflow:hidden;">
-      <div style="height:1px;background:${LAVENDER};font-size:0;line-height:0;">&nbsp;</div>
-      <div style="padding:40px 28px;">
-        <div style="text-align:center;">
+<body style="margin:0;padding:0;background:${PAGE};font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
+  <div style="background:${PAGE};padding:32px 16px;font-family:${EMAIL_FONT_FAMILY};">
+    <div style="max-width:560px;margin:0 auto;background:${CARD};border-radius:8px;overflow:hidden;font-family:${EMAIL_FONT_FAMILY};">
+      <div style="height:1px;background:${LAVENDER};font-size:0;line-height:0;font-family:${EMAIL_FONT_FAMILY};">&nbsp;</div>
+      <div style="padding:40px 28px;font-family:${EMAIL_FONT_FAMILY};">
+        <div style="text-align:center;font-family:${EMAIL_FONT_FAMILY};">
           ${emailLogoImg({ display: "block" })}
         </div>
-        <div style="margin-top:40px;color:${INK};font-family:Arial,Helvetica,sans-serif;">
-          <p style="margin:0 0 32px;font-size:16px;line-height:1.6;text-align:left;">${escapeHtml(thankYouLine(petName))}</p>
+        <div style="margin-top:40px;color:${INK};font-family:${EMAIL_FONT_FAMILY};">
+          <p style="margin:0 0 32px;font-size:16px;line-height:1.6;text-align:left;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(thankYouLine(petName))}</p>
           ${
             appointmentBlock
-              ? `<div style="margin:0 0 32px;">${appointmentBlock}</div>`
+              ? `<div style="margin:0 0 32px;font-family:${EMAIL_FONT_FAMILY};">${appointmentBlock}</div>`
               : ""
           }
-          ${petBlock ? `<div style="margin:0 0 32px;">${petBlock}</div>` : ""}
-          <div style="margin:0 0 32px;">
+          ${petBlock ? `<div style="margin:0 0 32px;font-family:${EMAIL_FONT_FAMILY};">${petBlock}</div>` : ""}
+          <div style="margin:0 0 32px;font-family:${EMAIL_FONT_FAMILY};">
             ${sectionLabel("Service summary")}
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
               ${itemRows}${tipRow}
             </table>
           </div>
-          <div style="border-top:1px solid ${LINE};border-bottom:1px solid ${LINE};padding:16px 0;margin:0 0 16px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+          <div style="border-top:1px solid ${LINE};border-bottom:1px solid ${LINE};padding:16px 0;margin:0 0 16px;font-family:${EMAIL_FONT_FAMILY};">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
               ${moneyRow("TOTAL PAID", charge.total, true, 2)}
             </table>
           </div>
           ${
             paymentStatus
-              ? `<p style="margin:0 0 16px;color:${MUTED};font-size:16px;line-height:1.6;">Payment status: ${escapeHtml(paymentStatus)}</p>`
+              ? `<p style="margin:0 0 16px;color:${MUTED};font-size:16px;line-height:1.6;font-family:${EMAIL_FONT_FAMILY};">Payment status: ${escapeHtml(paymentStatus)}</p>`
               : ""
           }
           ${extras
             .map(
               (line) =>
-                `<p style="margin:0 0 8px;color:${MUTED};font-size:16px;line-height:1.6;">${escapeHtml(line)}</p>`,
+                `<p style="margin:0 0 8px;color:${MUTED};font-size:16px;line-height:1.6;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(line)}</p>`,
             )
             .join("")}
         </div>
-        <div style="margin-top:48px;text-align:center;font-family:Georgia,'Times New Roman',serif;">
-          <p style="margin:0;color:${INK};font-size:20px;letter-spacing:3px;">K9 ATELIER</p>
+        <div style="margin-top:48px;text-align:center;font-family:${EMAIL_FONT_FAMILY};">
+          <p style="margin:0;color:${INK};font-size:20px;letter-spacing:3px;font-family:${EMAIL_FONT_FAMILY};">K9 ATELIER</p>
           ${
             phone
-              ? `<p style="margin:12px 0 0;color:${MUTED};font-size:16px;font-family:Arial,Helvetica,sans-serif;">${escapeHtml(phone)}</p>`
+              ? `<p style="margin:12px 0 0;color:${MUTED};font-size:16px;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(phone)}</p>`
               : ""
           }
         </div>
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin-top:20px;font-family:Arial,Helvetica,sans-serif;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin-top:20px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
           ${buttonRows.join("")}
         </table>
-        <p style="margin:20px 0 0;text-align:center;font-family:Arial,Helvetica,sans-serif;">
-          <a href="${escapeHtml(concern)}" style="color:${LAVENDER};font-size:14px;">File a Concern</a>
+        <p style="margin:20px 0 0;text-align:center;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">
+          <a href="${escapeHtml(concern)}" style="color:${LAVENDER};font-size:14px;font-family:${EMAIL_FONT_FAMILY};">File a Concern</a>
         </p>
       </div>
     </div>
