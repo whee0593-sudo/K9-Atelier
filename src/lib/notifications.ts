@@ -87,7 +87,9 @@ export function buildCustomerAppointmentConfirmSms(
 export function buildBookingConfirmationSms(
   details: BookingConfirmationDetails,
 ): string {
-  return buildCustomerAppointmentConfirmSms(details);
+  const address = details.addressLabel?.trim() || details.streetName?.trim();
+  const when = `${details.dateLabel}, ${formatSmsTimeWindow(details.timeLabel)}`;
+  return `K9 Atelier: You have an appointment for ${details.petName} on ${when}${address ? `, at ${address}` : ""}. See you then!💜 Reply to talk to Penny about anything. ${SMS_OPT_OUT}`;
 }
 
 export function buildAppointmentSubmittedSms(
