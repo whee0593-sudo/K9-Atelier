@@ -50,14 +50,14 @@ describe("appointment SMS copy", () => {
     assert.equal(body.includes("deposit"), false);
   });
 
-  it("keeps the confirmation email in the previous format", () => {
+  it("uses the concise confirmation email copy", () => {
     const email = buildBookingConfirmationEmail({
       ...details,
       addressLabel: "123 Palm Avenue, West Palm Beach, FL 33401",
       durationLabel: "2 hours",
     });
     assert.equal(email.subject, "Your Appointment Is Confirmed");
-    assert.match(email.body, /Your appointment for Bella is confirmed/);
+    assert.match(email.body, /Dear Jane, we look forward to caring for Bella/);
     assert.match(
       email.body,
       /Location: 123 Palm Avenue, West Palm Beach, FL 33401/,
