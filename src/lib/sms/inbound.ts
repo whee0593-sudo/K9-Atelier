@@ -16,6 +16,8 @@ import {
   recordCustomerSms,
 } from "@/lib/sms/inbox";
 import { handleStaffPhoneReply } from "@/lib/sms/staff-reply";
+import { formatVisitPetNames } from "@/lib/visits/pet-names";
+import { buildCommunicationContext } from "@/lib/communications/context";
 
 const INBOUND_SELECT = `
   id,
@@ -41,6 +43,7 @@ const INBOUND_SELECT = `
   status,
   confirmed_at,
   customer_confirmed_at,
+  staff_created,
   created_at,
   reminder_sms_sent_at,
   pets ( name, breed ),
@@ -61,6 +64,37 @@ export function isIgnoredInboundReply(body: string) {
 }
 
 export { phonesMatch };
+
+export function customerReplyConfirmationVisit(matches: ReturnType<typeof mapAppointmentRowToAdminRecord>[], request?: { visit_id?: string | null; appointment_ids?: string[] | null } | null) {
+  const requested = request ? matches.find((row) => request.visit_id ? row.visitId === request.visit_id : request.appointment_ids?.includes(row.id)) : undefined;
+  const appointment = requested ?? matches.find((row) => row.staffCreated && row.status === "pending_confirmation" && !row.customerConfirmedAt)
+    ?? matches.find((row) => row.reminderSmsSentAt && !row.customerConfirmedAt)
+    ?? matches.find((row) => !row.customerConfirmedAt) ?? matches[0];
+  if (!appointment) return null;
+  const pets = matches.filter((row) => row.customerId === appointment.customerId &&
+    (appointment.visitId ? row.visitId === appointment.visitId : row.id === appointment.id));
+  return { appointment, pets, petName: formatVisitPetNames(pets.map((row) => row.petName), appointment.petName) };
+}
+
+export async function persistCustomerReplyConfirmation(
+  visit: NonNullable<ReturnType<typeof customerReplyConfirmationVisit>>,
+  write: (ids: string[], customerId: string, patch: { status: "confirmed"; confirmed_at: string; customer_confirmed_at: string }) => PromiseLike<{ data: Array<{ id: string }> | null; error: { message: string } | null }>,
+): Promise<"confirmed" | "already" | "failed"> {
+  if (visit.pets.every((pet) => pet.customerConfirmedAt)) return "already";
+  const now = new Date().toISOString();
+  try {
+    const result = await write(visit.pets.map((pet) => pet.id), visit.appointment.customerId,
+      { status: "confirmed", confirmed_at: visit.appointment.confirmedAt ?? now, customer_confirmed_at: now });
+    if (result.error) {
+      console.error("customer SMS confirmation failed:", result.error.message);
+      return "failed";
+    }
+    return result.data?.length ? "confirmed" : "already";
+  } catch (error) {
+    console.error("customer SMS confirmation failed:", error);
+    return "failed";
+  }
+}
 
 function firstName(name: string | null | undefined) {
   const first = name?.trim().split(/\s+/)[0];
@@ -147,41 +181,48 @@ export async function handleInboundCustomerSms(input: {
     .map(mapAppointmentRowToAdminRecord)
     .filter((appointment) => phonesMatch(appointment.customerPhone, input.from));
 
-  const appointment =
-    matches.find((row) => row.reminderSmsSentAt && !row.customerConfirmedAt) ??
-    matches.find((row) => !row.customerConfirmedAt) ??
-    matches[0];
-
-  if (!appointment) {
+  // Bind C to the latest actual confirmation request, including retries after confirmation.
+  const { data: latestRequest, error: requestError } = await admin.from("communication_logs")
+    .select("visit_id, appointment_ids").eq("channel", "sms").eq("audience", "customer")
+    .eq("recipient", input.from)
+    .in("notification_type", ["staff_created_booking", "confirm_reminder_3_day"])
+    .in("status", ["accepted", "delivered"])
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (requestError) {
+    console.error("customer SMS confirmation request lookup failed:", requestError.message);
     return { handled: "unmatched" };
   }
+  const visit = customerReplyConfirmationVisit(matches, latestRequest);
+  if (!visit) {
+    return { handled: "unmatched" };
+  }
+  const { appointment, pets, petName } = visit;
 
   const contact = contactFromAdminAppointment(appointment);
   const dateLabel = formatAppointmentDateLabel(appointment.appointmentDate);
-  const already = Boolean(appointment.customerConfirmedAt);
-
-  if (!already) {
-    const { error: markError } = await admin
+  const outcome = await persistCustomerReplyConfirmation(visit, (ids, customerId, patch) => admin
       .from("appointments")
-      .update({ customer_confirmed_at: new Date().toISOString() })
-      .eq("id", appointment.id)
-      .is("customer_confirmed_at", null);
-
-    if (markError) {
-      console.error(
-        "handleInboundCustomerSms mark failed:",
-        appointment.id,
-        markError.message,
-      );
-    }
-  }
+      .update(patch)
+      .in("id", ids)
+      .eq("customer_id", customerId)
+      .in("status", ["pending_confirmation", "confirmed"])
+      .is("customer_confirmed_at", null)
+      .select("id"));
+  if (outcome === "failed") return { handled: "unmatched" };
+  const already = outcome === "already";
+  if (already) return { handled: "yes", already: true, appointmentId: appointment.id };
 
   const reply = buildCustomerYesReceivedSms({
     customerName: contact?.firstName ?? contact?.name,
-    petName: appointment.petName,
+    petName,
     dateLabel,
   });
-  await sendSms({ to: input.from, body: reply });
+  await sendSms({ to: input.from, body: reply, communication: buildCommunicationContext({
+    notificationType: "customer_sms_confirmation", recipient: input.from,
+    customerId: appointment.customerId, visitId: appointment.visitId,
+    appointmentIds: pets.map((pet) => pet.id), petIds: pets.map((pet) => pet.petId),
+    dedupe: appointment.visitId ? "visit" : "appointment",
+  }) });
 
   if (!already) {
     try {
@@ -192,7 +233,7 @@ export async function handleInboundCustomerSms(input: {
         replyTo: contact?.email ?? null,
         appointmentId: appointment.id,
         petId: appointment.petId,
-        petName: appointment.petName,
+        petName,
         serviceName: appointment.serviceName,
         whenLabel: `${dateLabel} · ${appointment.appointmentTime}`,
         addressLabel: [

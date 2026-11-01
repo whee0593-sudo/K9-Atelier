@@ -976,6 +976,7 @@ export function BookForCustomerForm({
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          bookingIntent: Boolean(servicesReady || appointmentDate || slotStartMinutes),
           firstName,
           travelFeeOverride: travelFeeOverride === null ? null : Number(travelFeeOverride),
           lastName,
@@ -1038,6 +1039,9 @@ export function BookForCustomerForm({
       if (!response.ok || !body.confirmUrl || !body.customer) {
         throw new Error(body.error ?? "Could not send this booking link.");
       }
+      if ((servicesReady || appointmentDate || slotStartMinutes) && (body.mode !== "booking" || !body.appointment)) {
+        throw new Error("No appointment was created. Complete the dog, service, address, date, and start time, then try again.");
+      }
       setSuccess({
         mode: body.mode === "booking" ? "booking" : "invite",
         confirmUrl: body.confirmUrl,
@@ -1071,7 +1075,7 @@ export function BookForCustomerForm({
     return (
       <div className="rounded-2xl border border-lavender/30 bg-cream p-6">
         <h3 className="font-medium text-gold-dark">
-          {success.mode === "invite" ? "Booking link ready" : "Confirmation link ready"}
+          {success.mode === "invite" ? "Booking link ready — no appointment created" : "Appointment created"}
         </h3>
         <p className="mt-2 text-sm text-text">
           {success.mode === "invite"
@@ -1079,8 +1083,8 @@ export function BookForCustomerForm({
               ? `A customer account was started for ${displayName}. They can finish the required booking details from the link.`
               : `${displayName} can finish the required booking details from the link.`
             : success.createdAccount
-              ? `A customer account was created for ${displayName}. The visit stays pending until they secure it from the review and confirm link with a card on file.`
-              : `This booking was added to ${displayName}'s existing account. It stays pending until they secure it from the review and confirm link with a card on file.`}
+              ? `A customer account was created for ${displayName}. The appointment is saved on the calendar and awaits their confirmation by reply C or Save & confirm appointment through the link.`
+              : `This booking was added to ${displayName}'s existing account. It is saved on the calendar and awaits their confirmation by reply C or Save & confirm appointment through the link.`}
         </p>
         {success.mode === "booking" &&
         success.serviceName &&
@@ -1104,6 +1108,11 @@ export function BookForCustomerForm({
             ? "A text was sent to their phone."
             : "A text was not sent."}
         </p>
+        {success.mode === "booking" && !success.texted ? (
+          <p role="alert" className="mt-3 text-sm text-red-800">
+            The appointment is saved, but the confirmation text was not sent. Contact the customer to request a reply C. Do not create the appointment again.
+          </p>
+        ) : null}
         <label className={`${labelClass} mt-5`} htmlFor="confirm-url">
           {success.mode === "invite"
             ? "Customer booking link"
@@ -1736,7 +1745,7 @@ export function BookForCustomerForm({
             disabled={submitting}
             className="rounded-xl bg-gold px-6 py-2.5 text-sm font-medium text-white hover:bg-gold-dark disabled:opacity-60"
           >
-            {submitting ? "Sending…" : "Send booking link"}
+            {submitting ? "Sending…" : everyDogServiceReady || appointmentDate || slotStartMinutes ? "Create appointment" : "Send booking link"}
           </button>
         )}
         <Link href="/admin/pets" className="text-sm text-gold-dark hover:underline">

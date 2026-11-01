@@ -39,6 +39,8 @@ function AddCardForm({
   saveSetupIntent = savePaymentSetupIntent,
   allowWallets = false,
   bookingCardCopy = false,
+  submitLabel = "Save Card",
+  beforeSave,
 }: {
   clientSecret: string;
   onSaved: (method: PaymentMethodRecord) => void;
@@ -47,6 +49,8 @@ function AddCardForm({
   saveSetupIntent?: (setupIntentId: string) => Promise<PaymentMethodRecord>;
   allowWallets?: boolean;
   bookingCardCopy?: boolean;
+  submitLabel?: string;
+  beforeSave?: () => boolean;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -55,6 +59,7 @@ function AddCardForm({
 
   async function handleSubmit() {
     if (!stripe || !elements) return;
+    if (beforeSave && !beforeSave()) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -144,7 +149,7 @@ function AddCardForm({
           disabled={submitting || !stripe}
           className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
         >
-          {submitting ? "Verifying…" : "Save Card"}
+          {submitting ? "Verifying…" : submitLabel}
         </button>
         <button
           type="button"

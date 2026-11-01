@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
@@ -18,10 +18,12 @@ import {
   SECURE_APPOINTMENT_CARD_MESSAGE,
 } from "@/lib/staff/customer-confirm-status";
 
+import { BookingPoliciesModal } from "@/components/booking/BookingPoliciesModal";
+
 type Preview = {
   appointment: AppointmentRecord;
   appointments?: AppointmentRecord[];
-  customer: { email: string; firstName: string };
+  customer: { email: string; firstName: string; lastName?: string; phone?: string };
   requiresPassword: boolean;
   paymentMethods?: PaymentMethodRecord[];
   stripeConfigured?: boolean;
@@ -37,12 +39,14 @@ export function ConfirmAccountForm({ token, preview }: Props) {
     | { status: "loading" }
     | { status: "ready"; preview: Preview }
     | { status: "error"; message: string }
-    | { status: "done"; appointmentDate: string }
+    | { status: "done"; appointmentDate: string; awaitingSmsConfirmation: boolean }
   >(
     preview
       ? { status: "ready", preview }
       : { status: "loading" },
   );
+  const [policiesOpen, setPoliciesOpen] = useState(false);
+  const policiesButtonRef = useRef<HTMLButtonElement>(null);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [acceptPolicies, setAcceptPolicies] = useState(false);
@@ -95,13 +99,13 @@ export function ConfirmAccountForm({ token, preview }: Props) {
     };
   }, [preview, token]);
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  async function handleSubmit(event?: React.FormEvent, savedMethod?: PaymentMethodRecord) {
+    event?.preventDefault();
     if (loadState.status !== "ready") return;
     setError(null);
     const appointment = loadState.preview.appointment;
 
-    const selectedPaymentMethodId = preferredPaymentMethodId(usableConfirmationCards(paymentMethods));
+    const selectedPaymentMethodId = savedMethod?.id ?? preferredPaymentMethodId(usableConfirmationCards(paymentMethods));
     if (!selectedPaymentMethodId) {
       setError(SECURE_APPOINTMENT_CARD_MESSAGE);
       return;
@@ -119,10 +123,10 @@ export function ConfirmAccountForm({ token, preview }: Props) {
         }
       }
       if (!acceptPolicies) {
-        setError("Please confirm this appointment and agree to the service policies.");
+        setError("Please agree to the service policies.");
         return;
       }
-      setLoadState({ status: "done", appointmentDate: appointment.appointmentDate });
+      setLoadState({ status: "done", appointmentDate: appointment.appointmentDate, awaitingSmsConfirmation: false });
       return;
     }
 
@@ -151,14 +155,15 @@ export function ConfirmAccountForm({ token, preview }: Props) {
       });
       const body = (await response.json()) as {
         error?: string;
+        appointment?: AppointmentRecord;
         email?: string;
         signedInWithPassword?: boolean;
       };
-      if (!response.ok) {
-        throw new Error(body.error ?? "Could not confirm this appointment.");
+      if (!response.ok || body.appointment?.status !== "confirmed") {
+        throw new Error(body.error ?? "Your card is saved, but this appointment could not be confirmed. Please try again or contact K9 Atelier.");
       }
 
-      setLoadState({ status: "done", appointmentDate: appointment.appointmentDate });
+      setLoadState({ status: "done", appointmentDate: appointment.appointmentDate, awaitingSmsConfirmation: body.appointment?.status !== "confirmed" });
       if (body.signedInWithPassword && body.email && password) {
         try {
           const supabase = createClient();
@@ -196,42 +201,36 @@ export function ConfirmAccountForm({ token, preview }: Props) {
   }
 
   if (loadState.status === "done") {
-    return <AppointmentConfirmationSuccess appointmentDate={loadState.appointmentDate} />;
+    return <AppointmentConfirmationSuccess appointmentDate={loadState.appointmentDate} awaitingSmsConfirmation={loadState.awaitingSmsConfirmation} />;
   }
 
-  const { appointment, requiresPassword } = loadState.preview;
+  const { appointment, requiresPassword, customer } = loadState.preview;
   const appointments = loadState.preview.appointments ?? [appointment];
 
   return (
     <form onSubmit={(event) => void handleSubmit(event)} className="mt-8 space-y-5 text-left">
       <div className="border border-gray-line/80 bg-ivory p-6">
+        <p className="font-body text-sm text-ink">{[customer.firstName, customer.lastName].filter(Boolean).join(" ")}</p>
+        <p className="font-body mt-2 text-sm text-taupe">{customer.email}</p>
+        {customer.phone ? <p className="font-body mt-2 text-sm text-taupe">{customer.phone}</p> : null}
         <p className="font-body mt-2 text-sm text-taupe">
           {formatAppointmentDateLabel(appointment.appointmentDate)} ·{" "}
           {appointment.appointmentTime}
         </p>
         <p className="font-body mt-2 text-sm text-taupe">
-          {appointment.addressStreet}, {appointment.addressCity},{" "}
-          {appointment.addressState} {appointment.addressZip}
+          {appointment.addressStreet}, {appointment.addressCity}
         </p>
         <ul className="mt-4 space-y-2">
           {appointments.map(pet => (
             <li key={pet.id} className="font-body text-sm text-ink">
               {pet.petName} - {pet.serviceName}
+              {pet.petBreed ? <span className="mt-1 block text-taupe">{pet.petBreed}{pet.petWeightLbs != null ? ` · ${pet.petWeightLbs} lbs` : ""}</span> : null}
             </li>
           ))}
         </ul>
       </div>
 
-      <ConfirmAccountPayment
-        token={token}
-        preview={Boolean(preview)}
-        methods={paymentMethods}
-        stripeConfigured={loadState.preview.stripeConfigured}
-        onChange={(methods) => {
-          setPaymentMethods(methods);
-          if (methods.length > 0) setError(null);
-        }}
-      />
+
 
       {requiresPassword ? (
         <>
@@ -268,17 +267,45 @@ export function ConfirmAccountForm({ token, preview }: Props) {
         </>
       ) : null}
 
-      <label className="font-body flex items-start gap-2 text-sm text-ink">
+      <div className="font-body flex items-start gap-2 text-sm text-ink">
         <input
+          id="confirm-account-policies"
           type="checkbox"
-          className="mt-1"
+          className="mt-1 shrink-0"
           checked={acceptPolicies}
           onChange={(event) => setAcceptPolicies(event.target.checked)}
           required
         />
-        I confirm this appointment and agree to K9 Atelier’s cancellation,
-        payment, photo, and text-message policies.
-      </label>
+        <span>
+          <label htmlFor="confirm-account-policies">I agree to K9 Atelier’s cancellation, payment, photo, and text-message policies.</label>{" "}
+          <button ref={policiesButtonRef} type="button" onClick={() => setPoliciesOpen(true)} className="inline whitespace-nowrap text-sm text-ink underline underline-offset-4">View The Policies</button>
+        </span>
+      </div>
+      <BookingPoliciesModal open={policiesOpen} onClose={() => setPoliciesOpen(false)} returnFocusRef={policiesButtonRef} includeConsentPolicies />
+
+      <ConfirmAccountPayment
+        token={token}
+        preview={Boolean(preview)}
+        methods={paymentMethods}
+        stripeConfigured={loadState.preview.stripeConfigured}
+        beforeSave={() => {
+          if (requiresPassword && (password.length < 8 || password !== confirm)) {
+            setError(password.length < 8 ? "Use at least 8 characters." : "Passwords do not match.");
+            return false;
+          }
+          if (!acceptPolicies) {
+            setError("Please agree to the service policies.");
+            return false;
+          }
+          setError(null);
+          return true;
+        }}
+        onSaved={(method) => void handleSubmit(undefined, method)}
+        onChange={(methods) => {
+          setPaymentMethods(methods);
+          if (methods.length > 0) setError(null);
+        }}
+      />
 
       {error ? (
         <p className="font-body text-sm text-red-700" role="alert">
@@ -286,16 +313,16 @@ export function ConfirmAccountForm({ token, preview }: Props) {
         </p>
       ) : null}
 
-      <button type="submit" disabled={submitting || usableConfirmationCards(paymentMethods).length === 0} className={bookingPrimaryBtnClass}>
-        {submitting ? "Confirming…" : "Confirm"}
-      </button>
+      {usableConfirmationCards(paymentMethods).length > 0 ? <button type="submit" disabled={submitting} className={bookingPrimaryBtnClass}>
+        {submitting ? "Saving & confirming…" : "Save & confirm appointment"}
+      </button> : null}
     </form>
   );
 }
 
-export function AppointmentConfirmationSuccess({ appointmentDate }: { appointmentDate: string }) {
+export function AppointmentConfirmationSuccess({ appointmentDate, awaitingSmsConfirmation = false }: { appointmentDate: string; awaitingSmsConfirmation?: boolean }) {
   return <section className="mt-8 space-y-4 text-center" role="status">
-    <h2 className="font-display text-3xl text-ink">Your appointment is confirmed.</h2>
-    <p className="font-body text-base text-taupe">Thank you, see you on {formatAppointmentDateLabel(appointmentDate)}!</p>
+    <h2 className="font-display text-3xl text-ink">{awaitingSmsConfirmation ? "Your account details are saved." : "Your appointment is confirmed."}</h2>
+    <p className="font-body text-base text-taupe">{awaitingSmsConfirmation ? `Please reply C to our appointment text to confirm your visit on ${formatAppointmentDateLabel(appointmentDate)}.` : `Thank you, see you on ${formatAppointmentDateLabel(appointmentDate)}!`}</p>
   </section>;
 }

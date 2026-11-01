@@ -610,7 +610,29 @@ export function validateStaffCustomerBookingInput(
       address,
   );
 
+  // A chosen date/time means staff are reserving a visit, not sending an invitation.
+  if ((record.bookingIntent === true || appointmentDate || slotStartMinutes != null) && !hasCompleteBooking) {
+    const missing = !pets.length
+      ? "Add at least one dog."
+      : !pets.every((pet) => pet.serviceIds.length > 0)
+        ? "Choose a service for every dog."
+        : !appointmentDate
+          ? "Choose an appointment date."
+          : slotStartMinutes == null
+            ? "Choose a start time."
+            : "Complete the service address.";
+    throw new StaffBookingValidationError(
+      `No appointment has been created. ${missing}`,
+      !pets.length ? "pets" : !pets.every((pet) => pet.serviceIds.length > 0)
+        ? "serviceId" : !appointmentDate ? "appointmentDate"
+          : slotStartMinutes == null ? "slotStartMinutes" : "address",
+    );
+  }
+
   if (hasCompleteBooking) {
+    if (!phone || !notifySms) {
+      throw new StaffBookingValidationError("A mobile phone number and text notification are required so the customer can reply C to confirm this appointment.", "phone");
+    }
     pets.forEach((pet, petIndex) => {
       pet.serviceIds.forEach((serviceId, serviceIndex) => {
         if (
@@ -671,7 +693,7 @@ export function validateCustomerConfirmInput(body: unknown): {
 
   if (record.acceptPolicies !== true) {
     throw new StaffBookingValidationError(
-      "Please confirm this appointment and agree to the service policies.",
+      "Please agree to the service policies.",
       "acceptPolicies",
     );
   }

@@ -27,14 +27,14 @@ it("shows stored card information and the no-charge message without asking to ad
   assert.match(html, /Default/);
   assert.match(html, /You will not be charged now\./);
   assert.doesNotMatch(html, /Add a card|Use a different card|Exp 12/);
-  assert.match(html, />Confirm<\/button>/);
+  assert.match(html, />Save &amp; confirm appointment<\/button>/);
 });
 it("lets a customer without a saved card add one before confirming", () => {
   const html = renderToStaticMarkup(<ConfirmAccountForm token="preview" preview={base} />);
-  assert.match(html.replace(/<[^>]+>/g, ""), /Add a card to secure this appointment\./);
+  assert.match(html.replace(/<[^>]+>/g, ""), /Reserve a card for your visit\./);
   assert.match(html, /You will not be charged now\./);
-  assert.match(html, /<a[^>]*href="\/account\/setup"[^>]*>Add a card<\/a>/);
-  assert.match(html, /<button[^>]*disabled=""[^>]*>Confirm<\/button>/);
+  assert.match(html, /<button[^>]*>Reserve a card<\/button>/);
+  assert.doesNotMatch(html, />Save &amp; confirm appointment<\/button>/);
   assert.doesNotMatch(html, /Use a different card/);
 });
 it("retains required password setup for a newly created unclaimed account", () => {
@@ -59,11 +59,17 @@ it("shows the requested success message with the appointment date", () => {
   assert.match(html, /Thank you, see you on Wednesday, October 28, 2026!/);
   assert.doesNotMatch(html, /Complete your profile|Add rabies details/);
 });
+it("does not claim the appointment is confirmed when only account details were saved", () => {
+  const html = renderToStaticMarkup(<AppointmentConfirmationSuccess appointmentDate="2026-11-01" awaitingSmsConfirmation />);
+  assert.match(html, /Your account details are saved\./);
+  assert.match(html, /reply C/);
+  assert.doesNotMatch(html, /Your appointment is confirmed/);
+});
 it("treats an expired saved card as missing and blocks confirmation", () => {
   const html = renderToStaticMarkup(<ConfirmAccountForm token="preview" preview={{...base,paymentMethods:[{...card,expYear:2020}]}} />);
   assert.doesNotMatch(html, /Visa •••• 1234/);
-  assert.match(html, /href="\/account\/setup"[^>]*>Add a card/);
-  assert.match(html, /<button[^>]*disabled=""[^>]*>Confirm<\/button>/);
+  assert.match(html, /<button[^>]*>Reserve a card/);
+  assert.doesNotMatch(html, />Save &amp; confirm appointment<\/button>/);
 });
 it("keeps cards valid through the last Eastern day of the expiry month and skips expired defaults", () => {
   const expiring = {...card,expMonth:10,expYear:2026};
@@ -71,4 +77,20 @@ it("keeps cards valid through the last Eastern day of the expiry month and skips
   assert.equal(usableConfirmationCards([expiring],new Date("2026-11-01T04:00:00Z")).length,0);
   const methods=usableConfirmationCards([expiring,{...card,id:"valid",isDefault:false}],new Date("2026-11-01T04:00:00Z"));
   assert.equal(preferredPaymentMethodId(methods),"valid");
+});
+
+it("shows owner and dog details but omits state and ZIP from the appointment address", () => {
+  const html = renderToStaticMarkup(<ConfirmAccountForm token="preview" preview={{...base,customer:{firstName:"Daniel",lastName:"Kladis",email:"owner@example.com",phone:"555-123-4567"},appointment:{...appointment,addressStreet:"123 Palm Lane",addressCity:"Jupiter",addressState:"FL",addressZip:"33458",petBreed:"Cocker Spaniel",petWeightLbs:20},paymentMethods:[card]}} />);
+  assert.match(html, /Daniel Kladis/);
+  assert.match(html, /owner@example.com/);
+  assert.match(html, /555-123-4567/);
+  assert.match(html, /123 Palm Lane, Jupiter/);
+  assert.match(html, /Cocker Spaniel.*20 lbs/);
+  assert.doesNotMatch(html, /33458|Jupiter, FL/);
+});
+
+it("provides a non-submit policy button next to the consent checkbox", () => {
+  const html = renderToStaticMarkup(<ConfirmAccountForm token="preview" preview={base} />);
+  assert.match(html, /<button[^>]*type="button"[^>]*>View The Policies<\/button>/);
+  assert.doesNotMatch(html, /After adding a card, select/);
 });

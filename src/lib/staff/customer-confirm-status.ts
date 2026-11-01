@@ -21,11 +21,8 @@ export function isAwaitingCustomerConfirm(row: {
   status?: string | null;
 }) {
   const staffCreated = row.staffCreated ?? row.staff_created ?? false;
-  const hash =
-    row.customerConfirmTokenHash ?? row.customer_confirm_token_hash ?? null;
   return (
     staffCreated === true &&
-    Boolean(hash) &&
     (row.status == null || row.status === "pending_confirmation")
   );
 }

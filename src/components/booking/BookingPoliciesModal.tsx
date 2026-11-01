@@ -20,6 +20,7 @@ type Props = {
   returnFocusRef?: RefObject<HTMLElement | null>;
   initialSection?: BookingPolicySectionId;
   showPrices?: boolean;
+  includeConsentPolicies?: boolean;
 };
 
 const SECTIONS: Array<{
@@ -151,6 +152,7 @@ export function BookingPoliciesModal({
   returnFocusRef,
   initialSection,
   showPrices = false,
+  includeConsentPolicies = false,
 }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -378,6 +380,12 @@ export function BookingPoliciesModal({
           </AccordionPanel>
         </div>
 
+        {includeConsentPolicies ? <div className="font-body mt-6 space-y-4 text-sm text-taupe">
+          <h3 className="font-medium text-ink">Photo policy</h3>
+          <p>{business.booking.photoMarketingConsent}</p>
+          <h3 className="font-medium text-ink">Text-message policies</h3>
+          <p>Review our <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline">SMS terms and opt-out instructions</a> and <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline">Privacy Policy</a>.</p>
+        </div> : null}
         <button
           ref={closeRef}
           type="button"

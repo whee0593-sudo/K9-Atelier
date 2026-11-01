@@ -184,6 +184,7 @@ export type CustomerLetterDetailRow = {
 export type CustomerLetterEmailContent = {
   subject: string;
   greetingName: string;
+  greeting?: "Hi" | "Dear";
   introParagraph: string;
   detailRows: CustomerLetterDetailRow[];
   estimateNote: string;
@@ -224,7 +225,7 @@ export function buildCustomerLetterEmailHtml(content: CustomerLetterEmailContent
         ${emailLogoImg()}
       </div>
       <div style="padding:28px 32px; color:${STAFF_EMAIL.ink}; font-size:16px; line-height:1.65; background:#ffffff;font-family:${EMAIL_FONT_FAMILY};">
-        <p style="margin:0 0 14px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">Dear ${escapeHtml(content.greetingName)},</p>
+        <p style="margin:0 0 14px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">${content.greeting === "Hi" ? "Hi" : "Dear"} ${escapeHtml(content.greetingName)},</p>
         <p style="margin:0 0 14px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">${escapeHtml(content.introParagraph)}</p>
         <div style="padding:14px 0; font-size:16px; margin:18px 0; border-top:1px solid ${STAFF_EMAIL.border}; border-bottom:1px solid ${STAFF_EMAIL.border};font-family:${EMAIL_FONT_FAMILY};">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; font-size:16px;font-family:${EMAIL_FONT_FAMILY};">
@@ -232,7 +233,7 @@ export function buildCustomerLetterEmailHtml(content: CustomerLetterEmailContent
           </table>
         </div>
         <p style="margin:0 0 14px; font-size:12px; color:${STAFF_EMAIL.muted};font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(content.estimateNote)}</p>
-        <p style="margin:0 0 22px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">${escapeHtml(content.closingParagraph)}</p>
+        ${content.closingParagraph ? `<p style="margin:0 0 22px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">${escapeHtml(content.closingParagraph)}</p>` : ""}
         <div style="text-align:center;font-family:${EMAIL_FONT_FAMILY};">
           <a href="${escapeHtml(content.cta.href)}" style="display:inline-block; border:1px solid ${STAFF_EMAIL.gold}; color:${STAFF_EMAIL.gold}; padding:10px 28px; text-decoration:none; font-size:11px; letter-spacing:2px;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(content.cta.label)}</a>
         </div>

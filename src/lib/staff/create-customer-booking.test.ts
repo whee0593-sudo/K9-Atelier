@@ -485,6 +485,28 @@ describe("validateStaffCustomerBookingInput", () => {
     assert.equal(input.pets.length, 0);
   });
 
+  it("never silently turns a dated booking into an invitation", () => {
+    for (const overrides of [
+      { serviceId: "" },
+      { address: undefined },
+      { slotStartMinutes: undefined },
+      { appointmentDate: undefined },
+      { pet: undefined },
+      { appointmentDate: undefined, slotStartMinutes: undefined, bookingIntent: true },
+    ]) {
+      assert.throws(
+        () => validateStaffCustomerBookingInput(validBody(overrides)),
+        (error: unknown) => error instanceof StaffBookingValidationError && /No appointment has been created/.test(error.message),
+      );
+    }
+  });
+
+  it("requires a text confirmation channel for a complete staff booking", () => {
+    for (const overrides of [{ phone: "", notifySms: false }, { notifySms: false, notifyEmail: true }]) {
+      assert.throws(() => validateStaffCustomerBookingInput(validBody(overrides)), /reply C/);
+    }
+  });
+
   it("accepts a phone-only invite with no other fields", () => {
     const input = validateStaffCustomerBookingInput({
       phone: "5615550123",
@@ -605,6 +627,7 @@ describe("customer confirm tokens", () => {
   });
 
   it("marks staff-created pending bookings as awaiting confirm", () => {
+    assert.equal(isAwaitingCustomerConfirm({ staff_created: true, customer_confirm_token_hash: null, status: "pending_confirmation" }), true);
     assert.equal(
       isAwaitingCustomerConfirm({
         staff_created: true,
@@ -635,12 +658,12 @@ describe("staff-created booking copy", () => {
     });
     assert.match(email.subject, /confirm/i);
     assert.match(email.text, /confirm-account\?token=abc/);
-    assert.match(email.html, /Review and Confirm/);
+    assert.match(email.html, /Review Details/);
     assert.match(email.text, /Rabies vaccination details are optional/);
-    assert.match(email.text, /card on file/);
-    assert.match(email.text, /secure this appointment/);
+    assert.match(email.text, /reply C/i);
+    assert.doesNotMatch(email.text, /card on file is required to secure/);
     const sms = buildStaffCreatedBookingSms(appointment, confirmUrl);
-    assert.match(sms, /add a card to secure/i);
+    assert.match(sms, /reply C to confirm/i);
     assert.match(sms, /Bella/);
     assert.match(sms, /confirm-account\?token=abc/);
     const multiSms = buildStaffCreatedBookingSms(appointment, confirmUrl, [
@@ -662,4 +685,25 @@ describe("appointmentStatusLabel", () => {
       "Pending Review",
     );
   });
+});
+
+it("asks a customer with incomplete details to complete their profile without offering SMS-only confirmation", () => {
+  const appointment = sampleAppointment();
+  const confirmUrl = "https://k9atelier.com/confirm-account?token=example";
+  const email = buildStaffCreatedBookingEmail(appointment, {firstName:"Daniel",confirmUrl,createdAccount:false,requiresProfileCompletion:true});
+  assert.match(email.text, /^Hi Daniel,/);
+  assert.match(email.html, />Hi Daniel,</);
+  assert.match(email.text, /some required information is missing/);
+  assert.doesNotMatch(email.text, /Please click the button below to complete your profile and confirm your appointment/);
+  assert.doesNotMatch(email.html, /Please click the button below to complete your profile and confirm your appointment/);
+  assert.doesNotMatch(email.text, /reply C|securely saved|Looking forward|card on file/i);
+  for (const petNames of [["Molly"],["Molly","Daisy"],["Molly","Daisy","Milo"]]) {
+    const sms = buildStaffCreatedBookingSms(appointment, confirmUrl, petNames, {firstName:"Daniel",requiresProfileCompletion:true});
+    assert.match(sms, /Hi Daniel/);
+    assert.match(sms, /some required information is missing/);
+    assert.match(sms, /use the link below to complete your profile and confirm your appointment/);
+    assert.match(sms, /Reply STOP to opt out/);
+    assert.doesNotMatch(sms, /reply C to confirm/i);
+    for (const petName of petNames) assert.ok(sms.includes(petName));
+  }
 });

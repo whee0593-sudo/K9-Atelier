@@ -11,19 +11,27 @@ export type StaffCreatedBookingNotice = {
   firstName: string;
   confirmUrl: string;
   createdAccount: boolean;
+  requiresProfileCompletion?: boolean;
 };
 
 export function buildStaffCreatedBookingEmail(
   appointment: AppointmentRecord,
   notice: StaffCreatedBookingNotice,
 ) {
+  if (notice.requiresProfileCompletion) {
+    const greetingName = notice.firstName.trim() || "there";
+    const subject = "Please complete your profile to confirm your appointment";
+    const introParagraph = "Your appointment is not confirmed yet because some required information is missing. Please click the button below to complete your profile.";
+    const closingParagraph = "";
+    const detailRows = appointmentDetailRows(appointment).map(([label,value]) => ({label,value:label === "Address" ? [appointment.addressStreet, appointment.addressCity].filter(Boolean).join(", ") : value}));
+    const text = [`Hi ${greetingName},`, "", introParagraph, "", ...detailRows.map(({label,value}) => `${label}: ${value}`), "", closingParagraph, "", `Complete profile & confirm appointment: ${notice.confirmUrl}`].join("\n");
+    return buildCustomerLetterEmail({subject,greetingName,greeting:"Hi",introParagraph,detailRows,estimateNote:"",closingParagraph,cta:{href:notice.confirmUrl,label:"Complete profile & confirm appointment"}},text);
+  }
   const greetingName = notice.firstName.trim() || "there";
   const subject = "Please confirm your K9 Atelier appointment";
-  const introParagraph = notice.createdAccount
-    ? "K9 Atelier reserved this grooming visit for you. Open the link below to confirm the appointment and create your password so you can manage it online."
-    : "K9 Atelier reserved this grooming visit for you. Open the link below to confirm the appointment.";
+  const introParagraph = "K9 Atelier reserved this grooming visit for you. Please reply C to our appointment text message to confirm.";
   const closingParagraph =
-    "A card on file is required to secure this appointment. Add one on the review and confirm page if you do not already have one. You are not charged when you confirm. Rabies vaccination details are optional and can be added later.";
+    "You can use the link below to review your details, set up your account, or add a payment method. To confirm online, review your details, add a card if needed, and select Save & confirm appointment. Rabies vaccination details are optional and can be added later.";
 
   const text = [
     `Dear ${greetingName},`,
@@ -38,7 +46,7 @@ export function buildStaffCreatedBookingEmail(
     "",
     closingParagraph,
     "",
-    `Review and confirm: ${notice.confirmUrl}`,
+    `Review details: ${notice.confirmUrl}`,
   ].join("\n");
 
   return buildCustomerLetterEmail(
@@ -54,7 +62,7 @@ export function buildStaffCreatedBookingEmail(
       closingParagraph,
       cta: {
         href: notice.confirmUrl,
-        label: "Review and Confirm",
+        label: "Review Details",
       },
     },
     text,
@@ -73,7 +81,12 @@ export function buildStaffCreatedBookingSms(
   appointment: AppointmentRecord,
   confirmUrl: string,
   petNames: string[] = [appointment.petName],
+  profileNotice?: {firstName: string; requiresProfileCompletion: boolean},
 ) {
+  if (profileNotice?.requiresProfileCompletion) {
+    const name = profileNotice.firstName.trim() || "there";
+    return `K9 ATELIER: Hi ${name}, your appointment for ${formatPetNameList(petNames)} is not confirmed yet because some required information is missing. Please use the link below to complete your profile and confirm your appointment.\n\n${confirmUrl}\n\nReply STOP to opt out.`;
+  }
   const dateLabel = formatAppointmentDateLabel(appointment.appointmentDate);
   const petLabel = formatPetNameList(petNames);
   const when =
@@ -81,7 +94,7 @@ export function buildStaffCreatedBookingSms(
     appointment.appointmentTime !== ARRIVAL_WINDOW_PENDING_LABEL
       ? `${dateLabel} between ${appointment.appointmentTime}`
       : dateLabel;
-  return `K9 Atelier reserved a visit for ${petLabel} on ${when}. Review and confirm, and add a card to secure it: ${confirmUrl} Reply STOP to opt out.`;
+  return `K9 Atelier reserved a visit for ${petLabel} on ${when}. Please reply C to confirm your appointment. Or save your details and confirm online: ${confirmUrl} Reply STOP to opt out.`;
 }
 
 export type StaffBookingInviteNotice = {

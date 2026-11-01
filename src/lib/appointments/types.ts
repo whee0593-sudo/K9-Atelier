@@ -69,7 +69,7 @@ export type AppointmentRecord = {
   vaccinationStatusAtBooking: VaccinationBookingStatus | null;
   status: AppointmentStatus;
   confirmedAt: string | null;
-  /** Customer replied C (or YES) to the confirmation SMS. Separate from staff confirmedAt. */
+  /** Customer confirmed through the appointment link or replied C (or YES) by SMS. Separate from staff confirmedAt. */
   customerConfirmedAt: string | null;
   staffCreated?: boolean;
   awaitingCustomerConfirm?: boolean;

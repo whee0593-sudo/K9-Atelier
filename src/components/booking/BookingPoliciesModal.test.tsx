@@ -60,3 +60,12 @@ describe("concise booking policy modal", () => {
     assert.equal(render("special-handling").includes("From $30"), false);
   });
 });
+
+it("includes photo consent and text-message terms when opened from appointment confirmation", () => {
+  const html = renderToStaticMarkup(<BookingPoliciesModal open onClose={() => {}} includeConsentPolicies />);
+  assert.match(html, /Photo policy/);
+  assert.match(html, /photographing/);
+  assert.match(html, /Text-message policies/);
+  assert.match(html, /href="\/terms"/);
+  assert.match(html, /href="\/privacy"/);
+});

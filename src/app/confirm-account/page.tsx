@@ -15,7 +15,7 @@ export default async function ConfirmAccountPage({ searchParams }: Props) {
   return (
     <Container className="py-14 md:py-20">
       <div className="mx-auto max-w-xl">
-        <h1 className="sr-only">Confirm your appointment</h1>
+        <h1 className="sr-only">Review your appointment and account details</h1>
         {trimmed ? (
           <ConfirmAccountForm token={trimmed} />
         ) : (

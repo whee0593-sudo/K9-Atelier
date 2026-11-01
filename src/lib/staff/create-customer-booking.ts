@@ -1,3 +1,5 @@
+import { listPaymentMethodsForCustomer } from "@/lib/payments/service";
+import { usableConfirmationCards } from "@/lib/staff/customer-confirm-status";
 import { mapFixedServicePrices } from "@/lib/pets/fixed-prices";
 import { notifyMerchantVisitCreatedFromAppointments } from "@/lib/communications/merchant-notices";
 import { business } from "@/lib/business";
@@ -535,7 +537,7 @@ export async function createStaffCustomerBooking(
     slotStartMinutes == null ||
     input.pets.length === 0
   ) {
-    return createStaffCustomerInvite(input);
+    return { error: "conflict", message: "No appointment has been created. Complete the dog, service, address, date, and start time." };
   }
 
   const baseFormatted = getBaseAddressFormatted();
@@ -840,13 +842,23 @@ export async function createStaffCustomerBooking(
     const confirmUrl = siteUrl(customerConfirmPath(confirm.token));
     const petNames = appointments.map((entry) => entry.petName);
 
+    let requiresProfileCompletion = createdAccount;
+    try {
+      const methods = await listPaymentMethodsForCustomer(userId);
+      requiresProfileCompletion = createdAccount || !methods || usableConfirmationCards(methods).length === 0;
+    } catch {
+      requiresProfileCompletion = true;
+    }
     let emailed = false;
     let texted = false;
+    // The reservation is already committed. Delivery failures must not disguise it as a failed booking.
+    try {
     if (input.notifyEmail && input.email && isEmailConfigured()) {
       const email = buildStaffCreatedBookingEmail(appointment, {
         firstName: input.firstName,
         confirmUrl,
         createdAccount,
+        requiresProfileCompletion,
       });
       emailed = isCommunicationAccepted(
         await sendEmail({
@@ -866,11 +878,15 @@ export async function createStaffCustomerBooking(
         }),
       );
     }
+    } catch (emailError) {
+      console.error("staff booking customer email failed:", emailError);
+    }
+    try {
     if (input.notifySms && input.phone && isSmsConfigured()) {
       texted = isCommunicationAccepted(
         await sendSms({
           to: input.phone,
-          body: buildStaffCreatedBookingSms(appointment, confirmUrl, petNames),
+          body: buildStaffCreatedBookingSms(appointment, confirmUrl, petNames, { firstName: input.firstName, requiresProfileCompletion }),
           communication: buildCommunicationContext({
             notificationType: "staff_created_booking",
             recipient: input.phone,
@@ -882,6 +898,9 @@ export async function createStaffCustomerBooking(
           }),
         }),
       );
+    }
+    } catch (smsError) {
+      console.error("staff booking customer SMS failed:", smsError);
     }
 
     return {

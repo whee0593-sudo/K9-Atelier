@@ -1,3 +1,6 @@
+import { fetchCustomerContact } from "@/lib/email/appointment-context";
+import { notifyMerchantVisitConfirmedFromVisit } from "@/lib/communications/merchant-notices";
+import { notifyCustomerAppointmentConfirmed } from "@/lib/email/appointment-mails";
 import {
   mapAppointmentRowToRecord,
 } from "@/lib/appointments/map";
@@ -6,9 +9,6 @@ import type {
   AppointmentRow,
 } from "@/lib/appointments/types";
 import { isFrozenAuthUser } from "@/lib/auth/frozen-account";
-import { fetchCustomerContact } from "@/lib/email/appointment-context";
-import { notifyMerchantVisitConfirmedFromVisit } from "@/lib/communications/merchant-notices";
-import { notifyCustomerAppointmentConfirmed } from "@/lib/email/appointment-mails";
 import {
   issueOffSessionSetupIntent,
   listPaymentMethodsForCustomer,
@@ -61,7 +61,7 @@ const APPOINTMENT_SELECT = `
   customer_confirm_token_hash,
   customer_confirm_expires_at,
   created_at,
-  pets ( name, breed )
+  pets ( name, breed, weight_lbs )
 `;
 
 export type CustomerConfirmPreview = {
@@ -70,6 +70,8 @@ export type CustomerConfirmPreview = {
   customer: {
     email: string;
     firstName: string;
+    lastName?: string;
+    phone?: string;
   };
   requiresPassword: boolean;
   createdAccount: boolean;
@@ -120,7 +122,7 @@ async function loadConfirmAppointment(token: string) {
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("email, first_name")
+    .select("email, first_name, last_name, phone")
     .eq("id", row.customer_id)
     .maybeSingle();
 
@@ -153,6 +155,8 @@ async function loadConfirmAppointment(token: string) {
     paymentMethods: usableConfirmationCards(paymentMethods),
     email: profile?.email ?? authUser.user.email ?? "",
     firstName: profile?.first_name ?? "",
+    lastName: profile?.last_name ?? "",
+    phone: profile?.phone ?? "",
   };
 }
 
@@ -172,6 +176,8 @@ export async function getCustomerConfirmPreview(
       customer: {
         email: result.email,
         firstName: result.firstName,
+        lastName: result.lastName,
+        phone: result.phone,
       },
       requiresPassword: result.requiresPassword,
       createdAccount: result.user.app_metadata?.staff_created === true,
@@ -261,17 +267,19 @@ export async function confirmStaffCreatedBooking(input: {
     }
   }
 
-  const now = new Date().toISOString();
   const { data, error } = await result.admin
     .from("appointments")
     .update({
-      status: "confirmed",
-      confirmed_at: now,
-      customer_confirmed_at: now,
       customer_confirm_token_hash: null,
       customer_confirm_expires_at: null,
       payment_method_id: paymentMethodId,
+      status: "confirmed",
+      confirmed_at: result.row.confirmed_at ?? new Date().toISOString(),
+      customer_confirmed_at: result.row.customer_confirmed_at ?? new Date().toISOString(),
     })
+    .eq("customer_id", result.row.customer_id)
+    .in("id", result.appointments.map(appointment => appointment.id))
+    .in("status", ["pending_confirmation", "confirmed"])
     .eq("customer_confirm_token_hash", hashCustomerConfirmToken(input.token))
     .select(APPOINTMENT_SELECT);
 
@@ -288,33 +296,36 @@ export async function confirmStaffCreatedBooking(input: {
   );
   const appointment = appointments[0];
   if (!appointment) return { error: "not_found" };
-  let contact: Awaited<ReturnType<typeof fetchCustomerContact>> | {
-    email: string;
-    name: string | null;
-  } | null = null;
-  try {
-    contact =
-      (await fetchCustomerContact(result.user.id)) ??
-      (result.email
-        ? { email: result.email, name: result.firstName || null }
-        : null);
-    if (contact) {
-      await notifyCustomerAppointmentConfirmed(appointment, contact);
+  if (result.row.status === "pending_confirmation") {
+    let contact: Awaited<ReturnType<typeof fetchCustomerContact>> | {
+      email: string;
+      name: string | null;
+    } | null = null;
+    try {
+      contact =
+        (await fetchCustomerContact(result.user.id)) ??
+        (result.email
+          ? { email: result.email, name: result.firstName || null }
+          : null);
+      if (contact) {
+        await notifyCustomerAppointmentConfirmed(appointment, contact);
+      }
+    } catch (emailError) {
+      console.error("confirmStaffCreatedBooking email failed:", emailError);
     }
-  } catch (emailError) {
-    console.error("confirmStaffCreatedBooking email failed:", emailError);
+    try {
+      await notifyMerchantVisitConfirmedFromVisit(appointment.visitId, {
+        customerName: contact?.name ?? (result.firstName || null),
+        replyTo: contact?.email ?? result.email ?? null,
+      });
+    } catch (merchantError) {
+      console.error(
+        "confirmStaffCreatedBooking merchant notify failed:",
+        merchantError,
+      );
+    }
   }
-  try {
-    await notifyMerchantVisitConfirmedFromVisit(appointment.visitId, {
-      customerName: contact?.name ?? (result.firstName || null),
-      replyTo: contact?.email ?? result.email ?? null,
-    });
-  } catch (merchantError) {
-    console.error(
-      "confirmStaffCreatedBooking merchant notify failed:",
-      merchantError,
-    );
-  }
+
 
   return {
     appointment,
