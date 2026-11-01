@@ -1,4 +1,5 @@
-import { isBookingStartInFuture, isDateBookable, parseDateValue } from "@/lib/booking-slots";
+import { isBookingStartInFuture } from "@/lib/booking-slots";
+import { isStaffBookingDate } from "@/lib/staff/booking-dates";
 import { isWithinServiceDay } from "@/lib/booking-schedule";
 import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
@@ -547,7 +548,7 @@ export function validateStaffCustomerBookingInput(
         "appointmentDate",
       );
     }
-    if (!isDateBookable(parseDateValue(appointmentDateRaw))) {
+    if (!isStaffBookingDate(appointmentDateRaw)) {
       throw new StaffBookingValidationError(
         "That date is not available for booking.",
         "appointmentDate",

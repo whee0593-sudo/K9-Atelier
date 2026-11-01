@@ -1,5 +1,5 @@
 import type { AdminCalendarDay } from "@/lib/appointments/calendar";
-import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
+import { isStaffBookingDate } from "@/lib/staff/booking-dates";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
 
 export const ADMIN_CALENDAR_WEEKDAYS = [
@@ -60,7 +60,7 @@ export function isStaffPickerDaySelectable(
 ) {
   if (day.isPast || day.isFull || day.closure?.closedAllDay) return false;
   if (day.blocks?.some((block) => block.allDay)) return false;
-  return isDateBookable(parseDateValue(day.date));
+  return isStaffBookingDate(day.date);
 }
 
 export function staffPickerSelectableDates(days: AdminCalendarDay[]) {

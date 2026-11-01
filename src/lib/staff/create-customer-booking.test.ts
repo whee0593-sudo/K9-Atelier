@@ -103,6 +103,12 @@ describe("staffCreatedAccountBlockReason", () => {
 
 describe("validateStaffCustomerBookingInput", () => {
   beforeEach((t) => t.mock.timers.enable({ apis: ["Date"], now: new Date("2026-10-26T12:00:00Z") }));
+  it("allows staff to book Saturday and Sunday without changing public weekdays", () => {
+    for (const appointmentDate of ["2026-10-31", "2026-11-01"]) {
+      const result = validateStaffCustomerBookingInput(validBody({ appointmentDate, slotStartMinutes: 600 }));
+      assert.equal(result.appointmentDate, appointmentDate);
+    }
+  });
 
   it("accepts today's 2 PM booking at 12:24 PM and rejects elapsed starts", (t) => {
     t.mock.timers.setTime(new Date("2026-10-26T16:24:00Z").getTime());

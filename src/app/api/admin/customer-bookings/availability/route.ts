@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAvailabilityForAddress, getBaseGeoPoint } from "@/lib/appointments/schedule";
-import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
+import { isStaffBookingDate } from "@/lib/staff/booking-dates";
 import { mapStaffServiceError, staffJsonError } from "@/lib/staff/api-errors";
 import { getStaffSession } from "@/lib/staff/auth";
 import { enforceIpRateLimit } from "@/lib/rate-limit";
@@ -57,7 +57,7 @@ export async function GET(request: Request) {
   const requestedDate = url.searchParams.get("date")?.trim() ?? "";
   const extraDates =
     /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) &&
-    isDateBookable(parseDateValue(requestedDate))
+    isStaffBookingDate(requestedDate)
       ? [requestedDate]
       : [];
 
@@ -68,6 +68,7 @@ export async function GET(request: Request) {
     visitDurations: durations,
     base,
     extraDates,
+    staffBooking: true,
   });
 
   if ("error" in result) {

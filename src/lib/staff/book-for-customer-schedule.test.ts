@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
-import { getUpcomingBookableDates } from "@/lib/booking-slots";
+import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
+import { getUpcomingStaffDates, isStaffBookingDate } from "./booking-dates";
 import { listHourlyStartMinutes } from "@/lib/booking-schedule";
 import {
   fallbackStaffScheduleDays,
@@ -30,14 +31,28 @@ const wednesdayEmpty: StaffAvailabilityDay = {
 };
 
 describe("fallbackStaffScheduleDays", () => {
+  it("includes both weekend days in the staff schedule", () => {
+    const days = fallbackStaffScheduleDays(14);
+    assert.ok(days.some((day) => day.date === "2026-09-26" && day.slots.length > 0));
+    assert.ok(days.some((day) => day.date === "2026-09-27" && day.slots.length > 0));
+  });
   it("lists upcoming studio days with hourly start times", () => {
-    const first = getUpcomingBookableDates(1)[0];
+    const first = getUpcomingStaffDates(1)[0];
     assert.ok(first);
     const days = fallbackStaffScheduleDays(3);
     assert.equal(days.length, 3);
     assert.equal(days[0]?.date, first.value);
     assert.equal(days[0]?.available, true);
     assert.ok((days[0]?.slots.length ?? 0) > 0);
+  });
+  it("opens weekends only for staff and rejects invalid or past dates", () => {
+    for (const date of ["2026-09-26", "2026-09-27"]) {
+      assert.equal(isStaffBookingDate(date), true);
+      assert.equal(isDateBookable(parseDateValue(date)), false);
+    }
+    assert.equal(isStaffBookingDate("2026-02-30"), false);
+    assert.equal(isStaffBookingDate("2026-09-01"), false);
+    assert.equal(isStaffBookingDate("invalid"), false);
   });
 });
 

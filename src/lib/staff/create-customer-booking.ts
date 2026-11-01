@@ -643,6 +643,7 @@ export async function createStaffCustomerBooking(
     slotStartMinutes,
     base,
     allowUnfittedStart: overrideSchedule,
+    staffBooking: true,
   });
   const firstSchedule = resolveArrivalForBooking(firstAssignment, slotStartMinutes);
   if ("error" in firstSchedule) return { error: "slot_unavailable" };

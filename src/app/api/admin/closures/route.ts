@@ -3,7 +3,7 @@ import { getStaffSession } from "@/lib/staff/auth";
 import { mapStaffServiceError, staffJsonError } from "@/lib/staff/api-errors";
 import { setStaffDayClosure } from "@/lib/appointments/schedule";
 import { listClosureHourOptions } from "@/lib/appointments/closures";
-import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
+import { isStaffBookingDate } from "@/lib/staff/booking-dates";
 
 export async function POST(request: Request) {
   const session = await getStaffSession();
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     return staffJsonError("Date must be YYYY-MM-DD.", 400);
   }
 
-  if (!isDateBookable(parseDateValue(date))) {
+  if (!isStaffBookingDate(date)) {
     return staffJsonError("That date is outside the booking calendar.", 400);
   }
 

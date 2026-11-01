@@ -1,9 +1,9 @@
 import { isWithinServiceDay } from "@/lib/booking-schedule";
 import {
-  isBookableWeekday,
-  isDateBookable,
   parseDateValue,
+  toDateValue,
 } from "@/lib/booking-slots";
+import { isStaffBookingDate } from "@/lib/staff/booking-dates";
 import {
   addDaysToIsoDate,
   todayInBusinessTimezone,
@@ -15,8 +15,8 @@ const PAST_CORRECTION_DAYS = 60;
 export function isStaffAssignableDate(date: string): boolean {
   if (!DATE_PATTERN.test(date)) return false;
   const parsed = parseDateValue(date);
-  if (!isBookableWeekday(parsed)) return false;
-  if (isDateBookable(parsed)) return true;
+  if (toDateValue(parsed) !== date) return false;
+  if (isStaffBookingDate(date)) return true;
   const today = todayInBusinessTimezone();
   if (date > today) return false;
   return date >= addDaysToIsoDate(today, -PAST_CORRECTION_DAYS);

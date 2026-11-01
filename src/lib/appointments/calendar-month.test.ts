@@ -132,6 +132,7 @@ describe("calendar month helpers", () => {
     assert.equal(selectable.has("2026-09-24"), true);
     assert.equal(selectable.has("2026-09-22"), true);
     assert.equal(selectable.has("2026-09-18"), false);
-    assert.equal(selectable.has("2026-09-26"), false);
+    assert.equal(selectable.has("2026-09-26"), true);
+    assert.equal(selectable.has("2026-09-27"), true);
   });
 });

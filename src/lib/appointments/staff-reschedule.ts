@@ -13,10 +13,6 @@ import type {
   AdminAppointmentRecord,
   AppointmentRow,
 } from "@/lib/appointments/types";
-import {
-  isBookableWeekday,
-  parseDateValue,
-} from "@/lib/booking-slots";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
 import { parseStaffRescheduleInput } from "@/lib/appointments/staff-reschedule-input";
 import { replaceVisitSchedule } from "@/lib/visits/persist";
@@ -215,7 +211,6 @@ export async function listStaffAppointmentAvailability(
   const extraDates = [today, loaded.row.appointment_date].filter(
     (date, index, all) =>
       Boolean(date) &&
-      isBookableWeekday(parseDateValue(date)) &&
       all.indexOf(date) === index,
   );
   const visitRows = [...(await loadActiveVisitRows(loaded.row))].sort(
@@ -238,6 +233,7 @@ export async function listStaffAppointmentAvailability(
     base,
     excludeAppointmentIds: visitAppointmentIds,
     extraDates,
+    staffBooking: true,
   });
   if ("error" in result) return result;
 

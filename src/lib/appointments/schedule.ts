@@ -20,6 +20,7 @@ import {
   type RouteStop,
 } from "@/lib/booking-schedule";
 import { isBookingStartInFuture, isDateBookable, parseDateValue } from "@/lib/booking-slots";
+import { getUpcomingStaffDates, isStaffBookingDate } from "@/lib/staff/booking-dates";
 import {
   applyClosureToSlots,
   isSlotClosed,
@@ -344,6 +345,7 @@ export async function getAvailabilityForAddress(input: {
   extraDates?: string[];
   /** Staff booking: keep every start hour and attach estimate conflicts. */
   visitDurations?: number[];
+  staffBooking?: boolean;
 }): Promise<
   | {
       days: Array<{
@@ -356,7 +358,7 @@ export async function getAvailabilityForAddress(input: {
   | ScheduleError
 > {
   const extraDates = input.extraDates ?? [];
-  const dates = listCalendarDates(40);
+  const dates = input.staffBooking ? getUpcomingStaffDates(40).map((day) => day.value) : listCalendarDates(40);
   for (const extra of extraDates) {
     if (!dates.includes(extra)) dates.unshift(extra);
   }
@@ -399,7 +401,7 @@ export async function getAvailabilityForAddress(input: {
 
   const days = [];
   for (const date of dates) {
-    if (!extraDates.includes(date) && !isDateBookable(parseDateValue(date))) {
+    if (!extraDates.includes(date) && !(input.staffBooking ? isStaffBookingDate(date) : isDateBookable(parseDateValue(date)))) {
       days.push({
         date,
         available: false,
@@ -484,6 +486,7 @@ export async function assignArrivalWindow(input: {
   base: GeoPoint;
   excludeAppointmentIds?: string[];
   allowUnbookableDate?: boolean;
+  staffBooking?: boolean;
   /** Keep the chosen start when the estimate does not fit the route. */
   allowUnfittedStart?: boolean;
 }): Promise<
@@ -493,7 +496,7 @@ export async function assignArrivalWindow(input: {
 > {
   if (
     !input.allowUnbookableDate &&
-    !isDateBookable(parseDateValue(input.date))
+    !(input.staffBooking ? isStaffBookingDate(input.date) : isDateBookable(parseDateValue(input.date)))
   ) {
     return { error: "slot_unavailable" as const };
   }
@@ -644,7 +647,7 @@ export type AdminScheduleDay = {
 export async function listAdminScheduleDays(): Promise<
   { days: AdminScheduleDay[] } | ScheduleError
 > {
-  const dates = listCalendarDates(40);
+  const dates = getUpcomingStaffDates(40).map((day) => day.value);
   if (dates.length === 0) return { days: [] as AdminScheduleDay[] };
 
   const fromDate = dates[0]!;

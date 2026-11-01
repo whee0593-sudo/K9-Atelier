@@ -6,7 +6,7 @@ import { formatEstimatedDuration } from "@/lib/staff/schedule-conflict";
 import { canStaffRescheduleAppointment } from "@/lib/appointments/staff-actions";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import { listHourlyStartMinutes } from "@/lib/booking-schedule";
-import { getUpcomingBookableDates } from "@/lib/booking-slots";
+import { getUpcomingStaffDates } from "@/lib/staff/booking-dates";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
 
 type AvailabilityDay = {
@@ -56,7 +56,7 @@ function summaryFromAppointments(
 
 function previewDays(unavailableDates?: readonly string[]): AvailabilityDay[] {
   const closed = new Set(unavailableDates ?? []);
-  return getUpcomingBookableDates(8).map((day) => {
+  return getUpcomingStaffDates(8).map((day) => {
     const unavailable = closed.has(day.value);
     return {
       date: day.value,

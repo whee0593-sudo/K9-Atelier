@@ -1,5 +1,6 @@
 import { listHourlyStartMinutes } from "@/lib/booking-schedule";
-import { getUpcomingBookableDates, isBookingStartInFuture, parseDateValue } from "@/lib/booking-slots";
+import { isBookingStartInFuture, parseDateValue } from "@/lib/booking-slots";
+import { getUpcomingStaffDates } from "./booking-dates";
 
 export type StaffAvailabilityDay = {
   date: string;
@@ -9,7 +10,7 @@ export type StaffAvailabilityDay = {
 
 /** Studio calendar days with standard start hours, before live route availability. */
 export function fallbackStaffScheduleDays(count = 20): StaffAvailabilityDay[] {
-  return getUpcomingBookableDates(count).map((day) => ({
+  return getUpcomingStaffDates(count).map((day) => ({
     date: day.value,
     available: true,
     slots: listHourlyStartMinutes().filter((start) => isBookingStartInFuture(day.value, start)),

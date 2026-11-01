@@ -5,9 +5,18 @@ import {
   parseStaffRescheduleInput,
 } from "@/lib/appointments/staff-reschedule-input";
 import { getUpcomingBookableDates } from "@/lib/booking-slots";
+import { getUpcomingStaffDates } from "@/lib/staff/booking-dates";
 import { addDaysToIsoDate, todayInBusinessTimezone } from "@/lib/sms/schedule";
 
 describe("staff reschedule input", () => {
+  it("allows staff to reschedule onto either weekend day", () => {
+    const weekends = getUpcomingStaffDates(14).filter((day) => [0, 6].includes(new Date(`${day.value}T12:00:00`).getDay()));
+    assert.ok(weekends.length >= 2);
+    for (const { value: date } of weekends) {
+      assert.deepEqual(parseStaffRescheduleInput({ date, slotStartMinutes: 600 }), { date, slotStartMinutes: 600 });
+    }
+    assert.equal(isStaffAssignableDate("2027-02-30"), false);
+  });
   it("requires a date and a start inside studio hours", () => {
     assert.deepEqual(parseStaffRescheduleInput(null), {
       error: "Date and start time are required.",
@@ -42,11 +51,6 @@ describe("staff reschedule input", () => {
 
   it("accepts today when the studio is open", () => {
     const today = todayInBusinessTimezone();
-    const weekday = new Date(`${today}T12:00:00`).getDay();
-    if (weekday === 0 || weekday === 6) {
-      assert.equal(isStaffAssignableDate(today), false);
-      return;
-    }
     assert.equal(isStaffAssignableDate(today), true);
     assert.deepEqual(
       parseStaffRescheduleInput({ date: today, slotStartMinutes: 540 }),
