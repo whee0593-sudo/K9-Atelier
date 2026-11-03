@@ -17,6 +17,7 @@ import { formatMinutesLabel } from "@/lib/appointments/closures";
 import { appointmentStatusLabel } from "@/lib/appointments/map";
 import { isOperationalAdminAppointment } from "@/lib/appointments/operational-visibility";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
+import { customerBookingVisits } from "@/lib/appointments/customer-visits";
 
 export type DateMenuAction =
   | "book"
@@ -551,7 +552,8 @@ export function ViewDayDialog({
   onBlockClick?: (id: string) => void;
 }) {
   const titleId = useId();
-  const timeline = buildDayTimeline({ appointments, blocks });
+  const visits = customerBookingVisits(appointments);
+  const timeline = buildDayTimeline({ appointments: visits.map((pets) => pets[0]!), blocks });
   return (
     <DialogFrame title={formatMonthDay(date)} titleId={titleId} onClose={onClose}>
       {loading ? (
@@ -578,7 +580,8 @@ export function ViewDayDialog({
                 </li>
               );
             }
-            const appointment = appointments.find((item) => item.id === entry.id);
+            const pets = visits.find((group) => group[0]?.id === entry.id) ?? [];
+            const appointment = pets[0];
             return (
               <li key={`${entry.kind}-${entry.id}`}>
                 <button
@@ -591,11 +594,16 @@ export function ViewDayDialog({
                 >
                   <p className="text-sm font-medium text-gold-dark">{entry.timeLabel}</p>
                   <p className="mt-1 text-sm text-text">
-                    {appointment?.petName ?? entry.title}
+                    {pets.length > 1 ? pets.map((pet) => pet.petName).join(" & ") : appointment?.petName ?? entry.title}
                   </p>
                   {appointment ? (
                     <>
-                      <p className="text-sm text-text">{appointment.serviceName}</p>
+                      {pets.map((pet) => (
+                        <p key={pet.id} className="text-sm text-text">
+                          {pets.length > 1 ? `${pet.petName} — ` : ""}{pet.serviceName}
+                          {pets.length > 1 ? ` · ${pet.appointmentTime}` : ""}
+                        </p>
+                      ))}
                       <p className="text-sm text-text-muted">
                         {appointmentStatusLabel(
                           appointment.status,

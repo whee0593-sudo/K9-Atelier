@@ -424,3 +424,13 @@ describe("Calendar date actions", () => {
     assert.match(day, /min-h-11/);
   });
 });
+
+it("shows explicit visit siblings in one day-dialog button and keeps other visits separate", () => {
+  const first = sampleAppointment({ id: "lychee", petName: "LYCHEE", serviceName: "Full Haircut", appointmentTime: "2:00–3:23 PM", scheduledStart: 840, visitId: "shared" });
+  const second = sampleAppointment({ id: "yoyo", petName: "YOYO", serviceName: "Signature Bath", appointmentTime: "3:23–4:23 PM", scheduledStart: 923, visitId: "shared" });
+  const other = sampleAppointment({ id: "other", petName: "Other", serviceName: "Bath", appointmentTime: "5:00 PM", visitId: "other" });
+  const html = renderToStaticMarkup(<ViewDayDialog date="2026-11-10" loading={false} appointments={[second, other, first]} blocks={[]} onClose={() => {}} />);
+  assert.equal((html.match(/data-day-entry="appointment"/g) ?? []).length, 2);
+  assert.ok(html.includes("LYCHEE &amp; YOYO"));
+  assert.ok(html.includes("3:23–4:23 PM"));
+});

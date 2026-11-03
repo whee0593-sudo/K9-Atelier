@@ -6,6 +6,27 @@ import {
 } from "@/lib/email/html-templates";
 import { buildCustomerLetterEmail } from "@/lib/email/layout";
 import { estimateNote } from "@/lib/notifications";
+import { formatPrice } from "@/lib/business";
+import { customerVisitEstimate } from "@/lib/appointments/customer-visits";
+
+export function staffCreatedVisitDetailRows(appointment: AppointmentRecord, siblings: AppointmentRecord[]) {
+  const pets = siblings.filter((pet) => pet.id === appointment.id || (
+    appointment.visitId && pet.visitId === appointment.visitId &&
+    pet.customerId === appointment.customerId && pet.appointmentDate === appointment.appointmentDate
+  )).filter((pet) => pet.status !== "cancelled");
+  if (pets.length < 2) return appointmentDetailRows(appointment);
+  const ordered = [...pets].sort((a, b) => (a.scheduledStart ?? 1440) - (b.scheduledStart ?? 1440));
+  const rows: Array<[string, string]> = [["Date", formatAppointmentDateLabel(appointment.appointmentDate)]];
+  for (const pet of ordered) {
+    rows.push(...appointmentDetailRows(pet).filter(([label]) =>
+      ["Pet", "Service", "Time", "Estimated Total", "Vaccination"].includes(label)
+    ).map(([label, value]): [string, string] => [label === "Estimated Total" ? "Pet estimate" : label, value]));
+  }
+  rows.push(...appointmentDetailRows(appointment).filter(([label]) => ["Address", "Travel"].includes(label)));
+  const total = customerVisitEstimate(ordered);
+  rows.push(["Estimated Total", total == null ? "To be confirmed" : `From ${formatPrice(total)}`]);
+  return rows;
+}
 
 export type StaffCreatedBookingNotice = {
   firstName: string;
@@ -17,13 +38,15 @@ export type StaffCreatedBookingNotice = {
 export function buildStaffCreatedBookingEmail(
   appointment: AppointmentRecord,
   notice: StaffCreatedBookingNotice,
+  appointments: AppointmentRecord[] = [appointment],
 ) {
+  const visitRows = staffCreatedVisitDetailRows(appointment, appointments);
   if (notice.requiresProfileCompletion) {
     const greetingName = notice.firstName.trim() || "there";
     const subject = "Please complete your profile to confirm your appointment";
     const introParagraph = "Your appointment is not confirmed yet because some required information is missing. Please click the button below to complete your profile.";
     const closingParagraph = "";
-    const detailRows = appointmentDetailRows(appointment).map(([label,value]) => ({label,value:label === "Address" ? [appointment.addressStreet, appointment.addressCity].filter(Boolean).join(", ") : value}));
+    const detailRows = visitRows.map(([label,value]) => ({label,value:label === "Address" ? [appointment.addressStreet, appointment.addressCity].filter(Boolean).join(", ") : value}));
     const text = [`Hi ${greetingName},`, "", introParagraph, "", ...detailRows.map(({label,value}) => `${label}: ${value}`), "", closingParagraph, "", `Complete profile & confirm appointment: ${notice.confirmUrl}`].join("\n");
     return buildCustomerLetterEmail({subject,greetingName,greeting:"Hi",introParagraph,detailRows,estimateNote:"",closingParagraph,cta:{href:notice.confirmUrl,label:"Complete profile & confirm appointment"}},text);
   }
@@ -38,7 +61,7 @@ export function buildStaffCreatedBookingEmail(
     "",
     introParagraph,
     "",
-    ...appointmentDetailRows(appointment).map(
+    ...visitRows.map(
       ([label, value]) => `${label}: ${value}`,
     ),
     "",
@@ -54,7 +77,7 @@ export function buildStaffCreatedBookingEmail(
       subject,
       greetingName,
       introParagraph,
-      detailRows: appointmentDetailRows(appointment).map(([label, value]) => ({
+      detailRows: visitRows.map(([label, value]) => ({
         label,
         value,
       })),
