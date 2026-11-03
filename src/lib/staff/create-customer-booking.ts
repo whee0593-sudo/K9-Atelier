@@ -840,7 +840,7 @@ export async function createStaffCustomerBooking(
       console.error("staff booking merchant notify failed:", error);
     }
     const confirmUrl = siteUrl(customerConfirmPath(confirm.token));
-    const petNames = appointments.map((entry) => entry.petName);
+    const petNames = [...new Map(appointments.map((entry) => [entry.petId, entry.petName])).values()];
 
     let requiresProfileCompletion = createdAccount;
     try {

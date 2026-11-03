@@ -97,6 +97,7 @@ export function buildStaffCreatedBookingEmail(
       cta: {
         href: confirmUrl.toString(),
         label: "Confirm",
+        variant: "primary",
       },
     },
     text,
@@ -113,22 +114,18 @@ function formatPetNameList(names: string[]) {
 
 export function buildStaffCreatedBookingSms(
   appointment: AppointmentRecord,
-  confirmUrl: string,
+  _confirmUrl: string,
   petNames: string[] = [appointment.petName],
-  profileNotice?: {firstName: string; requiresProfileCompletion: boolean},
+  _profileNotice?: {firstName: string; requiresProfileCompletion: boolean},
 ) {
-  if (profileNotice?.requiresProfileCompletion) {
-    const name = profileNotice.firstName.trim() || "there";
-    return `K9 ATELIER: Hi ${name}, your appointment for ${formatPetNameList(petNames)} is not confirmed yet because some required information is missing. Please use the link below to complete your profile and confirm your appointment.\n\n${confirmUrl}\n\nReply STOP to opt out.`;
-  }
   const dateLabel = formatAppointmentDateLabel(appointment.appointmentDate);
   const petLabel = formatPetNameList(petNames);
+  const time = appointment.scheduledStart == null ? appointment.appointmentTime : formatMinutesLabel(appointment.scheduledStart);
   const when =
-    appointment.appointmentTime &&
-    appointment.appointmentTime !== ARRIVAL_WINDOW_PENDING_LABEL
-      ? `${dateLabel} between ${appointment.appointmentTime}`
+    time && time !== ARRIVAL_WINDOW_PENDING_LABEL
+      ? `${dateLabel} ${time}`
       : dateLabel;
-  return `K9 Atelier reserved a visit for ${petLabel} on ${when}. Please reply C to confirm your appointment. Or save your details and confirm online: ${confirmUrl} Reply STOP to opt out.`;
+  return `K9 Atelier reserved an appointment for ${petLabel} on ${when}. Please reply C to confirm your appointment. Reply STOP to opt out.`;
 }
 
 export type StaffBookingInviteNotice = {

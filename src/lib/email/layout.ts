@@ -189,7 +189,7 @@ export type CustomerLetterEmailContent = {
   detailRows: CustomerLetterDetailRow[];
   estimateNote: string;
   closingParagraph: string;
-  cta: { href: string; label: string };
+  cta: { href: string; label: string; variant?: "primary" };
 };
 
 function customerLetterDetailRow(label: string, value: string) {
@@ -200,6 +200,9 @@ function customerLetterDetailRow(label: string, value: string) {
 }
 
 export function buildCustomerLetterEmailHtml(content: CustomerLetterEmailContent) {
+  const ctaStyle = content.cta.variant === "primary"
+    ? "border:1px solid #6b596e; background-color:#6b596e; color:#FAF7F2;"
+    : `border:1px solid ${STAFF_EMAIL.gold}; color:${STAFF_EMAIL.gold};`;
   const detailsHtml = content.detailRows
     .map(({ label, value }) => customerLetterDetailRow(label, value))
     .join("");
@@ -235,7 +238,7 @@ export function buildCustomerLetterEmailHtml(content: CustomerLetterEmailContent
         <p style="margin:0 0 14px; font-size:12px; color:${STAFF_EMAIL.muted};font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(content.estimateNote)}</p>
         ${content.closingParagraph ? `<p style="margin:0 0 22px;font-family:${EMAIL_FONT_FAMILY};font-size:16px;">${escapeHtml(content.closingParagraph)}</p>` : ""}
         <div style="text-align:center;font-family:${EMAIL_FONT_FAMILY};">
-          <a href="${escapeHtml(content.cta.href)}" style="display:inline-block; border:1px solid ${STAFF_EMAIL.gold}; color:${STAFF_EMAIL.gold}; padding:10px 28px; text-decoration:none; font-size:11px; letter-spacing:2px;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(content.cta.label)}</a>
+          <a href="${escapeHtml(content.cta.href)}" style="display:inline-block; ${ctaStyle} padding:10px 28px; text-decoration:none; font-size:11px; letter-spacing:2px;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(content.cta.label)}</a>
         </div>
       </div>
       <div style="background-color:${STAFF_EMAIL.cream}; padding:22px 32px; text-align:center; font-size:11px; color:${STAFF_EMAIL.muted}; letter-spacing:0.5px; font-family:${EMAIL_FONT_FAMILY};">
