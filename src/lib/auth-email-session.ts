@@ -29,10 +29,12 @@ export function isRecoveryAuthLink() {
 export function hasEmailAuthTokens() {
   if (typeof window === "undefined") return false;
   const { params, hash } = urlAuthParams();
+  const pathname = window.location.pathname;
+  const bookingConfirmation = pathname === "/confirm-account" || pathname.startsWith("/confirm-account/");
   return Boolean(
     params.get("code") ||
       params.get("token_hash") ||
-      params.get("token") ||
+      (params.get("token") && !bookingConfirmation) ||
       params.get("type") === "recovery" ||
       hash.get("access_token") ||
       hash.get("token_hash") ||
