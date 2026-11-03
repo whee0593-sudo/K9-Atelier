@@ -666,7 +666,7 @@ describe("staff-created booking copy", () => {
     const sms = buildStaffCreatedBookingSms(appointment, confirmUrl);
     assert.match(sms, /reply C to confirm/i);
     assert.match(sms, /Bella/);
-    assert.match(sms, /confirm-account\?token=abc/);
+    assert.doesNotMatch(sms, /https?:|confirm-account|confirm online|save your details/i);
     const multiSms = buildStaffCreatedBookingSms(appointment, confirmUrl, [
       "Bella",
       "Max",
@@ -702,11 +702,10 @@ it("uses direct email confirmation while retaining the separate SMS profile flow
   assert.doesNotMatch(email.text, /reply C|securely saved|Looking forward|card on file/i);
   for (const petNames of [["Molly"],["Molly","Daisy"],["Molly","Daisy","Milo"]]) {
     const sms = buildStaffCreatedBookingSms(appointment, confirmUrl, petNames, {firstName:"Daniel",requiresProfileCompletion:true});
-    assert.match(sms, /Hi Daniel/);
-    assert.match(sms, /some required information is missing/);
-    assert.match(sms, /use the link below to complete your profile and confirm your appointment/);
+    assert.match(sms, /^K9 Atelier reserved an appointment for /);
+    assert.doesNotMatch(sms, /complete your profile|https?:|confirm-account|confirm online|save your details/i);
     assert.match(sms, /Reply STOP to opt out/);
-    assert.doesNotMatch(sms, /reply C to confirm/i);
+    assert.match(sms, /Please reply C to confirm your appointment\./);
     for (const petName of petNames) assert.ok(sms.includes(petName));
   }
 });
@@ -742,4 +741,17 @@ it("combines multiple services per pet, includes paid travel once and excludes c
   const unknown = staffCreatedVisitDetailRows({...first, estimatedDurationMinutes: null, estimatedTotal: null}, []);
   assert.equal(unknown[1]![1], "To be confirmed");
   assert.equal(unknown.at(-1)![1], "To be confirmed");
+});
+
+it("uses the website purple for Confirm and sends the exact link-free visit SMS", () => {
+  const appointment = { ...sampleAppointment(), scheduledStart: 840, appointmentDate: "2026-11-10", appointmentTime: "2:00–3:23 PM" };
+  const expected = "K9 Atelier reserved an appointment for LYCHEE and YOYO on Tuesday, November 10, 2026 2:00 PM. Please reply C to confirm your appointment. Reply STOP to opt out.";
+  for (const requiresProfileCompletion of [false, true]) {
+    assert.equal(buildStaffCreatedBookingSms(appointment, "https://example.com/private-token", ["LYCHEE", "YOYO"], { firstName: "Penny", requiresProfileCompletion }), expected);
+  }
+  const email = buildStaffCreatedBookingEmail(appointment, {firstName:"Penny",confirmUrl:"https://example.com/confirm-account?token=preview",createdAccount:false});
+  const button = email.html.match(/<a[^>]*>Confirm<\/a>/)?.[0] ?? "";
+  assert.match(button, /background-color:#6b596e/);
+  assert.match(button, /color:#FAF7F2/);
+  assert.ok(buildStaffCreatedBookingSms(appointment, "unused", ["LYCHEE", "YOYO", "MILO"]).includes("LYCHEE, YOYO, and MILO"));
 });
