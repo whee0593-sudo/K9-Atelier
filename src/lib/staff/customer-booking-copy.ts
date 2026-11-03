@@ -59,20 +59,13 @@ export function buildStaffCreatedBookingEmail(
   appointments: AppointmentRecord[] = [appointment],
 ) {
   const visitRows = staffCreatedVisitDetailRows(appointment, appointments);
-  if (notice.requiresProfileCompletion) {
-    const greetingName = notice.firstName.trim() || "there";
-    const subject = "Please complete your profile to confirm your appointment";
-    const introParagraph = "Your appointment is not confirmed yet because some required information is missing. Please click the button below to complete your profile.";
-    const closingParagraph = "";
-    const detailRows = visitRows.map(([label,value]) => ({label,value:label === "Address" ? [appointment.addressStreet, appointment.addressCity].filter(Boolean).join(", ") : value}));
-    const text = [`Hi ${greetingName},`, "", introParagraph, "", ...detailRows.map(({label,value}) => `${label}: ${value}`), "", closingParagraph, "", `Complete profile & confirm appointment: ${notice.confirmUrl}`].join("\n");
-    return buildCustomerLetterEmail({subject,greetingName,greeting:"Hi",introParagraph,detailRows,estimateNote:"",closingParagraph,cta:{href:notice.confirmUrl,label:"Complete profile & confirm appointment"}},text);
-  }
+  const confirmUrl = new URL(notice.confirmUrl);
+  confirmUrl.pathname = "/confirm-account/appointment";
+  confirmUrl.hash = "";
   const greetingName = notice.firstName.trim() || "there";
   const subject = "Please confirm your K9 Atelier appointment";
-  const introParagraph = "K9 Atelier reserved this grooming visit for you. Please reply C to our appointment text message to confirm.";
-  const closingParagraph =
-    "You can use the link below to review your details, set up your account, or add a payment method. To confirm online, review your details, add a card if needed, and select Save & confirm appointment. Rabies vaccination details are optional and can be added later.";
+  const introParagraph = "Please review the details of your appointment with K9 Atelier and click the button below to confirm.";
+  const closingParagraph = "";
 
   const text = [
     `Dear ${greetingName},`,
@@ -87,7 +80,7 @@ export function buildStaffCreatedBookingEmail(
     "",
     closingParagraph,
     "",
-    `Review details: ${notice.confirmUrl}`,
+    `Confirm: ${confirmUrl.toString()}`,
   ].join("\n");
 
   return buildCustomerLetterEmail(
@@ -102,8 +95,8 @@ export function buildStaffCreatedBookingEmail(
       estimateNote,
       closingParagraph,
       cta: {
-        href: notice.confirmUrl,
-        label: "Review Details",
+        href: confirmUrl.toString(),
+        label: "Confirm",
       },
     },
     text,
