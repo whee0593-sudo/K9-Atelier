@@ -7,22 +7,40 @@ import {
 import { buildCustomerLetterEmail } from "@/lib/email/layout";
 import { estimateNote } from "@/lib/notifications";
 import { formatPrice } from "@/lib/business";
-import { customerVisitEstimate } from "@/lib/appointments/customer-visits";
+import { customerAppointmentServiceLines, customerVisitEstimate } from "@/lib/appointments/customer-visits";
+import { formatEstimatedDuration } from "@/lib/staff/schedule-conflict";
+import { formatMinutesLabel } from "@/lib/appointments/closures";
 
 export function staffCreatedVisitDetailRows(appointment: AppointmentRecord, siblings: AppointmentRecord[]) {
-  const pets = siblings.filter((pet) => pet.id === appointment.id || (
+  const pets = [appointment, ...siblings.filter((pet) => pet.id !== appointment.id)].filter((pet) => pet.id === appointment.id || (
     appointment.visitId && pet.visitId === appointment.visitId &&
     pet.customerId === appointment.customerId && pet.appointmentDate === appointment.appointmentDate
   )).filter((pet) => pet.status !== "cancelled");
-  if (pets.length < 2) return appointmentDetailRows(appointment);
   const ordered = [...pets].sort((a, b) => (a.scheduledStart ?? 1440) - (b.scheduledStart ?? 1440));
-  const rows: Array<[string, string]> = [["Date", formatAppointmentDateLabel(appointment.appointmentDate)]];
-  for (const pet of ordered) {
-    rows.push(...appointmentDetailRows(pet).filter(([label]) =>
-      ["Pet", "Service", "Time", "Estimated Total", "Vaccination"].includes(label)
-    ).map(([label, value]): [string, string] => [label === "Estimated Total" ? "Pet estimate" : label, value]));
+  const first = ordered[0] ?? appointment;
+  const time = first.scheduledStart == null ? first.appointmentTime : formatMinutesLabel(first.scheduledStart);
+  const duration = ordered.length > 0 && ordered.every((pet) => (pet.estimatedDurationMinutes ?? 0) > 0)
+    ? formatEstimatedDuration(ordered.reduce((sum, pet) => sum + pet.estimatedDurationMinutes!, 0))
+    : "To be confirmed";
+  const address = appointmentDetailRows(appointment).find(([label]) => label === "Address")![1];
+  const rows: Array<[string, string]> = [
+    ["Date & Time", `${formatAppointmentDateLabel(first.appointmentDate)} · ${time}`],
+    ["Estimated Service Duration", duration],
+    ["Address", address],
+  ];
+  const byPet = new Map<string, AppointmentRecord[]>();
+  for (const entry of ordered) {
+    const key = entry.petId || entry.id;
+    byPet.set(key, [...(byPet.get(key) ?? []), entry]);
   }
-  rows.push(...appointmentDetailRows(appointment).filter(([label]) => ["Address", "Travel"].includes(label)));
+  for (const services of byPet.values()) {
+    const pet = services[0]!;
+    rows.push(["Pet", `${pet.petName}${pet.petBreed ? ` (${pet.petBreed})` : ""}`]);
+    rows.push(["Services", services.flatMap((service) => customerAppointmentServiceLines(service).map((line) => line.name)).join(" · ")]);
+  }
+  // Stored appointment estimates already include their allocated share of travel.
+  const travelFee = ordered.reduce((sum, pet) => sum + Math.round(pet.travelFee * 100), 0) / 100;
+  if (travelFee > 0) rows.push(["Travelling Fee", formatPrice(travelFee)]);
   const total = customerVisitEstimate(ordered);
   rows.push(["Estimated Total", total == null ? "To be confirmed" : `From ${formatPrice(total)}`]);
   return rows;
