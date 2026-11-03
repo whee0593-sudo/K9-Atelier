@@ -707,3 +707,16 @@ it("asks a customer with incomplete details to complete their profile without of
     for (const petName of petNames) assert.ok(sms.includes(petName));
   }
 });
+
+it("includes every dog, saved time and estimate in both staff email formats", () => {
+  const first = { ...sampleAppointment(), visitId: "shared", petName: "LYCHEE", estimatedTotal: 140, scheduledStart: 840, appointmentTime: "2:00–3:23 PM" };
+  const second = { ...first, id: "second", petName: "YOYO", serviceName: "Signature Bath", scheduledStart: 923, appointmentTime: "3:23–4:23 PM", estimatedTotal: 80 };
+  for (const requiresProfileCompletion of [false, true]) {
+    const email = buildStaffCreatedBookingEmail(first, { firstName: "Penny", confirmUrl: "https://example.com/confirm", createdAccount: false, requiresProfileCompletion }, [second, first]);
+    for (const body of [email.text, email.html]) {
+      for (const value of ["LYCHEE", "YOYO", "Signature Bath", "2:00–3:23 PM", "3:23–4:23 PM", "$140", "$80", "$220"]) assert.ok(body.includes(value), value);
+    }
+  }
+  const unrelated = { ...second, visitId: "other", petName: "Unrelated" };
+  assert.ok(!buildStaffCreatedBookingEmail(first, { firstName: "Penny", confirmUrl: "https://example.com", createdAccount: false }, [first, unrelated]).text.includes("Unrelated"));
+});

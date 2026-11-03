@@ -859,7 +859,7 @@ export async function createStaffCustomerBooking(
         confirmUrl,
         createdAccount,
         requiresProfileCompletion,
-      });
+      }, appointments);
       emailed = isCommunicationAccepted(
         await sendEmail({
           to: input.email,
