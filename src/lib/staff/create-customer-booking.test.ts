@@ -22,6 +22,7 @@ import { preferredPaymentMethodId } from "@/lib/staff/customer-confirm-status";
 import {
   buildStaffCreatedBookingEmail,
   buildStaffCreatedBookingSms,
+  staffCreatedVisitDetailRows,
 } from "@/lib/staff/customer-booking-copy";
 import { appointmentStatusLabel } from "@/lib/appointments/map";
 import type { AppointmentRecord } from "@/lib/appointments/types";
@@ -708,15 +709,35 @@ it("asks a customer with incomplete details to complete their profile without of
   }
 });
 
-it("includes every dog, saved time and estimate in both staff email formats", () => {
-  const first = { ...sampleAppointment(), visitId: "shared", petName: "LYCHEE", estimatedTotal: 140, scheduledStart: 840, appointmentTime: "2:00–3:23 PM" };
-  const second = { ...first, id: "second", petName: "YOYO", serviceName: "Signature Bath", scheduledStart: 923, appointmentTime: "3:23–4:23 PM", estimatedTotal: 80 };
+it("orders visit details before pets and totals all services in both staff email formats", () => {
+  const first = { ...sampleAppointment(), visitId: "shared", petName: "LYCHEE", estimatedTotal: 140, scheduledStart: 840, estimatedDurationMinutes: 83, appointmentTime: "2:00–3:23 PM" };
+  const second = { ...first, id: "second", petId: "yoyo", petName: "YOYO", serviceName: "Signature Bath", scheduledStart: 923, estimatedDurationMinutes: 60, appointmentTime: "3:23–4:23 PM", estimatedTotal: 80 };
+  assert.deepEqual(staffCreatedVisitDetailRows(first, [second, first]).map(([label]) => label), ["Date & Time", "Estimated Service Duration", "Address", "Pet", "Services", "Pet", "Services", "Estimated Total"]);
   for (const requiresProfileCompletion of [false, true]) {
     const email = buildStaffCreatedBookingEmail(first, { firstName: "Penny", confirmUrl: "https://example.com/confirm", createdAccount: false, requiresProfileCompletion }, [second, first]);
     for (const body of [email.text, email.html]) {
-      for (const value of ["LYCHEE", "YOYO", "Signature Bath", "2:00–3:23 PM", "3:23–4:23 PM", "$140", "$80", "$220"]) assert.ok(body.includes(value), value);
+      for (const value of ["LYCHEE", "YOYO", "Signature Bath", "2:00 PM", "2 hr 23 min", "$220"]) assert.ok(body.includes(value), value);
+      assert.doesNotMatch(body, /Pet estimate|Travelling Fee|Complimentary|3:23–4:23 PM|\$140|\$80/);
     }
   }
   const unrelated = { ...second, visitId: "other", petName: "Unrelated" };
   assert.ok(!buildStaffCreatedBookingEmail(first, { firstName: "Penny", confirmUrl: "https://example.com", createdAccount: false }, [first, unrelated]).text.includes("Unrelated"));
+});
+
+it("combines multiple services per pet, includes paid travel once and excludes cancelled dogs", () => {
+  const first = { ...sampleAppointment(), visitId: "shared", estimatedTotal: 140.25, travelFee: 10, estimatedDurationMinutes: 60 };
+  const extra = { ...first, id: "extra", serviceName: "Extra Care", estimatedTotal: 20.1, travelFee: 0, estimatedDurationMinutes: 15 };
+  const third = { ...first, id: "third", petId: "third", petName: "Third", estimatedTotal: 30, travelFee: 0 };
+  const cancelled = { ...third, id: "cancelled", petId: "cancelled", petName: "Cancelled", status: "cancelled" as const };
+  const rows = staffCreatedVisitDetailRows(first, [first, extra, third, cancelled]);
+  assert.equal(rows.filter(([label]) => label === "Pet").length, 2);
+  assert.ok(rows.find(([label]) => label === "Services")![1].includes("Extra Care"));
+  assert.deepEqual(rows.slice(-2), [["Travelling Fee", "$10"], ["Estimated Total", "From $190.35"]]);
+  assert.ok(!JSON.stringify(rows).includes("Cancelled"));
+  const single = staffCreatedVisitDetailRows(first, [first]);
+  assert.equal(single[0]![0], "Date & Time");
+  assert.equal(single[1]![1], "1 hr");
+  const unknown = staffCreatedVisitDetailRows({...first, estimatedDurationMinutes: null, estimatedTotal: null}, []);
+  assert.equal(unknown[1]![1], "To be confirmed");
+  assert.equal(unknown.at(-1)![1], "To be confirmed");
 });
