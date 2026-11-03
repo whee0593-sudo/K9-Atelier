@@ -658,10 +658,10 @@ describe("staff-created booking copy", () => {
       createdAccount: true,
     });
     assert.match(email.subject, /confirm/i);
-    assert.match(email.text, /confirm-account\?token=abc/);
-    assert.match(email.html, /Review Details/);
-    assert.match(email.text, /Rabies vaccination details are optional/);
-    assert.match(email.text, /reply C/i);
+    assert.match(email.text, /confirm-account\/appointment\?token=abc/);
+    assert.match(email.html, />Confirm<\/a>/);
+    assert.doesNotMatch(email.text, /You can use the link below|Rabies vaccination details are optional|Review details/i);
+    assert.match(email.text, /click the button below to confirm/);
     assert.doesNotMatch(email.text, /card on file is required to secure/);
     const sms = buildStaffCreatedBookingSms(appointment, confirmUrl);
     assert.match(sms, /reply C to confirm/i);
@@ -688,13 +688,15 @@ describe("appointmentStatusLabel", () => {
   });
 });
 
-it("asks a customer with incomplete details to complete their profile without offering SMS-only confirmation", () => {
+it("uses direct email confirmation while retaining the separate SMS profile flow", () => {
   const appointment = sampleAppointment();
   const confirmUrl = "https://k9atelier.com/confirm-account?token=example";
   const email = buildStaffCreatedBookingEmail(appointment, {firstName:"Daniel",confirmUrl,createdAccount:false,requiresProfileCompletion:true});
-  assert.match(email.text, /^Hi Daniel,/);
-  assert.match(email.html, />Hi Daniel,</);
-  assert.match(email.text, /some required information is missing/);
+  assert.match(email.text, /^Dear Daniel,/);
+  assert.match(email.html, />Dear Daniel,</);
+  assert.match(email.text, /Please review the details of your appointment with K9 Atelier and click the button below to confirm\./);
+  assert.match(email.html, /href="https:\/\/k9atelier.com\/confirm-account\/appointment\?token=example"/);
+  assert.doesNotMatch(email.html, /You can use the link below|Review Details|complete your profile|reply C/i);
   assert.doesNotMatch(email.text, /Please click the button below to complete your profile and confirm your appointment/);
   assert.doesNotMatch(email.html, /Please click the button below to complete your profile and confirm your appointment/);
   assert.doesNotMatch(email.text, /reply C|securely saved|Looking forward|card on file/i);

@@ -79,7 +79,7 @@ export type CustomerConfirmPreview = {
   stripeConfigured: boolean;
 };
 
-async function loadConfirmAppointment(token: string) {
+async function loadConfirmAppointment(token: string, includePaymentMethods = true) {
   if (!hasSupabaseAdminConfig()) {
     return { ok: false as const, error: "misconfigured" as const };
   }
@@ -141,7 +141,7 @@ async function loadConfirmAppointment(token: string) {
   const appointments = appointmentRows.map(mapAppointmentRowToRecord);
   const appointment = appointments[0]!;
   const requiresPassword = authUser.user.app_metadata?.unclaimed === true;
-  const paymentMethods = await listPaymentMethodsForCustomer(row.customer_id);
+  const paymentMethods = includePaymentMethods ? await listPaymentMethodsForCustomer(row.customer_id) : [];
   if (!paymentMethods) return { ok: false as const, error: "server" as const };
 
   return {
@@ -158,6 +158,36 @@ async function loadConfirmAppointment(token: string) {
     lastName: profile?.last_name ?? "",
     phone: profile?.phone ?? "",
   };
+}
+
+/** Email confirmation acknowledges the visit, without claiming an account or changing payment details. */
+export async function confirmStaffBookingFromEmail(token: string, load = loadConfirmAppointment) {
+  if (!/^[a-f0-9]{64}$/i.test(token)) return { error: "not_found" as const };
+  const result = await load(token, false);
+  if (!result.ok) return result;
+  if (result.appointments.every((pet) => pet.status === "confirmed" && pet.customerConfirmedAt)) {
+    return { confirmed: true as const };
+  }
+  const now = new Date().toISOString();
+  const { data, error } = await result.admin.from("appointments")
+    .update({ status: "confirmed", confirmed_at: result.row.confirmed_at ?? now,
+      customer_confirmed_at: result.row.customer_confirmed_at ?? now })
+    .eq("customer_id", result.row.customer_id)
+    .in("id", result.appointments.map((pet) => pet.id))
+    .in("status", ["pending_confirmation", "confirmed"])
+    .select("id");
+  if (error || !data || data.length !== result.appointments.length) {
+    console.error("confirmStaffBookingFromEmail failed:", error?.message ?? "Visit changed during confirmation");
+    return { error: "server" as const };
+  }
+  try {
+    await notifyMerchantVisitConfirmedFromVisit(result.appointment.visitId, {
+      customerName: result.firstName || null, replyTo: result.email || null,
+    });
+  } catch (error) {
+    console.error("email booking confirmation merchant notice failed:", error);
+  }
+  return { confirmed: true as const };
 }
 
 export async function getCustomerConfirmPreview(
