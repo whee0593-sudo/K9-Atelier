@@ -18,15 +18,6 @@ import {
   appointmentFieldsFromVisitLineItems,
   mergeVisitLineItemsIntoOptions,
 } from "@/lib/charges/visit-line-items";
-import { recordCustomerSms } from "@/lib/sms/inbox";
-import { normalizePhoneToE164 } from "@/lib/sms/phone";
-import {
-  buildCommunicationContext,
-  communicationFingerprint,
-} from "@/lib/communications/context";
-import { isCommunicationAccepted } from "@/lib/communications/result";
-import { isSmsConfigured, sendSms } from "@/lib/sms/twilio";
-import { buildVisitServicesUpdatedSms } from "@/lib/sms/visit-update-copy";
 import type { ChargeLineItem } from "@/lib/charges/types";
 import type { AppointmentStatus } from "@/lib/appointments/types";
 
@@ -40,7 +31,6 @@ export async function updateAppointmentVisitServices(input: {
       lineItems: ChargeLineItem[];
       estimatedTotal: number;
       serviceName: string;
-      smsSent: boolean;
     }
   | {
       error:
@@ -73,7 +63,7 @@ export async function updateAppointmentVisitServices(input: {
   const { data: row, error } = await admin
     .from("appointments")
     .select(
-      "id, customer_id, visit_id, travel_fee, status, service_id, service_name, add_on_options, appointment_date, service_ended_at, pets ( weight_lbs ), profiles ( first_name, last_name, phone )",
+      "id, visit_id, travel_fee, status, service_id, service_name, add_on_options, appointment_date, service_ended_at, pets ( weight_lbs )",
     )
     .eq("id", input.appointmentId)
     .maybeSingle();
@@ -174,25 +164,11 @@ export async function updateAppointmentVisitServices(input: {
     }
   }
 
-  const smsSent = await sendVisitServicesUpdatedSms({
-    visitId: (row.visit_id as string | null) ?? null,
-    appointmentId: row.id as string,
-    customerId: row.customer_id as string,
-    profile: firstRelation<{
-      first_name: string | null;
-      last_name: string | null;
-      phone: string | null;
-    }>(row.profiles),
-    lineItems,
-    estimatedTotal: fields.estimatedTotal,
-  });
-
   return {
     ok: true,
     lineItems,
     estimatedTotal: fields.estimatedTotal,
     serviceName: fields.serviceName,
-    smsSent,
   };
 }
 
@@ -328,61 +304,6 @@ function firstRelation<T>(value: unknown): T | null {
   if (value == null) return null;
   if (Array.isArray(value)) return (value[0] ?? null) as T | null;
   return value as T;
-}
-
-async function sendVisitServicesUpdatedSms(input: {
-  visitId: string | null;
-  appointmentId: string;
-  customerId: string;
-  profile: {
-    first_name: string | null;
-    last_name: string | null;
-    phone: string | null;
-  } | null;
-  lineItems: ChargeLineItem[];
-  estimatedTotal: number;
-}) {
-  if (!isSmsConfigured()) return false;
-  const to = normalizePhoneToE164(input.profile?.phone ?? "");
-  if (!to) return false;
-  const body = buildVisitServicesUpdatedSms({
-    services: input.lineItems,
-    estimatedTotal: input.estimatedTotal,
-  });
-  try {
-    const sent = isCommunicationAccepted(
-      await sendSms({
-        to,
-        body,
-        communication: buildCommunicationContext({
-          notificationType: "visit_services_updated",
-          recipient: to,
-          customerId: input.customerId,
-          visitId: input.visitId,
-          appointmentIds: [input.appointmentId],
-          dedupe: input.visitId ? "visit" : "appointment",
-          fingerprint: communicationFingerprint(body),
-        }),
-      }),
-    );
-    if (!sent) return false;
-    const customerName = [input.profile?.first_name, input.profile?.last_name]
-      .filter(Boolean)
-      .join(" ")
-      .trim();
-    await recordCustomerSms({
-      direction: "outbound",
-      phone: to,
-      body,
-      customerId: input.customerId,
-      customerName: customerName || null,
-      petNames: [],
-    });
-    return true;
-  } catch (error) {
-    console.error("sendVisitServicesUpdatedSms failed:", error);
-    return false;
-  }
 }
 
 export function visitServicesEstimatedTotal(items: ChargeLineItem[]) {

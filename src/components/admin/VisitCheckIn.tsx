@@ -15,7 +15,6 @@ import { formatServiceAddress } from "@/lib/travel";
 import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
 import { VisitServiceEditor } from "@/components/admin/VisitServiceEditor";
 import { sumLineItems } from "@/lib/charges/money";
-import { buildVisitServicesUpdatedSms } from "@/lib/sms/visit-update-copy";
 import type { ChargeLineItem } from "@/lib/charges/types";
 
 export function VisitCheckIn({
@@ -158,12 +157,7 @@ export function VisitCheckIn({
         },
       });
       setSavedLineItems(lineItems);
-      setServicesNotice(
-        `Preview only · guest would receive: ${buildVisitServicesUpdatedSms({
-          services: lineItems,
-          estimatedTotal: total,
-        })}`,
-      );
+      setServicesNotice("Services saved.");
       setSavingServices(false);
       return;
     }
@@ -182,7 +176,6 @@ export function VisitCheckIn({
         code?: string;
         serviceName?: string;
         estimatedTotal?: number;
-        smsSent?: boolean;
       };
       if (!response.ok) {
         if (body.code === "addon_confirmation_required") {
@@ -209,11 +202,7 @@ export function VisitCheckIn({
         },
       });
       setSavedLineItems(lineItems);
-      setServicesNotice(
-        body.smsSent
-          ? "Services saved. The guest was texted the update."
-          : "Services saved. The guest could not be texted.",
-      );
+      setServicesNotice("Services saved.");
     } catch {
       setError("Could not save the services.");
     } finally {
