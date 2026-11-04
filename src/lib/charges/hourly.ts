@@ -26,6 +26,17 @@ export function hourlyAmountFromTimes(
   return Math.round(((end - start) / 3_600_000) * rate * 100) / 100;
 }
 
+export function completedHourlyAmount(
+  serviceId: string,
+  startedAt: string | null | undefined,
+  endedAt: string | null | undefined,
+) {
+  const rate = hourlyRateForCatalogId(serviceId);
+  if (rate == null || !startedAt || !endedAt) return null;
+  if (!(Date.parse(endedAt) > Date.parse(startedAt))) return null;
+  return hourlyAmountFromTimes(startedAt, endedAt, rate);
+}
+
 export function formatVisitClock(iso: string, timeZone = BUSINESS_TIME_ZONE) {
   return new Intl.DateTimeFormat("en-US", {
     timeZone,

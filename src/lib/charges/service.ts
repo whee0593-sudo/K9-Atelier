@@ -1,5 +1,5 @@
 import { receiptEmailAddress } from "@/lib/charges/receipt-recipient";
-import { hourlyRateForCatalogId } from "@/lib/charges/hourly";
+import { completedHourlyAmount, hourlyRateForCatalogId } from "@/lib/charges/hourly";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStaffSession } from "@/lib/staff/auth";
 import { visitTravelLinesMatch } from "@/lib/visits/travel-fee";
@@ -213,6 +213,11 @@ export async function getCollectContext(
     paidService
       ? paidService.line_items
       : null;
+  const timedPrice = completedHourlyAmount(
+    appointment.serviceId,
+    appointmentWithTiming.serviceStartedAt,
+    appointmentWithTiming.serviceEndedAt,
+  );
   const defaultItems = paidBillItems
     ? withCatalogListAmount(paidBillItems, catalog)
     : visitCollect
@@ -226,6 +231,10 @@ export async function getCollectContext(
               : Number(appointmentRow.service_price),
           }),
           catalog,
+        ).map((item) =>
+          timedPrice != null && item.catalogId?.split("::")[0] === appointment.serviceId
+            ? { ...item, amount: timedPrice, listAmount: undefined }
+            : item,
         );
 
   return {
@@ -342,6 +351,7 @@ async function loadVisitCollect(
     return visitCheckoutPetFromStoredAppointment({
       id: row.id as string,
       status: String(row.status ?? ""),
+      serviceStartedAt: row.service_started_at as string | null,
       serviceName: String(row.service_name ?? "Service"),
       serviceId: String(row.service_id ?? ""),
       servicePrice:

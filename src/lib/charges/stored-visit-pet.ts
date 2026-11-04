@@ -5,10 +5,12 @@ import {
   servicePriceIsBaseOnly,
 } from "@/lib/charges/visit-line-items";
 import type { VisitCheckoutPet } from "@/lib/charges/visit-bill";
+import { completedHourlyAmount } from "@/lib/charges/hourly";
 
 export type StoredVisitAppointment = {
   id: string;
   status: string;
+  serviceStartedAt?: string | null;
   serviceName: string;
   serviceId: string;
   /** Primary service amount when the row is known to store the main service only. */
@@ -73,6 +75,7 @@ function linesFromSavedBill(
 export function visitCheckoutPetFromStoredAppointment(
   row: StoredVisitAppointment,
 ): VisitCheckoutPet {
+  const timedPrice = completedHourlyAmount(row.serviceId, row.serviceStartedAt, row.serviceEndedAt);
   const stored = readStoredVisitLineItems(row.addOnOptions);
   if (stored) {
     const confirmed = linesFromSavedBill(row, stored);
@@ -81,7 +84,7 @@ export function visitCheckoutPetFromStoredAppointment(
         appointmentId: row.id,
         petName: row.petName.trim() || "Dog",
         serviceName: confirmed.serviceName,
-        servicePrice: confirmed.servicePrice,
+        servicePrice: timedPrice ?? confirmed.servicePrice,
         status: row.status,
         serviceEndedAt: row.serviceEndedAt,
         addOns: confirmed.addOns,
@@ -110,7 +113,7 @@ export function visitCheckoutPetFromStoredAppointment(
         appointmentId: row.id,
         petName: row.petName.trim() || "Dog",
         serviceName: row.serviceName,
-        servicePrice: row.servicePrice,
+        servicePrice: timedPrice ?? row.servicePrice,
         status: row.status,
         serviceEndedAt: row.serviceEndedAt,
         addOns,
@@ -124,7 +127,7 @@ export function visitCheckoutPetFromStoredAppointment(
       appointmentId: row.id,
       petName: row.petName.trim() || "Dog",
       serviceName: row.serviceName,
-      servicePrice: row.servicePrice,
+      servicePrice: timedPrice ?? row.servicePrice,
       status: row.status,
       serviceEndedAt: row.serviceEndedAt,
       addOns: [],
@@ -136,7 +139,7 @@ export function visitCheckoutPetFromStoredAppointment(
     appointmentId: row.id,
     petName: row.petName.trim() || "Dog",
     serviceName: row.serviceName,
-    servicePrice: row.servicePrice,
+    servicePrice: timedPrice ?? row.servicePrice,
     status: row.status,
     serviceEndedAt: row.serviceEndedAt,
     addOns: [],
