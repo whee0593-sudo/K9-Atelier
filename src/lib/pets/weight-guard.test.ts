@@ -135,6 +135,8 @@ describe("checkout quotes", () => {
     assert.equal(small?.suggestedAmount, 90);
     assert.equal(mid?.suggestedAmount, 110);
     const lines = buildDefaultLineItems(appointment(), null);
+    const checkoutLines = buildDefaultLineItems({ ...appointment(), addOnIds: [] }, null, { savedServicePrice: 120 });
+    assert.equal(checkoutLines.find((item) => item.catalogId === BATH)?.amount, 120);
     assert.equal(
       lines.some((item) => item.amount === 90 || item.catalogId === BATH),
       false,
