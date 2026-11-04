@@ -13,7 +13,6 @@ import { buildPreviewCollectContext } from "@/lib/charges/preview";
 import type { CollectContext } from "@/lib/charges/types";
 import { formatServiceAddress } from "@/lib/travel";
 import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark";
-import { CheckoutTextToggle } from "@/components/admin/CheckoutTextToggle";
 import { VisitServiceEditor } from "@/components/admin/VisitServiceEditor";
 import { sumLineItems } from "@/lib/charges/money";
 import { buildVisitServicesUpdatedSms } from "@/lib/sms/visit-update-copy";
@@ -34,7 +33,6 @@ export function VisitCheckIn({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sendCheckoutText, setSendCheckoutText] = useState(true);
   const [lineItems, setLineItems] = useState<ChargeLineItem[]>([]);
   const [savedLineItems, setSavedLineItems] = useState<ChargeLineItem[]>([]);
   const loadVersion = useRef(0);
@@ -119,7 +117,7 @@ export function VisitCheckIn({
           body: JSON.stringify({
             action,
             scope: "visit",
-            sendCheckoutText: action === "check_out" ? sendCheckoutText : undefined,
+            sendCheckoutText: false,
           }),
         },
       );
@@ -364,12 +362,6 @@ export function VisitCheckIn({
               </div>
             ) : null}
             {servicesDirty ? <p className="mt-4 text-sm text-taupe" role="status">Save changes for {appointment.petName} before switching dogs or checking out.</p> : null}
-            <CheckoutTextToggle
-              checked={sendCheckoutText}
-              onChange={setSendCheckoutText}
-              disabled={busy || savingServices}
-              className="mt-8"
-            />
             <button
               type="button"
               disabled={busy || savingServices || servicesDirty}
