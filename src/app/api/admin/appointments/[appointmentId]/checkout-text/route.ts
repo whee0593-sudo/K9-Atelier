@@ -18,7 +18,7 @@ export async function POST(_request: Request, context: { params: Promise<{ appoi
     const visit = Array.isArray(data.visits) ? data.visits[0] : data.visits;
     if (!(visit?.service_ended_at ?? data.service_ended_at)) return staffJsonError("Check out before sending the completion text.", 409);
     if (!await sendCheckoutReadySms(appointmentId)) {
-      return staffJsonError("Could not send the check out text. Try again or uncheck the text option to continue.", 503);
+      return staffJsonError("Could not send the check out text. Try again.", 503);
     }
     return NextResponse.json({ sent: true });
   } catch {
