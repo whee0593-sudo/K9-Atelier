@@ -27,7 +27,6 @@ import {
 } from "@/lib/charges/hourly";
 import { HourlyVisitTimer } from "@/components/admin/HourlyVisitTimer";
 import { ChargeReceiptActions } from "@/components/admin/ChargeReceiptActions";
-import { CheckoutTextToggle } from "@/components/admin/CheckoutTextToggle";
 import { ChargeReceiptLetter } from "@/components/admin/ChargeReceiptLetter";
 import { ChargeRefundForm } from "@/components/admin/ChargeRefundForm";
 import { NoShowEvidencePanel } from "@/components/admin/NoShowEvidencePanel";
@@ -153,8 +152,8 @@ export function CollectCheckout({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [sendCheckoutText, setSendCheckoutText] = useState(true);
-  const presentLock = useRef(false);
+  const [checkoutTextStatus, setCheckoutTextStatus] = useState<"idle" | "sending" | "sent">("idle");
+  const checkoutTextLock = useRef(false);
   const paymentLock = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [serviceStartedAt, setServiceStartedAt] = useState<string | null>(null);
@@ -1057,7 +1056,39 @@ export function CollectCheckout({
           ) : null}
 
           {kind === "service" ? (
-            <CheckoutTextToggle checked={sendCheckoutText} onChange={setSendCheckoutText} disabled={busy} className="mt-6" />
+            <button
+              type="button"
+              disabled={busy || checkoutTextStatus !== "idle"}
+              onClick={async () => {
+                if (checkoutTextLock.current || checkoutTextStatus !== "idle") return;
+                if (preview) {
+                  setCheckoutTextStatus("sent");
+                  return;
+                }
+                checkoutTextLock.current = true;
+                setCheckoutTextStatus("sending");
+                setError(null);
+                try {
+                  const response = await fetch(
+                    `/api/admin/appointments/${appointmentId}/checkout-text`,
+                    { method: "POST", credentials: "include" },
+                  );
+                  const body = await response.json();
+                  if (!response.ok || body.sent !== true) {
+                    throw new Error(body.error ?? "Could not send the check out text. Try again.");
+                  }
+                  setCheckoutTextStatus("sent");
+                } catch (failure) {
+                  setError(failure instanceof Error ? failure.message : "Could not send the check out text. Try again.");
+                  setCheckoutTextStatus("idle");
+                } finally {
+                  checkoutTextLock.current = false;
+                }
+              }}
+              className="mt-6 w-full rounded-sm border border-deep-lavender px-6 py-4 text-sm text-deep-lavender disabled:opacity-50"
+            >
+              {checkoutTextStatus === "sent" ? "Text Sent" : checkoutTextStatus === "sending" ? "Sending…" : "Send Text"}
+            </button>
           ) : null}
           <button
             type="button"
@@ -1067,27 +1098,7 @@ export function CollectCheckout({
               Boolean(context.visit?.blockedMessage) ||
               (kind === "no_show" && !preview && !noShowConfirmed)
             }
-            onClick={async () => {
-              if (presentLock.current) return;
-              if (kind !== "service" || !sendCheckoutText || preview) {
-                setStep("pay");
-                return;
-              }
-              presentLock.current = true;
-              setBusy(true);
-              setError(null);
-              try {
-                const response = await fetch(`/api/admin/appointments/${appointmentId}/checkout-text`, { method: "POST", credentials: "include" });
-                const body = await response.json();
-                if (!response.ok) throw new Error(body.error ?? "Could not send the check out text. Try again or uncheck the text option to continue.");
-                setStep("pay");
-              } catch (failure) {
-                setError(failure instanceof Error ? failure.message : "Could not send the check out text. Try again or uncheck the text option to continue.");
-              } finally {
-                presentLock.current = false;
-                setBusy(false);
-              }
-            }}
+            onClick={() => setStep("pay")}
             className="mt-6 w-full rounded-sm bg-deep-lavender px-6 py-4 text-[11px] font-medium uppercase tracking-[0.16em] text-ivory disabled:opacity-50"
           >
             {kind === "no_show" ? "Continue to payment" : "Present to customer"}
