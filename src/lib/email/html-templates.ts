@@ -266,11 +266,9 @@ function customerAppointmentDetailRows(
   const petValue = appointment.petBreed
     ? `${appointment.petName}, ${appointment.petBreed}`
     : appointment.petName;
-  const travelLabel = `${appointment.travelDistanceMiles} mi · ${
-    appointment.travelFee === 0
-      ? "Complimentary"
-      : formatPrice(appointment.travelFee)
-  }`;
+  const travelLabel = appointment.travelFee === 0
+    ? "Complimentary"
+    : `${appointment.travelDistanceMiles} mi · ${formatPrice(appointment.travelFee)}`;
 
   return [
     { label: "Pet", value: petValue },
