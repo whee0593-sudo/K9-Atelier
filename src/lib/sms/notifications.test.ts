@@ -68,11 +68,13 @@ describe("appointment SMS copy", () => {
   it("keeps request, reminder, and on-the-way texts short", () => {
     const submitted = buildAppointmentSubmittedSms(details);
     const reminder = buildAppointmentReminderSms(details);
-    const enRoute = buildAppointmentEnRouteSms(details);
+    const enRoute = buildAppointmentEnRouteSms(details, 13 * 60 + 25);
     assert.match(submitted, /appointment request/);
     assert.match(submitted, /pending confirmation/);
     assert.match(reminder, /appointment is today/);
     assert.match(enRoute, /We're on the way/);
+    assert.match(enRoute, /Estimated arrival time: 1:25 pm\./);
+    assert.doesNotMatch(enRoute, /between|10–11 AM/);
   });
 
   it("asks for C and keeps the location to the street name", () => {

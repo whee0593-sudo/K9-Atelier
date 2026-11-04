@@ -56,6 +56,7 @@ export function AppointmentReviewPanel({
   const [paidKinds, setPaidKinds] = useState<Record<string, ChargeKind[]>>({});
   const [loading, setLoading] = useState(!preview);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [arrivalDraft, setArrivalDraft] = useState<{ id: string; time: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [calendarNonce, setCalendarNonce] = useState(0);
 
@@ -106,25 +107,28 @@ export function AppointmentReviewPanel({
     void loadAppointments();
   }, [preview, loadAppointments]);
 
-  async function sendEnRoute(appointmentId: string) {
+  async function sendEnRoute(appointmentId: string, estimatedArrivalTime: string) {
+    if (!estimatedArrivalTime || busyId) return;
     setBusyId(appointmentId);
     setError(null);
 
     try {
-      const response = await fetch(
+      const response = preview ? null : await fetch(
         `/api/admin/appointments/${appointmentId}/en-route`,
         {
           method: "POST",
           credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ estimatedArrivalTime }),
         },
       );
-      const body = (await response.json()) as { error?: string };
-
-      if (!response.ok) {
+      if (response && !response.ok) {
+        const body = (await response.json()) as { error?: string };
         setError(body.error ?? "Could not send on-the-way text.");
         return;
       }
 
+      setArrivalDraft(null);
       setTodayAppointments((current) =>
         current.map((appointment) =>
           appointment.id === appointmentId || Boolean(appointment.visitId && appointment.visitId === current.find(row => row.id === appointmentId)?.visitId)
@@ -304,7 +308,12 @@ export function AppointmentReviewPanel({
                     <button
                       type="button"
                       disabled={busy || alreadySent || !appointment.customerPhone}
-                      onClick={() => void sendEnRoute(appointment.id)}
+                      onClick={() => {
+                        const start = appointment.scheduledStart;
+                        const time = start == null ? "" :
+                          `${String(Math.floor(start / 60)).padStart(2, "0")}:${String(start % 60).padStart(2, "0")}`;
+                        setArrivalDraft({ id: appointment.id, time });
+                      }}
                       className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-cream transition hover:bg-gold-dark disabled:opacity-50"
                     >
                       {alreadySent
@@ -313,6 +322,33 @@ export function AppointmentReviewPanel({
                           ? "Text: on the way"
                           : "No mobile number"}
                     </button>
+                    {arrivalDraft?.id === appointment.id && !alreadySent ? (
+                      <form
+                        className="flex w-full flex-wrap items-end gap-3"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          void sendEnRoute(appointment.id, arrivalDraft.time);
+                        }}
+                      >
+                        <label className="grid gap-1 text-sm">
+                          Estimated arrival time
+                          <input
+                            type="time"
+                            required
+                            value={arrivalDraft.time}
+                            disabled={busy}
+                            onChange={(event) => setArrivalDraft({ id: appointment.id, time: event.target.value })}
+                            className="rounded-xl border border-lavender/40 bg-white px-3 py-2"
+                          />
+                        </label>
+                        <button type="submit" disabled={busy || !arrivalDraft.time} className="rounded-xl bg-deep-lavender px-4 py-2 text-ivory disabled:opacity-50">
+                          Send text
+                        </button>
+                        <button type="button" disabled={busy} onClick={() => setArrivalDraft(null)} className="px-3 py-2 text-sm underline">
+                          Cancel
+                        </button>
+                      </form>
+                    ) : null}
                     <AppointmentActionLinks
                       driveOrder
                       appointment={appointment}

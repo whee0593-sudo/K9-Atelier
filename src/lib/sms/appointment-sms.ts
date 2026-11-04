@@ -196,6 +196,7 @@ export async function sendAppointmentConfirmRequestSms(
 export async function sendAppointmentEnRouteSms(
   appointment: AppointmentRecord,
   customer: CustomerContact,
+  estimatedArrivalMinutes: number,
   petNames?: string[],
   scope?: { appointmentIds?: string[]; petIds?: string[] },
 ) {
@@ -203,7 +204,7 @@ export async function sendAppointmentEnRouteSms(
     "en_route",
     appointment,
     customer.phone,
-    buildAppointmentEnRouteSms(namedDetails(appointment, customer, petNames)),
+    buildAppointmentEnRouteSms(namedDetails(appointment, customer, petNames), estimatedArrivalMinutes),
     scope,
   );
 }
