@@ -159,6 +159,11 @@ describe("visit checkout bill", () => {
     assert.equal(bill.incompletePets.map((item) => item.petName).join(", "), "Milo");
     assert.equal(bill.eligiblePets.length, 1);
     assert.equal(bill.lineItems.some((item) => item.petName === "Milo"), false);
+    assert.deepEqual(bill.draftLineItems.map((item) => [item.petName, item.amount]), [
+      ["Daisy", 150],
+      ["Milo", 170],
+      [undefined, 65],
+    ]);
   });
 
   it("applies one visit tip and one visit discount", () => {

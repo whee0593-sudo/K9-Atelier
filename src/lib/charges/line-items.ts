@@ -10,16 +10,18 @@ import { resolveReferralCategory } from "@/lib/referrals/eligible";
 import { listAmountForCatalog, normalizeListAmount } from "@/lib/charges/list-amount";
 import { bookingWeightLbs } from "@/lib/pets/weight";
 import type { ChargeLineItem } from "@/lib/charges/types";
+import { servicePriceIsBaseOnly } from "@/lib/charges/visit-line-items";
 
 export { catalogChargeItems, catalogChargeGroups } from "@/lib/charges/catalog";
 
 export function buildDefaultLineItems(
   appointment: AppointmentRecord,
   weightLbs: number | null,
+  checkout?: { savedServicePrice: number | null },
 ): ChargeLineItem[] {
   const items: ChargeLineItem[] = [];
   const pricedWeight = bookingWeightLbs(weightLbs);
-  if (pricedWeight == null) {
+  if (pricedWeight == null && !checkout) {
     if (appointment.travelFee > 0) {
       items.push({
         id: randomUUID(),
@@ -34,11 +36,18 @@ export function buildDefaultLineItems(
   const primary = allBookableServices().find(
     (service) => service.id === appointment.serviceId,
   );
-  const primaryPrice = primary
+  const primaryPrice = primary && pricedWeight != null
     ? getServicePriceEstimate(primary, pricedWeight)?.from
     : null;
 
-  const primaryAmount = Number(primaryPrice ?? appointment.estimatedTotal ?? 0);
+  const savedPrimaryPrice =
+    appointment.addOnIds.length === 0 || servicePriceIsBaseOnly(appointment.addOnOptions)
+      ? checkout?.savedServicePrice
+      : null;
+  const primaryAmount = Number(
+    savedPrimaryPrice ?? primaryPrice ??
+      (pricedWeight != null ? appointment.estimatedTotal : null) ?? 0,
+  );
   items.push({
     id: randomUUID(),
     label: getServiceDisplayName(appointment.serviceId, appointment.serviceName),
@@ -48,7 +57,7 @@ export function buildDefaultLineItems(
     referralCategory: "eligible_service",
   });
 
-  for (const charge of resolveAddOnCharges(
+  for (const charge of pricedWeight == null ? [] : resolveAddOnCharges(
     appointment.serviceId,
     appointment.addOnIds,
     pricedWeight,

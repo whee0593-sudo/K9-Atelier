@@ -867,7 +867,7 @@ export function CollectCheckout({
                 key={item.id}
                 className="rounded-2xl border border-lavender/40 bg-cream p-4"
               >
-                {index === 0 && (context.catalogGroups?.length ?? 0) > 0 ? (
+                {index === 0 && item.catalogId !== "travel-fee" && (context.catalogGroups?.length ?? 0) > 0 ? (
                   <ServiceCategoryPicker
                     groups={context.catalogGroups ?? []}
                     selectedId={item.catalogId}

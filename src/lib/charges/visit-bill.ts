@@ -104,10 +104,10 @@ export function buildVisitBill(input: VisitBillInput) {
           ? `Review stored charges for ${reviewPets.map((pet) => pet.petName).join(", ")} before collecting this visit. The saved amount could not be split into the main service and add-ons. Save the service lines, then collect. Nothing is charged until then.`
           : null;
 
-  const petLineItems: ChargeLineItem[] = [];
-  for (const pet of eligiblePets) {
+  const draftPetLineItems: ChargeLineItem[] = [];
+  for (const pet of input.pets.filter((entry) => entry.status !== "cancelled")) {
     const amount = money(pet.servicePrice ?? 0);
-    petLineItems.push({
+    draftPetLineItems.push({
       id: randomUUID(),
       label: `${pet.petName} — ${pet.serviceName}`,
       amount,
@@ -119,7 +119,7 @@ export function buildVisitBill(input: VisitBillInput) {
     });
     for (const addOn of pet.addOns ?? []) {
       const addOnAmount = money(addOn.amount);
-      petLineItems.push({
+      draftPetLineItems.push({
         id: randomUUID(),
         label: `${pet.petName} — ${addOn.label}`,
         amount: addOnAmount,
@@ -144,6 +144,10 @@ export function buildVisitBill(input: VisitBillInput) {
         }
       : null;
 
+  const completedIds = new Set(eligiblePets.map((pet) => pet.appointmentId));
+  const petLineItems = draftPetLineItems.filter(
+    (item) => item.appointmentId && completedIds.has(item.appointmentId),
+  );
   const lineItems = travelLineItem
     ? [...petLineItems, travelLineItem]
     : petLineItems;
@@ -164,6 +168,7 @@ export function buildVisitBill(input: VisitBillInput) {
     petLineItems,
     travelLineItem,
     lineItems,
+    draftLineItems: travelLineItem ? [...draftPetLineItems, travelLineItem] : draftPetLineItems,
     travelFee,
     subtotal,
     servicedDogCount: eligiblePets.length,

@@ -216,11 +216,15 @@ export async function getCollectContext(
   const defaultItems = paidBillItems
     ? withCatalogListAmount(paidBillItems, catalog)
     : visitCollect
-      ? visitCollect.bill.lineItems
+      ? visitCollect.bill.draftLineItems
       : withCatalogListAmount(
           readStoredVisitLineItems(
             (timing?.add_on_options as Record<string, unknown> | null) ?? null,
-          ) ?? buildDefaultLineItems(appointment, weightLbs),
+          ) ?? buildDefaultLineItems(appointment, weightLbs, {
+            savedServicePrice: appointmentRow?.service_price == null
+              ? null
+              : Number(appointmentRow.service_price),
+          }),
           catalog,
         );
 
