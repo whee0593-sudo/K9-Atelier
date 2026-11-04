@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { visitCheckoutPetFromStoredAppointment } from "@/lib/charges/stored-visit-pet";
 import { describe, it } from "node:test";
 import { buildPreviewCollectContext } from "@/lib/charges/preview";
 import { buildChargeReceiptParagraphs } from "@/lib/charges/receipt-content";
@@ -32,6 +33,25 @@ const visit = {
   serviceDate: "2026-11-23",
   arrivalLabel: "3:30 PM",
 };
+
+it("prefills Hand Stripping checkout from the finished pet timer", () => {
+  const handStrip = visitCheckoutPetFromStoredAppointment({
+    id: "hand-strip",
+    status: "confirmed",
+    serviceName: "Hand Stripping",
+    serviceId: "hand-stripping",
+    servicePrice: 160,
+    serviceStartedAt: "2026-11-23T19:00:00.000Z",
+    serviceEndedAt: "2026-11-23T20:20:00.000Z",
+    addOnIds: [],
+    addOnOptions: null,
+    petName: "Milo",
+    weightLbs: 20,
+  });
+  const bill = buildVisitBill({ ...visit, travelFee: 0, pets: [handStrip] });
+  assert.equal(bill.draftLineItems[0]?.amount, 213.33);
+  assert.equal(bill.subtotal, 213.33);
+});
 
 describe("visit checkout bill", () => {
   it("builds one bill for a single dog and omits a zero travel fee", () => {
