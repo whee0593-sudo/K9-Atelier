@@ -44,7 +44,7 @@ export function OnTheWayPreview() {
         serviceName: sample.serviceName,
         dateLabel: "Monday, August 24, 2026",
         timeLabel: sample.appointmentTime,
-      })
+      }, sample.scheduledStart ?? undefined)
     : "";
 
   return (

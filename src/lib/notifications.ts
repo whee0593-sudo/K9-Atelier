@@ -1,4 +1,5 @@
 import { business } from "@/lib/business";
+import { formatMinutesLabel } from "@/lib/appointments/closures";
 import { streetNameForSms } from "@/lib/sms/street-name";
 
 /** Disclaimer shown under the estimated total in booking confirmations. */
@@ -143,9 +144,13 @@ export function buildAppointmentConfirmRequestSms(
 
 export function buildAppointmentEnRouteSms(
   details: BookingConfirmationDetails,
+  estimatedArrivalMinutes?: number,
 ): string {
   const name = smsGreetingName(details);
-  return `Hi ${name}! We're on the way for ${details.petName}'s K9 Atelier appointment. See you soon, between ${details.timeLabel}. ${SMS_OPT_OUT}`;
+  const arrival = estimatedArrivalMinutes == null
+    ? ""
+    : ` Estimated arrival time: ${formatMinutesLabel(estimatedArrivalMinutes).toLowerCase()}.`;
+  return `Hi ${name}! We're on the way for ${details.petName}'s K9 Atelier appointment. See you soon!${arrival} ${SMS_OPT_OUT}`;
 }
 
 /**

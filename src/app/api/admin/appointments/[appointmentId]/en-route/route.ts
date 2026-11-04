@@ -7,11 +7,17 @@ type RouteContext = {
   params: Promise<{ appointmentId: string }>;
 };
 
-export async function POST(_request: Request, context: RouteContext) {
+export async function POST(request: Request, context: RouteContext) {
   try {
     const { appointmentId: rawAppointmentId } = await context.params;
     const appointmentId = validateAppointmentId(rawAppointmentId);
-    const result = await sendAppointmentEnRouteNotification(appointmentId);
+    const body = await request.json().catch(() => null);
+    const time = body?.estimatedArrivalTime;
+    if (typeof time !== "string" || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+      return staffJsonError("Enter a valid estimated arrival time.", 400);
+    }
+    const [hours, minutes] = time.split(":").map(Number);
+    const result = await sendAppointmentEnRouteNotification(appointmentId, hours * 60 + minutes);
 
     if ("error" in result) {
       if (result.error === "conflict") {

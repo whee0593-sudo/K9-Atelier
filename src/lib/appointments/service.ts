@@ -624,6 +624,7 @@ export async function listAdminAppointmentsOnDate(
 
 export async function sendAppointmentEnRouteNotification(
   appointmentId: string,
+  estimatedArrivalMinutes: number,
 ): Promise<
   | { ok: true }
   | {
@@ -756,6 +757,7 @@ export async function sendAppointmentEnRouteNotification(
       sendAppointmentEnRouteSms(
         appointment,
         contact,
+        estimatedArrivalMinutes,
         active.map((dog) => dog.petName),
         {
           appointmentIds: active.map((dog) => dog.id),
