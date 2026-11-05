@@ -27,7 +27,7 @@ import {
 } from "@/lib/notifications";
 import { siteUrl } from "@/lib/email/site-url";
 import { confirmationEstimateLabel } from "@/lib/booking-price";
-import { allBookableServices } from "@/lib/services";
+import { allBookableServices, getAddOnService } from "@/lib/services";
 
 type CustomerContact = {
   email: string;
@@ -665,12 +665,20 @@ export function buildCustomerAddDogEmail({
   const dateLabel = formatAppointmentDateLabel(appointment.appointmentDate);
   const subject = `We received your request to add ${appointment.petName}`;
   const greetingName = customer.name ?? "Client";
-  const introParagraph = `We've received your request to add ${appointment.petName} to the visit on ${dateLabel}.`;
+  const introParagraph = `We've received your request to add ${appointment.petName} to the visit on ${dateLabel}. We'll review the day's schedule and text you once the change has been confirmed.`;
   const estimateNote =
     "Adding another pet is subject to availability and is not confirmed automatically.";
-  const closingParagraph =
-    "We'll review the day's schedule and text you once the change has been confirmed.";
-  const detailRows = customerAppointmentDetailRows(appointment);
+  const serviceLabels = [
+    appointment.serviceName,
+    ...appointment.addOnIds.map((id) => {
+      const name = getAddOnService(id)?.name ?? id;
+      const option = appointment.addOnOptions[id];
+      return option ? `${name} (${option})` : name;
+    }),
+  ];
+  const detailRows = customerAppointmentDetailRows(appointment).map((row) =>
+    row.label === "Service" ? { ...row, value: serviceLabels.join(" + ") } : row,
+  );
 
   const text = [
     `Dear ${greetingName},`,
@@ -680,8 +688,6 @@ export function buildCustomerAddDogEmail({
     ...detailRows.map(({ label, value }) => `${label}: ${value}`),
     "",
     estimateNote,
-    "",
-    closingParagraph,
     "",
     `View bookings: ${siteUrl("/account/appointments")}`,
   ].join("\n");
@@ -693,7 +699,7 @@ export function buildCustomerAddDogEmail({
       introParagraph,
       detailRows,
       estimateNote,
-      closingParagraph,
+      closingParagraph: "",
       cta: {
         href: siteUrl("/account/appointments"),
         label: "VIEW BOOKINGS",
