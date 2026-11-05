@@ -197,7 +197,7 @@ const faqGroups: Array<{ title: string; items: FaqItem[] }> = [
       {
         q: "Can I pay with cash or Zelle?",
         paragraphs: [
-          "Yes. We gladly accept cash and Zelle after grooming, as well as credit cards.",
+          "Yes, we prefer cash or Zelle payments. Your payment method on file is to secure the appointment.",
         ],
       },
     ],

@@ -88,7 +88,7 @@ describe("FAQ page", () => {
     assert.match(page, /50% of the scheduled service price/);
     assert.match(page, /you will not be charged/);
     assert.match(page, /cash or Zelle after grooming/);
-    assert.match(page, /gladly accept cash and Zelle/);
+    assert.ok(page.includes("Yes, we prefer cash or Zelle payments. Your payment method on file is to secure the appointment."));
     assert.match(page, /href="\/referrals"/);
     assert.match(page, /cannot be transferred, withdrawn, sold, or exchanged for cash/);
     assert.match(page, /in full or in part/);
