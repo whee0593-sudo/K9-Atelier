@@ -239,18 +239,10 @@ export async function listStaffCustomerServiceAddresses(
   if (!ensured.ok) return { error: ensured.error };
   const { admin } = ensured;
 
-  const [savedResult, visitResult] = await Promise.all([
-    admin
-      .from("customer_service_addresses")
-      .select("id, street, city, state, zip, created_at")
-      .eq("customer_id", customerId)
-      .order("created_at", { ascending: true }),
-    admin
-      .from("appointments")
-      .select("address_street, address_city, address_state, address_zip, created_at")
-      .eq("customer_id", customerId)
-      .order("created_at", { ascending: true }),
-  ]);
+  // Historical snapshots must not resurrect deleted address-book entries.
+  const savedResult = await admin.from("customer_service_addresses")
+    .select("id, street, city, state, zip, created_at")
+    .eq("customer_id", customerId).order("created_at", { ascending: true });
 
   if (savedResult.error) {
     console.error(
@@ -259,14 +251,6 @@ export async function listStaffCustomerServiceAddresses(
     );
     return { error: "server" };
   }
-  if (visitResult.error) {
-    console.error(
-      "listStaffCustomerServiceAddresses visits failed:",
-      visitResult.error.message,
-    );
-    return { error: "server" };
-  }
-
   const byKey = new Map<string, StaffServiceAddressRecord>();
 
   for (const row of savedResult.data ?? []) {
@@ -279,19 +263,6 @@ export async function listStaffCustomerServiceAddresses(
       source: "saved",
     };
     byKey.set(addressKey(address), address);
-  }
-
-  for (const row of visitResult.data ?? []) {
-    const address: StaffServiceAddress = {
-      street: (row.address_street as string) ?? "",
-      city: (row.address_city as string) ?? "",
-      state: (row.address_state as string) ?? "",
-      zip: (row.address_zip as string) ?? "",
-    };
-    if (!address.street && !address.city && !address.zip) continue;
-    const key = addressKey(address);
-    if (byKey.has(key)) continue;
-    byKey.set(key, { ...address, id: null, source: "visit" });
   }
 
   return { addresses: [...byKey.values()] };
@@ -588,4 +559,25 @@ export async function rewriteStaffCustomerServiceAddress(
     },
     updatedVisitCount: matches.length,
   };
+}
+
+/** Delete only the address-book entry, preserving booked visit snapshots. */
+export async function deleteStaffCustomerServiceAddress(
+  customerId: string,
+  address: StaffServiceAddress,
+): Promise<{ ok: true } | { error: "unauthenticated" | "forbidden" | "not_found" | "server" }> {
+  const session = await getStaffSession();
+  if ("error" in session) return session;
+  const ensured = await ensureCustomerExists(customerId);
+  if (!ensured.ok) return { error: ensured.error };
+  const { data, error } = await ensured.admin.from("customer_service_addresses")
+    .delete().eq("customer_id", customerId)
+    .eq("street", address.street).eq("city", address.city)
+    .eq("state", address.state).eq("zip", address.zip).select("id");
+  if (error) {
+    console.error("deleteStaffCustomerServiceAddress failed:", error.message);
+    return { error: "server" };
+  }
+  if (!data?.length) return { error: "not_found" };
+  return { ok: true };
 }

@@ -199,7 +199,7 @@ describe("CustomerRecordCard actions", () => {
     assert.match(referrals, /MILO-TIA/);
   });
 
-  it("shows Edit and Add address controls on service addresses", () => {
+  it("shows address actions and a confirmation dialog without opening it", () => {
     const html = renderToStaticMarkup(
       <CustomerRecordCard
         customer={sampleCustomer({
@@ -267,6 +267,11 @@ describe("CustomerRecordCard actions", () => {
     assert.match(html, /2100 S Ocean Blvd/);
     assert.match(html, />Edit</);
     assert.match(html, /\+ Add address/);
+    assert.match(html, /aria-label="Delete address: 2100 S Ocean Blvd, Palm Beach, FL 33480"/);
+    assert.match(html, /<dialog[^>]*aria-label="Delete service address"/);
+    assert.doesNotMatch(html, /<dialog[^>]* open/);
+    assert.match(html, />Cancel<\/button>/);
+    assert.match(html, />Confirm<\/button>/);
   });
 
   it("shows saved pets as name, age, last service, and Edit", () => {

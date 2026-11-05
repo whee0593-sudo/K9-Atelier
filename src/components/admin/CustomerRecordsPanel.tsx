@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { CustomerProfileForm } from "@/components/account/CustomerProfileForm";
 import { CreateCustomerProfileForm } from "@/components/admin/CreateCustomerProfileForm";
 import type { CustomerProfile } from "@/lib/profiles/types";
@@ -263,12 +263,18 @@ function ServiceAddressEditor({
   address,
   preview = false,
   onSaved,
+  onDeleted,
 }: {
   customerId: string;
   address: ServiceAddressParts;
   preview?: boolean;
+  onDeleted: (address: ServiceAddressParts) => void;
   onSaved: (from: ServiceAddressParts, to: ServiceAddressParts) => void;
 }) {
+  const deleteDialog = useRef<HTMLDialogElement>(null);
+  const deletingRef = useRef(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<ServiceAddressParts>(address);
   const [saving, setSaving] = useState(false);
@@ -281,6 +287,31 @@ function ServiceAddressEditor({
     setError(null);
     setSaved(false);
   }, [address]);
+
+  async function handleDelete() {
+    if (deletingRef.current) return;
+    deletingRef.current = true;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      if (!preview) {
+        const response = await fetch(`/api/admin/customers/${customerId}/addresses`, {
+          method: "DELETE", credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ address }),
+        });
+        const body = await response.json() as { ok?: boolean; error?: string };
+        if (!response.ok || !body.ok) throw new Error(body.error ?? "Could not delete this address.");
+      }
+      deleteDialog.current?.close();
+      onDeleted(address);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Could not delete this address.");
+    } finally {
+      deletingRef.current = false;
+      setDeleting(false);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -341,18 +372,41 @@ function ServiceAddressEditor({
               addressZip: address.zip,
             })}
           </p>
-          <button
-            type="button"
-            onClick={() => {
-              setEditing(true);
-              setError(null);
-              setSaved(false);
-            }}
-            className="shrink-0 rounded-xl border border-lavender/40 px-3 py-1.5 text-sm text-text-muted hover:border-gold/40 hover:text-text"
-          >
-            Edit
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(true);
+                setError(null);
+                setSaved(false);
+              }}
+              className="shrink-0 rounded-xl border border-lavender/40 px-3 py-1.5 text-sm text-text-muted hover:border-gold/40 hover:text-text"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              aria-label={`Delete address: ${address.street}, ${address.city}, ${address.state} ${address.zip}`}
+              onClick={() => { setDeleteError(null); deleteDialog.current?.showModal(); }}
+              className="rounded-xl border border-red-200 px-3 py-1.5 text-sm text-red-800 hover:bg-red-50"
+            >Delete</button>
+            </div>
         </div>
+        <dialog
+          ref={deleteDialog}
+          aria-label="Delete service address"
+          onCancel={(event) => { if (deletingRef.current) event.preventDefault(); }}
+          className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border border-lavender/40 bg-cream p-6 text-text shadow-xl backdrop:bg-black/40"
+        >
+          <h4 className="text-lg font-medium text-gold-dark">Delete this address?</h4>
+          <p className="mt-3 text-sm">{address.street}, {address.city}, {address.state} {address.zip}</p>
+          <p className="mt-2 text-sm text-text-muted">This removes the address from the customer's address book. Existing appointments will keep their addresses.</p>
+          {deleteError && <p role="alert" className="mt-3 text-sm text-red-800">{deleteError}</p>}
+          <div className="mt-5 flex justify-end gap-3">
+            <button type="button" autoFocus disabled={deleting} onClick={() => deleteDialog.current?.close()} className="rounded-xl border border-lavender px-4 py-2 text-sm disabled:opacity-60">Cancel</button>
+            <button type="button" disabled={deleting} onClick={() => void handleDelete()} className="rounded-xl bg-red-800 px-4 py-2 text-sm text-white disabled:opacity-60">{deleting ? "Deleting…" : "Confirm"}</button>
+          </div>
+        </dialog>
         {saved ? <p className="mt-2 text-xs text-text-muted">Saved</p> : null}
       </li>
     );
@@ -570,19 +624,13 @@ function CustomerHistory({
         };
         if (cancelled) return;
         if (!response.ok) {
-          // Fall back to visit addresses from history when the saved-address
-          // table is unavailable (e.g. migration not applied yet).
-          if (history) {
-            setAddresses(uniqueServiceAddresses(history.appointments));
-          }
+          setError(body.error ?? "Could not load service addresses.");
           return;
         }
         setAddresses(body.addresses ?? []);
       })
       .catch(() => {
-        if (!cancelled && history) {
-          setAddresses(uniqueServiceAddresses(history.appointments));
-        }
+        if (!cancelled) setError("Could not load service addresses.");
       });
     return () => {
       cancelled = true;
@@ -653,7 +701,7 @@ function CustomerHistory({
           ) : null}
         </div>
         {addresses == null ? (
-          <p className="mt-3 text-sm text-text-muted">Loading addresses…</p>
+          <p className="mt-3 text-sm text-text-muted" role={error ? "alert" : undefined}>{error ?? "Loading addresses…"}</p>
         ) : (
           <>
             {addresses.length === 0 ? (
@@ -669,6 +717,9 @@ function CustomerHistory({
                     address={address}
                     preview={preview}
                     onSaved={applyAddressRewrite}
+                    onDeleted={(deleted) => setAddresses((current) =>
+                      (current ?? []).filter((item) => addressKey(item) !== addressKey(deleted)),
+                    )}
                   />
                 ))}
               </ul>

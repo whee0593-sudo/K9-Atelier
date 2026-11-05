@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   addStaffCustomerServiceAddress,
+  deleteStaffCustomerServiceAddress,
   listStaffCustomerServiceAddresses,
   rewriteStaffCustomerServiceAddress,
 } from "@/lib/profiles/staff-addresses";
@@ -111,6 +112,24 @@ export async function PATCH(request: Request, context: RouteContext) {
       return jsonError(error.message, 400, error.field);
     }
     console.error("PATCH /api/admin/customers/.../addresses failed:", error);
+    return jsonError("Something went wrong. Please try again.", 500);
+  }
+}
+
+export async function DELETE(request: Request, context: RouteContext) {
+  try {
+    const { customerId: rawId } = await context.params;
+    const customerId = validateCustomerId(rawId);
+    let body: unknown;
+    try { body = await request.json(); }
+    catch { return jsonError("Invalid request body.", 400); }
+    const address = validateStaffAddressCreateInput(body);
+    const result = await deleteStaffCustomerServiceAddress(customerId, address);
+    if ("error" in result) return mapAddressWriteError(result.error);
+    return NextResponse.json(result);
+  } catch (error) {
+    if (error instanceof ProfileValidationError) return jsonError(error.message, 400, error.field);
+    console.error("DELETE /api/admin/customers/.../addresses failed:", error);
     return jsonError("Something went wrong. Please try again.", 500);
   }
 }
