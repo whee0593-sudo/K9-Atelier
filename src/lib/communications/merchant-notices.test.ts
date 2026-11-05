@@ -4,6 +4,7 @@ import { createMemoryCommunicationLogStore } from "@/lib/communications/memory-s
 import { readMerchantFromAddress } from "@/lib/communications/merchant-config";
 import {
   MERCHANT_REPLAY_ALERT,
+  buildMerchantVisitPetsChangedCopy,
   factsFromAppointments,
   merchantVisitIsConfirmed,
   notifyMerchantVisitConfirmed,
@@ -108,6 +109,33 @@ describe("merchant from address", () => {
       ).ok,
       true,
     );
+  });
+});
+
+describe("added dog request SMS", () => {
+  it("includes only the newly added dog and the appointment date and time", () => {
+    const previous = facts().pets;
+    const added = { ...previous[0], appointmentId: "apt-3", petId: "pet-3", petName: "yoyo" };
+    const copy = buildMerchantVisitPetsChangedCopy({
+      ...facts([...previous, added]),
+      previousPets: previous,
+      whenLabel: "Friday, October 30, 2026, 9:00–11:38 AM",
+    });
+    assert.equal(copy.sms, "We have received your request of adding yoyo to Friday, October 30, 2026, 9:00–11:38 AM. Thank you for letting us know. We are checking the availability and will be getting back to you soon.");
+  });
+
+  it("identifies added dogs by ID even when names match existing dogs", () => {
+    const previous = facts().pets;
+    const added = previous.map((pet, index) => ({ ...pet, petId: `added-${index}` }));
+    const copy = buildMerchantVisitPetsChangedCopy({ ...facts([...previous, ...added]), previousPets: previous });
+    assert.match(copy.sms, /request of adding Lychee and Otto to /);
+  });
+
+  it("keeps the roster update for a removal", () => {
+    const previous = facts().pets;
+    const copy = buildMerchantVisitPetsChangedCopy({ ...facts([previous[0]]), previousPets: previous });
+    assert.match(copy.sms, /Dogs on this visit changed\. Was Lychee and Otto\. Now Lychee\./);
+    assert.doesNotMatch(copy.sms, /request of adding/);
   });
 });
 

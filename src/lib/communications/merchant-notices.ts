@@ -219,6 +219,8 @@ export function rosterChanged(
 }
 
 export function buildMerchantVisitPetsChangedCopy(facts: MerchantPetsChangedFacts) {
+  const previousPetIds = new Set(facts.previousPets.map((pet) => pet.petId));
+  const addedPets = facts.pets.filter((pet) => !previousPetIds.has(pet.petId));
   const subject = "Dogs on this visit changed";
   const intro =
     "The dogs on this visit changed. This notice is only that roster change. It is not a new confirmation, and it is not a cancellation of the whole visit.";
@@ -246,7 +248,9 @@ export function buildMerchantVisitPetsChangedCopy(facts: MerchantPetsChangedFact
     subject,
     emailText: letter.text,
     emailHtml: letter.html,
-    sms: `K9 Atelier: Dogs on this visit changed. Was ${petNames(facts.previousPets)}. Now ${petNames(facts.pets)}. ${facts.whenLabel}.`,
+    sms: addedPets.length > 0
+      ? `We have received your request of adding ${petNames(addedPets)} to ${facts.whenLabel}. Thank you for letting us know. We are checking the availability and will be getting back to you soon.`
+      : `K9 Atelier: Dogs on this visit changed. Was ${petNames(facts.previousPets)}. Now ${petNames(facts.pets)}. ${facts.whenLabel}.`,
   };
 }
 
