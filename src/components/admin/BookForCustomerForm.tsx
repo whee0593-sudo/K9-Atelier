@@ -23,7 +23,6 @@ import {
 import {
   listStaffServiceChoices,
   parseStaffServiceSelection,
-  staffMenuAllows,
 } from "@/lib/staff/service-choice";
 import {
   fallbackStaffScheduleDays,
@@ -72,6 +71,7 @@ type SuccessState = {
   confirmUrl: string;
   emailed: boolean;
   texted: boolean;
+  fixedPricesSaved?: boolean;
   createdAccount: boolean;
   email: string;
   firstName: string;
@@ -173,11 +173,11 @@ function keptAddOns(
   return { addOnIds: nextIds, addOnOptions: nextOptions };
 }
 
-function serviceChoices(weightLbs: string, serviceIds: string[], index: number) {
+function serviceChoices(serviceIds: string[], index: number) {
   const taken = new Set(
     serviceIds.filter((serviceId, serviceIndex) => serviceIndex !== index && serviceId),
   );
-  return listStaffServiceChoices(positiveWeight(weightLbs)).filter(
+  return listStaffServiceChoices(null).filter(
     (choice) => !taken.has(choice.value),
   );
 }
@@ -216,6 +216,7 @@ export function BookForCustomerForm({
   initialScheduleDays?: AvailabilityDay[] | null;
 }) {
   const initialAddress = initialProfile?.addresses[0] ?? null;
+  const [editingPrice, setEditingPrice] = useState<string | null>(null);
   const [firstName, setFirstName] = useState(prefill?.firstName ?? "");
   const [lastName, setLastName] = useState(prefill?.lastName ?? "");
   const [email, setEmail] = useState(prefill?.email ?? "");
@@ -332,7 +333,7 @@ export function BookForCustomerForm({
         (sum, row) =>
           sum +
           row.selected.reduce((serviceSum, line) => {
-            const amount = fixedPriceForService(row.pet.fixedServicePrices, line.choice.serviceId) ?? bookedServiceAmount(
+            const amount = parseEnteredServicePrice(line.priceRaw) ?? fixedPriceForService(row.pet.fixedServicePrices, line.choice.serviceId) ?? bookedServiceAmount(
               line.choice.service,
               row.weight!,
               line.choice.optionName,
@@ -404,34 +405,6 @@ export function BookForCustomerForm({
       current.map((pet) => {
         if (pet.key !== key) return pet;
         const next = { ...pet, [field]: value };
-        if (field === "weightLbs") {
-          const weight = positiveWeight(value);
-          const serviceIds: string[] = [];
-          const servicePrices: string[] = [];
-          next.serviceIds.forEach((serviceId, index) => {
-            const choice = parseStaffServiceSelection(serviceId);
-            if (
-              choice &&
-              weight != null &&
-              !staffMenuAllows(choice.serviceId, weight)
-            ) {
-              serviceIds.push("");
-              servicePrices.push("");
-              return;
-            }
-            serviceIds.push(serviceId);
-            servicePrices.push(next.servicePrices[index] ?? "");
-          });
-          next.serviceIds = serviceIds;
-          next.servicePrices = servicePrices;
-          const addOns = keptAddOns(
-            serviceIds,
-            next.addOnIds,
-            next.addOnOptions,
-          );
-          next.addOnIds = addOns.addOnIds;
-          next.addOnOptions = addOns.addOnOptions;
-        }
         return next;
       }),
     );
@@ -445,20 +418,7 @@ export function BookForCustomerForm({
         const serviceIds = pet.serviceIds.map((currentId, serviceIndex) =>
           serviceIndex === index ? serviceId : currentId,
         );
-        const servicePrices = pet.servicePrices.map((price, serviceIndex) => {
-          if (serviceIndex !== index) return price;
-          const choice = parseStaffServiceSelection(serviceId);
-          if (
-            !choice ||
-            !isCustomCreativeDesignSelection(
-              choice.serviceId,
-              choice.optionName,
-            )
-          ) {
-            return "";
-          }
-          return price;
-        });
+        const servicePrices = pet.servicePrices.map((price, i) => i === index ? "" : price);
         const addOns = keptAddOns(serviceIds, pet.addOnIds, pet.addOnOptions);
         return { ...pet, serviceIds, servicePrices, ...addOns };
       }),
@@ -1017,6 +977,7 @@ export function BookForCustomerForm({
         confirmUrl?: string;
         emailed?: boolean;
         texted?: boolean;
+        fixedPricesSaved?: boolean;
         customer?: {
           email: string;
           firstName: string;
@@ -1047,6 +1008,7 @@ export function BookForCustomerForm({
         confirmUrl: body.confirmUrl,
         emailed: body.emailed === true,
         texted: body.texted === true,
+        fixedPricesSaved: body.fixedPricesSaved !== false,
         createdAccount: body.customer.createdAccount,
         email: body.customer.email,
         firstName: body.customer.firstName,
@@ -1108,6 +1070,7 @@ export function BookForCustomerForm({
             ? "A text was sent to their phone."
             : "A text was not sent."}
         </p>
+        {success.fixedPricesSaved === false ? <p role="alert" className="text-sm text-red-700">Appointment created with your edited prices, but the dog’s fixed prices could not be saved. Please update them in the customer profile.</p> : null}
         {success.mode === "booking" && !success.texted ? (
           <p role="alert" className="mt-3 text-sm text-red-800">
             The appointment is saved, but the confirmation text was not sent. Contact the customer to request a reply C. Do not create the appointment again.
@@ -1331,18 +1294,11 @@ export function BookForCustomerForm({
                   const serviceFieldId = `pet-service-${pet.key}-${serviceIndex}`;
                   const priceFieldId = `pet-service-price-${pet.key}-${serviceIndex}`;
                   const choices = serviceChoices(
-                    pet.weightLbs,
                     pet.serviceIds,
                     serviceIndex,
                   );
                   const selectedChoice = parseStaffServiceSelection(serviceId);
-                  const needsEnteredPrice = Boolean(
-                    selectedChoice &&
-                      isCustomCreativeDesignSelection(
-                        selectedChoice.serviceId,
-                        selectedChoice.optionName,
-                      ),
-                  );
+                  const displayedPrice = selectedChoice ? fixedPriceForService(pet.fixedServicePrices, selectedChoice.serviceId) ?? bookedServiceAmount(selectedChoice.service, positiveWeight(pet.weightLbs) ?? 0, selectedChoice.optionName) : null;
                   return (
                     <div key={serviceFieldId} className="flex items-end gap-3">
                       <div className="w-1/2">
@@ -1372,33 +1328,19 @@ export function BookForCustomerForm({
                             </option>
                           ))}
                         </select>
-                        {needsEnteredPrice ? (
-                          <div className="mt-3">
-                            <label className={labelClass} htmlFor={priceFieldId}>
-                              Price
-                            </label>
-                            <input
-                              id={priceFieldId}
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              inputMode="decimal"
-                              className={fieldClass}
-                              value={pet.servicePrices[serviceIndex] ?? ""}
-                              onChange={(event) =>
-                                updatePetServicePrice(
-                                  pet.key,
-                                  serviceIndex,
-                                  event.target.value,
-                                )
-                              }
-                            />
-                            <p className="mt-2 text-sm text-text-muted">
-                              This amount is included in the estimated total.
-                            </p>
-                          </div>
-                        ) : null}
                       </div>
+                      {selectedChoice ? (
+                        <div className="w-28 shrink-0">
+                          <label className={labelClass} htmlFor={priceFieldId}>Price ($)</label>
+                          <input id={priceFieldId} aria-label={selectedChoice.label + " price for " + (pet.name || "dog")}
+                            type="number" min="0" max="5000" step="0.01" inputMode="decimal" className={fieldClass}
+                            value={editingPrice === priceFieldId ? pet.servicePrices[serviceIndex] ?? "" : pet.servicePrices[serviceIndex] || (displayedPrice ?? "")}
+                            placeholder="Enter price"
+                            onFocus={(event) => { setEditingPrice(priceFieldId); updatePetServicePrice(pet.key, serviceIndex, event.target.value); event.target.select(); }}
+                            onBlur={() => setEditingPrice(null)}
+                            onChange={(event) => updatePetServicePrice(pet.key, serviceIndex, event.target.value)} />
+                        </div>
+                      ) : null}
                       {pet.serviceIds.length > 1 ? (
                         <button
                           type="button"

@@ -1,3 +1,5 @@
+import { staffAppointmentPriceDrafts } from "@/lib/staff/staff-appointment-drafts";
+import { fixedPriceForService, mapFixedServicePrices } from "@/lib/pets/fixed-prices";
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import {
@@ -447,32 +449,13 @@ describe("validateStaffCustomerBookingInput", () => {
     );
   });
 
-  it("rejects a service that the dog's weight cannot book", () => {
-    assert.throws(
-      () =>
-        validateStaffCustomerBookingInput(
-          validBody({
-            serviceId: undefined,
-            pets: [
-              {
-                name: "Luna",
-                breed: "Poodle",
-                weightLbs: 14,
-                serviceId: "signature-bath-care",
-              },
-              {
-                name: "Bear",
-                breed: "Airedale",
-                weightLbs: 60,
-                serviceId: "custom-full-haircut",
-              },
-            ],
-          }),
-        ),
-      (error: unknown) =>
-        error instanceof StaffBookingValidationError &&
-        error.field === "pets[1].serviceIds[0]",
-    );
+  it("accepts services regardless of the dog's weight and retains edited prices", () => {
+    const input = validateStaffCustomerBookingInput(validBody({
+      serviceId: undefined,
+      pets: [{name: "Bear", breed: "Lab", weightLbs: 60, serviceIds: ["signature-bath-care", "custom-full-haircut"], servicePrices: [135.5, 0]}],
+    }));
+    assert.deepEqual(input.pets[0].servicePrices, [135.5, 0]);
+    assert.equal(input.mode, "booking");
   });
 
   it("accepts an email-only invite with no other fields", () => {
@@ -537,16 +520,8 @@ describe("validateStaffCustomerBookingInput", () => {
     );
   });
 
-  it("rejects dogs over 45 lbs for a bath service", () => {
-    assert.throws(
-      () =>
-        validateStaffCustomerBookingInput(
-          validBody({
-            pet: { name: "Bear", breed: "Lab", weightLbs: 60 },
-          }),
-        ),
-      StaffBookingValidationError,
-    );
+  it("accepts dogs over 45 lbs for a bath service", () => {
+    assert.equal(validateStaffCustomerBookingInput(validBody({pet: {name: "Bear", breed: "Lab", weightLbs: 60}})).mode, "booking");
   });
 });
 
@@ -754,4 +729,28 @@ it("uses the website purple for Confirm and sends the exact link-free visit SMS"
   assert.match(button, /background-color:#6b596e/);
   assert.match(button, /color:#FAF7F2/);
   assert.ok(buildStaffCreatedBookingSms(appointment, "unused", ["LYCHEE", "YOYO", "MILO"]).includes("LYCHEE, YOYO, and MILO"));
+});
+
+ it("uses edited prices ahead of saved fixed prices in appointment and notification estimates", () => {
+   const priced = staffAppointmentPriceDrafts([{
+     weightLbs: 60, serviceIds: ["signature-bath-care", "mini-trim"], serviceOptionNames: [null, null],
+     servicePrices: [135.5, 0], fixedServicePrices: {"signature-bath-care": 95, "mini-trim": 30},
+     addOnIds: [], addOnOptions: {},
+   }], 10);
+   assert.ok(priced.ok);
+   const drafts = priced.drafts;
+   assert.deepEqual(drafts.map(row => row.servicePrice), [135.5, 0]);
+   assert.deepEqual(drafts.map(row => row.estimatedTotal), [145.5, 0]);
+   const appointments = drafts.map((row, i) => ({...sampleAppointment(), id: String(i), visitId: "visit", serviceId: row.serviceId, serviceName: row.serviceName, servicePrice: row.servicePrice, estimatedTotal: row.estimatedTotal, travelFee: row.travelFee}));
+   const notice = {firstName: "Ada", confirmUrl: "https://k9atelier.com/confirm-account?token=test", createdAccount: false};
+   assert.match(buildStaffCreatedBookingEmail(appointments[0], notice, appointments).text, /145.50/);
+
+   const prices = mapFixedServicePrices([{service_id: "signature-bath-care", amount: 135.5}, {service_id: "mini-trim", amount: 0}]);
+   assert.equal(fixedPriceForService(prices, "mini-trim"), 0);
+   assert.equal(fixedPriceForService(prices, "signature-bath-care"), 135.5);
+ });
+
+it("requires a staff quote when an unrestricted service has no weight-tier price", () => {
+  const priced = staffAppointmentPriceDrafts([{weightLbs: 60, serviceIds: ["signature-bath-care"], serviceOptionNames: [null], servicePrices: [null], addOnIds: [], addOnOptions: {}}], 0);
+  assert.equal(priced.ok, false);
 });

@@ -118,6 +118,7 @@ export type StaffCreatedBookingResult = {
   confirmUrl: string;
   emailed: boolean;
   texted: boolean;
+  fixedPricesSaved?: boolean;
 };
 
 function phonePlaceholderEmail(phone: string) {
@@ -686,11 +687,17 @@ export async function createStaffCustomerBooking(
     let previousStart = firstSchedule.scheduledStart;
     let previousDuration = firstDurationMinutes;
     let visitIndex = 0;
+    const fixedPriceUpdates: { pet_id: string; service_id: string; amount: number; updated_by: string }[] = [];
 
     for (const [petIndex, pet] of input.pets.entries()) {
       const savedPet = await saveBookingPet(admin, userId, pet);
       if ("error" in savedPet) return savedPet;
       const petRow = savedPet.pet;
+      pet.serviceIds.forEach((serviceId, index) => {
+        const amount = pet.servicePrices[index];
+        if (amount != null) fixedPriceUpdates.push({pet_id: petRow.id as string, service_id: serviceId, amount, updated_by: session.user.id});
+      });
+
 
       await keepPrimaryIfReferralFails(petRow, async () => {
         const { ensurePetReferralCode } = await import("@/lib/referrals/service");
@@ -813,6 +820,19 @@ export async function createStaffCustomerBooking(
       appointments: pendingAppointments,
     });
     if ("error" in created) return created;
+    let fixedPricesSaved = true;
+    if (fixedPriceUpdates.length) {
+      const updates = [...new Map(fixedPriceUpdates.map(row => [row.pet_id + ":" + row.service_id, row])).values()];
+      try {
+        const saved = await admin.from("pet_service_prices").upsert(updates, { onConflict: "pet_id,service_id" });
+        fixedPricesSaved = !saved.error;
+        if (saved.error) console.error("Booking created, but fixed prices could not be saved:", saved.error.message);
+      } catch (error) {
+        fixedPricesSaved = false;
+        console.error("Booking created, but fixed prices could not be saved:", error);
+      }
+    }
+
 
     const { data: appointmentRows, error: appointmentError } = await admin
       .from("appointments")
@@ -916,6 +936,7 @@ export async function createStaffCustomerBooking(
         confirmUrl,
         emailed,
         texted,
+        fixedPricesSaved,
       },
     };
   } catch (error) {

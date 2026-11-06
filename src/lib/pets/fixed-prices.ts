@@ -4,7 +4,7 @@ import { canonicalServiceId } from "@/lib/service-catalog";
 export type PetServicePriceRow = { service_id: string; amount: number | string | null };
 export type FixedServicePrices = Record<string, number>;
 export function fixedPriceServices() {
-  return allBookableServices().filter(service => service.bookableAsPrimary && service.pricingType !== "hourly" && service.pricingType !== "free" && service.id !== "creative-accent-coloring");
+  return allBookableServices().filter(service => service.bookableAsPrimary || ["dematting-brush-out", "deshedding-treatment", "mini-trim", "senior-comfort-care", "end-of-life-care"].includes(service.id));
 }
 export function validFixedAmount(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 5000 && Math.abs(value * 100 - Math.round(value * 100)) < 0.000001;
