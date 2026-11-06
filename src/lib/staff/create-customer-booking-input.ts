@@ -15,7 +15,6 @@ import {
 } from "@/lib/services";
 import {
   parseStaffServiceSelection,
-  staffMenuAllows,
 } from "@/lib/staff/service-choice";
 import {
   PetValidationError,
@@ -146,7 +145,7 @@ function readPetServiceIds(record: Record<string, unknown>, index: number) {
 function readOptionalMoney(value: unknown, field: string) {
   if (value == null || value === "") return null;
   const amount = parseEnteredServicePrice(value);
-  if (amount == null || amount > 100000) {
+  if (amount == null || amount > 5000) {
     throw new StaffBookingValidationError("Enter a valid price.", field);
   }
   return amount;
@@ -470,14 +469,6 @@ export function validateStaffCustomerBookingInput(
             field,
           );
         }
-        if (!staffMenuAllows(chosen.serviceId, pet.weightLbs)) {
-          throw new StaffBookingValidationError(
-            filledPetBodies.length > 1
-              ? `That service is not available for dog ${index + 1}'s weight.`
-              : "That service is not available for this dog's weight.",
-            field,
-          );
-        }
         return chosen;
       });
       const serviceIds = selections.map((selection) => selection.serviceId);
@@ -496,14 +487,7 @@ export function validateStaffCustomerBookingInput(
         throw new StaffBookingValidationError(addOnMessage, addOnField);
       }
       assertAddOnOptions(addOnIds, addOnOptions, `pets[${index}].addOnOptions`);
-      const servicePrices = selections.map((selection, serviceIndex) =>
-        isCustomCreativeDesignSelection(
-          selection.serviceId,
-          selection.optionName,
-        )
-          ? (requestedPrices[serviceIndex] ?? null)
-          : null,
-      );
+      const servicePrices = selections.map((_, i) => requestedPrices[i] ?? null);
       return {
         ...pet,
         id,

@@ -63,6 +63,7 @@ export async function POST(request: Request) {
         confirmUrl: result.booking.confirmUrl,
         emailed: result.booking.emailed,
         texted: result.booking.texted,
+        fixedPricesSaved: result.booking.fixedPricesSaved,
         customer: result.booking.customer,
         appointment: result.booking.appointment
           ? {

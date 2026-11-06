@@ -124,12 +124,15 @@ export function staffAppointmentPriceDrafts(
             : [],
         ),
       );
-      const price = fixedPriceForService(pet.fixedServicePrices, service.id) ?? bookedServiceAmount(
+      const price = pet.servicePrices[serviceIndex] ?? fixedPriceForService(pet.fixedServicePrices, service.id) ?? bookedServiceAmount(
         service,
         pet.weightLbs,
         optionName,
         pet.servicePrices[serviceIndex] ?? null,
       );
+      if (price == null && service.pricingType === "tiered") {
+        return { ok: false, message: `Enter a price for ${service.name}.` };
+      }
       const servicePrice = snapshotServicePrice(price ?? 0);
       const rowTravel = visitIndex === 0 ? travelFee : 0;
       const addOnPrice = carriesAddOns

@@ -30,14 +30,14 @@ it("keeps other services standard and adds add-ons and travel separately", () =>
   assert.ok(result.quote.addOnPrice > 0); assert.ok(result.quote.travelFee > 0);
   assert.equal(result.quote.estimatedTotal,200 + result.quote.addOnPrice + result.quote.travelFee);
 });
-it("accepts zero, restores standard prices and rejects invalid or hourly overrides", () => {
+it("accepts zero, restores standard prices and rejects invalid overrides and supports staff-selected services", () => {
   const zero = quoteGuestBooking({...input,fixedServicePrices:{[id]:0}});
   assert.ok(zero.ok); if (zero.ok) assert.equal(zero.quote.servicePrice,0);
   for (const amount of [-1,5000.01,NaN,Infinity,"200",true,200.001]) assert.equal(parseFixedServicePrice({serviceId:id,amount}),null);
   assert.deepEqual(parseFixedServicePrice({serviceId:id,amount:null}),{serviceId:id,amount:null});
-  assert.equal(parseFixedServicePrice({serviceId:"hand-stripping",amount:200}),null);
-  assert.equal(parseFixedServicePrice({serviceId:"dematting-brush-out",amount:25}),null);
-  assert.equal(fixedPriceForService({"hand-stripping":1},"hand-stripping"),null);
+  assert.deepEqual(parseFixedServicePrice({serviceId:"hand-stripping",amount:200}),{serviceId:"hand-stripping",amount:200});
+  assert.deepEqual(parseFixedServicePrice({serviceId:"dematting-brush-out",amount:25}),{serviceId:"dematting-brush-out",amount:25});
+  assert.equal(fixedPriceForService({"hand-stripping":1},"hand-stripping"),1);
 });
 it("validates the submitted total against the server's stored fixed price", () => {
   const result = evaluateSubmittedBookingPrice({...input,estimatedTotal:1},18,{[id]:200});
