@@ -1367,78 +1367,80 @@ export function BookForCustomerForm({
                   if (addOnChoices.length === 0) return null;
                   const weight = positiveWeight(pet.weightLbs);
                   return (
-                    <fieldset className="space-y-3 rounded-xl border border-lavender/30 px-4 py-3">
-                      <legend className="px-1 text-sm font-medium text-text">
+                    <details className="rounded-xl border border-lavender/30 px-4 py-3">
+                      <summary className="cursor-pointer text-sm font-medium text-text">
                         Add-on care for this dog
-                      </legend>
-                      <p className="text-sm text-text-muted">
-                        Saved on this dog only. The visit still has one arrival
-                        time and one travel fee.
-                      </p>
-                      {addOnChoices.map((addOn) => {
-                        const checked = pet.addOnIds.includes(addOn.id);
-                        const charge =
-                          checked && weight != null
-                            ? resolveAddOnCharges(
-                                primaryServiceIds(pet.serviceIds)[0] ?? "",
-                                [addOn.id],
-                                weight,
-                                pet.addOnOptions,
-                              )[0]
-                            : null;
-                        const priceLabel =
-                          charge?.kind === "priced"
-                            ? formatPrice(charge.amount)
-                            : null;
-                        return (
-                          <div key={addOn.id}>
-                            <label className="flex items-start gap-3 text-sm text-text">
-                              <input
-                                type="checkbox"
-                                className="mt-1"
-                                checked={checked}
-                                onChange={() => togglePetAddOn(pet.key, addOn.id)}
-                              />
-                              <span>
-                                {addOn.name}
-                                {priceLabel ? ` · ${priceLabel}` : ""}
-                                {isAssessedOnSiteService(addOn)
-                                  ? " · Quoted at the visit"
-                                  : ""}
-                              </span>
-                            </label>
-                            {checked &&
-                            addOn.id === CREATIVE_ACCENT_COLORING_ID &&
-                            addOn.options?.length ? (
-                              <label className={`${labelClass} mt-3 ml-7 block`}>
-                                Color option
-                                <select
-                                  className={fieldClass}
-                                  value={pet.addOnOptions[addOn.id] ?? ""}
-                                  onChange={(event) =>
-                                    updatePetAddOnOption(
-                                      pet.key,
-                                      addOn.id,
-                                      event.target.value,
-                                    )
-                                  }
-                                >
-                                  <option value="">Select an option</option>
-                                  {addOn.options.map((option) => (
-                                    <option key={option.name} value={option.name}>
-                                      {option.name}
-                                      {option.priceFrom != null
-                                        ? ` · ${formatPrice(option.priceFrom)}`
-                                        : ""}
-                                    </option>
-                                  ))}
-                                </select>
+                      </summary>
+                      <fieldset aria-label="Add-on care for this dog" className="mt-3 space-y-3">
+                        <p className="text-sm text-text-muted">
+                          Saved on this dog only. The visit still has one arrival
+                          time and one travel fee.
+                        </p>
+                        {addOnChoices.map((addOn) => {
+                          const checked = pet.addOnIds.includes(addOn.id);
+                          const charge =
+                            checked && weight != null
+                              ? resolveAddOnCharges(
+                                  primaryServiceIds(pet.serviceIds)[0] ?? "",
+                                  [addOn.id],
+                                  weight,
+                                  pet.addOnOptions,
+                                )[0]
+                              : null;
+                          const priceLabel =
+                            charge?.kind === "priced"
+                              ? formatPrice(charge.amount)
+                              : null;
+                          return (
+                            <div key={addOn.id}>
+                              <label className="flex items-start gap-3 text-sm text-text">
+                                <input
+                                  type="checkbox"
+                                  className="mt-1"
+                                  checked={checked}
+                                  onChange={() => togglePetAddOn(pet.key, addOn.id)}
+                                />
+                                <span>
+                                  {addOn.name}
+                                  {priceLabel ? ` · ${priceLabel}` : ""}
+                                  {isAssessedOnSiteService(addOn)
+                                    ? " · Quoted at the visit"
+                                    : ""}
+                                </span>
                               </label>
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </fieldset>
+                              {checked &&
+                              addOn.id === CREATIVE_ACCENT_COLORING_ID &&
+                              addOn.options?.length ? (
+                                <label className={`${labelClass} mt-3 ml-7 block`}>
+                                  Color option
+                                  <select
+                                    className={fieldClass}
+                                    value={pet.addOnOptions[addOn.id] ?? ""}
+                                    onChange={(event) =>
+                                      updatePetAddOnOption(
+                                        pet.key,
+                                        addOn.id,
+                                        event.target.value,
+                                      )
+                                    }
+                                  >
+                                    <option value="">Select an option</option>
+                                    {addOn.options.map((option) => (
+                                      <option key={option.name} value={option.name}>
+                                        {option.name}
+                                        {option.priceFrom != null
+                                          ? ` · ${formatPrice(option.priceFrom)}`
+                                          : ""}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </fieldset>
+                    </details>
                   );
                 })()}
               </div>
