@@ -19,10 +19,12 @@ export function CustomerAdminNotesEditor({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setEditing(false);
     setError(null);
     setSaved(false);
 
@@ -56,6 +58,7 @@ export function CustomerAdminNotesEditor({
       const next = await saveCustomerAdminNotes(customerId, notes, preview);
       setNotes(next);
       setSaved(true);
+      setEditing(false);
     } catch (saveError) {
       setError(
         saveError instanceof Error
@@ -70,20 +73,39 @@ export function CustomerAdminNotesEditor({
   return (
     <section>
       <h3 className="text-base font-medium text-gold-dark">Customer record</h3>
+      {loading ? (
+        <p className="mt-3 text-sm text-text-muted">Loading…</p>
+      ) : editing ? (
+        <>
       <label htmlFor={fieldId} className="sr-only">
         Admin notes
       </label>
       <textarea
         id={fieldId}
+        autoFocus
         value={notes}
         onChange={(event) => {
           setNotes(event.target.value);
           setSaved(false);
         }}
-        rows={6}
+        rows={Math.min(12, Math.max(3, notes.split("\n").length))}
         disabled={busy || loading}
-        className="mt-3 w-full resize-none rounded-xl border border-lavender/40 bg-cream px-4 py-3 text-sm text-text disabled:opacity-60"
+        className="mt-3 w-full resize-y rounded-xl border border-lavender/40 bg-cream px-4 py-3 text-sm text-text disabled:opacity-60"
       />
+        </>
+      ) : (
+        <button
+          type="button"
+          aria-label={notes.trim() ? "Edit customer record" : "Add customer record"}
+          onClick={() => {
+            setEditing(true);
+            setSaved(false);
+          }}
+          className="mt-3 block w-full whitespace-pre-wrap break-words rounded-sm text-left text-sm text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-deep-lavender"
+        >
+          {notes.trim() ? notes : <span className="text-text-muted">Add notes</span>}
+        </button>
+      )}
       {error ? (
         <p className="mt-3 text-sm text-red-700" role="alert">
           {error}
@@ -92,6 +114,7 @@ export function CustomerAdminNotesEditor({
       {saved && !error ? (
         <p className="mt-3 text-sm text-gold-dark">Saved.</p>
       ) : null}
+      {editing ? (
       <div className="mt-4">
         <button
           type="button"
@@ -102,6 +125,7 @@ export function CustomerAdminNotesEditor({
           {busy ? "Saving…" : "Save"}
         </button>
       </div>
+      ) : null}
     </section>
   );
 }
