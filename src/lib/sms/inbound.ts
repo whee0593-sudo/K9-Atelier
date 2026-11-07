@@ -1,3 +1,4 @@
+import { appointmentNeedsAddress } from "@/lib/staff/booking-address";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import { mapAppointmentRowToAdminRecord } from "@/lib/appointments/map";
@@ -79,7 +80,8 @@ export function customerReplyConfirmationVisit(matches: ReturnType<typeof mapApp
 export async function persistCustomerReplyConfirmation(
   visit: NonNullable<ReturnType<typeof customerReplyConfirmationVisit>>,
   write: (ids: string[], customerId: string, patch: { status: "confirmed"; confirmed_at: string; customer_confirmed_at: string }) => PromiseLike<{ data: Array<{ id: string }> | null; error: { message: string } | null }>,
-): Promise<"confirmed" | "already" | "failed"> {
+): Promise<"confirmed" | "already" | "failed" | "details_required"> {
+  if (visit.appointment.staffCreated && visit.pets.some(appointmentNeedsAddress)) return "details_required";
   if (visit.pets.every((pet) => pet.customerConfirmedAt)) return "already";
   const now = new Date().toISOString();
   try {
@@ -208,6 +210,13 @@ export async function handleInboundCustomerSms(input: {
       .in("status", ["pending_confirmation", "confirmed"])
       .is("customer_confirmed_at", null)
       .select("id"));
+  if (outcome === "details_required") {
+    await sendSms({ to: input.from, body: "K9 Atelier: Please add your service address using the link in our reservation message to complete your appointment. Reply STOP to opt out.", communication: buildCommunicationContext({
+      notificationType: "staff_booking_address_required", recipient: input.from, customerId: appointment.customerId,
+      visitId: appointment.visitId, appointmentIds: pets.map(pet => pet.id), petIds: pets.map(pet => pet.petId), dedupe: appointment.visitId ? "visit" : "appointment",
+    }) });
+    return { handled: "message" };
+  }
   if (outcome === "failed") return { handled: "unmatched" };
   const already = outcome === "already";
   if (already) return { handled: "yes", already: true, appointmentId: appointment.id };

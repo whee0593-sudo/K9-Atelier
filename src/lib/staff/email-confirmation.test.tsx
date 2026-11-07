@@ -9,7 +9,7 @@ import { POST } from "@/app/api/confirm-account/appointment/route";
 type Loader = NonNullable<Parameters<typeof confirmStaffBookingFromEmail>[1]>;
 const token = "a".repeat(64);
 
-function loaderFixture(options: { error?: string; already?: boolean; writeError?: boolean; partial?: boolean } = {}) {
+function loaderFixture(options: { error?: string; already?: boolean; writeError?: boolean; partial?: boolean; missingAddress?: boolean } = {}) {
   const calls: Array<[string, unknown]> = [];
   const chain = {
     update(value: unknown) { calls.push(["update", value]); return chain; },
@@ -23,7 +23,7 @@ function loaderFixture(options: { error?: string; already?: boolean; writeError?
     return { ok:true, admin:{from:(table: string) => {calls.push(["table",table]); return chain;}},
       row:{customer_id:"owner",confirmed_at:null,customer_confirmed_at:null},
       appointment:{visitId:null}, firstName:"", email:"",
-      appointments:["first","second"].map((id) => ({id,status:options.already?"confirmed":"pending_confirmation",customerConfirmedAt:options.already?"2026-11-03":null})),
+      appointments:["first","second"].map((id) => ({addressStreet:options.missingAddress?"":"1 Main St",addressCity:"Jupiter",addressState:"FL",addressZip:"33458",id,status:options.already?"confirmed":"pending_confirmation",customerConfirmedAt:options.already?"2026-11-03":null})),
     };
   }) as unknown as Loader;
   return {load,calls};
@@ -73,4 +73,10 @@ it("the public POST endpoint rejects malformed tokens without reporting confirma
   const response=await POST(new Request("https://k9atelier.com/api/confirm-account/appointment",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:"invalid"})}));
   assert.equal(response.status,404);
   assert.deepEqual(await response.json(),{error:"This confirmation link is not valid."});
+});
+
+it("opens address completion instead of confirming an incomplete reservation", async () => {
+  const fixture = loaderFixture({missingAddress:true});
+  assert.deepEqual(await confirmStaffBookingFromEmail(token,fixture.load), {needsAddress:true});
+  assert.ok(!fixture.calls.some(([key]) => key === "update"));
 });

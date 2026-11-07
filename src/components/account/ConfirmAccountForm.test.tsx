@@ -94,3 +94,11 @@ it("provides a non-submit policy button next to the consent checkbox", () => {
   assert.match(html, /<button[^>]*type="button"[^>]*>View The Policies<\/button>/);
   assert.doesNotMatch(html, /After adding a card, select/);
 });
+
+it("asks for a missing service address even when a card is already saved", () => {
+  const html = renderToStaticMarkup(<ConfirmAccountForm token="preview" preview={{...base,appointment:{...appointment,addressStreet:"",addressCity:"",addressState:"FL",addressZip:""},paymentMethods:[card]}} />);
+  assert.match(html,/Add your service address/);
+  for(const key of ["street","city","state","zip"]) assert.ok(html.includes('id="confirm-address-' + key + '"'));
+  assert.match(html,/Check &amp; save address/);
+  assert.match(html,/travel fee will be calculated/);
+});

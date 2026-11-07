@@ -1,5 +1,9 @@
 "use client";
 
+import { appointmentNeedsAddress, hasServiceAddress, MISSING_BOOKING_ADDRESS_MESSAGE } from "@/lib/staff/booking-address";
+import type { ServiceAddress } from "@/lib/travel";
+import { formatPrice } from "@/lib/business";
+
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -45,6 +49,12 @@ export function ConfirmAccountForm({ token, preview }: Props) {
       ? { status: "ready", preview }
       : { status: "loading" },
   );
+  const [address, setAddress] = useState<ServiceAddress>({
+    street: preview?.appointment.addressStreet ?? "", city: preview?.appointment.addressCity ?? "",
+    state: preview?.appointment.addressState || "FL", zip: preview?.appointment.addressZip ?? "",
+  });
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [addressSaved, setAddressSaved] = useState(false);
   const [policiesOpen, setPoliciesOpen] = useState(false);
   const policiesButtonRef = useRef<HTMLButtonElement>(null);
   const [password, setPassword] = useState("");
@@ -73,6 +83,8 @@ export function ConfirmAccountForm({ token, preview }: Props) {
           });
           return;
         }
+        setAddress({ street: body.appointment.addressStreet, city: body.appointment.addressCity,
+          state: body.appointment.addressState || "FL", zip: body.appointment.addressZip });
         setPaymentMethods(body.paymentMethods ?? []);
         setLoadState({
           status: "ready",
@@ -99,11 +111,32 @@ export function ConfirmAccountForm({ token, preview }: Props) {
     };
   }, [preview, token]);
 
+  async function saveAddress() {
+    if (loadState.status !== "ready") return;
+    setError(null);
+    if (!hasServiceAddress(address)) { setError("Enter your street, city, state, and ZIP code."); return; }
+    setSavingAddress(true);
+    try {
+      if (preview) {
+        const updated = { ...loadState.preview.appointment, addressStreet: address.street, addressCity: address.city, addressState: address.state, addressZip: address.zip };
+        setLoadState({ status: "ready", preview: { ...loadState.preview, appointment: updated, appointments: [updated] } });
+      } else {
+        const response = await fetch("/api/confirm-account/address", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, address }) });
+        const body = await response.json() as Preview & { error?: string };
+        if (!response.ok || !body.appointment) throw new Error(body.error ?? "We could not save your address.");
+        setLoadState({ status: "ready", preview: body });
+      }
+      setAddressSaved(true);
+    } catch (failure) { setError(failure instanceof Error ? failure.message : "We could not save your address."); }
+    finally { setSavingAddress(false); }
+  }
+
   async function handleSubmit(event?: React.FormEvent, savedMethod?: PaymentMethodRecord) {
     event?.preventDefault();
     if (loadState.status !== "ready") return;
     setError(null);
     const appointment = loadState.preview.appointment;
+    if ((loadState.preview.appointments ?? [appointment]).some(appointmentNeedsAddress)) { setError(MISSING_BOOKING_ADDRESS_MESSAGE); return; }
 
     const selectedPaymentMethodId = savedMethod?.id ?? preferredPaymentMethodId(usableConfirmationCards(paymentMethods));
     if (!selectedPaymentMethodId) {
@@ -206,6 +239,7 @@ export function ConfirmAccountForm({ token, preview }: Props) {
 
   const { appointment, requiresPassword, customer } = loadState.preview;
   const appointments = loadState.preview.appointments ?? [appointment];
+  const needsAddress = appointments.some(appointmentNeedsAddress);
 
   return (
     <form onSubmit={(event) => void handleSubmit(event)} className="mt-8 space-y-5 text-left">
@@ -218,7 +252,7 @@ export function ConfirmAccountForm({ token, preview }: Props) {
           {appointment.appointmentTime}
         </p>
         <p className="font-body mt-2 text-sm text-taupe">
-          {appointment.addressStreet}, {appointment.addressCity}
+          {appointmentNeedsAddress(appointment) ? "Service address needed" : appointment.addressStreet + ", " + appointment.addressCity}
         </p>
         <ul className="mt-4 space-y-2">
           {appointments.map(pet => (
@@ -231,6 +265,26 @@ export function ConfirmAccountForm({ token, preview }: Props) {
       </div>
 
 
+
+      {needsAddress ? (
+        <fieldset className="space-y-4 border border-gray-line/80 p-6">
+          <legend className="font-body px-2 text-sm font-medium text-ink">Add your service address</legend>
+          <p className="font-body text-sm text-taupe">{MISSING_BOOKING_ADDRESS_MESSAGE}</p>
+          {([ ["street", "Street"], ["city", "City"], ["state", "State"], ["zip", "ZIP code"] ] as const).map(([key, label]) => (
+            <div key={key}>
+              <label className={bookingLabelClass} htmlFor={"confirm-address-" + key}>{label}</label>
+              <input id={"confirm-address-" + key} className={bookingFieldClass} value={address[key]}
+                autoComplete={key === "street" ? "street-address" : key === "city" ? "address-level2" : key === "state" ? "address-level1" : "postal-code"}
+                maxLength={key === "street" ? 200 : key === "city" ? 120 : key === "state" ? 40 : 20}
+                onChange={(event) => setAddress(current => ({ ...current, [key]: event.target.value }))} required />
+            </div>
+          ))}
+          <button type="button" className={bookingPrimaryBtnClass} disabled={savingAddress} onClick={() => void saveAddress()}>
+            {savingAddress ? "Checking & saving address…" : "Check & save address"}
+          </button>
+        </fieldset>
+      ) : null}
+      {addressSaved ? <p role="status" className="font-body text-sm text-ink">Address saved. Travel fee: {formatPrice(appointments.reduce((sum, row) => sum + row.travelFee, 0))}. Estimated total: {formatPrice(appointments.reduce((sum, row) => sum + (row.estimatedTotal ?? 0), 0))}.</p> : null}
 
       {requiresPassword ? (
         <>
@@ -289,6 +343,7 @@ export function ConfirmAccountForm({ token, preview }: Props) {
         methods={paymentMethods}
         stripeConfigured={loadState.preview.stripeConfigured}
         beforeSave={() => {
+          if (needsAddress) { setError(MISSING_BOOKING_ADDRESS_MESSAGE); return false; }
           if (requiresPassword && (password.length < 8 || password !== confirm)) {
             setError(password.length < 8 ? "Use at least 8 characters." : "Passwords do not match.");
             return false;

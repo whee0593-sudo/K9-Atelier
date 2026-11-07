@@ -1,3 +1,6 @@
+import { appointmentNeedsAddress, hasServiceAddress, MISSING_BOOKING_ADDRESS_MESSAGE } from "./booking-address";
+import { staffBookingLocation } from "./booking-location";
+import type { ServiceAddress } from "@/lib/travel";
 import { fetchCustomerContact } from "@/lib/email/appointment-context";
 import { notifyMerchantVisitConfirmedFromVisit } from "@/lib/communications/merchant-notices";
 import { notifyCustomerAppointmentConfirmed } from "@/lib/email/appointment-mails";
@@ -165,6 +168,7 @@ export async function confirmStaffBookingFromEmail(token: string, load = loadCon
   if (!/^[a-f0-9]{64}$/i.test(token)) return { error: "not_found" as const };
   const result = await load(token, false);
   if (!result.ok) return result;
+  if (result.appointments.some(appointmentNeedsAddress)) return { needsAddress: true as const };
   if (result.appointments.every((pet) => pet.status === "confirmed" && pet.customerConfirmedAt)) {
     return { confirmed: true as const };
   }
@@ -260,6 +264,8 @@ export async function confirmStaffCreatedBooking(input: {
 > {
   const result = await loadConfirmAppointment(input.token);
   if (!result.ok) return result;
+
+  if (result.appointments.some(appointmentNeedsAddress)) return { error: "conflict", message: MISSING_BOOKING_ADDRESS_MESSAGE };
 
   if (result.requiresPassword && !input.password) {
     return {
@@ -362,4 +368,26 @@ export async function confirmStaffCreatedBooking(input: {
     email: result.email,
     signedInWithPassword: Boolean(input.password),
   };
+}
+
+/** A valid reservation token may complete only that visit's missing address. */
+export async function saveCustomerConfirmAddress(token: string, address: ServiceAddress) {
+  if (!/^[a-f0-9]{64}$/i.test(token)) return { error: "not_found" as const };
+  if (!hasServiceAddress(address)) return { error: "conflict" as const, message: "Enter your street, city, state, and ZIP code." };
+  const result = await loadConfirmAppointment(token, false);
+  if (!result.ok) return result;
+  if (!result.appointments.some(appointmentNeedsAddress)) return getCustomerConfirmPreview(token);
+  const location = await staffBookingLocation(address);
+  if ("error" in location) return { error: "conflict" as const, message: location.message ?? "We could not check your service address. Please try again." };
+  if (!location.destination) return { error: "conflict" as const, message: MISSING_BOOKING_ADDRESS_MESSAGE };
+  const saved = await result.admin.rpc("complete_staff_booking_address", {
+    p_token_hash: hashCustomerConfirmToken(token), p_customer_id: result.row.customer_id,
+    p_appointment_id: result.row.id, p_address: address, p_lat: location.destination.lat,
+    p_lon: location.destination.lon, p_distance: location.quote.distanceMiles, p_automatic_fee: location.quote.fee,
+  });
+  if (saved.error || saved.data !== true) {
+    console.error("saveCustomerConfirmAddress failed:", saved.error?.message);
+    return { error: "conflict" as const, message: "Your address could not be saved. Please reload your confirmation link and try again." };
+  }
+  return getCustomerConfirmPreview(token);
 }

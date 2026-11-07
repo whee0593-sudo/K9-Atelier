@@ -458,6 +458,14 @@ describe("validateStaffCustomerBookingInput", () => {
     assert.equal(input.mode, "booking");
   });
 
+  it("creates a dated reservation without an address, including the default FL state", () => {
+    for (const address of [undefined, {street:"",city:"",state:"FL",zip:""}, {street:"123 Palm Lane",city:"",state:"FL",zip:""}]) {
+      const input = validateStaffCustomerBookingInput(validBody({address}));
+      assert.equal(input.mode, "booking");
+      assert.ok(input.appointmentDate);
+    }
+  });
+
   it("accepts an email-only invite with no other fields", () => {
     const input = validateStaffCustomerBookingInput({
       email: "ada@example.com",
@@ -472,7 +480,6 @@ describe("validateStaffCustomerBookingInput", () => {
   it("never silently turns a dated booking into an invitation", () => {
     for (const overrides of [
       { serviceId: "" },
-      { address: undefined },
       { slotStartMinutes: undefined },
       { appointmentDate: undefined },
       { pet: undefined },

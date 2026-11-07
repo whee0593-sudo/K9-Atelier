@@ -1,3 +1,6 @@
+import { formatMinutesLabel } from "@/lib/appointments/closures";
+import { hasServiceAddress } from "@/lib/staff/booking-address";
+import { staffBookingLocation } from "@/lib/staff/booking-location";
 import { listPaymentMethodsForCustomer } from "@/lib/payments/service";
 import { usableConfirmationCards } from "@/lib/staff/customer-confirm-status";
 import { mapFixedServicePrices } from "@/lib/pets/fixed-prices";
@@ -7,10 +10,10 @@ import { resolveArrivalForBooking } from "@/lib/appointments/arrival-window";
 import {
   assignArrivalWindow,
   claimDayPlan,
-  getBaseGeoPoint,
   loadOccupiedStops,
 } from "@/lib/appointments/schedule";
 import {
+  preferenceFromStart,
   buildSameAddressCompanionInsertion,
   buildStaffOverrideCompanionInsertion,
 } from "@/lib/booking-schedule";
@@ -25,9 +28,6 @@ import type {
   AppointmentRecord,
   AppointmentRow,
 } from "@/lib/appointments/types";
-import { drivingDistanceMiles, geocodeAddress } from "@/lib/geo";
-import { getBaseAddressFormatted } from "@/lib/server/base-address";
-import { formatServiceAddress, calculateTravelFee } from "@/lib/travel";
 import { mapValidatedInputToInsertRow } from "@/lib/pets/map";
 import { loadBookingAllergySnapshot } from "@/lib/appointments/service";
 import { PET_SELECT } from "@/lib/pets/types";
@@ -525,46 +525,25 @@ export async function createStaffCustomerBooking(
   if ("error" in session) return { error: session.error };
   if (!hasSupabaseAdminConfig()) return { error: "misconfigured" };
 
-  const address = input.address;
+  const address = input.address ?? { street: "", city: "", state: "", zip: "" };
+  const needsAddress = !hasServiceAddress(input.address);
   const serviceId = input.serviceId;
   const serviceName = input.serviceName;
   const appointmentDate = input.appointmentDate;
   const slotStartMinutes = input.slotStartMinutes;
   if (
-    !address ||
     !serviceId ||
     !serviceName ||
     !appointmentDate ||
     slotStartMinutes == null ||
     input.pets.length === 0
   ) {
-    return { error: "conflict", message: "No appointment has been created. Complete the dog, service, address, date, and start time." };
+    return { error: "conflict", message: "No appointment has been created. Complete the dog, service, date, and start time." };
   }
 
-  const baseFormatted = getBaseAddressFormatted();
-  const base = await getBaseGeoPoint();
-  if (!baseFormatted || !base) return { error: "misconfigured" };
-
-  const customerQuery = formatServiceAddress(address);
-  const destination = await geocodeAddress(customerQuery);
-  if (!destination) {
-    return {
-      error: "outside_area",
-      message:
-        "We could not locate that address. Please check the street and ZIP code.",
-    };
-  }
-
-  const miles = await drivingDistanceMiles(base, destination);
-  if (miles == null) return { error: "server" };
-
-  const quote = calculateTravelFee(miles);
-  if (!quote.withinServiceArea) {
-    return {
-      error: "outside_area",
-      message: quote.summary,
-    };
-  }
+  const location = await staffBookingLocation(input.address);
+  if ("error" in location) return location;
+  const { base, destination, quote } = location;
 
   for (const pet of input.pets) {
     const petServiceIds =
@@ -638,26 +617,20 @@ export async function createStaffCustomerBooking(
   if (scheduleConflict && !input.acknowledgeScheduleConflict) {
     return { error: "schedule_conflict", message: scheduleConflict };
   }
-  const firstAssignment = await assignArrivalWindow({
-    date: appointmentDate,
-    point: destination,
-    zip: address.zip,
-    durationMinutes: firstDurationMinutes,
-    slotStartMinutes,
-    base,
-    allowUnfittedStart: overrideSchedule,
-    staffBooking: true,
-  });
+  const firstAssignment = base && destination ? await assignArrivalWindow({
+    date: appointmentDate, point: destination, zip: address.zip,
+    durationMinutes: firstDurationMinutes, slotStartMinutes, base,
+    allowUnfittedStart: overrideSchedule, staffBooking: true,
+  }) : { insertion: { appointmentTime: formatMinutesLabel(slotStartMinutes), scheduledStart: slotStartMinutes, usedPreference: preferenceFromStart(slotStartMinutes) } };
   const firstSchedule = resolveArrivalForBooking(firstAssignment, slotStartMinutes);
   if ("error" in firstSchedule) return { error: "slot_unavailable" };
 
-  const claimed = await claimDayPlan(appointmentDate, address.zip, destination);
-  if ("error" in claimed) {
-    if (claimed.error === "slot_unavailable") return { error: "slot_unavailable" };
-    console.error(
-      "createStaffCustomerBooking day plan was not claimed; booking continues:",
-      claimed.error,
-    );
+  if (destination) {
+    const claimed = await claimDayPlan(appointmentDate, address.zip, destination);
+    if ("error" in claimed) {
+      if (claimed.error === "slot_unavailable") return { error: "slot_unavailable" };
+      console.error("createStaffCustomerBooking day plan was not claimed; booking continues:", claimed.error);
+    }
   }
 
   try {
@@ -775,8 +748,8 @@ export async function createStaffCustomerBooking(
           appointment_time: insertion.appointmentTime,
           scheduled_start: insertion.scheduledStart,
           time_preference: insertion.timePreference,
-          address_lat: destination.lat,
-          address_lon: destination.lon,
+          address_lat: destination?.lat ?? null,
+          address_lon: destination?.lon ?? null,
           timezone: business.booking.timezone,
           estimated_total: draft.estimatedTotal,
           new_client_deposit: 0,
@@ -810,8 +783,8 @@ export async function createStaffCustomerBooking(
         address_city: address.city,
         address_state: address.state,
         address_zip: address.zip,
-        address_lat: destination.lat,
-        address_lon: destination.lon,
+        address_lat: destination?.lat ?? null,
+        address_lon: destination?.lon ?? null,
         travel_distance_miles: quote.distanceMiles,
         travel_fee: effectiveTravelFee(quote.fee, input.travelFeeOverride),
         travel_fee_automatic: quote.fee,
@@ -862,10 +835,10 @@ export async function createStaffCustomerBooking(
     const confirmUrl = siteUrl(customerConfirmPath(confirm.token));
     const petNames = [...new Map(appointments.map((entry) => [entry.petId, entry.petName])).values()];
 
-    let requiresProfileCompletion = createdAccount;
+    let requiresProfileCompletion = createdAccount || needsAddress;
     try {
       const methods = await listPaymentMethodsForCustomer(userId);
-      requiresProfileCompletion = createdAccount || !methods || usableConfirmationCards(methods).length === 0;
+      requiresProfileCompletion = needsAddress || createdAccount || !methods || usableConfirmationCards(methods).length === 0;
     } catch {
       requiresProfileCompletion = true;
     }
@@ -879,6 +852,7 @@ export async function createStaffCustomerBooking(
         confirmUrl,
         createdAccount,
         requiresProfileCompletion,
+        requiresAddress: needsAddress,
       }, appointments);
       emailed = isCommunicationAccepted(
         await sendEmail({
@@ -906,7 +880,7 @@ export async function createStaffCustomerBooking(
       texted = isCommunicationAccepted(
         await sendSms({
           to: input.phone,
-          body: buildStaffCreatedBookingSms(appointment, confirmUrl, petNames, { firstName: input.firstName, requiresProfileCompletion }),
+          body: buildStaffCreatedBookingSms(appointment, confirmUrl, petNames, { firstName: input.firstName, requiresProfileCompletion, requiresAddress: needsAddress }),
           communication: buildCommunicationContext({
             notificationType: "staff_created_booking",
             recipient: input.phone,
