@@ -14,6 +14,7 @@ describe("inbound customer SMS", () => {
   const base = buildPreviewCollectContext().appointment;
   const pending = (id: string, name: string, visitId = "staff-visit") => ({
     ...base, id, petId: id, petName: name, visitId,
+    addressStreet: "1 Main St", addressCity: "Jupiter", addressState: "FL", addressZip: "33458",
     staffCreated: true, status: "pending_confirmation" as const, customerConfirmedAt: null,
   });
 
@@ -89,4 +90,11 @@ describe("inbound customer SMS", () => {
     assert.equal(body.includes("YES"), false);
     assert.equal(body.includes("appointment is confirmed"), false);
   });
+});
+
+it("does not confirm a staff reservation by C while its address is missing", async () => {
+  const row = { id:"missing", customerId:"owner", staffCreated:true, status:"pending_confirmation", addressStreet:"", addressCity:"Jupiter", addressState:"FL", addressZip:"33458" } as AdminAppointmentRecord;
+  let wrote = false;
+  assert.equal(await persistCustomerReplyConfirmation(customerReplyConfirmationVisit([row])!, async () => { wrote=true; return {data:[],error:null}; }), "details_required");
+  assert.equal(wrote, false);
 });

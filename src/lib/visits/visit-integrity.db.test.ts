@@ -653,3 +653,10 @@ describe("visit sequence in postgres", () => {
     assert.equal(visit.rows[0]?.travel_fee, "0.00");
   });
 });
+
+it("stores a staff reservation with no address and preserves the requested start", async () => {
+  const pendingAddress = "jsonb_build_object('address_street','','address_city','','address_state','','address_zip','','address_lat',null,'address_lon',null,'travel_distance_miles',0,'travel_fee',0)";
+  const created = await db.query<{id:string}>("select public.create_staff_visit(" + visitJson(600,"2026-12-20") + " || " + pendingAddress + ",jsonb_build_array(" + appointmentJson({petId:PET_A,start:600,date:"2026-12-20",name:"Pending address"}) + " || " + pendingAddress + "))::text as id");
+  const rows = await db.query<{address_street:string;address_lat:number|null;scheduled_start:number}>("select address_street,address_lat,scheduled_start from appointments where visit_id=$1",[created.rows[0].id]);
+  assert.deepEqual(rows.rows,[{address_street:"",address_lat:null,scheduled_start:600}]);
+});

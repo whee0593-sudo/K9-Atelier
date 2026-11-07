@@ -1,7 +1,8 @@
 import { ConfirmAccountForm } from "@/components/account/ConfirmAccountForm";
 import { Container } from "@/components/luxury/Container";
 
-export default function ConfirmAccountPreviewPage() {
+export default async function ConfirmAccountPreviewPage({ searchParams }: { searchParams: Promise<{ missingAddress?: string }> }) {
+  const missingAddress = (await searchParams).missingAddress === "1";
   return (
     <Container className="py-14 md:py-20">
       <div className="mx-auto max-w-xl">
@@ -36,10 +37,10 @@ export default function ConfirmAccountPreviewPage() {
               serviceName: "Signature Bath & Care",
               addOnIds: [],
               addOnOptions: {},
-              addressStreet: "100 Olive Ave",
-              addressCity: "West Palm Beach",
+              addressStreet: missingAddress ? "" : "100 Olive Ave",
+              addressCity: missingAddress ? "" : "West Palm Beach",
               addressState: "FL",
-              addressZip: "33401",
+              addressZip: missingAddress ? "" : "33401",
               travelDistanceMiles: 4,
               travelFee: 0,
               appointmentDate: "2026-09-18",

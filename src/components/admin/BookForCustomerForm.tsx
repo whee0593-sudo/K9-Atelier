@@ -875,9 +875,6 @@ export function BookForCustomerForm({
     const servicesReady =
       filledPets.length > 0 &&
       filledPets.every((pet) => pet.lines.length > 0);
-    const addressComplete = Boolean(
-      street.trim() && city.trim() && state.trim() && zip.trim(),
-    );
     const missingCustomPrice = filledPets.some((pet) =>
       pet.lines.some((line) => {
         const choice = parseStaffServiceSelection(line.serviceId);
@@ -892,7 +889,6 @@ export function BookForCustomerForm({
       servicesReady &&
       appointmentDate &&
       slotStartMinutes &&
-      addressComplete &&
       missingCustomPrice
     ) {
       setError("Enter a price for Custom Creative Design.");
@@ -1001,7 +997,7 @@ export function BookForCustomerForm({
         throw new Error(body.error ?? "Could not send this booking link.");
       }
       if ((servicesReady || appointmentDate || slotStartMinutes) && (body.mode !== "booking" || !body.appointment)) {
-        throw new Error("No appointment was created. Complete the dog, service, address, date, and start time, then try again.");
+        throw new Error("No appointment was created. Complete the dog, service, date, and start time, then try again.");
       }
       setSuccess({
         mode: body.mode === "booking" ? "booking" : "invite",
@@ -1459,6 +1455,7 @@ export function BookForCustomerForm({
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2">
+        <p className="text-sm text-text-muted sm:col-span-2">Address is optional when creating the appointment. If it is missing or incomplete, the customer will be asked to add it using their confirmation link. Travel will be calculated then.</p>
         {foundProfile && foundProfile.addresses.length > 1 ? (
           <div className="sm:col-span-2">
             <label className={labelClass} htmlFor="saved-address">

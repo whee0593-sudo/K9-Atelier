@@ -48,7 +48,7 @@ export type StaffBookingPetInput = PetWriteInput & {
   serviceIds: string[];
   /** Parallel to serviceIds. Set when a service has its own styles, such as coloring. */
   serviceOptionNames: (string | null)[];
-  /** Parallel to serviceIds. Set when staff type a price for Custom Creative Design. */
+  /** Parallel to serviceIds. Optional staff-entered price for this service. */
   servicePrices: (number | null)[];
   /** Add-ons for this dog only. They are not copied onto the other dogs. */
   addOnIds: string[];
@@ -575,23 +575,14 @@ export function validateStaffCustomerBookingInput(
     const city = readOptionalString(addressObj, "city", "City", 120);
     const state = readOptionalString(addressObj, "state", "State", 40);
     const zip = readOptionalString(addressObj, "zip", "ZIP code", 20);
-    if (street || city || state || zip) {
-      if (!street || !city || !state || !zip) {
-        throw new StaffBookingValidationError(
-          "Complete the street, city, state, and ZIP, or leave the address blank.",
-          "address",
-        );
-      }
-      address = { street, city, state, zip };
-    }
+    if (street || city || zip) address = { street, city, state, zip };
   }
 
   const hasCompleteBooking = Boolean(
     pets.length > 0 &&
       pets.every((pet) => pet.serviceIds.length > 0) &&
       appointmentDate &&
-      slotStartMinutes != null &&
-      address,
+      slotStartMinutes != null,
   );
 
   // A chosen date/time means staff are reserving a visit, not sending an invitation.
@@ -602,14 +593,12 @@ export function validateStaffCustomerBookingInput(
         ? "Choose a service for every dog."
         : !appointmentDate
           ? "Choose an appointment date."
-          : slotStartMinutes == null
-            ? "Choose a start time."
-            : "Complete the service address.";
+          : "Choose a start time.";
     throw new StaffBookingValidationError(
       `No appointment has been created. ${missing}`,
       !pets.length ? "pets" : !pets.every((pet) => pet.serviceIds.length > 0)
         ? "serviceId" : !appointmentDate ? "appointmentDate"
-          : slotStartMinutes == null ? "slotStartMinutes" : "address",
+          : "slotStartMinutes",
     );
   }
 
