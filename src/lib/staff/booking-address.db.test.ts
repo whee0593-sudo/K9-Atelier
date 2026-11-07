@@ -25,7 +25,7 @@ before(async()=>{
     ALTER TABLE visits ENABLE ROW LEVEL SECURITY;
   `);
   await db.exec(readFileSync("supabase/migrations/20261026153942_visit_travel_fee_override.sql","utf8"));
-  await db.exec(readFileSync("supabase/migrations/20261106174639_complete_staff_booking_address.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261107021223_complete_staff_booking_address.sql","utf8"));
 });
 beforeEach(async()=>{
   await db.exec(`TRUNCATE appointments,visits,appointment_charges;
