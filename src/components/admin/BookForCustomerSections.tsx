@@ -113,10 +113,6 @@ export function BookForCustomerSections({
         open={formOpen}
         onToggle={() => setFormOpen((value) => !value)}
       >
-        <p className="text-sm text-text-muted">
-          Email or phone is enough to send a booking link. The customer can
-          complete the rest online.
-        </p>
         {showPreviewLink ? (
           <p className="mt-2">
             <Link

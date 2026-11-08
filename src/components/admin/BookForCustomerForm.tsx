@@ -32,7 +32,6 @@ import {
 } from "@/lib/staff/book-for-customer-schedule";
 import {
   bookingAddressKey,
-  bookingProfileStatusCopy,
   formatBookingAddress,
   resolveBookingProfileQuery,
   type StaffBookingProfile,
@@ -237,9 +236,6 @@ export function BookForCustomerForm({
   const [foundProfile, setFoundProfile] = useState<StaffBookingProfile | null>(
     initialProfile,
   );
-  const [profileNote, setProfileNote] = useState<string | null>(() =>
-    initialProfile ? bookingProfileStatusCopy(initialProfile) : null,
-  );
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [selectedAddressKey, setSelectedAddressKey] = useState(
@@ -385,14 +381,12 @@ export function BookForCustomerForm({
   function markPetsEdited() {
     petsSourceRef.current = "user";
     setPetsSource("user");
-    setProfileNote(null);
   }
 
   function markAddressEdited() {
     addressSourceRef.current = "user";
     setAddressSource("user");
     setSelectedAddressKey("");
-    setProfileNote(null);
   }
 
   function updatePet(
@@ -568,12 +562,6 @@ export function BookForCustomerForm({
       setPhone(profile.phone);
       setNotifySms(true);
     }
-    setProfileNote(
-      bookingProfileStatusCopy({
-        pets: fillPets ? profile.pets : [],
-        addresses: fillAddress ? profile.addresses : [],
-      }),
-    );
   }
 
   function clearLoadedProfile() {
@@ -582,7 +570,6 @@ export function BookForCustomerForm({
     }
     foundProfileRef.current = null;
     setFoundProfile(null);
-    setProfileNote(null);
     if (petsSourceRef.current === "saved") {
       setPets([createPetDraft()]);
       petsSourceRef.current = "empty";
@@ -603,12 +590,6 @@ export function BookForCustomerForm({
     );
     if (!address) return;
     applySavedAddress(address);
-    setProfileNote(
-      bookingProfileStatusCopy({
-        pets: petsSourceRef.current === "saved" ? (foundProfileRef.current?.pets ?? []) : [],
-        addresses: [address],
-      }),
-    );
   }
 
   async function quoteAddress(
@@ -1111,10 +1092,6 @@ export function BookForCustomerForm({
       onSubmit={(event) => void handleSubmit(event)}
       className="space-y-8 rounded-2xl border border-lavender/30 bg-cream p-6"
     >
-      <p className="text-sm text-text-muted">
-        Only an email or mobile phone is required. Leave other fields blank and
-        the customer can finish them from the booking link.
-      </p>
       {profileLoading ? (
         <p className="text-sm text-text-muted">
           Loading saved pets and address…
@@ -1124,9 +1101,6 @@ export function BookForCustomerForm({
         <p className="text-sm text-red-800" role="alert">
           {profileError}
         </p>
-      ) : null}
-      {profileNote ? (
-        <p className="text-sm text-text-muted">{profileNote}</p>
       ) : null}
       {foundProfile &&
       (foundProfile.pets.length > 0 || foundProfile.addresses.length > 0) &&
