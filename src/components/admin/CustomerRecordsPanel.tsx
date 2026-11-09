@@ -1066,6 +1066,9 @@ export function CustomerRecordCard({
               )}
             </div>
           </section>
+          {customer.kind === "customer" ? (
+            <StaffCustomerReferrals customerId={customer.profile.id} preview={preview} />
+          ) : null}
           <StaffCustomerPayments
             customerId={customer.profile.id}
             methods={customer.paymentMethods}
@@ -1092,9 +1095,6 @@ export function CustomerRecordCard({
             onPetCreated={onPetCreated}
             onPetArchived={onPetArchived}
           />
-          {customer.kind === "customer" ? (
-            <StaffCustomerReferrals customerId={customer.profile.id} preview={preview} />
-          ) : null}
           <StaffCustomerPassword
             customerId={customer.profile.id}
             preview={preview}
