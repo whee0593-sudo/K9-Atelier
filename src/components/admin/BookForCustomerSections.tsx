@@ -7,7 +7,6 @@ import { CustomerRecordsPanel } from "@/components/admin/CustomerRecordsPanel";
 import type { StaffBookingProfile } from "@/lib/staff/customer-booking-profile";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
 import type { StaffCustomerHistory } from "@/lib/charges/history";
-import type { StaffReferralView } from "@/components/admin/StaffCustomerReferrals";
 
 type Prefill = {
   customerId?: string;
@@ -68,7 +67,6 @@ export function BookForCustomerSections({
   formInitiallyOpen = false,
   previewCustomers,
   previewHistoryByCustomerId,
-  previewReferralsByCustomerId,
   initialSlotStartMinutes,
   initialScheduleDays,
 }: {
@@ -81,7 +79,6 @@ export function BookForCustomerSections({
   formInitiallyOpen?: boolean;
   previewCustomers?: StaffCustomerRecord[];
   previewHistoryByCustomerId?: Record<string, StaffCustomerHistory>;
-  previewReferralsByCustomerId?: Record<string, StaffReferralView>;
   initialSlotStartMinutes?: number | null;
   initialScheduleDays?: Array<{
     date: string;
@@ -105,7 +102,6 @@ export function BookForCustomerSections({
           preview={preview}
           previewCustomers={previewCustomers}
           previewHistoryByCustomerId={previewHistoryByCustomerId}
-          previewReferralsByCustomerId={previewReferralsByCustomerId}
         />
       </FoldSection>
       <FoldSection

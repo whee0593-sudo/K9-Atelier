@@ -16,7 +16,6 @@ import {
   StaffCustomerPets,
 } from "@/components/admin/StaffCustomerPets";
 import { StaffCustomerPassword } from "@/components/admin/StaffCustomerPassword";
-import { StaffCustomerReferrals } from "@/components/admin/StaffCustomerReferrals";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
 
 function sampleCustomer(
@@ -139,7 +138,7 @@ describe("CustomerRecordCard actions", () => {
     assert.match(source, /StaffCustomerPets/);
     assert.match(source, /StaffCustomerPayments/);
     assert.match(source, /StaffCustomerPassword/);
-    assert.match(source, /StaffCustomerReferrals/);
+    assert.match(source, /<StaffCustomerReferrals/);
     assert.match(source, /Service addresses/);
   });
 
@@ -151,7 +150,7 @@ describe("CustomerRecordCard actions", () => {
     assert.match(source, /StaffCustomerPets/);
     assert.match(source, /StaffCustomerPayments/);
     assert.match(source, /StaffCustomerPassword/);
-    assert.match(source, /StaffCustomerReferrals/);
+    assert.match(source, /<StaffCustomerReferrals/);
     assert.match(source, /Service addresses/);
     assert.match(source, /ServiceAddressEditor/);
     assert.match(source, /ServiceAddressAddForm/);
@@ -183,21 +182,6 @@ describe("CustomerRecordCard actions", () => {
     );
     assert.match(password, /Password/);
     assert.match(password, /Save password/);
-
-    const referrals = renderToStaticMarkup(
-      <StaffCustomerReferrals
-        customerId="11111111-1111-4111-8111-111111111111"
-        preview
-        previewView={{
-          availableCreditCents: 1800,
-          availableLabel: "18.00",
-          codes: [{ petName: "Milo", code: "MILO-TIA" }],
-          rewards: [],
-        }}
-      />,
-    );
-    assert.match(referrals, /Referrals/);
-    assert.match(referrals, /MILO-TIA/);
   });
 
   it("shows address actions and a confirmation dialog without opening it", () => {

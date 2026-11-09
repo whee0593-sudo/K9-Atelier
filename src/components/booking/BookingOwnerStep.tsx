@@ -523,20 +523,24 @@ export function BookingOwnerStep({
                 We&apos;d love to know how you found us.
               </p>
               {referralSource === "referral" ? (
-                <label className="block min-w-0" htmlFor="booking-referral-name">
-                  <span className={bookingLabelClass}>
-                    Who can we thank for referring you?
-                  </span>
-                  <input
-                    id="booking-referral-name"
-                    type="text"
-                    autoComplete="off"
-                    value={referralName}
-                    onChange={(event) => setReferralName(event.target.value)}
-                    placeholder="Name (optional)"
-                    className={bookingFieldClass}
-                  />
-                </label>
+                <div className="space-y-2">
+                  <label className="block min-w-0" htmlFor="booking-referral-name">
+                    <span className={bookingLabelClass}>Who referred you?</span>
+                    <input
+                      id="booking-referral-name"
+                      type="text"
+                      autoComplete="off"
+                      value={referralName}
+                      onChange={(event) => setReferralName(event.target.value)}
+                      placeholder="Name (optional)"
+                      aria-describedby="booking-referral-name-hint"
+                      className={bookingFieldClass}
+                    />
+                  </label>
+                  <p id="booking-referral-name-hint" className="font-body text-[13px] leading-relaxed text-taupe">
+                    Share their name so we can thank them for recommending us.
+                  </p>
+                </div>
               ) : null}
             </div>
           ) : null}

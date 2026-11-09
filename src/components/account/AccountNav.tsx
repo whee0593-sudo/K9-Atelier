@@ -25,7 +25,6 @@ function summaryForSection(
     sectionId === "addresses" ||
     sectionId === "pets" ||
     sectionId === "payment" ||
-    sectionId === "referrals" ||
     sectionId === "bookings"
   ) {
     return summaries[sectionId];

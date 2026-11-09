@@ -254,13 +254,6 @@
       ]
     },
     {
-      "id": "referrals",
-      "path": "/account/referrals",
-      "title": "Referral Rewards",
-      "description": "Your pet referral codes, share links, and available Referral Credit.",
-      "fields": []
-    },
-    {
       "id": "bookings",
       "path": "/account/bookings",
       "title": "Booking Record",

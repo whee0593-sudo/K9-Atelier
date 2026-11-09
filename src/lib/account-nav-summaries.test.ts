@@ -6,8 +6,6 @@ import {
   formatAccountDate,
   formatCompletionStatus,
   formatPetNamesSummary,
-  formatReferralCodeSummary,
-  formatReferralRewardsSummary,
   hasCompletedServiceAddress,
   isCustomerProfileComplete,
   pickLastAppointmentDate,
@@ -50,16 +48,9 @@ describe("account nav summaries", () => {
     assert.equal(formatCompletionStatus(false), "incompleted");
   });
 
-  it("formats overview, pets, and referral credit summaries", () => {
-    assert.equal(
-      formatReferralCodeSummary(["  BELLA-JANE-M  ", "MAX-JANE-M"]),
-      "Referral code: BELLA-JANE-M",
-    );
-    assert.equal(formatReferralCodeSummary(["", "  "]), null);
+  it("formats the saved pet names", () => {
     assert.equal(formatPetNamesSummary(["Bella", " Max "]), "Bella, Max");
     assert.equal(formatPetNamesSummary([]), "None");
-    assert.equal(formatReferralRewardsSummary(1250), "$12.50");
-    assert.equal(formatReferralRewardsSummary(0), "$0.00");
   });
 
   it("picks the most recent past appointment, or the soonest upcoming if none", () => {
@@ -134,8 +125,6 @@ describe("account nav summaries", () => {
           addressZip: "32801",
         },
       ],
-      referralCodes: ["BELLA-JANE-M"],
-      availableCreditCents: 1800,
       today: "2026-09-16",
     });
 
@@ -144,7 +133,6 @@ describe("account nav summaries", () => {
     assert.equal(summaries.addresses, null);
     assert.equal(summaries.pets, "Bella, Max");
     assert.equal(summaries.payment, null);
-    assert.equal(summaries.referrals, "$18.00");
     assert.equal(summaries.bookings, "Aug 12, 2026");
     assert.equal(summaries.password, null);
   });

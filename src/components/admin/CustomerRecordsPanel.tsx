@@ -20,10 +20,9 @@ import { AppointmentCornerMark } from "@/components/admin/AppointmentCornerMark"
 import { CallCustomerButton } from "@/components/admin/CallCustomerButton";
 import { CustomerAdminNotesEditor } from "@/components/admin/CustomerAdminNotesEditor";
 import { StaffCustomerPassword } from "@/components/admin/StaffCustomerPassword";
+import { StaffCustomerReferrals } from "@/components/admin/StaffCustomerReferrals";
 import { StaffCustomerPayments } from "@/components/admin/StaffCustomerPayments";
 import { StaffCustomerPets } from "@/components/admin/StaffCustomerPets";
-import { StaffCustomerReferrals } from "@/components/admin/StaffCustomerReferrals";
-import type { StaffReferralView } from "@/components/admin/StaffCustomerReferrals";
 
 type LoadState =
   | { status: "loading" }
@@ -840,7 +839,6 @@ export function CustomerRecordCard({
   startOpen,
   preview = false,
   previewHistory,
-  previewReferrals,
   onProfileSaved,
   onPetSaved,
   onPetCreated,
@@ -853,7 +851,6 @@ export function CustomerRecordCard({
   startOpen?: boolean;
   preview?: boolean;
   previewHistory?: StaffCustomerHistory;
-  previewReferrals?: StaffReferralView;
   onProfileSaved: (profile: CustomerProfile) => void;
   onPetSaved: (pet: StaffCustomerRecord["pets"][number]) => void;
   onPetCreated: (pet: StaffCustomerRecord["pets"][number]) => void;
@@ -1095,11 +1092,9 @@ export function CustomerRecordCard({
             onPetCreated={onPetCreated}
             onPetArchived={onPetArchived}
           />
-          <StaffCustomerReferrals
-            customerId={customer.profile.id}
-            preview={preview}
-            previewView={previewReferrals}
-          />
+          {customer.kind === "customer" ? (
+            <StaffCustomerReferrals customerId={customer.profile.id} preview={preview} />
+          ) : null}
           <StaffCustomerPassword
             customerId={customer.profile.id}
             preview={preview}
@@ -1123,14 +1118,12 @@ export function CustomerRecordsPanel({
   preview = false,
   previewCustomers,
   previewHistoryByCustomerId,
-  previewReferralsByCustomerId,
   customersOnly = false,
 }: {
   focusCustomerId?: string;
   preview?: boolean;
   previewCustomers?: StaffCustomerRecord[];
   previewHistoryByCustomerId?: Record<string, StaffCustomerHistory>;
-  previewReferralsByCustomerId?: Record<string, StaffReferralView>;
   /** Customer profile cards only, without administrators or the create form. */
   customersOnly?: boolean;
 }) {
@@ -1263,7 +1256,6 @@ export function CustomerRecordsPanel({
               }
               preview={preview}
               previewHistory={previewHistoryByCustomerId?.[customer.profile.id]}
-              previewReferrals={previewReferralsByCustomerId?.[customer.profile.id]}
               onDeleted={(customerId) => {
                 setLoadState((current) => {
                   if (current.status !== "ready") return current;

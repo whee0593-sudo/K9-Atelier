@@ -32,7 +32,7 @@ const QUESTIONS = [
   "Can I pay with cash or Zelle?",
   "What is your cancellation and rescheduling policy?",
   "Are all the photos on this website your real work?",
-  "How do Referral Rewards work?",
+  "How do I let you know a friend referred me?",
 ] as const;
 
 describe("FAQ page", () => {
@@ -89,9 +89,9 @@ describe("FAQ page", () => {
     assert.match(page, /you will not be charged/);
     assert.match(page, /cash or Zelle after grooming/);
     assert.ok(page.includes("Yes, we prefer cash or Zelle payments. Your payment method on file is to secure the appointment."));
-    assert.match(page, /href="\/referrals"/);
-    assert.match(page, /cannot be transferred, withdrawn, sold, or exchanged for cash/);
-    assert.match(page, /in full or in part/);
+    assert.match(page, /How did you hear about K9 Atelier\?/);
+    assert.match(page, /“Referred by a friend or client” and enter their name/);
+    assert.doesNotMatch(page, /Referral Credit|Referral Rewards/);
     assert.match(page, /id="fees-policies"/);
     assert.match(fees, /Flea & Tick Treatment Fee|flea-tick-fee/);
     assert.match(fees, /Dematting/);

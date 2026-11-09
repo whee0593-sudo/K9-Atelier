@@ -23,7 +23,6 @@ import {
 import { normalizeReferralCode } from "@/lib/referrals/codes";
 import {
   NEW_CLIENT_DISCOUNT_BPS,
-  centsToDollars,
   eligibleServiceCents,
   quoteReferralApplication,
   type ReferralApplyMode,
@@ -106,37 +105,6 @@ export async function ensurePetReferralCode(input: {
     },
     input,
   );
-}
-
-export async function ensureCustomerReferralCodes(customerId: string) {
-  if (!hasSupabaseAdminConfig()) return;
-  const admin = createAdminClient();
-  const { data: pets, error } = await admin
-    .from("pets")
-    .select("id, name")
-    .eq("customer_id", customerId)
-    .is("archived_at", null);
-  if (error) {
-    console.error(
-      "ensureCustomerReferralCodes failed:",
-      describeReferralWriteError(toReferralWriteError(error)),
-    );
-    return;
-  }
-  for (const pet of pets ?? []) {
-    try {
-      await ensurePetReferralCode({
-        petId: pet.id as string,
-        petName: String(pet.name ?? ""),
-        ownerCustomerId: customerId,
-      });
-    } catch (referralError) {
-      console.error(
-        "ensureCustomerReferralCodes pet failed:",
-        describeReferralWriteError(toReferralWriteError(referralError)),
-      );
-    }
-  }
 }
 
 export async function lookupReferralCode(code: string) {
@@ -1039,115 +1007,6 @@ export async function issueReferralRewardForPaidCharge(
     .eq("status", "pending");
 
   return { status: "issued", rewardCents: discountCents };
-}
-
-export async function getAccountReferralView(customerId: string) {
-  await ensureCustomerReferralCodes(customerId);
-  const admin = createAdminClient();
-  const availableCreditCents = await availableReferralCreditCents(customerId);
-
-  const { data: codes } = await admin
-    .from("pet_referral_codes")
-    .select("referral_code, pet_id")
-    .eq("owner_customer_id", customerId)
-    .eq("is_active", true)
-    .order("created_at", { ascending: true });
-
-  const petIds = [...new Set((codes ?? []).map((row) => row.pet_id as string))];
-  const { data: ownedPets } = petIds.length
-    ? await admin.from("pets").select("id, name").in("id", petIds)
-    : { data: [] };
-  const ownedPetNames = new Map(
-    (ownedPets ?? []).map((row) => [row.id as string, String(row.name ?? "Dog")]),
-  );
-
-  const { data: sources } = await admin
-    .from("referral_reward_sources")
-    .select(
-      "id, status, reward_credit_cents, remaining_credit_cents, issued_at, created_at, referral_relationship_id",
-    )
-    .eq("referrer_customer_id", customerId)
-    .order("created_at", { ascending: false });
-
-  const relationshipIds = [
-    ...new Set((sources ?? []).map((row) => row.referral_relationship_id as string)),
-  ];
-  const labels = new Map<string, { pet: string; code: string }>();
-  if (relationshipIds.length > 0) {
-    const { data: rels } = await admin
-      .from("referral_relationships")
-      .select("id, referral_code_id, referred_customer_id")
-      .in("id", relationshipIds);
-    const codeIds = [
-      ...new Set((rels ?? []).map((row) => row.referral_code_id as string)),
-    ];
-    const { data: relCodes } = codeIds.length
-      ? await admin
-          .from("pet_referral_codes")
-          .select("id, referral_code")
-          .in("id", codeIds)
-      : { data: [] };
-    const codeById = new Map(
-      (relCodes ?? []).map((row) => [row.id as string, row.referral_code as string]),
-    );
-    const referredIds = [
-      ...new Set((rels ?? []).map((row) => row.referred_customer_id as string)),
-    ];
-    const [{ data: referredProfiles }, { data: referredPets }] = await Promise.all([
-      referredIds.length
-        ? admin.from("profiles").select("id, last_name").in("id", referredIds)
-        : Promise.resolve({ data: [] }),
-      referredIds.length
-        ? admin
-            .from("pets")
-            .select("customer_id, name")
-            .in("customer_id", referredIds)
-            .is("archived_at", null)
-        : Promise.resolve({ data: [] }),
-    ]);
-    const lastByCustomer = new Map(
-      (referredProfiles ?? []).map((row) => [
-        row.id as string,
-        String(row.last_name ?? "").trim().slice(0, 1).toUpperCase() || "G",
-      ]),
-    );
-    const petByCustomer = new Map<string, string>();
-    for (const pet of referredPets ?? []) {
-      if (!petByCustomer.has(pet.customer_id as string)) {
-        petByCustomer.set(pet.customer_id as string, String(pet.name ?? "Friend"));
-      }
-    }
-    for (const rel of rels ?? []) {
-      const initial = lastByCustomer.get(rel.referred_customer_id as string) ?? "G";
-      const petName =
-        petByCustomer.get(rel.referred_customer_id as string) ?? "Friend";
-      labels.set(rel.id as string, {
-        pet: `${petName} ${initial}.`,
-        code: codeById.get(rel.referral_code_id as string) ?? "",
-      });
-    }
-  }
-
-  return {
-    availableCreditCents,
-    availableLabel: centsToDollars(availableCreditCents).toFixed(2),
-    codes: (codes ?? []).map((row) => ({
-      petName: ownedPetNames.get(row.pet_id as string) ?? "Dog",
-      code: row.referral_code as string,
-    })),
-    rewards: (sources ?? []).map((row) => {
-      const label = labels.get(row.referral_relationship_id as string);
-      return {
-        id: row.id as string,
-        date: (row.issued_at as string | null) ?? (row.created_at as string),
-        referral: label?.pet ?? "Friend",
-        code: label?.code ?? "",
-        status: row.status as string,
-        amountCents: Number(row.reward_credit_cents),
-        remainingCents: Number(row.remaining_credit_cents),
-      };
-    }),
-  };
 }
 
 async function appendLedgerReversal(input: {

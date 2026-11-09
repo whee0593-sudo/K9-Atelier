@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
-import { LuxuryButton } from "@/components/luxury/LuxuryButton";
 import { PageShell } from "@/components/luxury/PageShell";
 import {
   REFERRAL_HEADLINE,
@@ -54,9 +53,6 @@ export default function ReferralsPage() {
           <BookServiceLink className="inline-flex min-h-[52px] items-center justify-center rounded-sm bg-deep-lavender px-8 text-sm font-medium uppercase tracking-[0.16em] text-ivory transition hover:bg-ink">
             Book Online
           </BookServiceLink>
-          <LuxuryButton href="/account/referrals" variant="secondary">
-            View My Referral Codes
-          </LuxuryButton>
         </div>
         <p className="text-center text-sm text-ink">
           Questions?{" "}

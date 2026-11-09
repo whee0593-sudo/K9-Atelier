@@ -8,8 +8,9 @@ describe("BookingOwnerStep referral source", () => {
   it("asks new customers how they heard about K9 Atelier near continue", () => {
     assert.match(source, /How did you hear about K9 Atelier\?/);
     assert.match(source, /We&apos;d love to know how you found us\./);
-    assert.match(source, /Who can we thank for referring you\?/);
+    assert.match(source, /Who referred you\?/);
     assert.match(source, /Name \(optional\)/);
+    assert.match(source, /aria-describedby="booking-referral-name-hint"[\s\S]*id="booking-referral-name-hint"[^>]*text-taupe[^>]*>\s*Share their name so we can thank them for recommending us\./);
     assert.match(source, /REFERRAL_SOURCE_OPTIONS/);
     assert.match(source, /\{!loggedIn \? \(/);
     assert.match(source, /referralSource/);

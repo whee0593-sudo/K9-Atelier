@@ -58,7 +58,7 @@ const cancellationPolicy = {
 type FaqItem = {
   q: string;
   paragraphs?: readonly string[];
-  custom?: "cancellation" | "referral";
+  custom?: "cancellation";
 };
 
 const faqGroups: Array<{ title: string; items: FaqItem[] }> = [
@@ -223,11 +223,13 @@ const faqGroups: Array<{ title: string; items: FaqItem[] }> = [
     ],
   },
   {
-    title: "Referral Rewards",
+    title: "Referrals",
     items: [
       {
-        q: "How do Referral Rewards work?",
-        custom: "referral",
+        q: "How do I let you know a friend referred me?",
+        paragraphs: [
+          "When you set up your account during online booking, answer “How did you hear about K9 Atelier?” If a friend sent you our way, select “Referred by a friend or client” and enter their name so we can thank them for recommending us.",
+        ],
       },
     ],
   },
@@ -299,37 +301,8 @@ function CancellationAnswer() {
   );
 }
 
-function ReferralAnswer() {
-  return (
-    <div className="space-y-4">
-      <p>
-        Every dog receives a unique referral code. When a new household uses
-        your code, they receive 10% off eligible service charges on their first
-        completed appointment. Once that visit is completed and paid, you
-        receive promotional Referral Credit equal to their savings.
-      </p>
-      <p>
-        Referral Credit can be applied, in full or in part, toward eligible
-        service charges on a future appointment. Referral credits do not apply
-        to travel fees, special handling fees, or gratuities.         Referral Credit has no cash value and cannot be transferred, withdrawn, sold, or exchanged for cash.
-      </p>
-      <p>
-        Full program rules are available on the{" "}
-        <Link
-          href="/referrals"
-          className="underline decoration-champagne/70 underline-offset-4 transition hover:text-ink"
-        >
-          Referral Rewards
-        </Link>{" "}
-        page.
-      </p>
-    </div>
-  );
-}
-
 function FaqAnswer({ item }: { item: FaqItem }) {
   if (item.custom === "cancellation") return <CancellationAnswer />;
-  if (item.custom === "referral") return <ReferralAnswer />;
   return <FaqParagraphs paragraphs={item.paragraphs ?? []} />;
 }
 

@@ -1,6 +1,5 @@
 import type { CustomerProfile } from "@/lib/profiles/types";
 import { missingCustomerProfileFieldLabels } from "@/lib/profiles/validation";
-import { centsToDollars } from "@/lib/referrals/eligible";
 
 export type AccountNavSummaryKey =
   | "overview"
@@ -8,7 +7,6 @@ export type AccountNavSummaryKey =
   | "addresses"
   | "pets"
   | "payment"
-  | "referrals"
   | "bookings"
   | "password";
 
@@ -29,7 +27,6 @@ export function emptyAccountNavSummaries(): AccountNavSummaries {
     addresses: null,
     pets: null,
     payment: null,
-    referrals: null,
     bookings: null,
     password: null,
   };
@@ -50,16 +47,6 @@ export function isCustomerProfileComplete(
 
 export function formatCompletionStatus(complete: boolean) {
   return complete ? null : "incompleted";
-}
-
-export function formatReferralCodeSummary(codes: string[]) {
-  const code = codes.map((value) => value.trim()).find(Boolean);
-  if (!code) return null;
-  return `Referral code: ${code}`;
-}
-
-export function formatReferralRewardsSummary(creditCents: number) {
-  return `$${centsToDollars(creditCents).toFixed(2)}`;
 }
 
 export function formatPetNamesSummary(names: string[]) {
@@ -133,8 +120,6 @@ export function buildAccountNavSummaries(input: {
   pets?: Array<{ name: string }> | null;
   paymentMethodCount?: number | null;
   appointments?: AccountNavAppointmentInput[] | null;
-  referralCodes?: string[] | null;
-  availableCreditCents?: number | null;
   today?: string;
   savedAddressCount?: number | null;
 }): AccountNavSummaries {
@@ -167,12 +152,6 @@ export function buildAccountNavSummaries(input: {
 
   if (input.paymentMethodCount != null) {
     summaries.payment = formatCompletionStatus(input.paymentMethodCount > 0);
-  }
-
-  if (input.availableCreditCents != null) {
-    summaries.referrals = formatReferralRewardsSummary(
-      input.availableCreditCents,
-    );
   }
 
   return summaries;

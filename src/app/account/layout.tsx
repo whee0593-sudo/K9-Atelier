@@ -22,7 +22,7 @@ export default async function AccountLayout({
     redirect(`/login?next=${pathname}`);
   }
 
-  const summaries = await getAccountNavSummaries(user.id);
+  const summaries = await getAccountNavSummaries();
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">

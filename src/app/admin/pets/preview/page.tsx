@@ -1,5 +1,4 @@
 import { CustomerRecordsPanel } from "@/components/admin/CustomerRecordsPanel";
-import type { StaffReferralView } from "@/components/admin/StaffCustomerReferrals";
 import type { StaffCustomerHistory } from "@/lib/charges/history";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
@@ -159,15 +158,6 @@ const previewHistoryByCustomerId: Record<string, StaffCustomerHistory> = {
   },
 };
 
-const previewReferralsByCustomerId: Record<string, StaffReferralView> = {
-  [TIA_ID]: {
-    availableCreditCents: 1800,
-    availableLabel: "18.00",
-    codes: [{ petName: "Milo", code: "MILO-TIA" }],
-    rewards: [],
-  },
-};
-
 export default async function CustomerRecordsPreviewPage({
   searchParams,
 }: {
@@ -187,7 +177,6 @@ export default async function CustomerRecordsPreviewPage({
           preview
           previewCustomers={previewCustomers}
           previewHistoryByCustomerId={previewHistoryByCustomerId}
-          previewReferralsByCustomerId={previewReferralsByCustomerId}
           focusCustomerId={query.customer ?? TIA_ID}
         />
       </div>

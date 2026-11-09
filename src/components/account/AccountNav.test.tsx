@@ -27,8 +27,6 @@ const summaries = buildAccountNavSummaries({
       addressZip: "32801",
     },
   ],
-  referralCodes: ["BELLA-JANE-M"],
-  availableCreditCents: 1800,
   today: "2026-09-16",
 });
 
@@ -44,7 +42,7 @@ describe("AccountNavLinks", () => {
     assert.match(html, /Service Addresses/);
     assert.match(html, /My Pets[\s\S]*Bella, Max/);
     assert.match(html, /Payment Methods/);
-    assert.match(html, /Referral Rewards[\s\S]*\$18\.00/);
+    assert.doesNotMatch(html, /Referral Rewards/);
     assert.match(html, /Booking Record[\s\S]*Aug 12, 2026/);
     assert.match(html, /Password/);
     assert.equal(html.includes("Messages from K9 Atelier"), false);
@@ -61,7 +59,7 @@ describe("AccountNavLinks", () => {
     assert.match(html, /href="\/account\/addresses"/);
     assert.match(html, /href="\/account\/pets"/);
     assert.match(html, /href="\/account\/payment"/);
-    assert.match(html, /href="\/account\/referrals"/);
+    assert.doesNotMatch(html, /href="\/account\/referrals"/);
     assert.match(html, /href="\/account\/bookings"/);
     assert.match(html, /href="\/account\/password"/);
   });

@@ -1,10 +1,9 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { CustomerBookingsList } from "@/components/account/CustomerBookingsList";
 import { AccountFieldsForm } from "@/components/account/AccountFieldsForm";
 import { CustomerProfileSection } from "@/components/account/CustomerProfileForm";
 import { PaymentMethodsManager } from "@/components/account/PaymentMethodsManager";
 import { PetProfilesManager } from "@/components/account/PetProfilesManager";
-import { ReferralRewardsPanel } from "@/components/account/ReferralRewardsPanel";
 import { getAccountSection } from "@/lib/account-fields";
 import { ServiceAddresses } from "@/components/account/ServiceAddresses";
 
@@ -20,7 +19,6 @@ const SECTION_IDS = [
   "payment",
   "bookings",
   "appointments",
-  "referrals",
 ] as const;
 
 export function generateStaticParams() {
@@ -32,6 +30,7 @@ export default async function AccountSectionPage({
   searchParams,
 }: Props) {
   const { slug } = await params;
+  if (slug === "referrals") redirect("/account");
   const query = await searchParams;
   const section = getAccountSection(slug);
   if (!section) notFound();
@@ -49,8 +48,6 @@ export default async function AccountSectionPage({
           <CustomerBookingsList />
         ) : slug === "payment" ? (
           <PaymentMethodsManager fromAccountSetup={fromAccountSetup} />
-        ) : slug === "referrals" ? (
-          <ReferralRewardsPanel />
         ) : slug === "profile" ? (
           <CustomerProfileSection />
         ) : slug === "addresses" ? (
