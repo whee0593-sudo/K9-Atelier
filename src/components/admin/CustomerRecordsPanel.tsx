@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { CustomerProfileForm } from "@/components/account/CustomerProfileForm";
 import { CreateCustomerProfileForm } from "@/components/admin/CreateCustomerProfileForm";
+import { formatDateOfBirthDisplay } from "@/lib/pet-age";
 import type { CustomerProfile } from "@/lib/profiles/types";
 import type { StaffCustomerRecord } from "@/lib/profiles/staff-service";
 import {
@@ -62,6 +63,10 @@ function OwnerProfileDetails({ profile }: { profile: CustomerProfile }) {
     { label: "First Name", value: profileDetailValue(profile.firstName) },
     { label: "Last Name", value: profileDetailValue(profile.lastName) },
     { label: "Mobile Phone", value: profileDetailValue(profile.phone) },
+    {
+      label: "Birthday",
+      value: profile.birthday ? formatDateOfBirthDisplay(profile.birthday, "en-US") : "—",
+    },
     {
       label: "Preferred Contact Method",
       value: profileDetailValue(profile.preferredContact),
