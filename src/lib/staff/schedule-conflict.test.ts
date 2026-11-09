@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   describeStaffScheduleConflict,
+  describeStaffZoneConflict,
   listStaffOverrideHourStarts,
 } from "@/lib/staff/schedule-conflict";
 
@@ -65,6 +66,30 @@ describe("describeStaffScheduleConflict", () => {
 });
 
 describe("listStaffOverrideHourStarts", () => {
+  it("keeps out-of-area starts selectable and explains the day plan and visit overlap", () => {
+    const plan = {
+      serviceDate: "2026-11-12",
+      zoneId: "palm-beach-gardens",
+      source: "auto" as const,
+      anchor: null,
+    };
+    assert.equal(describeStaffZoneConflict(plan, "33418", nearby), null);
+    const zoneConflict = describeStaffZoneConflict(plan, "33458", nearby);
+    assert.match(zoneConflict ?? "", /outside.*Palm Beach Gardens/);
+
+    const result = listStaffOverrideHourStarts({
+      base,
+      incoming: nearby,
+      stops: [{ ...nearby, scheduledStart: 13 * 60, durationMinutes: 90 }],
+      durations: [60],
+      zoneConflict,
+    });
+
+    assert.ok(result.slots.includes(9 * 60));
+    assert.equal(result.conflicts[String(9 * 60)], zoneConflict);
+    assert.match(result.conflicts[String(13 * 60)], /Palm Beach Gardens.*overlaps.*1:00 PM/);
+  });
+
   it("keeps 9:00 AM selectable when the estimated chain overlaps a 1:00 PM visit", () => {
     const result = listStaffOverrideHourStarts({
       base,

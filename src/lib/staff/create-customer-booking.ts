@@ -621,14 +621,22 @@ export async function createStaffCustomerBooking(
     date: appointmentDate, point: destination, zip: address.zip,
     durationMinutes: firstDurationMinutes, slotStartMinutes, base,
     allowUnfittedStart: overrideSchedule, staffBooking: true,
+    acknowledgeScheduleConflict: input.acknowledgeScheduleConflict,
   }) : { insertion: { appointmentTime: formatMinutesLabel(slotStartMinutes), scheduledStart: slotStartMinutes, usedPreference: preferenceFromStart(slotStartMinutes) } };
+  if ("error" in firstAssignment && firstAssignment.error === "schedule_conflict") {
+    return firstAssignment;
+  }
   const firstSchedule = resolveArrivalForBooking(firstAssignment, slotStartMinutes);
   if ("error" in firstSchedule) return { error: "slot_unavailable" };
 
   if (destination) {
-    const claimed = await claimDayPlan(appointmentDate, address.zip, destination);
+    const claimed = await claimDayPlan(appointmentDate, address.zip, destination, {
+      allowOutsideZone: input.acknowledgeScheduleConflict,
+    });
     if ("error" in claimed) {
-      if (claimed.error === "slot_unavailable") return { error: "slot_unavailable" };
+      if (claimed.error === "slot_unavailable") {
+        return { error: "schedule_conflict", message: claimed.message };
+      }
       console.error("createStaffCustomerBooking day plan was not claimed; booking continues:", claimed.error);
     }
   }

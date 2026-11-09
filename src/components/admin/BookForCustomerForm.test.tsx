@@ -261,7 +261,7 @@ describe("BookForCustomerForm schedule conflict", () => {
       />,
     );
     assert.match(html, /Wed, Oct 7/);
-    assert.match(html, /9:00 AM — time conflict/);
+    assert.match(html, /9:00 AM — schedule conflict/);
     assert.match(html, /overlaps a visit already scheduled at 1:00 PM/);
     assert.match(html, /You can still book this time/);
     assert.match(html, /Send booking link/);

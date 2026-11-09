@@ -31,6 +31,7 @@ import {
 import { applyBlocksToSlots, appointmentOverlapsBlocks, groupBlocksByDate } from "@/lib/appointments/availability-blocks";
 import { loadAvailabilityBlocks } from "@/lib/appointments/availability-block-store";
 import {
+  describeStaffZoneConflict,
   listStaffOverrideHourStarts,
   retainConflicts,
 } from "@/lib/staff/schedule-conflict";
@@ -296,7 +297,7 @@ export async function upsertDayPlan(plan: {
   zoneId: string;
   source: "staff" | "auto";
   anchor: GeoPoint | null;
-}): Promise<{ ok: true } | ScheduleError> {
+}, options?: { keepExisting?: boolean }): Promise<{ ok: true } | ScheduleError> {
   const admin = requireAdminClient();
   if (!admin) return { error: "misconfigured" as const };
 
@@ -308,7 +309,7 @@ export async function upsertDayPlan(plan: {
       anchor_lat: plan.anchor?.lat ?? null,
       anchor_lon: plan.anchor?.lon ?? null,
     },
-    { onConflict: "service_date" },
+    { onConflict: "service_date", ignoreDuplicates: options?.keepExisting },
   );
 
   if (error) {
@@ -424,7 +425,7 @@ export async function getAvailabilityForAddress(input: {
 
     const plan = resolveEffectivePlan(date, plans.get(date) ?? null);
     const inZone = addressAllowedForPlan(plan, input.zip, input.point);
-    if (!inZone) {
+    if (!inZone && !input.staffBooking) {
       days.push({ date, available: false, slots: [] as number[] });
       continue;
     }
@@ -442,6 +443,7 @@ export async function getAvailabilityForAddress(input: {
         incoming: input.point,
         stops: occupied.stops,
         durations: staffDurations,
+        zoneConflict: describeStaffZoneConflict(plan, input.zip, input.point),
       });
       const gated = applyClosureToSlots(override.slots.filter((start) => isBookingStartInFuture(date, start)), closure);
       const withBlocks = applyBlocksToSlots(gated.slots, dayBlocks, 1);
@@ -487,12 +489,14 @@ export async function assignArrivalWindow(input: {
   excludeAppointmentIds?: string[];
   allowUnbookableDate?: boolean;
   staffBooking?: boolean;
+  acknowledgeScheduleConflict?: boolean;
   /** Keep the chosen start when the estimate does not fit the route. */
   allowUnfittedStart?: boolean;
 }): Promise<
   | { insertion: NonNullable<ReturnType<typeof findRouteInsertionAtHour>> }
   | ScheduleError
   | { error: "slot_unavailable" }
+  | { error: "schedule_conflict"; message: string }
 > {
   if (
     !input.allowUnbookableDate &&
@@ -537,8 +541,12 @@ export async function assignArrivalWindow(input: {
 
   const stored = plansResult.plans.get(input.date) ?? null;
   const plan = resolveEffectivePlan(input.date, stored);
-  if (!addressAllowedForPlan(plan, input.zip, input.point)) {
-    return { error: "slot_unavailable" as const };
+  const zoneConflict = describeStaffZoneConflict(plan, input.zip, input.point);
+  if (zoneConflict) {
+    if (!input.staffBooking) return { error: "slot_unavailable" };
+    if (!input.acknowledgeScheduleConflict) {
+      return { error: "schedule_conflict", message: zoneConflict };
+    }
   }
 
   if (occupied.bookedCount >= getRoutingConfig().maxAppointmentsPerDay) {
@@ -553,7 +561,7 @@ export async function assignArrivalWindow(input: {
     input.slotStartMinutes,
   );
   if (!insertion) {
-    if (!input.allowUnfittedStart) return { error: "slot_unavailable" as const };
+    if (!input.allowUnfittedStart && !zoneConflict) return { error: "slot_unavailable" as const };
     return {
       insertion: {
         scheduledStart: input.slotStartMinutes,
@@ -693,28 +701,24 @@ export async function claimDayPlan(
   date: string,
   zip: string,
   point: GeoPoint,
-): Promise<{ plan: DayPlanRecord | null } | ScheduleError | { error: "slot_unavailable" }> {
+  options?: { allowOutsideZone?: boolean },
+): Promise<{ plan: DayPlanRecord | null } | ScheduleError | { error: "slot_unavailable"; message: string }> {
   const loaded = await loadDayPlans(date, date);
   if ("error" in loaded) return loaded;
 
-  const stored = loaded.plans.get(date) ?? null;
-  const effective = resolveEffectivePlan(date, stored);
-  if (effective) {
-    if (!addressAllowedForPlan(effective, zip, point)) {
-      return { error: "slot_unavailable" };
-    }
-    return { plan: effective };
+  let plan = resolveEffectivePlan(date, loaded.plans.get(date) ?? null);
+  if (!plan) {
+    const inferred = planFromFirstStop(date, zip, point);
+    const inserted = await upsertDayPlan(inferred, { keepExisting: true });
+    if ("error" in inserted) return inserted;
+
+    const again = await loadDayPlans(date, date);
+    if ("error" in again) return again;
+    plan = again.plans.get(date) ?? inferred;
   }
-
-  const inferred = planFromFirstStop(date, zip, point);
-  const inserted = await upsertDayPlan(inferred);
-  if ("error" in inserted) return inserted;
-
-  const again = await loadDayPlans(date, date);
-  if ("error" in again) return again;
-  const plan = again.plans.get(date) ?? inferred;
-  if (!addressAllowedForPlan(plan, zip, point)) {
-    return { error: "slot_unavailable" };
+  const zoneConflict = describeStaffZoneConflict(plan, zip, point);
+  if (zoneConflict && !options?.allowOutsideZone) {
+    return { error: "slot_unavailable", message: zoneConflict };
   }
   return { plan };
 }

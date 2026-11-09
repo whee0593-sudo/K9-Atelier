@@ -1605,7 +1605,7 @@ export function BookForCustomerForm({
               return (
                 <option key={slot} value={slot}>
                   {formatMinutesLabel(slot)}
-                  {conflict ? " — time conflict" : ""}
+                  {conflict ? " — schedule conflict" : ""}
                 </option>
               );
             })}

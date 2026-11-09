@@ -1,12 +1,24 @@
 import {
+  addressAllowedForPlan,
   chainSameAddressVisits,
   getDayBounds,
   listAvailableHourStarts,
   listHourlyStartMinutes,
+  zoneLabel,
+  type DayPlanRecord,
   type GeoPoint,
   type RouteStop,
 } from "@/lib/booking-schedule";
 import { formatMinutesLabel } from "@/lib/appointments/closures";
+
+export function describeStaffZoneConflict(
+  plan: DayPlanRecord | null,
+  zip: string,
+  point: GeoPoint,
+): string | null {
+  if (!plan || addressAllowedForPlan(plan, zip, point)) return null;
+  return `This address is outside the scheduled service area for this day (${zoneLabel(plan.zoneId)}).`;
+}
 
 export function formatEstimatedDuration(totalMinutes: number) {
   const minutes = Math.max(0, Math.round(totalMinutes));
@@ -79,6 +91,7 @@ export function conflictsForStarts(
   starts: number[],
   durations: number[],
   stops: RouteStop[],
+  zoneConflict?: string | null,
 ) {
   const conflicts: Record<string, string> = {};
   for (const start of starts) {
@@ -87,7 +100,8 @@ export function conflictsForStarts(
       durations,
       stops,
     });
-    if (message) conflicts[String(start)] = message;
+    const conflict = [zoneConflict, message].filter(Boolean).join(" ");
+    if (conflict) conflicts[String(start)] = conflict;
   }
   return conflicts;
 }
@@ -110,6 +124,7 @@ export function listStaffOverrideHourStarts(input: {
   incoming: GeoPoint;
   stops: RouteStop[];
   durations: number[];
+  zoneConflict?: string | null;
 }) {
   const reopen = listAvailableHourStarts(
     input.base,
@@ -122,6 +137,6 @@ export function listStaffOverrideHourStarts(input: {
   );
   return {
     slots,
-    conflicts: conflictsForStarts(slots, input.durations, input.stops),
+    conflicts: conflictsForStarts(slots, input.durations, input.stops, input.zoneConflict),
   };
 }
