@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { Elements } from "@stripe/react-stripe-js";
+import { AddCardForm, stripePromiseFor } from "@/components/account/PaymentMethodsManager";
+import { createPaymentSetupIntent } from "@/lib/payments/client";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BookingPoliciesModal } from "@/components/booking/BookingPoliciesModal";
@@ -39,6 +42,7 @@ type VisitContext = {
 type ChangeFeeQuote = {
   fee: number;
   needsPriceReview: boolean;
+  hasSavedPaymentMethod?: boolean;
 };
 
 function formatShortDate(iso: string): string {
@@ -54,7 +58,7 @@ function formatShortDate(iso: string): string {
 
 const ACTION_LABELS: Record<AppointmentChangeAction, string> = {
   reschedule: "Reschedule",
-  cancel: "Cancel visit",
+  cancel: "Cancel appointment",
   add_dog: "Add a dog",
   remove_dog: "Remove a dog",
 };
@@ -91,6 +95,11 @@ export function AppointmentChangeForm({
   const [policiesOpen, setPoliciesOpen] = useState(false);
   const [serverQuote, setServerQuote] = useState<ChangeFeeQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
+  const [hasSavedMethod, setHasSavedMethod] = useState<boolean | null>(null);
+  const [cardSetup, setCardSetup] = useState<Awaited<ReturnType<typeof createPaymentSetupIntent>> | null>(null);
+  const [startingCardSetup, setStartingCardSetup] = useState(false);
+  const [cardSetupError, setCardSetupError] = useState<string | null>(null);
+  const [checkingCancellation, setCheckingCancellation] = useState(false);
   const policyRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -131,6 +140,7 @@ export function AppointmentChangeForm({
         setAppointments(body.appointments ?? []);
         setVisit(body.visit ?? null);
         setServerQuote(body.quote ?? null);
+        setHasSavedMethod(body.quote?.hasSavedPaymentMethod ?? null);
         setRemoveId(appointmentId);
       } catch {
         if (!cancelled) setError("Could not load this appointment.");
@@ -145,7 +155,7 @@ export function AppointmentChangeForm({
   }, [appointmentId, preview]);
 
   useEffect(() => {
-    if (preview || !action) return;
+    if (preview || !action || action === "cancel") return;
     const selectedAction = action;
     let cancelled = false;
     async function loadQuote() {
@@ -273,6 +283,7 @@ export function AppointmentChangeForm({
   const canConfirm = useMemo(() => {
     if (!action || needsPriceReview) return false;
     if (!preview && (quoteLoading || !serverQuote)) return false;
+    if (action === "cancel" && !preview) return hasSavedMethod === true && !checkingCancellation;
     if (action === "reschedule") return Boolean(nextDate && nextSlotStartMinutes != null);
     if (action === "add_dog") return Boolean(addPetId && validAddService && !editingAddPet);
     if (action === "remove_dog") {
@@ -281,6 +292,8 @@ export function AppointmentChangeForm({
     return true;
   }, [
     action,
+    checkingCancellation,
+    hasSavedMethod,
     addPetId,
     addServiceId,
     validAddService,
@@ -294,6 +307,54 @@ export function AppointmentChangeForm({
     removeId,
     serverQuote,
   ]);
+
+  async function openCardSetup() {
+    if (cardSetup || startingCardSetup) return;
+    setStartingCardSetup(true);
+    setCardSetupError(null);
+    try {
+      setCardSetup(await createPaymentSetupIntent());
+    } catch (error) {
+      setCardSetupError(error instanceof Error ? error.message : "Could not open the payment form.");
+    } finally {
+      setStartingCardSetup(false);
+    }
+  }
+
+  async function startCancellation() {
+    setAction("cancel");
+    setError(null);
+    setServerQuote(null);
+    setQuoteLoading(false);
+    if (preview) return;
+
+    setCheckingCancellation(true);
+    try {
+      const response = await fetch(`/api/appointments/${appointmentId}/change?action=cancel`, {
+        cache: "no-store",
+        credentials: "include",
+      });
+      const body = (await response.json()) as { error?: string; quote?: ChangeFeeQuote };
+      if (!response.ok || !body.quote) {
+        setError(body.error ?? "Could not check the cancellation fee.");
+        return;
+      }
+      const hasMethod = body.quote.hasSavedPaymentMethod === true;
+      setHasSavedMethod(hasMethod);
+      if (!hasMethod) {
+        setError("Please add a payment method first.");
+        void openCardSetup();
+        return;
+      }
+      setCardSetup(null);
+      setCardSetupError(null);
+      setServerQuote(body.quote);
+    } catch {
+      setError("Could not check the cancellation fee. Please try again.");
+    } finally {
+      setCheckingCancellation(false);
+    }
+  }
 
   async function confirmChange() {
     if (!action || !canConfirm || busy || confirmingRef.current) return;
@@ -324,8 +385,13 @@ export function AppointmentChangeForm({
           }),
         },
       );
-      const body = (await response.json()) as { error?: string };
+      const body = (await response.json()) as { error?: string; field?: string };
       if (!response.ok) {
+        if (action === "cancel" && body.field === "paymentMethod") {
+          setHasSavedMethod(false);
+          setServerQuote(null);
+          void openCardSetup();
+        }
         setError(body.error ?? "Could not save this change.");
         return;
       }
@@ -399,26 +465,65 @@ export function AppointmentChangeForm({
         )
           .filter((item): item is AppointmentChangeAction => Boolean(item))
           .map((item) => (
-            <button
-              key={item}
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                setAction(item);
-                setServerQuote(null);
-                setQuoteLoading(!preview);
-                setError(null);
-                setNextDate(null);
-                setNextSlotStartMinutes(null);
-              }}
-              className={
-                action === item
-                  ? `${bookingPrimaryBtnClass} !w-full sm:!w-full`
-                  : `${bookingSecondaryBtnClass} w-full`
-              }
-            >
-              {ACTION_LABELS[item]}
-            </button>
+            <div key={item} className="flex min-w-0 flex-col gap-2">
+              {item === "cancel" && !preview && (hasSavedMethod === false || cardSetup) ? (
+                <>
+                  <button
+                    type="button"
+                    aria-expanded={Boolean(cardSetup)}
+                    disabled={busy || startingCardSetup || Boolean(cardSetup)}
+                    onClick={() => void openCardSetup()}
+                    className={bookingSecondaryBtnClass}
+                  >
+                    {startingCardSetup ? "Opening payment form…" : "Add payment method"}
+                  </button>
+                  {cardSetup ? (
+                    <div className="rounded-xl border border-lavender/40 bg-cream p-4">
+                      <Elements
+                        stripe={stripePromiseFor(cardSetup.publishableKey)}
+                        options={{ clientSecret: cardSetup.clientSecret, locale: "en", appearance: { theme: "stripe" } }}
+                      >
+                        <AddCardForm
+                          clientSecret={cardSetup.clientSecret}
+                          submitLabel="Save payment method"
+                          onCancel={() => setCardSetup(null)}
+                          onSaved={() => {
+                            setHasSavedMethod(true);
+                            setCardSetup(null);
+                            setError(null);
+                            setAction(null);
+                          }}
+                        />
+                      </Elements>
+                    </div>
+                  ) : null}
+                  {cardSetupError ? <p className="text-sm text-red-700" role="alert">{cardSetupError}</p> : null}
+                </>
+              ) : null}
+              <button
+                type="button"
+                disabled={busy || checkingCancellation || (item === "cancel" && startingCardSetup)}
+                onClick={() => {
+                  if (item === "cancel") {
+                    void startCancellation();
+                    return;
+                  }
+                  setAction(item);
+                  setServerQuote(null);
+                  setQuoteLoading(!preview);
+                  setError(null);
+                  setNextDate(null);
+                  setNextSlotStartMinutes(null);
+                }}
+                className={
+                  action === item
+                    ? `${bookingPrimaryBtnClass} !w-full sm:!w-full`
+                    : `${bookingSecondaryBtnClass} w-full`
+                }
+              >
+                {item === "cancel" && checkingCancellation ? "Checking…" : ACTION_LABELS[item]}
+              </button>
+            </div>
           ))}
       </div>
 
@@ -504,7 +609,10 @@ export function AppointmentChangeForm({
                 : ""}
             </p>
           ) : null}
-          {needsPriceReview ? (
+          {action === "cancel" && (preview || serverQuote) && !needsPriceReview ? (
+            <h3 className="font-medium text-gold-dark">Cancel this appointment?</h3>
+          ) : null}
+          {action === "cancel" && !preview && !serverQuote ? null : needsPriceReview ? (
             <p className="text-sm text-text">
               We need to review this visit&apos;s saved price before a change fee
               can be charged. Please contact us. Nothing has been charged.
@@ -532,15 +640,17 @@ export function AppointmentChangeForm({
           >
             Cancellation &amp; Rescheduling Policy
           </button>
-          {error ? <p className="text-sm text-red-700">{error}</p> : null}
-          <button
-            type="button"
-            disabled={!canConfirm || busy}
-            onClick={() => void confirmChange()}
-            className={`${bookingPrimaryBtnClass} !w-full sm:!w-full`}
-          >
-            {busy ? "Saving…" : "Confirm"}
-          </button>
+          {error ? <p className="text-sm text-red-700" role="alert">{error}</p> : null}
+          {action !== "cancel" || preview || serverQuote ? (
+            <button
+              type="button"
+              disabled={!canConfirm || busy}
+              onClick={() => void confirmChange()}
+              className={`${bookingPrimaryBtnClass} !w-full sm:!w-full`}
+            >
+              {busy ? "Saving…" : action === "cancel" ? "Confirm cancellation" : "Confirm"}
+            </button>
+          ) : null}
         </div>
       ) : error && action !== "reschedule" ? (
         <p className="text-sm text-red-700">{error}</p>

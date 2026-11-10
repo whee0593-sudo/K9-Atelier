@@ -50,6 +50,7 @@ import {
 } from "@/lib/policy-fees/db";
 import {
   previewCustomerPolicyFee,
+  resolvePolicyPaymentMethod,
   settleCustomerPolicyFee,
 } from "@/lib/policy-fees/customer-settle";
 import { resumeSavedAppointmentChange } from "@/lib/policy-fees/resume-change";
@@ -115,6 +116,7 @@ export type ChangeQuote = {
   /** Fixed dollar cap when an admin authorized one. Null when the full fee is charged. */
   collectCap?: number | null;
   waiverAmount?: number;
+  hasSavedPaymentMethod?: boolean;
 };
 
 export type ChangeVisitContext = {
@@ -326,6 +328,13 @@ export async function quoteAppointmentChange(
       console.error("previewCustomerPolicyFee failed:", error);
       return { error: "server" };
     }
+  }
+
+  if (action === "cancel") {
+    quote.hasSavedPaymentMethod = Boolean(await resolvePolicyPaymentMethod(
+      user.id,
+      targetRows[0].payment_method_id,
+    ));
   }
 
   return {
@@ -593,7 +602,18 @@ export async function applyAppointmentChange(
 
   const quote = quoteForRows(input.action, targetRows);
   if (quote.needsPriceReview) return { error: "price_review_required" };
-  const contact = await fetchCustomerContact(user.id);
+  const contact = await fetchCustomerContact(user.id) ??
+    (user.email ? { email: user.email, name: null } : null);
+  const rescheduleTo = input.action === "reschedule" && input.date
+    ? {
+        date: input.date,
+        slotStartMinutes: input.slotStartMinutes ?? (input.timePreference === "afternoon" ? 12 * 60 : 9 * 60),
+      }
+    : undefined;
+  if (rescheduleTo) {
+    const plan = await planReschedule(targetRows, rescheduleTo.date, rescheduleTo.slotStartMinutes);
+    if ("error" in plan) return plan;
+  }
   const charged = await settleCustomerPolicyFee({
     action: input.action,
     rows: targetRows.map((row) => ({
@@ -604,12 +624,7 @@ export async function applyAppointmentChange(
     customerId: user.id,
     customerEmail: contact?.email ?? user.email,
     expectedAmount: input.expectedAmount,
-    rescheduleTo:
-      input.action === "reschedule" &&
-      input.date &&
-      input.slotStartMinutes != null
-        ? { date: input.date, slotStartMinutes: input.slotStartMinutes }
-        : undefined,
+    rescheduleTo,
   });
   if ("error" in charged) return charged;
   const billedQuote = { ...quote, fee: charged.fee };

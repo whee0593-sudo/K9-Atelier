@@ -160,13 +160,16 @@ export function AdminCalendar({
   const [blockCheckError, setBlockCheckError] = useState<string | null>(null);
   const router = useRouter();
   const monthLoadId = useRef(0);
+  const loadedDate = useRef<string | null>(null);
   const blockCheckId = useRef(0);
   const blockCheckDate = useRef<string | null>(null);
 
-  const loadMonth = useCallback(async (nextMonth: string) => {
+  const loadMonth = useCallback(async (nextMonth: string, background = false) => {
     const requestId = ++monthLoadId.current;
-    setLoadingMonth(true);
-    setError(null);
+    if (!background) {
+      setLoadingMonth(true);
+      setError(null);
+    }
     if (preview) {
       if (requestId !== monthLoadId.current) return;
       const body = buildPreviewCalendarMonth(nextMonth);
@@ -195,7 +198,7 @@ export function AdminCalendar({
       };
       if (requestId !== monthLoadId.current) return;
       if (!response.ok) {
-        setError(body.error ?? "Could not load the calendar.");
+        if (!background) setError(body.error ?? "Could not load the calendar.");
         return;
       }
       setDays(body.days ?? []);
@@ -206,7 +209,7 @@ export function AdminCalendar({
       });
     } catch {
       if (requestId !== monthLoadId.current) return;
-      setError("Could not load the calendar.");
+      if (!background) setError("Could not load the calendar.");
     } finally {
       if (requestId === monthLoadId.current) setLoadingMonth(false);
     }
@@ -215,6 +218,23 @@ export function AdminCalendar({
   useEffect(() => {
     void loadMonth(month);
   }, [loadMonth, month, reloadToken]);
+
+  useEffect(() => {
+    if (preview) return;
+
+    function refreshCalendar() {
+      if (document.visibilityState !== "visible") return;
+      void loadMonth(month, true);
+      setDayVersion((current) => current + 1);
+    }
+
+    const timer = window.setInterval(refreshCalendar, 30_000);
+    document.addEventListener("visibilitychange", refreshCalendar);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshCalendar);
+    };
+  }, [loadMonth, month, preview]);
 
   useEffect(() => {
     if (!selectedDate) return;
@@ -231,7 +251,8 @@ export function AdminCalendar({
       return;
     }
     let cancelled = false;
-    setLoadingDay(true);
+    const background = loadedDate.current === selectedDate;
+    if (!background) setLoadingDay(true);
     void fetch(`/api/admin/appointments?date=${selectedDate}`, {
       cache: "no-store",
       credentials: "include",
@@ -244,14 +265,15 @@ export function AdminCalendar({
         };
         if (cancelled) return;
         if (!response.ok) {
-          setError(body.error ?? "Could not load that day.");
+          if (!background) setError(body.error ?? "Could not load that day.");
           return;
         }
+        loadedDate.current = selectedDate;
         setAppointments(body.appointments ?? []);
         setPaidKinds(body.paidKinds ?? {});
       })
       .catch(() => {
-        if (!cancelled) setError("Could not load that day.");
+        if (!cancelled && !background) setError("Could not load that day.");
       })
       .finally(() => {
         if (!cancelled) setLoadingDay(false);

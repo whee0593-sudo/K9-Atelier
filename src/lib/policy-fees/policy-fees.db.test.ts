@@ -32,6 +32,8 @@ const FUNCTIONS = "supabase/migrations/20261018190100_policy_fee_functions.sql";
 const RECOVERY = "supabase/migrations/20261018210000_policy_fee_payment_recovery.sql";
 const CHANGE_RECOVERY = "supabase/migrations/20261018220000_policy_fee_change_recovery.sql";
 
+const STAFF_CANCELLATION = "supabase/migrations/20261110144334_staff_cancellation_fee.sql";
+
 function pgBinary(name: string) {
   if (process.env.K9_TEST_PG_BIN) {
     return path.join(process.env.K9_TEST_PG_BIN, process.platform === "win32" ? `${name}.exe` : name);
@@ -195,6 +197,7 @@ describe("policy fee postgres controls", { concurrency: false }, () => {
     await left.query(sqlFile(FUNCTIONS));
     await left.query(sqlFile(RECOVERY));
     await left.query(sqlFile(CHANGE_RECOVERY));
+    await left.query(sqlFile(STAFF_CANCELLATION));
   });
 
   after(async () => {
@@ -325,6 +328,35 @@ describe("policy fee postgres controls", { concurrency: false }, () => {
     assert.equal(Number(row.rows[0]?.total), 55);
     assert.equal(row.rows[0]?.stripe_payment_intent_id, "pi_historical");
     assert.equal(row.rows[0]?.claim_id, null);
+  });
+
+  it("records the calendar fee edit once and rolls back a rejected edit", async () => {
+    const made = await makeVisit(2);
+    const input = {
+      ...removeInput(made, 0, { computed: 40, charged: 15, waiver: 25, tender: "card" }),
+      staff_collect_cap: 15,
+    };
+    const rejected = await call("begin_staff_cancellation_fee_claim", {
+      ...input, expected_amount: 14,
+    });
+    assert.equal(rejected.outcome, "fee_changed");
+    const untouched = await left!.query(
+      "SELECT id FROM public.fee_waivers WHERE idempotency_key = $1",
+      [input.idempotency_key],
+    );
+    assert.equal(untouched.rows.length, 0);
+
+    const created = await call("begin_staff_cancellation_fee_claim", {
+      ...input, expected_amount: 15,
+    });
+    assert.equal(created.outcome, "created");
+    assert.equal(Number(created.charged), 15);
+    assert.equal(Number(created.waiver), 25);
+    const retried = await call("begin_staff_cancellation_fee_claim", {
+      ...input, expected_amount: 15,
+    });
+    assert.equal(retried.outcome, "existing");
+    assert.equal(retried.claim_id, created.claim_id);
   });
 
   it("charges the computed fee when the fixed cap is higher", async () => {

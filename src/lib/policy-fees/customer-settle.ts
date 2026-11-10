@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
+import Stripe from "stripe";
 import type { AppointmentChangeAction } from "@/lib/appointments/change-policy";
 import { changeNoticeBand } from "@/lib/appointments/change-policy";
-import { dollarsToCents } from "@/lib/charges/money";
 import type { ChargeLineItem } from "@/lib/charges/types";
 import { buildChangeRecoveryPayload } from "@/lib/policy-fees/change-recovery";
 import { executePolicyFee } from "@/lib/policy-fees/execute";
@@ -36,7 +36,7 @@ import { getOrCreateStripeCustomerId } from "@/lib/payments/service";
 import { isStripeConfigured } from "@/lib/stripe/config";
 import { getStripe } from "@/lib/stripe/server";
 
-type SettleRow = PolicyPriceRow & {
+export type SettleRow = PolicyPriceRow & {
   id: string;
   appointment_date: string;
   scheduled_start?: number | null;
@@ -77,7 +77,7 @@ function feeLabel(action: AppointmentChangeAction) {
   return "Cancellation fee";
 }
 
-function operationKey(input: {
+export function policyChangeOperationKey(input: {
   action: PolicyFeeAction;
   visitId: string;
   rows: SettleRow[];
@@ -131,12 +131,16 @@ export async function previewCustomerPolicyFee(input: {
   if (!priced.ok) {
     return { fee: 0, needsPriceReview: true, collectCap: null, waiver: 0 };
   }
-  const key = operationKey({
+  const key = policyChangeOperationKey({
     action: input.action,
     visitId: input.visitId,
     rows: input.rows,
     rescheduleTo: input.rescheduleTo,
   });
+  const existing = await loadOpenPolicyChangeClaim(key);
+  if (existing) {
+    return { fee: existing.chargedAmount, needsPriceReview: false, collectCap: null, waiver: 0 };
+  }
   const cap = await loadAuthorizedCap(key);
   const net = priceWithCap(priced.computed, cap);
   if (!net.ok) {
@@ -150,15 +154,24 @@ export async function previewCustomerPolicyFee(input: {
   };
 }
 
-async function resolvePaymentMethod(customerId: string, appointmentMethodId: string | null) {
+export async function resolvePolicyPaymentMethod(customerId: string, appointmentMethodId: string | null) {
   const admin = createAdminClient();
   const query = admin
     .from("payment_methods")
     .select("id, stripe_payment_method_id, brand, last4")
     .eq("customer_id", customerId);
-  const { data } = appointmentMethodId
+  let { data } = appointmentMethodId
     ? await query.eq("id", appointmentMethodId).maybeSingle()
     : await query.order("is_default", { ascending: false }).limit(1).maybeSingle();
+  if (!data && appointmentMethodId) {
+    ({ data } = await admin
+      .from("payment_methods")
+      .select("id, stripe_payment_method_id, brand, last4")
+      .eq("customer_id", customerId)
+      .order("is_default", { ascending: false })
+      .limit(1)
+      .maybeSingle());
+  }
   if (data?.id && data.stripe_payment_method_id) {
     return {
       id: data.id as string,
@@ -177,6 +190,7 @@ export async function settleCustomerPolicyFee(input: {
   customerId: string;
   customerEmail?: string;
   expectedAmount?: number | null;
+  staff?: { actorId: string; collectCap: number; expectedPolicyFee: number };
   rescheduleTo?: { date: string; slotStartMinutes: number };
 }): Promise<CustomerPolicySettlement> {
   if (input.action === "add_dog") return { error: "conflict" };
@@ -196,7 +210,7 @@ export async function settleCustomerPolicyFee(input: {
   });
   if (!priced.ok) return { error: "price_review_required" };
 
-  let key = operationKey({
+  let key = policyChangeOperationKey({
     action: input.action,
     visitId: input.visitId,
     rows: input.rows,
@@ -220,16 +234,33 @@ export async function settleCustomerPolicyFee(input: {
   }
 
   const cap = await loadAuthorizedCap(key);
-  const net = priceWithCap(priced.computed, cap);
+  const policy = priceWithCap(priced.computed, cap);
+  if (!policy.ok) return { error: "server" };
+  const staffCap = input.staff?.collectCap;
+  const net = priceWithCap(priced.computed, staffCap ?? cap);
   if (!net.ok) return { error: "server" };
+  if (typeof input.expectedAmount !== "number" || !Number.isFinite(input.expectedAmount)) {
+    return { error: "fee_changed" };
+  }
+  const existing = await loadOpenPolicyChangeClaim(key);
+  if (input.expectedAmount !== (existing?.chargedAmount ?? net.charged)) {
+    return { error: "fee_changed" };
+  }
+  if (input.staff && (policy.charged !== input.staff.expectedPolicyFee ||
+    input.staff.collectCap > policy.charged)) {
+    if (!existing || existing.chargedAmount !== input.staff.collectCap) {
+      return { error: "fee_changed" };
+    }
+  }
 
-  let method =
-    net.charged > 0
-      ? await resolvePaymentMethod(input.customerId, first.payment_method_id ?? null)
-      : null;
+  const requiresSavedMethod = !existing &&
+    (net.charged > 0 || (input.action === "cancel" && !input.staff));
+  let method = requiresSavedMethod
+    ? await resolvePolicyPaymentMethod(input.customerId, first.payment_method_id ?? null)
+    : null;
+  if (requiresSavedMethod && !method) return { error: "payment_required" };
   let stripeCustomerId: string | null = null;
-  if (net.charged > 0) {
-    if (!method) return { error: "payment_required" };
+  if (net.charged > 0 && !existing) {
     if (!getStripe() || !isStripeConfigured()) return { error: "misconfigured" };
     stripeCustomerId = await getOrCreateStripeCustomerId(
       input.customerId,
@@ -244,7 +275,7 @@ export async function settleCustomerPolicyFee(input: {
       idempotencyKey: key,
       visitId: input.visitId,
       action: input.action,
-      appointmentId: input.action === "remove_dog" ? first.id : first.id,
+      appointmentId: first.id,
       affectedAppointmentIds: priced.affectedAppointmentIds,
       includesTravel: priced.includesTravel,
       forfeit: policyFeeForfeitsService(input.action),
@@ -252,7 +283,7 @@ export async function settleCustomerPolicyFee(input: {
       charged: net.charged,
       waiver: net.waiver,
       tender: net.charged > 0 ? "card" : null,
-      actorId: input.customerId,
+      actorId: input.staff?.actorId ?? input.customerId,
       changePayload: buildChangeRecoveryPayload({
         operationId: key,
         action: input.action,
@@ -262,6 +293,7 @@ export async function settleCustomerPolicyFee(input: {
         rescheduleTo: input.rescheduleTo ?? null,
       }),
       expectedAmount: input.expectedAmount,
+      staffCollectCap: input.staff && !existing && staffCap !== policy.charged ? staffCap : undefined,
     });
   } catch (error) {
     console.error("beginPolicyFeeClaim failed:", error);
@@ -284,6 +316,7 @@ export async function settleCustomerPolicyFee(input: {
     console.error("loadPolicyFeeClaim failed:", error);
     return { error: "server" };
   }
+  if (claim.chargedAmount !== input.expectedAmount) return { error: "fee_changed" };
   if (claim.appointmentChangeApplied) {
     return { ok: true, fee: claim.chargedAmount, claimId: claim.id, performChange: false };
   }
@@ -301,7 +334,7 @@ export async function settleCustomerPolicyFee(input: {
   if (needsNewCardCharge && (!method || !stripeCustomerId)) {
     method =
       method ??
-      (await resolvePaymentMethod(input.customerId, first.payment_method_id ?? null));
+      (await resolvePolicyPaymentMethod(input.customerId, first.payment_method_id ?? null));
     if (!method) return { error: "payment_required" };
     stripeCustomerId =
       stripeCustomerId ??
@@ -328,25 +361,33 @@ export async function settleCustomerPolicyFee(input: {
         if (!savedMethod || !savedCustomerId) {
           throw new Error("saved card is required for a new charge");
         }
-        const intent = await stripe.paymentIntents.create(
-          {
-            amount: payment.amountCents || dollarsToCents(claim.chargedAmount),
-            currency: "usd",
-            customer: savedCustomerId,
-            payment_method: savedMethod.stripePaymentMethodId,
-            confirm: true,
-            off_session: true,
-            description: `K9 Atelier ${input.action.replaceAll("_", " ")} fee`,
-            metadata: policyFeeStripeMetadata({
-              claimId: claim.id,
-              idempotencyKey: payment.idempotencyKey,
-              appointmentId: first.id,
-              kind: "cancellation",
-            }),
-          },
-          { idempotencyKey: payment.idempotencyKey },
-        );
-        return { id: intent.id, status: intent.status };
+        try {
+          const intent = await stripe.paymentIntents.create(
+            {
+              amount: payment.amountCents,
+              currency: "usd",
+              customer: savedCustomerId,
+              payment_method: savedMethod.stripePaymentMethodId,
+              confirm: true,
+              off_session: true,
+              receipt_email: input.customerEmail?.trim() || undefined,
+              description: `K9 Atelier ${input.action.replaceAll("_", " ")} fee`,
+              metadata: policyFeeStripeMetadata({
+                claimId: claim.id,
+                idempotencyKey: payment.idempotencyKey,
+                appointmentId: first.id,
+                kind: "cancellation",
+              }),
+            },
+            { idempotencyKey: payment.idempotencyKey },
+          );
+          return { id: intent.id, status: intent.status };
+        } catch (error) {
+          if (error instanceof Stripe.errors.StripeCardError && error.payment_intent) {
+            return { id: error.payment_intent.id, status: error.payment_intent.status };
+          }
+          throw error;
+        }
       },
       retrievePaymentIntent: async (id) => {
         const intent = await stripe.paymentIntents.retrieve(id);
@@ -370,7 +411,7 @@ export async function settleCustomerPolicyFee(input: {
             subtotal: claim.chargedAmount,
             tip_amount: 0,
             total: claim.chargedAmount,
-            created_by: input.customerId,
+            created_by: input.staff?.actorId ?? input.customerId,
             payment_method_id: savedMethod?.id ?? null,
             tender: "card",
             stripe_payment_intent_id: paymentIntentId,
@@ -395,8 +436,12 @@ export async function settleCustomerPolicyFee(input: {
       markChangeApplied: async () => false,
     },
     { settlePaymentOnly: true },
-  );
+  ).catch((error: unknown) => {
+    console.error("Policy fee settlement needs reconciliation:", claim.id, error instanceof Error ? error.name : "unknown");
+    return null;
+  });
 
+  if (!execution) return { error: "payment_unknown" };
   if (execution.outcome === "declined") return { error: "payment_failed" };
   if (execution.outcome === "in_progress") return { error: "payment_pending" };
   if (execution.outcome === "needs_review") return { error: "payment_unknown" };
@@ -408,6 +453,17 @@ export async function settleCustomerPolicyFee(input: {
     cardBrand: savedMethod?.brand,
     cardLast4: savedMethod?.last4,
   };
+}
+
+export async function loadOpenPolicyChangeClaim(key: string) {
+  const { data, error } = await createAdminClient()
+    .from("policy_fee_claims")
+    .select("charged_amount")
+    .eq("idempotency_key", key)
+    .neq("status", "failed")
+    .maybeSingle();
+  if (error) throw error;
+  return data ? { chargedAmount: Number(data.charged_amount) } : null;
 }
 
 export async function finishCustomerPolicyChange(claimId: string) {

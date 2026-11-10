@@ -4,6 +4,14 @@ import React, { useEffect, useId, useState } from "react";
 import { canStaffCancelAppointment } from "@/lib/appointments/staff-actions";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 
+type CancellationQuote = {
+  fee: number;
+  locked: boolean;
+  needsPriceReview: boolean;
+  hasPaymentMethod: boolean;
+  hasEmail: boolean;
+};
+
 function formatConfirmDate(iso: string): string {
   const date = new Date(iso.includes("T") ? iso : `${iso}T12:00:00`);
   if (Number.isNaN(date.getTime())) return iso;
@@ -44,6 +52,8 @@ export function AdminCancelAppointmentButton({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  const [quote, setQuote] = useState<CancellationQuote | null>(null);
+  const [amount, setAmount] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -56,7 +66,39 @@ export function AdminCancelAppointmentButton({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, busy]);
 
+  useEffect(() => {
+    if (!open || preview) return;
+    const controller = new AbortController();
+    setQuote(null);
+    setError(null);
+    async function loadQuote() {
+      try {
+        const response = await fetch(`/api/admin/appointments/${appointment.id}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const body = await response.json();
+        if (controller.signal.aborted) return;
+        if (!response.ok) {
+          setError(body.error ?? "Could not load the cancellation fee.");
+          return;
+        }
+        setQuote(body);
+        setAmount(body.fee.toFixed(2));
+      } catch {
+        if (!controller.signal.aborted) setError("Could not load the cancellation fee.");
+      }
+    }
+    void loadQuote();
+    return () => controller.abort();
+  }, [appointment.id, open, preview]);
+
   if (!canStaffCancelAppointment(appointment)) return null;
+
+  const enteredFee = Number(amount);
+  const canConfirm = preview || (quote && !quote.needsPriceReview && amount.trim() &&
+    enteredFee >= 0 && enteredFee <= quote.fee &&
+    (enteredFee === 0 || (enteredFee >= 0.5 && quote.hasPaymentMethod)));
 
   const customerLabel =
     appointment.customerName?.trim() ||
@@ -70,6 +112,7 @@ export function AdminCancelAppointmentButton({
       return;
     }
 
+    if (!canConfirm || busy) return;
     setBusy(true);
     setError(null);
 
@@ -80,7 +123,11 @@ export function AdminCancelAppointmentButton({
           method: "PATCH",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "cancelled" }),
+          body: JSON.stringify({
+            status: "cancelled",
+            expectedPolicyFee: quote?.fee,
+            amount: enteredFee,
+          }),
         },
       );
       const body = (await response.json()) as { error?: string };
@@ -105,6 +152,7 @@ export function AdminCancelAppointmentButton({
         type="button"
         onClick={() => {
           setError(null);
+          setQuote(null);
           setOpen(true);
         }}
         data-appointment-action="cancel"
@@ -172,6 +220,45 @@ export function AdminCancelAppointmentButton({
                 </div>
               )}
             </dl>
+            {!preview && !quote && !error ? (
+              <p className="mt-4 text-sm" role="status">Checking cancellation fee…</p>
+            ) : null}
+            {quote?.needsPriceReview ? (
+              <p className="mt-4 text-sm text-red-700" role="alert">
+                Review the saved visit price or prior policy charges before cancelling.
+              </p>
+            ) : quote && quote.fee > 0 ? (
+              <div className="mt-4 space-y-2 text-sm">
+                <label className="block">
+                  Cancellation fee (USD)
+                  <input
+                    className="mt-1 block w-full rounded-xl border border-lavender/40 bg-white px-4 py-2.5"
+                    type="number"
+                    min={0}
+                    max={quote.fee}
+                    step="0.01"
+                    value={amount}
+                    readOnly={quote.locked}
+                    disabled={busy}
+                    onChange={(event) => setAmount(event.target.value)}
+                  />
+                </label>
+                {quote.locked ? (
+                  <p>This fee is locked while the existing payment is checked.</p>
+                ) : (
+                  <p>Policy fee: ${quote.fee.toFixed(2)}. Enter $0 to waive it.</p>
+                )}
+                {enteredFee > 0 && !quote.hasPaymentMethod ? (
+                  <p role="alert">No saved payment method. Add one or waive the fee to cancel.</p>
+                ) : enteredFee > 0 && !quote.hasEmail ? (
+                  <p role="status">There is no email on file for the payment receipt.</p>
+                ) : enteredFee > 0 && !quote.locked ? (
+                  <p>The saved card will be charged and Stripe will email the receipt.</p>
+                ) : null}
+              </div>
+            ) : quote ? (
+              <p className="mt-4 text-sm">No cancellation fee applies.</p>
+            ) : null}
             {showReason ? (
               <div className="mt-4">
                 <label
@@ -204,7 +291,7 @@ export function AdminCancelAppointmentButton({
             <div className="mt-6 flex flex-wrap gap-3">
               <button
                 type="button"
-                disabled={busy}
+                disabled={busy || !canConfirm}
                 onClick={() => void confirmCancel()}
                 className={`rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100 disabled:opacity-50 ${sheetOnMobile ? "min-h-11" : ""}`}
               >

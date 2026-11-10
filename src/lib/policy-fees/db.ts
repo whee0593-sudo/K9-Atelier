@@ -32,6 +32,7 @@ export type BeginClaimInput = {
   actorId: string;
   changePayload: Record<string, unknown>;
   expectedAmount?: number | null;
+  staffCollectCap?: number;
 };
 
 export type BeginClaimResult =
@@ -209,24 +210,28 @@ export async function beginPolicyFeeClaim(
   input: BeginClaimInput,
 ): Promise<BeginClaimResult> {
   const admin = createAdminClient();
-  const { data, error } = await admin.rpc("begin_policy_fee_claim", {
-    p_input: {
-      idempotency_key: input.idempotencyKey,
-      visit_id: input.visitId,
-      action: input.action,
-      appointment_id: input.appointmentId ?? null,
-      affected_appointment_ids: input.affectedAppointmentIds,
-      includes_travel: input.includesTravel,
-      forfeit: input.forfeit,
-      computed: input.computed,
-      charged: input.charged,
-      waiver: input.waiver,
-      tender: input.tender,
-      actor_id: input.actorId,
-      change_payload: input.changePayload,
-      expected_amount: input.expectedAmount ?? null,
+  const { data, error } = await admin.rpc(
+    input.staffCollectCap === undefined ? "begin_policy_fee_claim" : "begin_staff_cancellation_fee_claim",
+    {
+      p_input: {
+        idempotency_key: input.idempotencyKey,
+        visit_id: input.visitId,
+        action: input.action,
+        appointment_id: input.appointmentId ?? null,
+        affected_appointment_ids: input.affectedAppointmentIds,
+        includes_travel: input.includesTravel,
+        forfeit: input.forfeit,
+        computed: input.computed,
+        charged: input.charged,
+        waiver: input.waiver,
+        tender: input.tender,
+        actor_id: input.actorId,
+        change_payload: input.changePayload,
+        expected_amount: input.expectedAmount ?? null,
+        staff_collect_cap: input.staffCollectCap,
+      },
     },
-  });
+  );
   if (error) throw new Error(error.message);
   const row = asRecord(data);
   const outcome = String(row.outcome ?? "invalid");

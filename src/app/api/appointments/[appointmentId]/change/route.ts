@@ -121,6 +121,13 @@ export async function POST(
     });
 
     if ("error" in result) {
+      if (result.error === "payment_required") {
+        return appointmentJsonError(
+          "Please add a payment method first. Your appointment is still booked.",
+          409,
+          "paymentMethod",
+        );
+      }
       if (result.error === "payment_failed") {
         return appointmentJsonError(
           "We could not charge the card on file. Please update your payment method and try again.",
