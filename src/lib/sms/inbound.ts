@@ -1,4 +1,7 @@
 import { appointmentNeedsAddress } from "@/lib/staff/booking-address";
+import { listPaymentMethodsForCustomer } from "@/lib/payments/service";
+import { usableConfirmationCards } from "@/lib/staff/customer-confirm-status";
+import { isInternalCustomerEmail } from "@/lib/staff/owner";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import { mapAppointmentRowToAdminRecord } from "@/lib/appointments/map";
@@ -202,7 +205,16 @@ export async function handleInboundCustomerSms(input: {
 
   const contact = contactFromAdminAppointment(appointment);
   const dateLabel = formatAppointmentDateLabel(appointment.appointmentDate);
-  const outcome = await persistCustomerReplyConfirmation(visit, (ids, customerId, patch) => admin
+  const needsContactDetails = appointment.staffCreated &&
+    (!appointment.customerEmail || isInternalCustomerEmail(appointment.customerEmail) ||
+      pets.some(appointmentNeedsAddress));
+  let needsCard = false;
+  if (appointment.staffCreated && pets.some((pet) => pet.status === "pending_confirmation")) {
+    const methods = await listPaymentMethodsForCustomer(appointment.customerId);
+    if (!methods) return { handled: "unmatched" };
+    needsCard = usableConfirmationCards(methods).length === 0;
+  }
+  const outcome = needsContactDetails || needsCard ? "details_required" : await persistCustomerReplyConfirmation(visit, (ids, customerId, patch) => admin
       .from("appointments")
       .update(patch)
       .in("id", ids)
@@ -211,8 +223,12 @@ export async function handleInboundCustomerSms(input: {
       .is("customer_confirmed_at", null)
       .select("id"));
   if (outcome === "details_required") {
-    await sendSms({ to: input.from, body: "K9 Atelier: Please add your service address using the link in our reservation message to complete your appointment. Reply STOP to opt out.", communication: buildCommunicationContext({
-      notificationType: "staff_booking_address_required", recipient: input.from, customerId: appointment.customerId,
+    const instructions = [
+      needsContactDetails ? "Please reply with your email address so we can update your reservation." : "",
+      needsCard ? "Please use the link in your reservation message to add a card on file." : "",
+    ].filter(Boolean).join(" ");
+    await sendSms({ to: input.from, body: `K9 Atelier: ${instructions} Reply STOP to opt out.`, communication: buildCommunicationContext({
+      notificationType: "staff_booking_details_required", recipient: input.from, customerId: appointment.customerId,
       visitId: appointment.visitId, appointmentIds: pets.map(pet => pet.id), petIds: pets.map(pet => pet.petId), dedupe: appointment.visitId ? "visit" : "appointment",
     }) });
     return { handled: "message" };

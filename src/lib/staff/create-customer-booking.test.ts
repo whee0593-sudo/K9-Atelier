@@ -15,10 +15,13 @@ import {
 } from "@/lib/staff/create-customer-booking-input";
 import {
   createCustomerConfirmToken,
+  createCustomerReminderToken,
+  customerReminderAppointmentId,
   customerConfirmPath,
   hashCustomerConfirmToken,
   isAwaitingCustomerConfirm,
   isCustomerConfirmExpired,
+  matchesCustomerReminderToken,
 } from "@/lib/staff/customer-confirm-token";
 import { preferredPaymentMethodId } from "@/lib/staff/customer-confirm-status";
 import {
@@ -690,6 +693,43 @@ it("uses direct email confirmation while retaining the separate SMS profile flow
     assert.match(sms, /Please reply C to confirm your appointment\./);
     for (const petName of petNames) assert.ok(sms.includes(petName));
   }
+});
+
+it("uses the reservation templates to ask for missing card, address, and email details", () => {
+  const appointment = sampleAppointment();
+  const confirmUrl = "https://k9atelier.com/confirm-account?token=example";
+  const notice = { firstName: "Daniel", confirmUrl, createdAccount: false, requiresCard: true, requiresAddress: true };
+  const email = buildStaffCreatedBookingEmail(appointment, notice);
+  assert.match(email.text, /Add your service address/);
+  assert.match(email.text, /Add a card to secure this appointment/);
+  assert.match(email.text, /Confirm: https:\/\/k9atelier.com\/confirm-account\?token=example/);
+
+  const sms = buildStaffCreatedBookingSms(appointment, confirmUrl, ["Lychee", "Yoyo"], { ...notice, requiresEmail: true });
+  assert.match(sms, /Lychee and Yoyo/);
+  assert.match(sms, /add a card on file/);
+  assert.match(sms, /reply with your email address/);
+  assert.ok(sms.includes(confirmUrl));
+  const missingEmailSms = buildStaffCreatedBookingSms(appointment, confirmUrl, ["Lychee"], { firstName: "Daniel", requiresEmail: true });
+  assert.match(missingEmailSms, /reply with your email address/);
+  assert.ok(!missingEmailSms.includes(confirmUrl));
+});
+
+it("binds reminder links to the booking, date and original confirmation hash", (context) => {
+  const previous = process.env.CRON_SECRET;
+  process.env.CRON_SECRET = "test-reminder-signing-secret";
+  context.after(() => {
+    if (previous === undefined) delete process.env.CRON_SECRET;
+    else process.env.CRON_SECRET = previous;
+  });
+  const id = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+  const original = createCustomerConfirmToken();
+  const token = createCustomerReminderToken(id, "2026-11-10", original.hash);
+  assert.ok(token);
+  assert.equal(customerReminderAppointmentId(token), id);
+  assert.ok(matchesCustomerReminderToken(token, id, "2026-11-10", original.hash));
+  assert.ok(!matchesCustomerReminderToken(token, id, "2026-11-11", original.hash));
+  assert.ok(!matchesCustomerReminderToken(token, id, "2026-11-10", null));
+  assert.ok(!matchesCustomerReminderToken(original.token, id, "2026-11-10", original.hash));
 });
 
 it("orders visit details before pets and totals all services in both staff email formats", () => {

@@ -21,6 +21,12 @@ const details = {
 };
 
 describe("appointment SMS copy", () => {
+  it("reminds self-booked customers without asking them to confirm again", () => {
+    const body = buildAppointmentConfirmRequestSms(details, false);
+    assert.match(body, /Reminder: Bella's K9 Atelier appointment on Tuesday, August 18, 2026/);
+    assert.doesNotMatch(body, /reply C/i);
+  });
+
   it("sends the approved booking success text without the state or ZIP", () => {
     const body = buildBookingConfirmationSms({
       ...details,

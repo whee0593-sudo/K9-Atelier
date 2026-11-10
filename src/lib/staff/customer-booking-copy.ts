@@ -53,6 +53,9 @@ export type StaffCreatedBookingNotice = {
   createdAccount: boolean;
   requiresProfileCompletion?: boolean;
   requiresAddress?: boolean;
+  requiresCard?: boolean;
+  requiresEmail?: boolean;
+  requiresPhone?: boolean;
 };
 
 export function buildStaffCreatedBookingEmail(
@@ -63,12 +66,16 @@ export function buildStaffCreatedBookingEmail(
   const visitRows = staffCreatedVisitDetailRows(appointment, appointments);
   const confirmUrl = new URL(notice.confirmUrl);
   const needsAddress = notice.requiresAddress || appointmentNeedsAddress(appointment);
-  confirmUrl.pathname = needsAddress ? "/confirm-account" : "/confirm-account/appointment";
+  confirmUrl.pathname = needsAddress || notice.requiresCard || notice.requiresEmail ? "/confirm-account" : "/confirm-account/appointment";
   confirmUrl.hash = "";
   const greetingName = notice.firstName.trim() || "there";
   const subject = "Please confirm your K9 Atelier appointment";
   const introParagraph = "Please review the details of your appointment with K9 Atelier and click the button below to confirm.";
-  const closingParagraph = needsAddress ? MISSING_BOOKING_ADDRESS_MESSAGE : "";
+  const closingParagraph = [
+    needsAddress ? MISSING_BOOKING_ADDRESS_MESSAGE : "",
+    notice.requiresCard ? "Add a card to secure this appointment. You will not be charged now." : "",
+    notice.requiresPhone ? "Please reply to this email with your mobile number so we can update your reservation." : "",
+  ].filter(Boolean).join(" ");
 
   const text = [
     `Dear ${greetingName},`,
@@ -119,7 +126,7 @@ export function buildStaffCreatedBookingSms(
   appointment: AppointmentRecord,
   _confirmUrl: string,
   petNames: string[] = [appointment.petName],
-  _profileNotice?: {firstName: string; requiresProfileCompletion: boolean; requiresAddress?: boolean},
+  _profileNotice?: Pick<StaffCreatedBookingNotice, "firstName" | "requiresProfileCompletion" | "requiresAddress" | "requiresCard" | "requiresEmail">,
 ) {
   const dateLabel = formatAppointmentDateLabel(appointment.appointmentDate);
   const petLabel = formatPetNameList(petNames);
@@ -128,7 +135,15 @@ export function buildStaffCreatedBookingSms(
     time && time !== ARRIVAL_WINDOW_PENDING_LABEL
       ? `${dateLabel} ${time}`
       : dateLabel;
-  if (_profileNotice?.requiresAddress || appointmentNeedsAddress(appointment)) return `K9 Atelier reserved an appointment for ${petLabel} on ${when}. Please add your service address and complete your appointment details: ${_confirmUrl} Reply STOP to opt out.`;
+  const reservation = `K9 Atelier reserved an appointment for ${petLabel} on ${when}.`;
+  const needsAddress = _profileNotice?.requiresAddress || appointmentNeedsAddress(appointment);
+  const actions = [
+    _profileNotice?.requiresCard ? `Please add a card on file to confirm your appointment: ${_confirmUrl}` : "",
+    needsAddress || _profileNotice?.requiresEmail
+      ? "Please reply with your email address so we can update your reservation."
+      : "",
+  ].filter(Boolean);
+  if (actions.length) return `${reservation} ${actions.join(" ")} Reply STOP to opt out.`;
   return `K9 Atelier reserved an appointment for ${petLabel} on ${when}. Please reply C to confirm your appointment. Reply STOP to opt out.`;
 }
 

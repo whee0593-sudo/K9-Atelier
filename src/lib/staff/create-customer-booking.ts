@@ -43,7 +43,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig } from "@/lib/supabase/env";
 import { getStaffSession } from "@/lib/staff/auth";
 import { describeStaffScheduleConflict } from "@/lib/staff/schedule-conflict";
-import { isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
+import { isInternalCustomerEmail, isOwnerEmail, normalizeStaffEmail } from "@/lib/staff/owner";
 import { isFrozenAuthUser } from "@/lib/auth/frozen-account";
 import {
   buildCommunicationContext,
@@ -664,7 +664,19 @@ export async function createStaffCustomerBooking(
 
     const confirm = createCustomerConfirmToken();
     const confirmExpiresAt = customerConfirmExpiryIso();
-    const pendingAppointments: StaffVisitAppointmentInsert[] = [];
+    let requiresCard = true;
+    try {
+      const methods = await listPaymentMethodsForCustomer(userId);
+      requiresCard = !methods || usableConfirmationCards(methods).length === 0;
+    } catch (error) {
+      console.error("Could not check saved cards for staff booking:", error);
+    }
+    const requiresEmail = isInternalCustomerEmail(accountEmail);
+    const requiresPhone = !input.phone;
+    const requiresProfileCompletion = needsAddress || requiresCard || requiresEmail || requiresPhone;
+    const status = requiresProfileCompletion ? "pending_confirmation" : "confirmed";
+    const confirmedAt = status === "confirmed" ? new Date().toISOString() : null;
+    const visitAppointments: StaffVisitAppointmentInsert[] = [];
     let previousStart = firstSchedule.scheduledStart;
     let previousDuration = firstDurationMinutes;
     let visitIndex = 0;
@@ -734,7 +746,7 @@ export async function createStaffCustomerBooking(
           console.error("createStaffCustomerBooking allergy profile could not be read");
         }
         const allergySnapshot = allergySnapshotForBooking(allergy);
-        pendingAppointments.push({
+        visitAppointments.push({
           customer_id: userId,
           pet_id: petRow.id as string,
           service_id: draft.serviceId,
@@ -763,8 +775,8 @@ export async function createStaffCustomerBooking(
           new_client_deposit: 0,
           payment_method_id: null,
           vaccination_status_at_booking: "missing",
-          status: "pending_confirmation",
-          confirmed_at: null,
+          status,
+          confirmed_at: confirmedAt,
           staff_created: true,
           customer_confirm_token_hash: confirm.hash,
           customer_confirm_expires_at: confirmExpiresAt,
@@ -775,7 +787,7 @@ export async function createStaffCustomerBooking(
       }
     }
 
-    if (pendingAppointments.length === 0) {
+    if (visitAppointments.length === 0) {
       return { error: "conflict", message: "Choose a service for each dog." };
     }
 
@@ -786,7 +798,7 @@ export async function createStaffCustomerBooking(
         scheduled_start: firstSchedule.scheduledStart,
         time_preference: firstSchedule.timePreference,
         timezone: business.booking.timezone,
-        status: "pending_confirmation",
+        status,
         address_street: address.street,
         address_city: address.city,
         address_state: address.state,
@@ -798,7 +810,7 @@ export async function createStaffCustomerBooking(
         travel_fee_automatic: quote.fee,
         travel_fee_override: input.travelFeeOverride,
       },
-      appointments: pendingAppointments,
+      appointments: visitAppointments,
     });
     if ("error" in created) return created;
     let fixedPricesSaved = true;
@@ -843,13 +855,6 @@ export async function createStaffCustomerBooking(
     const confirmUrl = siteUrl(customerConfirmPath(confirm.token));
     const petNames = [...new Map(appointments.map((entry) => [entry.petId, entry.petName])).values()];
 
-    let requiresProfileCompletion = createdAccount || needsAddress;
-    try {
-      const methods = await listPaymentMethodsForCustomer(userId);
-      requiresProfileCompletion = needsAddress || createdAccount || !methods || usableConfirmationCards(methods).length === 0;
-    } catch {
-      requiresProfileCompletion = true;
-    }
     let emailed = false;
     let texted = false;
     // The reservation is already committed. Delivery failures must not disguise it as a failed booking.
@@ -861,6 +866,8 @@ export async function createStaffCustomerBooking(
         createdAccount,
         requiresProfileCompletion,
         requiresAddress: needsAddress,
+        requiresCard,
+        requiresPhone,
       }, appointments);
       emailed = isCommunicationAccepted(
         await sendEmail({
@@ -888,7 +895,7 @@ export async function createStaffCustomerBooking(
       texted = isCommunicationAccepted(
         await sendSms({
           to: input.phone,
-          body: buildStaffCreatedBookingSms(appointment, confirmUrl, petNames, { firstName: input.firstName, requiresProfileCompletion, requiresAddress: needsAddress }),
+          body: buildStaffCreatedBookingSms(appointment, confirmUrl, petNames, { firstName: input.firstName, requiresProfileCompletion, requiresAddress: needsAddress, requiresCard, requiresEmail }),
           communication: buildCommunicationContext({
             notificationType: "staff_created_booking",
             recipient: input.phone,

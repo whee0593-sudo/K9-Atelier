@@ -25,7 +25,7 @@ it("prices a completed address using driving distance and rejects unlocatable ad
   assert.ok(result.quote.fee > 0);
   assert.equal((await staffBookingLocation(address,{...deps,geocodeAddress:async()=>null}) as {error:string}).error,"outside_area");
 });
-it("email and SMS include an address completion link and mark travel as pending", () => {
+it("email links to address completion and SMS asks for an email reply", () => {
   const appointment = {...buildPreviewCollectContext().appointment,addressStreet:"",addressCity:"",addressState:"FL",addressZip:""};
   assert.equal(appointmentNeedsAddress(appointment),true);
   const notice = {firstName:"Ada",confirmUrl:"https://k9atelier.com/confirm-account?token=example",createdAccount:false};
@@ -33,7 +33,9 @@ it("email and SMS include an address completion link and mark travel as pending"
   assert.match(email.text,/confirm-account\?token=example/);
   assert.doesNotMatch(email.text,/confirm-account\/appointment/);
   assert.match(email.text,/Travel fee to be calculated/);
-  assert.match(buildStaffCreatedBookingSms(appointment,notice.confirmUrl),/Please add your service address.*confirm-account\?token=example/);
+  const sms = buildStaffCreatedBookingSms(appointment, notice.confirmUrl);
+  assert.match(sms, /Please reply with your email address/);
+  assert.doesNotMatch(sms, /confirm-account|reply C/i);
 });
 it("rejects malformed address submissions and invalid tokens without database writes", async () => {
   for (const body of [{token:"bad",address:{street:"1 Main",city:"Jupiter",state:"FL",zip:"33458"}},{token:"a".repeat(64),address:{street:"",city:"",state:"FL",zip:""}}]) {

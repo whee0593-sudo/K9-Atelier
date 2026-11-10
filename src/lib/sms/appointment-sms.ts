@@ -183,12 +183,13 @@ export async function sendAppointmentConfirmRequestSms(
   customer: CustomerContact,
   petNames?: string[],
   scope?: { appointmentIds?: string[]; petIds?: string[] },
+  requestReply = true,
 ) {
   return sendCustomerSms(
     "confirm_reminder_3_day",
     appointment,
     customer.phone,
-    buildAppointmentConfirmRequestSms(namedDetails(appointment, customer, petNames)),
+    buildAppointmentConfirmRequestSms(namedDetails(appointment, customer, petNames), requestReply),
     scope,
   );
 }

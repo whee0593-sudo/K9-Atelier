@@ -138,8 +138,14 @@ function formatSmsClock(hourText: string, minuteText: string, period: string) {
 /** Sent 3 days before the visit at 10am. Customer replies C to confirm. */
 export function buildAppointmentConfirmRequestSms(
   details: BookingConfirmationDetails,
+  requestReply = true,
 ): string {
-  return buildCustomerAppointmentConfirmSms(details);
+  if (requestReply) return buildCustomerAppointmentConfirmSms(details);
+  return [
+    `Reminder: ${details.petName}'s K9 Atelier appointment on ${confirmationSmsWhen(details)}.`,
+    "",
+    SMS_OPT_OUT,
+  ].join("\n");
 }
 
 export function buildAppointmentEnRouteSms(

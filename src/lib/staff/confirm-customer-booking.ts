@@ -28,8 +28,11 @@ import {
 } from "@/lib/staff/customer-confirm-status";
 import {
   hashCustomerConfirmToken,
+  customerReminderAppointmentId,
+  matchesCustomerReminderToken,
   isCustomerConfirmExpired,
 } from "@/lib/staff/customer-confirm-token";
+import { todayInBusinessTimezone } from "@/lib/sms/schedule";
 
 const APPOINTMENT_SELECT = `
   id,
@@ -103,13 +106,26 @@ async function loadConfirmAppointment(token: string, includePaymentMethods = tru
     console.error("loadConfirmAppointment failed:", error.message);
     return { ok: false as const, error: "server" as const };
   }
-  if (!data) return { ok: false as const, error: "not_found" as const };
-
-  const row = data as AppointmentRow;
+  let row = data as AppointmentRow | null;
+  let isReminderLink = false;
+  const reminderId = !row && customerReminderAppointmentId(token);
+  if (reminderId) {
+    const reminder = await admin.from("appointments").select(APPOINTMENT_SELECT)
+      .eq("id", reminderId).eq("staff_created", true)
+      .in("status", ["pending_confirmation", "confirmed"]).maybeSingle();
+    if (reminder.error) return { ok: false as const, error: "server" as const };
+    const candidate = reminder.data as AppointmentRow | null;
+    if (candidate && matchesCustomerReminderToken(token, candidate.id, candidate.appointment_date, candidate.customer_confirm_token_hash)) {
+      row = candidate;
+      isReminderLink = true;
+    }
+  }
+  if (!row) return { ok: false as const, error: "not_found" as const };
   if (row.status === "cancelled") {
     return { ok: false as const, error: "not_found" as const };
   }
-  if (isCustomerConfirmExpired(row.customer_confirm_expires_at)) {
+  if (isCustomerConfirmExpired(row.customer_confirm_expires_at) ||
+      (isReminderLink && row.appointment_date < todayInBusinessTimezone())) {
     return { ok: false as const, error: "expired" as const };
   }
 
@@ -316,7 +332,7 @@ export async function confirmStaffCreatedBooking(input: {
     .eq("customer_id", result.row.customer_id)
     .in("id", result.appointments.map(appointment => appointment.id))
     .in("status", ["pending_confirmation", "confirmed"])
-    .eq("customer_confirm_token_hash", hashCustomerConfirmToken(input.token))
+    .eq("customer_confirm_token_hash", result.row.customer_confirm_token_hash!)
     .select(APPOINTMENT_SELECT);
 
   if (error) {
@@ -381,7 +397,7 @@ export async function saveCustomerConfirmAddress(token: string, address: Service
   if ("error" in location) return { error: "conflict" as const, message: location.message ?? "We could not check your service address. Please try again." };
   if (!location.destination) return { error: "conflict" as const, message: MISSING_BOOKING_ADDRESS_MESSAGE };
   const saved = await result.admin.rpc("complete_staff_booking_address", {
-    p_token_hash: hashCustomerConfirmToken(token), p_customer_id: result.row.customer_id,
+    p_token_hash: result.row.customer_confirm_token_hash!, p_customer_id: result.row.customer_id,
     p_appointment_id: result.row.id, p_address: address, p_lat: location.destination.lat,
     p_lon: location.destination.lon, p_distance: location.quote.distanceMiles, p_automatic_fee: location.quote.fee,
   });
