@@ -1,4 +1,8 @@
-import { liveServiceDurationMinutes } from "@/lib/pets/weight";
+import { bookingWeightLbs, liveServiceDurationMinutes } from "@/lib/pets/weight";
+import { fixedPriceForService, mapFixedServicePrices, type PetServicePriceRow } from "@/lib/pets/fixed-prices";
+import { addOnSelectionMessage, getServicePriceEstimate } from "@/lib/services";
+import { visitCheckoutPetFromStoredAppointment } from "@/lib/charges/stored-visit-pet";
+import { readStoredVisitLineItems, VISIT_LINE_ITEMS_KEY } from "@/lib/charges/visit-line-items";
 import { groupBlocksByDate } from "@/lib/appointments/availability-blocks";
 import { loadAvailabilityBlocks } from "@/lib/appointments/availability-block-store";
 import {
@@ -14,8 +18,8 @@ import type {
   AppointmentRow,
 } from "@/lib/appointments/types";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
-import { parseStaffRescheduleInput } from "@/lib/appointments/staff-reschedule-input";
-import { replaceVisitSchedule } from "@/lib/visits/persist";
+import { parseStaffRescheduleInput, staffRescheduleServices } from "@/lib/appointments/staff-reschedule-input";
+import { applyVisitServiceChange, replaceVisitSchedule } from "@/lib/visits/persist";
 import { resolveAppointmentDuration } from "@/lib/visits/duration";
 import {
   hasVisitSequence,
@@ -70,7 +74,7 @@ const STAFF_RESCHEDULE_SELECT = `
   en_route_sms_sent_at,
   service_started_at,
   service_ended_at,
-  pets ( name, breed, weight_lbs ),
+  pets ( name, breed, weight_lbs, pet_service_prices ( service_id, amount ) ),
   visits ( service_started_at, service_ended_at ),
   profiles ( email, first_name, last_name, phone )
 `;
@@ -81,16 +85,16 @@ type StaffRescheduleError =
   | "not_found"
   | "conflict"
   | "slot_unavailable"
+  | "invalid_service"
   | "misconfigured"
   | "server";
+
+type LoadedPet = { name: string; breed: string; weight_lbs?: number; pet_service_prices?: PetServicePriceRow[] };
 
 type LoadedAppointment = Omit<AppointmentRow, "pets"> & {
   address_lat?: number | null;
   address_lon?: number | null;
-  pets?:
-    | { name: string; breed: string; weight_lbs?: number }
-    | { name: string; breed: string; weight_lbs?: number }[]
-    | null;
+  pets?: LoadedPet | LoadedPet[] | null;
 };
 
 function firstRelation<T>(value: T | T[] | null | undefined): T | null {
@@ -175,8 +179,80 @@ function isCompletedVisit(row: LoadedAppointment) {
   return Boolean(visit?.service_started_at || visit?.service_ended_at || row.service_started_at || row.service_ended_at);
 }
 
+type PlannedServiceEdit = NonNullable<Parameters<typeof applyVisitServiceChange>[0]["service"]> & {
+  durationMinutes: number;
+};
+
+function planServiceEdit(row: LoadedAppointment, serviceId: string | undefined):
+  | { service: PlannedServiceEdit | null }
+  | { error: "invalid_service"; message?: string } {
+  if (!serviceId || serviceId === row.service_id) return { service: null };
+  if (isCompletedVisit(row)) {
+    return { error: "invalid_service", message: "The service can only be changed before the visit starts." } as const;
+  }
+  const pet = firstRelation(row.pets);
+  const weight = bookingWeightLbs(pet?.weight_lbs);
+  const service = staffRescheduleServices(weight).find((item) => item.id === serviceId);
+  if (!service || weight == null) return { error: "invalid_service" } as const;
+  const addOnIds = row.add_on_ids ?? [];
+  const message = addOnSelectionMessage([serviceId], addOnIds);
+  if (message) return { error: "invalid_service", message } as const;
+  const price = fixedPriceForService(mapFixedServicePrices(pet?.pet_service_prices), serviceId)
+    ?? getServicePriceEstimate(service, weight)?.from;
+  const durationMinutes = liveServiceDurationMinutes(serviceId, weight, addOnIds);
+  if (price == null || !durationMinutes) return { error: "invalid_service" } as const;
+  const addOnOptions: Record<string, unknown> = { ...row.add_on_options };
+  const checkout = visitCheckoutPetFromStoredAppointment({
+    id: row.id,
+    status: row.status,
+    serviceName: row.service_name,
+    serviceId: row.service_id,
+    servicePrice: row.service_price ?? null,
+    serviceEndedAt: null,
+    addOnIds,
+    addOnOptions,
+    petName: pet?.name ?? "Dog",
+    weightLbs: weight,
+  });
+  if (checkout.priceReviewRequired) {
+    return { error: "invalid_service", message: "Review this pet's existing service and add-on prices before changing the service." } as const;
+  }
+  delete addOnOptions[row.service_id];
+  const stored = readStoredVisitLineItems(addOnOptions);
+  if (stored) {
+    const primary = stored.findIndex((line) => line.catalogId !== "travel-fee" && line.catalogId !== "no-show");
+    if (primary >= 0) {
+      stored[primary] = {
+        ...stored[primary]!,
+        catalogId: serviceId,
+        label: service.name,
+        amount: price,
+        listAmount: price,
+      };
+      addOnOptions[VISIT_LINE_ITEMS_KEY] = stored;
+    }
+  }
+  const travelFee = Number(row.travel_fee ?? 0);
+  const estimatedTotal = price + travelFee +
+    (checkout.addOns ?? []).reduce((sum, item) => sum + item.amount, 0);
+  return {
+    service: {
+      serviceId,
+      serviceName: service.name,
+      addOnIds,
+      addOnOptions,
+      travelFee,
+      estimatedTotal: Math.round(estimatedTotal * 100) / 100,
+      durationMinutes,
+      servicePrice: price,
+      previous: { serviceId: row.service_id, date: row.appointment_date, start: row.scheduled_start ?? null },
+    },
+  };
+}
+
 export async function listStaffAppointmentAvailability(
   appointmentId: string,
+  serviceId?: string,
 ): Promise<
   | {
       days: Array<{ date: string; available: boolean; slots: number[] }>;
@@ -190,7 +266,7 @@ export async function listStaffAppointmentAvailability(
         }>;
       };
     }
-  | { error: StaffRescheduleError }
+  | { error: StaffRescheduleError; message?: string }
 > {
   const session = await requireStaffSession();
   if ("error" in session) return session;
@@ -200,6 +276,8 @@ export async function listStaffAppointmentAvailability(
 
   const blocked = assertOpenForReschedule(loaded.row);
   if (blocked) return blocked;
+  const serviceEdit = planServiceEdit(loaded.row, serviceId);
+  if ("error" in serviceEdit) return serviceEdit;
 
   const point = visitPoint(loaded.row);
   if (!point) return { error: "conflict" };
@@ -220,12 +298,16 @@ export async function listStaffAppointmentAvailability(
     return { error: "conflict" };
   }
   const visitAppointmentIds = visitRows.map((row) => row.id);
-  const decisions = visitRows.map(visitDurationDecision);
-  if (decisions.some((decision) => decision.unknown || decision.minutes == null)) {
+  const durations = visitRows.map((row) =>
+    row.id === appointmentId && serviceEdit.service
+      ? serviceEdit.service.durationMinutes
+      : visitDurationDecision(row).minutes,
+  );
+  if (durations.some((duration) => duration == null)) {
     return { error: "conflict" };
   }
-  const durations = decisions.map((decision) => decision.minutes ?? 0);
-  const totalDuration = durations.reduce((sum, minutes) => sum + minutes, 0);
+  const knownDurations = durations.map((duration) => duration ?? 0);
+  const totalDuration = knownDurations.reduce((sum, minutes) => sum + minutes, 0);
   const result = await getAvailabilityForAddress({
     point,
     zip: loaded.row.address_zip,
@@ -271,13 +353,13 @@ export async function listStaffAppointmentAvailability(
     }
     const stops = occupiedResult.byDate.get(day.date)?.stops ?? [];
     const slots = listVisitArrivalMinutes({
-      durations,
+      durations: knownDurations,
       otherStops: stops,
     }).filter(
       (start) =>
         visitSpanFitsScheduleBounds({
           visitStartMinutes: start,
-          durations,
+          durations: knownDurations,
           closure,
           blocks: dayBlocks,
         }).ok,
@@ -290,10 +372,12 @@ export async function listStaffAppointmentAvailability(
     visit: {
       dogCount: visitRows.length,
       estimatedDurationMinutes: totalDuration,
-      dogs: visitRows.map((row) => ({
+      dogs: visitRows.map((row, index) => ({
         petName: firstRelation(row.pets)?.name ?? "Dog",
-        serviceName: row.service_name,
-        durationMinutes: visitDurationDecision(row).minutes ?? 0,
+        serviceName: row.id === appointmentId && serviceEdit.service
+          ? serviceEdit.service.serviceName
+          : row.service_name,
+        durationMinutes: knownDurations[index] ?? 0,
       })),
     },
   };
@@ -301,17 +385,20 @@ export async function listStaffAppointmentAvailability(
 
 export async function rescheduleStaffAppointment(
   appointmentId: string,
-  date: string,
-  slotStartMinutes: number,
+  date: string | undefined,
+  slotStartMinutes: number | undefined,
+  serviceId?: string,
 ): Promise<
   | { appointment: AdminAppointmentRecord }
-  | { error: StaffRescheduleError }
+  | { error: StaffRescheduleError; message?: string }
 > {
   const session = await requireStaffSession();
   if ("error" in session) return session;
 
-  const parsed = parseStaffRescheduleInput({ date, slotStartMinutes });
-  if ("error" in parsed) return { error: "conflict" };
+  const requestedTime = date !== undefined || slotStartMinutes !== undefined;
+  if (requestedTime && "error" in parseStaffRescheduleInput({ date, slotStartMinutes })) {
+    return { error: "conflict" };
+  }
 
   const loaded = await loadAppointmentRow(appointmentId);
   if ("error" in loaded) return loaded;
@@ -326,15 +413,28 @@ export async function rescheduleStaffAppointment(
     return { error: "conflict" };
   }
   const anchor = ordered[0] ?? loaded.row;
+  const serviceEdit = planServiceEdit(loaded.row, serviceId);
+  if ("error" in serviceEdit) return serviceEdit;
+  const { service } = serviceEdit;
+  const scheduleDate = date ?? anchor.appointment_date;
+  const scheduleStart = slotStartMinutes ?? anchor.scheduled_start;
+  const timeChanged = scheduleDate !== anchor.appointment_date || scheduleStart !== anchor.scheduled_start;
+  if (!timeChanged && !service) {
+    return { appointment: mapAppointmentRowToAdminRecord(loaded.row as AppointmentRow) };
+  }
+  if (scheduleStart == null) return { error: "slot_unavailable" };
   const visitAppointmentIds = ordered.map((row) => row.id);
-  const decisions = ordered.map(visitDurationDecision);
-  if (decisions.some((decision) => decision.unknown || decision.minutes == null)) {
+  const estimatedDurations = ordered.map((row) =>
+    row.id === appointmentId && service ? service.durationMinutes : visitDurationDecision(row).minutes,
+  );
+  if (estimatedDurations.some((duration) => duration == null)) {
     return { error: "conflict" };
   }
-  const durations = decisions.map((decision) => decision.minutes ?? 0);
+  const durations = estimatedDurations.map((duration) => duration ?? 0);
   const completed = ordered.some(isCompletedVisit);
+  if (completed && service) return { error: "invalid_service" };
   const planned = scheduleVisitPetChain({
-    visitStartMinutes: parsed.slotStartMinutes,
+    visitStartMinutes: scheduleStart,
     durations,
   });
   if (!planned.ok) return { error: "slot_unavailable" };
@@ -342,14 +442,14 @@ export async function rescheduleStaffAppointment(
 
   if (!completed) {
     const point = visitPoint(anchor);
-    if (!point) return { error: "conflict" };
+    if (!point && timeChanged) return { error: "conflict" };
     const allowed = await assertVisitScheduleAllowed({
-      date: parsed.date,
-      visitStartMinutes: parsed.slotStartMinutes,
+      date: scheduleDate,
+      visitStartMinutes: scheduleStart,
       durations,
       excludeAppointmentIds: visitAppointmentIds,
-      enforceZoneAndCapacity: true,
-      point,
+      enforceZoneAndCapacity: timeChanged,
+      point: point ?? undefined,
       zip: anchor.address_zip,
     });
     if ("error" in allowed) return allowed;
@@ -357,9 +457,8 @@ export async function rescheduleStaffAppointment(
 
   const visitId = ordered[0]?.visit_id;
   if (!visitId) return { error: "server" };
-  const written = await replaceVisitSchedule({
-    visitId,
-    serviceDate: parsed.date,
+  const schedule = {
+    serviceDate: scheduleDate,
     visitStartMinutes: slots[0]!.scheduledStart,
     timePreference: slots[0]!.usedPreference,
     children: ordered.map((row, index) => {
@@ -372,7 +471,10 @@ export async function rescheduleStaffAppointment(
         timePreference: slot.usedPreference,
       };
     }),
-  });
+  };
+  const written = service
+    ? await applyVisitServiceChange({ appointmentId, visitId, service, schedule })
+    : await replaceVisitSchedule({ visitId, ...schedule });
   if ("error" in written) return written;
 
   const admin = createAdminClient();
@@ -391,7 +493,7 @@ export async function rescheduleStaffAppointment(
   const appointment = mapAppointmentRowToAdminRecord(
     data as unknown as AppointmentRow,
   );
-  if (!completed) {
+  if (!completed && timeChanged) {
     const contact: CustomerContact | null =
       contactFromAdminAppointment(appointment);
     if (contact) {

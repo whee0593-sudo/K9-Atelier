@@ -424,12 +424,16 @@ export function AdminCalendar({
   function handleAppointmentChanged(next?: {
     date: string;
     slotStartMinutes: number;
+    serviceId?: string;
+    serviceName?: string;
   }) {
     if (preview && appointmentMenu && next) {
       const current = appointmentById(appointmentMenu.id);
       if (current) {
         const moved: AdminAppointmentRecord = {
           ...current,
+          serviceId: next.serviceId ?? current.serviceId,
+          serviceName: next.serviceName ?? current.serviceName,
           appointmentDate: next.date,
           scheduledStart: next.slotStartMinutes,
           appointmentTime: formatMinutesLabel(next.slotStartMinutes),

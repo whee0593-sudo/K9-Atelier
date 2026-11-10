@@ -140,6 +140,13 @@ before(async () => {
   );
   await db.exec(sequence);
   await db.exec(`
+    ALTER TABLE public.visits ADD COLUMN service_started_at timestamptz, ADD COLUMN service_ended_at timestamptz;
+    ALTER TABLE public.appointments ADD COLUMN service_started_at timestamptz;
+    CREATE TABLE public.appointment_charges (visit_id uuid, appointment_id uuid, status text, kind text, line_items jsonb);
+  `);
+  await db.exec(readFileSync("supabase/migrations/20261026153942_visit_travel_fee_override.sql", "utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261110173108_atomic_reschedule_service.sql", "utf8"));
+  await db.exec(`
     CREATE TRIGGER appointments_sync_visit
       AFTER INSERT OR UPDATE OF status, service_ended_at, scheduled_start,
         appointment_time, time_preference, appointment_date, visit_id
@@ -153,6 +160,43 @@ before(async () => {
 });
 
 describe("visit integrity in postgres", () => {
+  it("saves a service and price at the existing arrival and rolls both back when a later move fails", async () => {
+    const visitId = "26262626-2626-4262-8262-262626262626";
+    const dogId = "27272727-2727-4272-8272-272727272727";
+    const date = "2026-12-30";
+    await insertVisit({ id: visitId, start: 600, date });
+    await insertAppointment({ id: dogId, visitId, petId: PET_A, start: 600, date, name: "Daisy" });
+    const edit = (previousService: string, service: string, price: number, start: number, nextDate = date) =>
+      db.query("SELECT public.apply_visit_service_change($1,$2,$3,$4,$5,'morning',$6)", [
+        dogId, visitId, JSON.stringify({
+          previous_service_id: previousService, previous_date: date, previous_start: 600,
+          service_id: service, service_name: service, service_price: price,
+          estimated_total: price, estimated_duration_minutes: 60,
+        }), nextDate, start, JSON.stringify([{
+          id: dogId, scheduled_start: start, estimated_duration_minutes: 60,
+          appointment_time: "10:00 AM", time_preference: "morning",
+        }]),
+      ]);
+    await edit("bath", "full-groom", 140, 600);
+    await assert.rejects(edit("full-groom", "bath", 90, 9999));
+    const saved = await db.query(
+      "SELECT service_id, service_price::text, estimated_duration_minutes, scheduled_start, appointment_date::text FROM public.appointments WHERE id=$1",
+      [dogId],
+    );
+    assert.deepEqual(saved.rows, [{
+      service_id: "full-groom", service_price: "140.00", estimated_duration_minutes: 60,
+      scheduled_start: 600, appointment_date: date,
+    }]);
+    await edit("full-groom", "bath", 90, 660, "2026-12-31");
+    const moved = await db.query(
+      "SELECT service_id, service_price::text, scheduled_start, appointment_date::text FROM public.appointments WHERE id=$1",
+      [dogId],
+    );
+    assert.deepEqual(moved.rows, [{
+      service_id: "bath", service_price: "90.00", scheduled_start: 660,
+      appointment_date: "2026-12-31",
+    }]);
+  });
   it("uses the same arrival label as the application", async () => {
     const { visitArrivalFields } = await import("@/lib/visits/visit");
     const minutes = [0, 9 * 60 + 5, 12 * 60, 15 * 60, 15 * 60 + 30, 23 * 60 + 59];

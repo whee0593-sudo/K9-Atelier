@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   isStaffAssignableDate,
+  parseStaffAppointmentEdit,
   parseStaffRescheduleInput,
 } from "@/lib/appointments/staff-reschedule-input";
 import { getUpcomingBookableDates } from "@/lib/booking-slots";
@@ -9,6 +10,18 @@ import { getUpcomingStaffDates } from "@/lib/staff/booking-dates";
 import { addDaysToIsoDate, todayInBusinessTimezone } from "@/lib/sms/schedule";
 
 describe("staff reschedule input", () => {
+  it("accepts service-only and combined changes without accepting a partial schedule", () => {
+    const serviceId = "signature-bath-care";
+    assert.deepEqual(parseStaffAppointmentEdit({ serviceId }), {
+      serviceId, date: undefined, slotStartMinutes: undefined,
+    });
+    const date = todayInBusinessTimezone();
+    assert.deepEqual(parseStaffAppointmentEdit({ serviceId, date, slotStartMinutes: 540 }), {
+      serviceId, date, slotStartMinutes: 540,
+    });
+    assert.ok("error" in parseStaffAppointmentEdit({ serviceId, date }));
+    assert.ok("error" in parseStaffAppointmentEdit({ serviceId: 123 }));
+  });
   it("allows staff to reschedule onto either weekend day", () => {
     const weekends = getUpcomingStaffDates(14).filter((day) => [0, 6].includes(new Date(`${day.value}T12:00:00`).getDay()));
     assert.ok(weekends.length >= 2);

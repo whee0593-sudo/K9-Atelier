@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { AppointmentValidationError, validateAppointmentId } from "@/lib/appointments/validation";
-import { parseStaffRescheduleInput } from "@/lib/appointments/staff-reschedule-input";
+import { parseStaffAppointmentEdit } from "@/lib/appointments/staff-reschedule-input";
 import { rescheduleStaffAppointment } from "@/lib/appointments/staff-reschedule";
 import { mapStaffServiceError, staffJsonError } from "@/lib/staff/api-errors";
 
@@ -20,7 +20,7 @@ export async function POST(request: Request, context: RouteContext) {
       return staffJsonError("Invalid request body.", 400);
     }
 
-    const parsed = parseStaffRescheduleInput(body);
+    const parsed = parseStaffAppointmentEdit(body);
     if ("error" in parsed) {
       return staffJsonError(parsed.error, 400);
     }
@@ -29,9 +29,13 @@ export async function POST(request: Request, context: RouteContext) {
       appointmentId,
       parsed.date,
       parsed.slotStartMinutes,
+      parsed.serviceId,
     );
 
     if ("error" in result) {
+      if (result.error === "invalid_service") {
+        return staffJsonError(result.message ?? "This service is unavailable for this appointment.", 400);
+      }
       if (result.error === "slot_unavailable") {
         return staffJsonError(
           "That start time is fully booked or no longer available for this address. Please choose another time.",

@@ -88,7 +88,7 @@ export function AppointmentActionsMenu({
   paidKinds?: ChargeKind[];
   panel?: "actions" | "details" | "contact";
   onClose: () => void;
-  onChanged?: (next?: { date: string; slotStartMinutes: number }) => void;
+  onChanged?: (next?: { date: string; slotStartMinutes: number; serviceId?: string; serviceName?: string }) => void;
   onCancelled?: () => void;
   unavailableDates?: string[];
   visitAppointments?: AdminAppointmentRecord[];

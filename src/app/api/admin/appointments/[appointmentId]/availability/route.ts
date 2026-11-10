@@ -7,13 +7,17 @@ type RouteContext = {
   params: Promise<{ appointmentId: string }>;
 };
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   try {
     const { appointmentId: rawAppointmentId } = await context.params;
     const appointmentId = validateAppointmentId(rawAppointmentId);
-    const result = await listStaffAppointmentAvailability(appointmentId);
+    const serviceId = new URL(request.url).searchParams.get("serviceId") ?? undefined;
+    const result = await listStaffAppointmentAvailability(appointmentId, serviceId);
 
     if ("error" in result) {
+      if (result.error === "invalid_service") {
+        return staffJsonError(result.message ?? "This service is unavailable for this appointment.", 400);
+      }
       if (result.error === "slot_unavailable") {
         return staffJsonError(
           "That start time is fully booked or no longer available.",

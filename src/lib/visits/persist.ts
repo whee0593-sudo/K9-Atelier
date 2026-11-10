@@ -158,6 +158,8 @@ export async function applyVisitServiceChange(input: {
     travelFee: number;
     estimatedTotal: number;
     durationMinutes: number | null;
+    servicePrice?: number;
+    previous?: { serviceId: string; date: string; start: number | null };
   };
   schedule: {
     serviceDate: string;
@@ -178,6 +180,10 @@ export async function applyVisitServiceChange(input: {
       appointment_travel_fee: input.service.travelFee,
       estimated_total: input.service.estimatedTotal,
       estimated_duration_minutes: input.service.durationMinutes,
+      service_price: input.service.servicePrice,
+      previous_service_id: input.service.previous?.serviceId,
+      previous_date: input.service.previous?.date,
+      previous_start: input.service.previous?.start,
     },
     p_service_date: input.schedule?.serviceDate ?? null,
     p_visit_start: input.schedule?.visitStartMinutes ?? null,

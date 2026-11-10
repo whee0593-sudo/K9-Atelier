@@ -1,4 +1,6 @@
 import { isWithinServiceDay } from "@/lib/booking-schedule";
+import { bookingWeightLbs } from "@/lib/pets/weight";
+import { getBookableServicesForPet, getServicePriceEstimate } from "@/lib/services";
 import {
   parseDateValue,
   toDateValue,
@@ -11,6 +13,31 @@ import {
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const PAST_CORRECTION_DAYS = 60;
+
+export function staffRescheduleServices(weight: unknown) {
+  const lbs = bookingWeightLbs(weight);
+  return lbs == null ? [] : getBookableServicesForPet(lbs, { includeMembersOnly: true })
+    .filter((service) => getServicePriceEstimate(service, lbs) != null);
+}
+
+export function parseStaffAppointmentEdit(body: unknown):
+  | { serviceId?: string; date?: string; slotStartMinutes?: number }
+  | { error: string } {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return { error: "Invalid request body." };
+  }
+  const record = body as { serviceId?: unknown; date?: unknown; slotStartMinutes?: unknown };
+  const serviceId = record.serviceId;
+  if (serviceId !== undefined && (typeof serviceId !== "string" || !serviceId.trim())) {
+    return { error: "Choose a valid service." };
+  }
+  if (serviceId && record.date === undefined && record.slotStartMinutes === undefined) {
+    return { serviceId, date: undefined, slotStartMinutes: undefined };
+  }
+  const schedule = parseStaffRescheduleInput(record);
+  if ("error" in schedule) return schedule;
+  return { ...schedule, serviceId };
+}
 
 export function isStaffAssignableDate(date: string): boolean {
   if (!DATE_PATTERN.test(date)) return false;
