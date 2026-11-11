@@ -145,7 +145,7 @@ before(async () => {
     CREATE TABLE public.appointment_charges (visit_id uuid, appointment_id uuid, status text, kind text, line_items jsonb);
   `);
   await db.exec(readFileSync("supabase/migrations/20261026153942_visit_travel_fee_override.sql", "utf8"));
-  await db.exec(readFileSync("supabase/migrations/20261110173108_atomic_reschedule_service.sql", "utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261111154549_atomic_reschedule_service.sql", "utf8"));
   await db.exec(`
     CREATE TRIGGER appointments_sync_visit
       AFTER INSERT OR UPDATE OF status, service_ended_at, scheduled_start,
