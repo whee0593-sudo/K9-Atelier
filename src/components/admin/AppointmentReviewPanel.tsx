@@ -370,8 +370,10 @@ export function AppointmentReviewPanel({
         )}
       </section>
 
-      <section>
-        <h3 className="text-lg font-medium text-gold-dark">Route days</h3>
+      <details>
+        <summary className="cursor-pointer text-lg font-medium text-gold-dark">
+          Route days
+        </summary>
         {schedule.length === 0 ? (
           <p className="mt-4 text-sm text-text-muted">
             No upcoming bookable days yet.
@@ -495,7 +497,7 @@ export function AppointmentReviewPanel({
             })}
           </ul>
         )}
-      </section>
+      </details>
           </>
         }
       />
