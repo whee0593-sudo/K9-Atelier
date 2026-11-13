@@ -13,12 +13,14 @@ export async function POST(
     const body = (await request.json().catch(() => null)) as {
       lineItems?: unknown;
       confirmIncompatibleAddOns?: boolean;
+      acknowledgedConflict?: unknown;
     } | null;
 
     const result = await updateAppointmentVisitServices({
       appointmentId,
       lineItems: body?.lineItems,
       confirmIncompatibleAddOns: body?.confirmIncompatibleAddOns === true,
+      acknowledgedConflict: typeof body?.acknowledgedConflict === "string" ? body.acknowledgedConflict : undefined,
     });
 
     if ("error" in result) {
@@ -38,6 +40,9 @@ export async function POST(
           },
           { status: 409 },
         );
+      }
+      if (result.error === "schedule_conflict") {
+        return NextResponse.json({ code: result.error, error: result.message }, { status: 409 });
       }
       if (result.error === "slot_unavailable") {
         return staffJsonError(

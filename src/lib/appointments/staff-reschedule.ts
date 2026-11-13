@@ -388,9 +388,10 @@ export async function rescheduleStaffAppointment(
   date: string | undefined,
   slotStartMinutes: number | undefined,
   serviceId?: string,
+  acknowledgedConflict?: string,
 ): Promise<
   | { appointment: AdminAppointmentRecord }
-  | { error: StaffRescheduleError; message?: string }
+  | { error: StaffRescheduleError | "schedule_conflict"; message?: string }
 > {
   const session = await requireStaffSession();
   if ("error" in session) return session;
@@ -452,7 +453,15 @@ export async function rescheduleStaffAppointment(
       point: point ?? undefined,
       zip: anchor.address_zip,
     });
-    if ("error" in allowed) return allowed;
+    if ("error" in allowed) {
+      if (allowed.error !== "slot_unavailable") return allowed;
+      if (allowed.message !== acknowledgedConflict) {
+        return { error: "schedule_conflict", message: allowed.message };
+      }
+      const { getOwnerSession } = await import("@/lib/staff/auth");
+      const owner = await getOwnerSession();
+      if ("error" in owner) return { error: owner.error };
+    }
   }
 
   const visitId = ordered[0]?.visit_id;

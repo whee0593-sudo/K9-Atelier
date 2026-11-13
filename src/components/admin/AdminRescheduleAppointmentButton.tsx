@@ -57,13 +57,15 @@ function previewDays(unavailableDates?: readonly string[]): AvailabilityDay[] {
   });
 }
 
-/** Open windows returned by the staff availability API. Calendar reschedule does not invent extra hours. */
+/** Include hourly starts so an owner can review conflicts before saving. */
 export function staffRescheduleSlotChoices(
   daySlots: number[] | undefined,
   hasDate: boolean,
   limitToOpenSlots: boolean,
 ) {
-  if (limitToOpenSlots) return daySlots ?? [];
+  if (limitToOpenSlots && hasDate) {
+    return [...new Set([...(daySlots ?? []), ...listHourlyStartMinutes()])].sort((a, b) => a - b);
+  }
   if (daySlots && daySlots.length > 0) return daySlots;
   if (hasDate) return listHourlyStartMinutes();
   return [];
@@ -247,7 +249,7 @@ export function AdminRescheduleAppointmentButton({
     setError(null);
 
     try {
-      const response = await fetch(
+      const submit = (acknowledgedConflict?: string) => fetch(
         `/api/admin/appointments/${appointment.id}/reschedule`,
         {
           method: "POST",
@@ -256,10 +258,17 @@ export function AdminRescheduleAppointmentButton({
           body: JSON.stringify({
             ...(timeChanged ? { date: nextDate, slotStartMinutes: Number(nextSlot) } : {}),
             ...(serviceChanged ? { serviceId } : {}),
+            acknowledgedConflict,
           }),
         },
       );
-      const body = (await response.json()) as { error?: string };
+      let response = await submit();
+      let body = (await response.json()) as { error?: string; code?: string };
+      while (response.status === 409 && body.code === "schedule_conflict" && body.error) {
+        if (!window.confirm(`${body.error}\n\nSave this change anyway?`)) return;
+        response = await submit(body.error);
+        body = await response.json();
+      }
 
       if (!response.ok) {
         setError(body.error ?? "Could not change this appointment.");

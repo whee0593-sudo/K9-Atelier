@@ -162,21 +162,27 @@ export function VisitCheckIn({
       return;
     }
     try {
-      const response = await fetch(
+      const submit = (acknowledgedConflict?: string) => fetch(
         `/api/admin/appointments/${selectedPetId}/services`,
         {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lineItems, confirmIncompatibleAddOns }),
+          body: JSON.stringify({ lineItems, confirmIncompatibleAddOns, acknowledgedConflict }),
         },
       );
-      const body = (await response.json()) as {
+      let response = await submit();
+      let body = (await response.json()) as {
         error?: string;
         code?: string;
         serviceName?: string;
         estimatedTotal?: number;
       };
+      while (response.status === 409 && body.code === "schedule_conflict" && body.error) {
+        if (!window.confirm(`${body.error}\n\nSave this change anyway?`)) return;
+        response = await submit(body.error);
+        body = await response.json();
+      }
       if (!response.ok) {
         if (body.code === "addon_confirmation_required") {
           setConfirmAddOnCharge(

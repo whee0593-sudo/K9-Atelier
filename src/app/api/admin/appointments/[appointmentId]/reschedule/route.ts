@@ -30,9 +30,14 @@ export async function POST(request: Request, context: RouteContext) {
       parsed.date,
       parsed.slotStartMinutes,
       parsed.serviceId,
+      body && typeof body === "object" && "acknowledgedConflict" in body &&
+        typeof body.acknowledgedConflict === "string" ? body.acknowledgedConflict : undefined,
     );
 
     if ("error" in result) {
+      if (result.error === "schedule_conflict") {
+        return NextResponse.json({ code: result.error, error: result.message }, { status: 409 });
+      }
       if (result.error === "invalid_service") {
         return staffJsonError(result.message ?? "This service is unavailable for this appointment.", 400);
       }

@@ -591,7 +591,7 @@ export async function assertVisitScheduleAllowed(input: {
   enforceZoneAndCapacity?: boolean;
   point?: GeoPoint;
   zip?: string;
-}): Promise<{ ok: true } | ScheduleError | { error: "slot_unavailable" }> {
+}): Promise<{ ok: true } | ScheduleError | { error: "slot_unavailable"; message: string }> {
   const [closuresResult, blocksResult, occupied] = await Promise.all([
     loadDayClosures(input.date, input.date),
     loadAvailabilityBlocks(input.date, input.date),
@@ -613,7 +613,15 @@ export async function assertVisitScheduleAllowed(input: {
     closure: closuresResult.closures.get(input.date) ?? null,
     blocks: blocksResult.blocks,
   });
-  if (!bounds.ok) return { error: "slot_unavailable" };
+  if (!bounds.ok) {
+    const reasons: Record<string, string> = {
+      before_open: "The visit starts before business hours.",
+      after_close: "The visit would finish after business hours.",
+      closure: "The selected day or start time is closed.",
+      blocked: "The visit overlaps blocked calendar time.",
+    };
+    return { error: "slot_unavailable", message: reasons[bounds.reason] ?? "The visit cannot fit in the schedule." };
+  }
   if (
     !visitArrivalFits({
       visitStartMinutes: input.visitStartMinutes,
@@ -621,11 +629,11 @@ export async function assertVisitScheduleAllowed(input: {
       otherStops: occupied.stops,
     })
   ) {
-    return { error: "slot_unavailable" };
+    return { error: "slot_unavailable", message: "The visit overlaps another appointment or leaves insufficient travel time." };
   }
 
   if (input.enforceZoneAndCapacity) {
-    if (!input.point || !input.zip) return { error: "slot_unavailable" };
+    if (!input.point || !input.zip) return { error: "slot_unavailable", message: "The address cannot be checked against the route." };
     const plansResult = await loadDayPlans(input.date, input.date);
     if ("error" in plansResult) return plansResult;
     const plan = resolveEffectivePlan(
@@ -633,10 +641,10 @@ export async function assertVisitScheduleAllowed(input: {
       plansResult.plans.get(input.date) ?? null,
     );
     if (!addressAllowedForPlan(plan, input.zip, input.point)) {
-      return { error: "slot_unavailable" };
+      return { error: "slot_unavailable", message: "The address is outside the route area for that date." };
     }
     if (occupied.bookedCount >= getRoutingConfig().maxAppointmentsPerDay) {
-      return { error: "slot_unavailable" };
+      return { error: "slot_unavailable", message: "That date has reached its appointment limit." };
     }
   }
 

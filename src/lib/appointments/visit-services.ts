@@ -8,7 +8,7 @@ import {
   hasVisitSequence,
   scheduleActivePetsFromVisitArrival,
 } from "@/lib/visits/visit";
-import { getStaffSession } from "@/lib/staff/auth";
+import { getOwnerSession, getStaffSession } from "@/lib/staff/auth";
 import { withTravelFee } from "@/lib/visits/travel-fee";
 import { sanitizeLineItems } from "@/lib/charges/line-items";
 import { addOnSelectionMessage } from "@/lib/services";
@@ -25,6 +25,7 @@ export async function updateAppointmentVisitServices(input: {
   appointmentId: string;
   lineItems: unknown;
   confirmIncompatibleAddOns?: boolean;
+  acknowledgedConflict?: string;
 }): Promise<
   | {
       ok: true;
@@ -39,6 +40,7 @@ export async function updateAppointmentVisitServices(input: {
         | "not_found"
         | "invalid"
         | "addon_confirmation_required"
+        | "schedule_conflict"
         | "slot_unavailable"
         | "server";
       message?: string;
@@ -132,6 +134,7 @@ export async function updateAppointmentVisitServices(input: {
       status: row.status as AppointmentStatus,
       serviceEndedAt: (row.service_ended_at as string | null) ?? null,
       durationMinutes,
+      acknowledgedConflict: input.acknowledgedConflict,
     });
     if ("error" in planned) return planned;
     const written = await applyVisitServiceChange({
@@ -179,6 +182,7 @@ async function planVisitServiceChange(input: {
   status: AppointmentStatus;
   serviceEndedAt: string | null;
   durationMinutes: number | null;
+  acknowledgedConflict?: string;
 }): Promise<
   | {
       ok: true;
@@ -196,7 +200,7 @@ async function planVisitServiceChange(input: {
         }>;
       } | null;
     }
-  | { error: "server" | "slot_unavailable" | "invalid" }
+  | { error: "server" | "slot_unavailable" | "invalid" | "schedule_conflict" | "forbidden" | "unauthenticated"; message?: string }
 > {
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -275,9 +279,12 @@ async function planVisitServiceChange(input: {
     excludeAppointmentIds: pets.map((row) => row.id),
   });
   if ("error" in allowed) {
-    return {
-      error: allowed.error === "slot_unavailable" ? "slot_unavailable" : "server",
-    };
+    if (allowed.error !== "slot_unavailable") return { error: "server" };
+    if (allowed.message !== input.acknowledgedConflict) {
+      return { error: "schedule_conflict", message: allowed.message };
+    }
+    const owner = await getOwnerSession();
+    if ("error" in owner) return owner;
   }
 
   const preference = pets.find((row) => row.id === plan.slots[0]?.id)
