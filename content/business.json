@@ -67,7 +67,7 @@
   "serviceArea": {
     "freeRadiusMiles": 10,
     "travelFeePerMile": 6.5,
-    "travelFeeNote": "One-way miles: 0–10 complimentary; the portion above 10 through 20 at $6.50/mile; the portion above 20 through 25 at $10/mile. Beyond 25 miles, contact the studio. Final travel fee is rounded to the nearest dollar.",
+    "travelFeeNote": "One-way miles: 0–10 complimentary; the portion above 10 through 20 at $6.50/mile; the portion above 20 through 25 at $10/mile. Beyond 25 miles, contact the studio. Any partial billable mile counts as a full mile.",
     "maxDistanceMiles": 20,
     "extendedTravelFeePerMile": 10,
     "standardServiceMiles": 25,
@@ -298,7 +298,7 @@
       "type": "travel",
       "rate": 6.5,
       "unit": "per_one_way_mile_beyond_free_radius",
-      "description": "One-way GPS driving distance from our service base. Complimentary within 10 miles. Above 10 through 20 miles: $6.50 per mile beyond 10. Above 20 through 25 miles: $65 plus $10 per mile beyond 20. Beyond 25 miles, please contact the studio. The fee is rounded to the nearest dollar and covers the grooming van's fuel, wear, and round-trip travel time."
+      "description": "One-way GPS driving distance from our service base. Complimentary within 10 miles. Above 10 through 20 miles: $6.50 per mile beyond 10. Above 20 through 25 miles: $65 plus $10 per mile beyond 20. Beyond 25 miles, please contact the studio. Any partial billable mile counts as a full mile. The fee covers the grooming van's fuel, wear, and round-trip travel time."
     }
   ],
   "serviceCategories": [

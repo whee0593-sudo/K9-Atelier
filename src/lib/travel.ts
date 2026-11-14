@@ -30,11 +30,6 @@ export function formatServiceAddress(address: ServiceAddress) {
   return `${address.street}, ${address.city}, ${address.state} ${address.zip}`;
 }
 
-/** Nearest whole dollar. Miles are not rounded before this. */
-function roundTravelFee(amount: number) {
-  return Math.round(amount);
-}
-
 /** Label only. The stored distance and the fee still use the raw miles. */
 export function formatTravelMiles(miles: number) {
   if (!Number.isFinite(miles)) return "0";
@@ -45,10 +40,10 @@ export function formatTravelMiles(miles: number) {
 
 /**
  * One-way travel fee from the service base.
- * Bands use the original GPS miles:
+ * Bands use the original GPS miles. Round each chargeable portion up to a full mile:
  * 0–10 miles: $0
- * above 10 through 20: (distance − 10) × $6.50
- * above 20 through 25: $65 + (distance − 20) × $10
+ * above 10 through 20: ceil(distance − 10) × $6.50
+ * above 20 through 25: $65 + ceil(distance − 20) × $10
  * Beyond 25: no automatic fee
  * Only the final dollar amount is rounded.
  */
@@ -66,15 +61,13 @@ function travelFeeAmount(miles: number) {
   }
 
   if (miles <= maxDistanceMiles) {
-    return roundTravelFee((miles - freeRadiusMiles) * travelFeePerMile);
+    return Math.ceil(miles - freeRadiusMiles) * travelFeePerMile;
   }
 
   const throughStandardMiles =
     (maxDistanceMiles - freeRadiusMiles) * travelFeePerMile;
   const extendedMiles = miles - maxDistanceMiles;
-  return roundTravelFee(
-    throughStandardMiles + extendedMiles * extendedTravelFeePerMile,
-  );
+  return throughStandardMiles + Math.ceil(extendedMiles) * extendedTravelFeePerMile;
 }
 
 export function calculateTravelFee(distanceMiles: number): TravelQuote {
@@ -99,7 +92,7 @@ export function calculateTravelFee(distanceMiles: number): TravelQuote {
     zone = "complimentary";
   } else if (withinServiceArea) {
     zone = withinStandardRate ? "standard" : "extended";
-    billableMiles = miles - freeRadiusMiles;
+    billableMiles = Math.ceil(miles - freeRadiusMiles);
     fee = travelFeeAmount(miles);
   }
 

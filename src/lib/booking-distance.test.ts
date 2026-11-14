@@ -86,11 +86,11 @@ describe("measured driving distance", () => {
   it("keeps 10, 20, and 25 mile fees on the unrounded distance", async () => {
     const cases = [
       { miles: 10, fee: 0, bookable: true },
-      { miles: 10.04, fee: 0, bookable: true },
-      { miles: 10.06, fee: 0, bookable: true },
-      { miles: 10.08, fee: 1, bookable: true },
+      { miles: 10.04, fee: 6.5, bookable: true },
+      { miles: 10.06, fee: 6.5, bookable: true },
+      { miles: 10.08, fee: 6.5, bookable: true },
       { miles: 20, fee: 65, bookable: true },
-      { miles: 20.04, fee: 65, bookable: true },
+      { miles: 20.04, fee: 75, bookable: true },
       { miles: 25, fee: 115, bookable: true },
       { miles: 25.01, fee: 0, bookable: false },
     ];
@@ -104,7 +104,7 @@ describe("measured driving distance", () => {
       assert.equal(measured.distanceMiles, item.miles);
       assert.equal(measured.travel.fee, item.fee);
     }
-    assert.equal(calculateTravelFee(10.1).fee, 1);
+    assert.equal(calculateTravelFee(10.1).fee, 6.5);
   });
 
   it("accepts a resubmitted total that matches the measured quote", () => {
