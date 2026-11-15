@@ -68,9 +68,7 @@ export function buildChargeReceiptCardHtml(
   const appointmentDate = formatReceiptDate(
     snapshot?.serviceDate ?? appointment.appointmentDate,
   );
-  const appointmentTime = snapshot?.arrivalLabel
-    ? snapshot.arrivalLabel
-    : formatReceiptServiceTime(appointment);
+  const appointmentTime = formatReceiptServiceTime(appointment, charge.paidAt, snapshot?.arrivalLabel);
   const paymentDate = formatReceiptPaymentDate(
     charge.paidAt,
     appointment.timezone,
@@ -199,7 +197,7 @@ export function buildChargeReceiptCardText(
   return [
     thankYouLine(petName), "", "APPOINTMENT",
     formatReceiptDate(snapshot?.serviceDate ?? appointment.appointmentDate),
-    snapshot?.arrivalLabel || formatReceiptServiceTime(appointment),
+    formatReceiptServiceTime(appointment, charge.paidAt, snapshot?.arrivalLabel),
     "", "PET", petName, "", "SERVICE SUMMARY",
     ...items.flatMap(group => group.items.map((item, index) =>
       [index === 0 ? group.petName : "", item.label, formatChargeMoney(item.amount)].filter(Boolean).join("  "))),

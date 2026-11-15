@@ -49,7 +49,24 @@ export async function fetchAppointmentAdminRecord(
   }
 
   if (!data) return null;
-  return mapAppointmentRowToAdminRecord(data as AppointmentRow);
+  const appointment = mapAppointmentRowToAdminRecord(data as AppointmentRow);
+  const logs = supabase.from("communication_logs")
+    .select("body_text")
+    .eq("channel", "sms")
+    .eq("notification_type", "en_route")
+    .eq("customer_id", appointment.customerId)
+    .not("accepted_at", "is", null)
+    .order("accepted_at", { ascending: false })
+    .limit(1);
+  const { data: sms, error: smsError } = await (appointment.visitId
+    ? logs.eq("visit_id", appointment.visitId)
+    : logs.contains("appointment_ids", [appointmentId])
+  ).maybeSingle();
+  if (smsError) console.error("Could not load receipt arrival time:", smsError.code);
+  const textedArrivalTime = sms?.body_text
+    ?.match(/Estimated arrival time: (\d{1,2}:\d{2} [ap]m)\./i)?.[1]
+    ?.toUpperCase();
+  return { ...appointment, textedArrivalTime };
 }
 
 export type CustomerContact = {

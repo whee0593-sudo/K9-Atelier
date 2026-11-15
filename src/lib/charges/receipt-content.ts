@@ -36,9 +36,7 @@ export function buildChargeReceiptParagraphs(
 
   return [
     `Thank you for trusting K9 Atelier with ${receiptPetNames(appointment, charge) || "your pet"}. Here is your ${kindLabel.toLowerCase()} receipt.`,
-    snapshot
-      ? `${formatReceiptDate(snapshot.serviceDate)} · ${snapshot.arrivalLabel}`
-      : `${formatReceiptDate(appointment.appointmentDate)} · ${formatReceiptServiceTime(appointment) ?? appointment.appointmentTime}`,
+    `${formatReceiptDate(snapshot?.serviceDate ?? appointment.appointmentDate)} · ${formatReceiptServiceTime(appointment, charge.paidAt, snapshot?.arrivalLabel) ?? appointment.appointmentTime}`,
     ...itemLines,
     charge.tipAmount > 0 ? `Tip  ${formatChargeMoney(charge.tipAmount)}` : "",
     `Total paid  ${formatChargeMoney(charge.total)}`,

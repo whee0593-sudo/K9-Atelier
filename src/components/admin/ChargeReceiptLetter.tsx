@@ -37,9 +37,7 @@ export function ChargeReceiptLetter({
   const appointmentDate = formatReceiptDate(
     snapshot?.serviceDate ?? appointment.appointmentDate,
   );
-  const appointmentTime = snapshot?.arrivalLabel
-    ? snapshot.arrivalLabel
-    : formatReceiptServiceTime(appointment);
+  const appointmentTime = formatReceiptServiceTime(appointment, charge.paidAt, snapshot?.arrivalLabel);
   const paymentDate = formatReceiptPaymentDate(
     charge.paidAt,
     appointment.timezone,

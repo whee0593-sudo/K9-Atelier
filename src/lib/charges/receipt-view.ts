@@ -51,10 +51,16 @@ function formatReceiptClock(iso: string, timeZone?: string) {
 export function formatReceiptServiceTime(appointment: {
   appointmentTime?: string | null;
   timezone?: string | null;
+  textedArrivalTime?: string;
   serviceStartedAt?: string | null;
   serviceEndedAt?: string | null;
-}) {
+}, paidAt?: string | null, savedArrivalLabel?: string | null) {
   const timeZone = appointment.timezone || "America/New_York";
+  const paymentTime = paidAt ? formatReceiptClock(paidAt, timeZone) : null;
+  if (appointment.textedArrivalTime && paymentTime) {
+    return `${appointment.textedArrivalTime}–${paymentTime}`;
+  }
+  if (savedArrivalLabel) return savedArrivalLabel;
   const start = appointment.serviceStartedAt
     ? formatReceiptClock(appointment.serviceStartedAt, timeZone)
     : null;

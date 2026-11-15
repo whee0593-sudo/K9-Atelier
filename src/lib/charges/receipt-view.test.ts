@@ -107,6 +107,16 @@ describe("receipt email subject", () => {
 });
 
 describe("receipt service time", () => {
+  it("uses the texted ETA through recorded payment ahead of the saved booking time", () => {
+    assert.equal(formatReceiptServiceTime({
+      appointmentTime: "09:00",
+      textedArrivalTime: "9:35 AM",
+      timezone: "America/New_York",
+      serviceStartedAt: "2026-07-08T13:45:00.000Z",
+      serviceEndedAt: "2026-07-08T15:03:00.000Z",
+    }, "2026-07-08T15:10:00.000Z", "9:00 AM"), "9:35 AM–11:10 AM");
+  });
+
   it("uses check-in and check-out clock times", () => {
     assert.equal(
       formatReceiptServiceTime({
