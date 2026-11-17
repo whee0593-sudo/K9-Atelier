@@ -57,9 +57,18 @@ function serviceIdentity(item: ChargeLineItem) {
   if (item.catalogId === "travel-fee") {
     return { id: "travel-fee", name: "Travel fee" };
   }
+  // Visit bills use the same placeholder ID for every dog's main service.
+  const isVisitService = item.catalogId === "visit-pet-service";
+  const catalogId = isVisitService ? undefined : item.catalogId;
+  const separator = " — ";
+  const label = isVisitService && item.label.includes(separator)
+    ? item.label.slice(item.label.indexOf(separator) + separator.length)
+    : item.label;
+  const name = getCatalogItemDisplayLabel(catalogId, label.trim());
+
   return {
-    id: item.catalogId ?? item.label.toLowerCase().replace(/\s+/g, "-"),
-    name: getCatalogItemDisplayLabel(item.catalogId, item.label),
+    id: catalogId ?? name.toLowerCase().replace(/\s+/g, "-"),
+    name,
   };
 }
 
