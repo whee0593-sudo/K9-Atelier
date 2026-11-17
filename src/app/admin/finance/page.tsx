@@ -32,6 +32,9 @@ export default async function AdminFinancePage() {
   return (
     <div>
       <h2 className="text-2xl font-semibold text-gold-dark">Finance</h2>
+      <p className="mt-2 text-sm text-text-muted">
+        Collections are grouped by payment date. Refunds appear with the original payment.
+      </p>
       <div className="mt-8">
         <FinanceReport />
       </div>
