@@ -99,6 +99,8 @@ describe("appointment actions menu", () => {
       petId: "pet-max",
       petName: "Max",
       serviceName: "Signature Bath",
+      estimatedTotal: 100,
+      travelFee: 0,
       allergySnapshot: {
         petName: "Max",
         petStatus: "yes",
@@ -120,16 +122,16 @@ describe("appointment actions menu", () => {
     );
     assert.match(html, /Appointment details/);
     assert.match(html, /href="\/admin\/pets\?customer=customer-maya"[^>]*>Maya Patel<\/a>/);
-    assert.match(html, /Bella — Full Groom/);
-    assert.match(html, /Max — Signature Bath/);
+    assert.match(html, /Pet1.*Bella .*Full Groom.*\$167/);
+    assert.match(html, /Pet2.*Max .*Signature Bath.*\$100/);
     assert.match(html, /text-red-700[^>]*>.*MAX: OAT SHAMPOO/);
     assert.doesNotMatch(html, /No known allergies|Arrival window|Requested date|Vaccination status/);
   });
 
-  it("hides the allergy section when no allergy has been reported", () => {
+  it("hides allergies and travel fees when there are none", () => {
     const html = renderToStaticMarkup(
       <AppointmentActionsMenu
-        appointment={appointment}
+        appointment={{ ...appointment, travelFee: 0 }}
         variant="popover"
         top={0}
         left={0}
@@ -137,8 +139,8 @@ describe("appointment actions menu", () => {
         onClose={() => {}}
       />,
     );
-    assert.match(html, /Bella — Full Groom/);
-    assert.doesNotMatch(html, /Allergies/);
+    assert.match(html, /Pet1.*Bella .*Full Groom.*\$180/);
+    assert.doesNotMatch(html, /Allergies|Travel fee/i);
   });
 
   it("reuses the text and email contact paths", () => {

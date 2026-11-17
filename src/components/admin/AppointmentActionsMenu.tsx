@@ -8,6 +8,7 @@ import { VisitTravelFeeEditor } from "@/components/admin/VisitTravelFeeEditor";
 import { AdminRescheduleAppointmentButton } from "@/components/admin/AdminRescheduleAppointmentButton";
 import { CallCustomerButton } from "@/components/admin/CallCustomerButton";
 import { allergyWarning } from "@/lib/allergies";
+import { customerAppointmentServiceLines } from "@/lib/appointments/customer-visits";
 import { formatFullDate } from "@/lib/appointments/availability-blocks";
 import { appointmentStatusLabel } from "@/lib/appointments/map";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
@@ -140,11 +141,18 @@ export function AppointmentActionsMenu({
             </dd>
           </div>
           {visit.map((item, index) => (
-            <DetailRow
-              key={item.id}
-              label={`Pet ${index + 1}`}
-              value={`${item.petName} — ${item.serviceName}`}
-            />
+            <div key={item.id}>
+              <dt className="text-text-muted">Pet{index + 1}</dt>
+              <dd className="[overflow-wrap:anywhere]">
+                {customerAppointmentServiceLines(item).map(({ name, amount }, lineIndex) => (
+                  <p key={name}>
+                    {lineIndex === 0 ? <span>{item.petName} </span> : null}
+                    <span>{name}</span>
+                    {amount != null ? <span className="ml-2">{formatPrice(amount)}</span> : null}
+                  </p>
+                ))}
+              </dd>
+            </div>
           ))}
           {allergyLines.length ? (
             <div className="font-semibold text-red-700">
@@ -156,9 +164,9 @@ export function AppointmentActionsMenu({
               </dd>
             </div>
           ) : null}
-          {!appointment.visitId ? <DetailRow label="Travel fee" value={formatPrice(appointment.travelFee)} /> : null}
+          {!appointment.visitId && appointment.travelFee > 0 ? <DetailRow label="Travel fee" value={formatPrice(appointment.travelFee)} /> : null}
         </dl>
-        {appointment.visitId ? <VisitTravelFeeEditor appointmentId={appointment.id} preview={preview} onSaved={() => onChanged?.()} /> : null}
+        {appointment.visitId && (!preview || visit.some((item) => item.travelFee > 0)) ? <VisitTravelFeeEditor appointmentId={appointment.id} preview={preview} onSaved={() => onChanged?.()} /> : null}
         <button
           type="button"
           className={`${menuItemClass} mt-4 border border-lavender/40`}

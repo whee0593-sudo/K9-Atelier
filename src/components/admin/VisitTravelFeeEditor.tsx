@@ -48,6 +48,7 @@ export function VisitTravelFeeEditor({ appointmentId, preview = false, onSaved }
     finally { setBusy(false); }
   }
   if (preview) return <p className="mt-3 text-sm">Travel fee editing is available on saved visits.</p>;
+  if (data?.effective === 0) return null;
   return <div className="mt-3">
     {data ? <>
       <p className="text-sm">Saved visit travel fee: {formatPrice(data.effective)}</p>
