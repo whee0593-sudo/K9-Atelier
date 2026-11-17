@@ -13,6 +13,7 @@ import { formatFullDate } from "@/lib/appointments/availability-blocks";
 import { appointmentStatusLabel } from "@/lib/appointments/map";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import { formatPrice } from "@/lib/business";
+import { formatServiceAddress } from "@/lib/travel";
 import type { ChargeKind } from "@/lib/charges/types";
 
 const menuItemClass =
@@ -111,8 +112,13 @@ export function AppointmentActionsMenu({
   const summary = (
     <dl className="mt-3 space-y-2 text-sm text-text">
       <DetailRow label="Customer" value={customerLabel(appointment)} />
-      <DetailRow label="Pet" value={appointment.petName} />
-      <DetailRow label="Service" value={appointment.serviceName} />
+      {visit.map((item, index) => (
+        <DetailRow
+          key={item.id}
+          label={`Pet${index + 1}`}
+          value={[item.petName, ...customerAppointmentServiceLines(item).map(({ name }) => name)].join(" · ")}
+        />
+      ))}
       <DetailRow label="Date" value={formatFullDate(appointment.appointmentDate)} />
       <DetailRow label="Arrival window" value={appointment.appointmentTime} />
       <DetailRow
@@ -140,6 +146,17 @@ export function AppointmentActionsMenu({
               </Link>
             </dd>
           </div>
+          <DetailRow label="Phone" value={phone} />
+          <DetailRow
+            label="Address"
+            value={formatServiceAddress({
+              street: appointment.addressStreet,
+              city: appointment.addressCity,
+              state: appointment.addressState,
+              zip: appointment.addressZip,
+            })}
+          />
+          <DetailRow label="Email" value={email} />
           {visit.map((item, index) => (
             <div key={item.id}>
               <dt className="text-text-muted">Pet{index + 1}</dt>

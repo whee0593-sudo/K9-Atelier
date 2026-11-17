@@ -17,7 +17,7 @@ import { formatMinutesLabel } from "@/lib/appointments/closures";
 import { appointmentStatusLabel } from "@/lib/appointments/map";
 import { isOperationalAdminAppointment } from "@/lib/appointments/operational-visibility";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
-import { customerBookingVisits } from "@/lib/appointments/customer-visits";
+import { customerAppointmentServiceLines, customerBookingVisits } from "@/lib/appointments/customer-visits";
 
 export type DateMenuAction =
   | "book"
@@ -600,7 +600,7 @@ export function ViewDayDialog({
                     <>
                       {pets.map((pet) => (
                         <p key={pet.id} className="text-sm text-text">
-                          {pets.length > 1 ? `${pet.petName} — ` : ""}{pet.serviceName}
+                          {pets.length > 1 ? `${pet.petName} — ` : ""}{customerAppointmentServiceLines(pet).map(({ name }) => name).join(" · ")}
                           {pets.length > 1 ? ` · ${pet.appointmentTime}` : ""}
                         </p>
                       ))}

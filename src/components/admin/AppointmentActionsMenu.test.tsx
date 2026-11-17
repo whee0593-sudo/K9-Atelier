@@ -121,6 +121,9 @@ describe("appointment actions menu", () => {
       />,
     );
     assert.match(html, /Appointment details/);
+    assert.match(html, /\+15615550131/);
+    assert.match(html, /maya@example.com/);
+    assert.match(html, /123 Example Avenue, Palm Beach Gardens, FL 33418/);
     assert.match(html, /href="\/admin\/pets\?customer=customer-maya"[^>]*>Maya Patel<\/a>/);
     assert.match(html, /Pet1.*Bella .*Full Groom.*\$167/);
     assert.match(html, /Pet2.*Max .*Signature Bath.*\$100/);
