@@ -18,7 +18,7 @@ export async function getFinanceReport(
   const session = await getStaffSession();
   if ("error" in session) return { error: session.error };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(anchor)) return { error: "conflict" };
-  if (!["day", "week", "quarter", "year"].includes(period)) {
+  if (!["day", "week", "month", "quarter", "year"].includes(period)) {
     return { error: "conflict" };
   }
 

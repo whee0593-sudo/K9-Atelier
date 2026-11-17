@@ -1,4 +1,4 @@
-export type FinancePeriod = "day" | "week" | "quarter" | "year";
+export type FinancePeriod = "day" | "week" | "month" | "quarter" | "year";
 
 export type FinanceTotals = {
   service: number;

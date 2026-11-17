@@ -12,6 +12,7 @@ import type { FinancePeriod, FinanceReport } from "@/lib/finance/types";
 const PERIODS: { id: FinancePeriod; label: string }[] = [
   { id: "day", label: "Day" },
   { id: "week", label: "Week" },
+  { id: "month", label: "Month" },
   { id: "quarter", label: "Quarter" },
   { id: "year", label: "Year" },
 ];
@@ -155,7 +156,7 @@ export function FinanceReport({ preview = false }: { preview?: boolean }) {
           {period !== "day" && totals.chargeCount > 0 && (
             <details className="mt-6 rounded-2xl border border-lavender/30 bg-cream">
               <summary className="cursor-pointer px-5 py-4 font-medium text-gold-dark">
-                Collections by {period === "week" ? "day" : "month"}
+                Collections by {period === "week" || period === "month" ? "day" : "month"}
               </summary>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm tabular-nums">

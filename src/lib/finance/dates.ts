@@ -80,6 +80,12 @@ export function periodRange(period: FinancePeriod, anchor: string) {
   const year = Number(yearText);
   const month = Number(monthText);
 
+  if (period === "month") {
+    const startDate = `${yearText}-${monthText}-01`;
+    const endDate = `${yearText}-${monthText}-${pad(new Date(year, month, 0).getDate())}`;
+    return { startDate, endDate, label: monthLabel(startDate) };
+  }
+
   if (period === "quarter") {
     const quarter = Math.floor((month - 1) / 3);
     const startMonth = quarter * 3 + 1;
@@ -105,8 +111,9 @@ export function shiftPeriod(period: FinancePeriod, anchor: string, delta: number
   if (period === "week") return addCalendarDays(anchor, delta * 7);
 
   const [yearText, monthText, dayText] = anchor.split("-").map(Number);
-  if (period === "quarter") {
-    const next = new Date(yearText, monthText - 1 + delta * 3, 1);
+  if (period === "month" || period === "quarter") {
+    const months = period === "month" ? 1 : 3;
+    const next = new Date(yearText, monthText - 1 + delta * months, 1);
     const last = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
     return `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(Math.min(dayText, last))}`;
   }
@@ -119,10 +126,9 @@ export function bucketKeys(period: FinancePeriod, startDate: string, endDate: st
     return [{ key: startDate, label: longDateLabel(startDate) }];
   }
 
-  if (period === "week") {
+  if (period === "week" || period === "month") {
     const keys = [];
-    for (let i = 0; i < 7; i += 1) {
-      const date = addCalendarDays(startDate, i);
+    for (let date = startDate; date <= endDate; date = addCalendarDays(date, 1)) {
       keys.push({ key: date, label: shortDateLabel(date) });
     }
     return keys;
