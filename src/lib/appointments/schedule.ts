@@ -47,7 +47,29 @@ export type OccupiedAppointment = RouteStop & {
 export type { DayClosureRecord };
 
 type ScheduleError = { error: "misconfigured" | "server" };
-type OccupiedDay = { stops: OccupiedAppointment[]; bookedCount: number };
+type OccupiedDay = {
+  stops: OccupiedAppointment[];
+  bookedCount: number;
+  firstBooking?: OccupiedRow;
+};
+
+function resolveOccupiedDayPlan(
+  date: string,
+  stored: DayPlanRecord | null,
+  occupied?: OccupiedDay,
+) {
+  const effective = resolveEffectivePlan(date, stored);
+  if (effective && effective.source !== "auto") return effective;
+
+  const first = occupied?.firstBooking;
+  if (!first) return effective;
+
+  const point =
+    first.address_lat != null && first.address_lon != null
+      ? { lat: first.address_lat, lon: first.address_lon }
+      : null;
+  return planFromFirstStop(date, first.address_zip ?? "", point);
+}
 
 export function requireAdminClient() {
   if (!hasSupabaseConfig() || !hasSupabaseAdminConfig()) return null;
@@ -242,7 +264,9 @@ export async function loadOccupiedStopsByDate(
     .select(`${select}, pets ( weight_lbs )`)
     .gte("appointment_date", fromDate)
     .lte("appointment_date", toDate)
-    .neq("status", "cancelled");
+    .neq("status", "cancelled")
+    .order("created_at")
+    .order("id");
 
   if (withPets.error) {
     console.error("loadOccupiedStopsByDate pets join failed:", withPets.error.message);
@@ -251,7 +275,9 @@ export async function loadOccupiedStopsByDate(
       .select(select)
       .gte("appointment_date", fromDate)
       .lte("appointment_date", toDate)
-      .neq("status", "cancelled");
+      .neq("status", "cancelled")
+      .order("created_at")
+      .order("id");
     if (withoutPets.error) {
       console.error("loadOccupiedStopsByDate failed:", withoutPets.error.message);
       return { error: "server" as const };
@@ -263,17 +289,18 @@ export async function loadOccupiedStopsByDate(
 
   const rows = data ?? [];
   const exclude = new Set(options?.excludeAppointmentIds ?? []);
-  const byDate = new Map<string, { stops: OccupiedAppointment[]; bookedCount: number }>();
+  const byDate = new Map<string, OccupiedDay>();
   for (const row of rows) {
-    if (row.id && exclude.has(row.id)) continue;
     const current = byDate.get(row.appointment_date) ?? {
       stops: [],
       bookedCount: 0,
     };
+    current.firstBooking ??= row;
+    byDate.set(row.appointment_date, current);
+    if (row.id && exclude.has(row.id)) continue;
     current.bookedCount += 1;
     const peers = rows.filter((peer) => peer.appointment_date === row.appointment_date);
     current.stops.push(mapOccupiedRow(row, peers));
-    byDate.set(row.appointment_date, current);
   }
 
   for (const entry of byDate.values()) {
@@ -423,7 +450,7 @@ export async function getAvailabilityForAddress(input: {
       bookedCount: 0,
     };
 
-    const plan = resolveEffectivePlan(date, plans.get(date) ?? null);
+    const plan = resolveOccupiedDayPlan(date, plans.get(date) ?? null, occupied);
     const inZone = addressAllowedForPlan(plan, input.zip, input.point);
     if (!inZone && !input.staffBooking) {
       days.push({ date, available: false, slots: [] as number[] });
@@ -540,7 +567,7 @@ export async function assignArrivalWindow(input: {
   if ("error" in occupied) return occupied;
 
   const stored = plansResult.plans.get(input.date) ?? null;
-  const plan = resolveEffectivePlan(input.date, stored);
+  const plan = resolveOccupiedDayPlan(input.date, stored, occupied);
   const zoneConflict = describeStaffZoneConflict(plan, input.zip, input.point);
   if (zoneConflict) {
     if (!input.staffBooking) return { error: "slot_unavailable" };
@@ -636,9 +663,10 @@ export async function assertVisitScheduleAllowed(input: {
     if (!input.point || !input.zip) return { error: "slot_unavailable", message: "The address cannot be checked against the route." };
     const plansResult = await loadDayPlans(input.date, input.date);
     if ("error" in plansResult) return plansResult;
-    const plan = resolveEffectivePlan(
+    const plan = resolveOccupiedDayPlan(
       input.date,
       plansResult.plans.get(input.date) ?? null,
+      occupied,
     );
     if (!addressAllowedForPlan(plan, input.zip, input.point)) {
       return { error: "slot_unavailable", message: "The address is outside the route area for that date." };
@@ -679,8 +707,8 @@ export async function listAdminScheduleDays(): Promise<
 
   const days: AdminScheduleDay[] = dates.map((date) => {
     const stored = plansResult.plans.get(date) ?? null;
-    const plan = resolveEffectivePlan(date, stored);
     const occupied = occupiedResult.byDate.get(date);
+    const plan = resolveOccupiedDayPlan(date, stored, occupied);
     const closure = closuresResult.closures.get(date) ?? null;
     if (!plan) {
       return {
@@ -714,7 +742,10 @@ export async function claimDayPlan(
   const loaded = await loadDayPlans(date, date);
   if ("error" in loaded) return loaded;
 
-  let plan = resolveEffectivePlan(date, loaded.plans.get(date) ?? null);
+  const occupied = await loadOccupiedStops(date);
+  if ("error" in occupied) return occupied;
+
+  let plan = resolveOccupiedDayPlan(date, loaded.plans.get(date) ?? null, occupied);
   if (!plan) {
     const inferred = planFromFirstStop(date, zip, point);
     const inserted = await upsertDayPlan(inferred, { keepExisting: true });

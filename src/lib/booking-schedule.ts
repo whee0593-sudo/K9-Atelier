@@ -160,7 +160,7 @@ export function addressAllowedForPlan(
 ) {
   if (!plan) return true;
   if (plan.zoneId === NEARBY_ZONE_ID) {
-    if (!plan.anchor) return true;
+    if (!plan.anchor) return false;
     return (
       haversineMiles(plan.anchor, point) <=
       getRoutingConfig().clusterRadiusMiles
@@ -193,7 +193,7 @@ export function resolveEffectivePlan(
   };
 }
 
-export function planFromFirstStop(dateValue: string, zip: string, point: GeoPoint) {
+export function planFromFirstStop(dateValue: string, zip: string, point: GeoPoint | null) {
   const zoneId = inferZoneIdFromZip(zip) ?? NEARBY_ZONE_ID;
   return {
     serviceDate: dateValue,
