@@ -92,7 +92,41 @@ describe("appointment actions menu", () => {
     assert.match(html, /max-w-full/);
   });
 
-  it("shows the appointment fields already stored on the record", () => {
+  it("links to the customer and shows all pets and known allergies for the visit", () => {
+    const secondPet: AdminAppointmentRecord = {
+      ...appointment,
+      id: "appt-max",
+      petId: "pet-max",
+      petName: "Max",
+      serviceName: "Signature Bath",
+      allergySnapshot: {
+        petName: "Max",
+        petStatus: "yes",
+        petDetails: "Oat shampoo",
+        householdStatus: "no",
+        householdDetails: null,
+      },
+    };
+    const html = renderToStaticMarkup(
+      <AppointmentActionsMenu
+        appointment={appointment}
+        visitAppointments={[appointment, secondPet]}
+        variant="popover"
+        top={0}
+        left={0}
+        panel="details"
+        onClose={() => {}}
+      />,
+    );
+    assert.match(html, /Appointment details/);
+    assert.match(html, /href="\/admin\/pets\?customer=customer-maya"[^>]*>Maya Patel<\/a>/);
+    assert.match(html, /Bella — Full Groom/);
+    assert.match(html, /Max — Signature Bath/);
+    assert.match(html, /text-red-700[^>]*>.*MAX: OAT SHAMPOO/);
+    assert.doesNotMatch(html, /No known allergies|Arrival window|Requested date|Vaccination status/);
+  });
+
+  it("hides the allergy section when no allergy has been reported", () => {
     const html = renderToStaticMarkup(
       <AppointmentActionsMenu
         appointment={appointment}
@@ -103,19 +137,8 @@ describe("appointment actions menu", () => {
         onClose={() => {}}
       />,
     );
-    assert.match(html, /Appointment details/);
-    assert.match(html, /Maya Patel/);
-    assert.match(html, /\+15615550131/);
-    assert.match(html, /maya@example.com/);
-    assert.match(html, /Goldendoodle/);
-    assert.match(html, /42 lb/);
-    assert.match(html, /Full Groom/);
-    assert.match(html, /October 12, 2026/);
-    assert.match(html, /9:00–10:30 AM/);
-    assert.match(html, /123 Example Avenue, Palm Beach Gardens, FL 33418/);
-    assert.match(html, /\$13/);
-    assert.match(html, /Vaccines on file/);
-    assert.match(html, /Confirmed/);
+    assert.match(html, /Bella — Full Groom/);
+    assert.doesNotMatch(html, /Allergies/);
   });
 
   it("reuses the text and email contact paths", () => {

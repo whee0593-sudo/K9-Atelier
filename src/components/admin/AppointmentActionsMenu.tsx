@@ -7,16 +7,12 @@ import { AdminCancelAppointmentButton } from "@/components/admin/AdminCancelAppo
 import { VisitTravelFeeEditor } from "@/components/admin/VisitTravelFeeEditor";
 import { AdminRescheduleAppointmentButton } from "@/components/admin/AdminRescheduleAppointmentButton";
 import { CallCustomerButton } from "@/components/admin/CallCustomerButton";
-import { allergyStatusLabel, allergyWarning } from "@/lib/allergies";
+import { allergyWarning } from "@/lib/allergies";
 import { formatFullDate } from "@/lib/appointments/availability-blocks";
-import { isLuxurySpaDay } from "@/lib/service-catalog";
-import { spaGoalTitle } from "@/lib/spa-goals";
 import { appointmentStatusLabel } from "@/lib/appointments/map";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
 import { formatPrice } from "@/lib/business";
 import type { ChargeKind } from "@/lib/charges/types";
-import { formatServiceAddress } from "@/lib/travel";
-import { vaccinationStatusLabel } from "@/lib/vaccinations/booking";
 
 const menuItemClass =
   "flex min-h-11 w-full items-center rounded-xl px-3 text-left text-sm text-text hover:bg-lavender-light";
@@ -40,11 +36,6 @@ function customerLabel(appointment: AdminAppointmentRecord) {
     appointment.customerEmail?.trim() ||
     "Customer"
   );
-}
-
-function formatWeight(weight: number | null | undefined) {
-  if (typeof weight !== "number") return "—";
-  return `${weight} lb`;
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
@@ -109,7 +100,13 @@ export function AppointmentActionsMenu({
     phone: phone || null,
   });
 
-  const allergyAlert = allergyWarning(appointment.allergySnapshot ?? null);
+  const visit = visitAppointments?.length ? visitAppointments : [appointment];
+  const allergyLines = Array.from(new Set(visit.flatMap(
+    (item) => allergyWarning(item.allergySnapshot ?? null)?.lines ?? [],
+  )));
+  const customerHref = `/admin/pets${preview ? "/preview" : ""}?${new URLSearchParams({
+    customer: appointment.customerId,
+  })}`;
   const summary = (
     <dl className="mt-3 space-y-2 text-sm text-text">
       <DetailRow label="Customer" value={customerLabel(appointment)} />
@@ -134,88 +131,32 @@ export function AppointmentActionsMenu({
           Appointment details
         </h3>
         <dl className="mt-3 space-y-2 text-sm text-text">
-          <DetailRow label="Customer" value={customerLabel(appointment)} />
-          <DetailRow label="Phone" value={phone} />
-          <DetailRow label="Email" value={email} />
-          <DetailRow label="Pet" value={appointment.petName} />
-          <DetailRow label="Breed" value={appointment.petBreed} />
-          <DetailRow label="Weight" value={formatWeight(appointment.petWeightLbs)} />
-          <DetailRow label="Service" value={appointment.serviceName} />
-          {isLuxurySpaDay(appointment.serviceId) ||
-          (appointment.spaGoals?.length ?? 0) > 0 ? (
-            <DetailRow
-              label="Spa goals"
-              value={
-                appointment.spaGoals?.length
-                  ? appointment.spaGoals.map((goal) => spaGoalTitle(goal)).join(", ")
-                  : "None selected"
-              }
-            />
-          ) : null}
           <div>
-            <dt className="text-text-muted">Allergies &amp; sensitivities</dt>
+            <dt className="text-text-muted">Customer</dt>
             <dd className="[overflow-wrap:anywhere]">
-              {allergyAlert ? (
-                <>
-                  <p className="font-semibold text-red-700">{allergyAlert.banner}</p>
-                  <p className="mt-2 font-semibold text-red-700">
-                    ALLERGIES &amp; SENSITIVITIES
-                  </p>
-                  {allergyAlert.lines.map((line) => (
-                    <p key={line} className="font-semibold text-red-700">
-                      {line}
-                    </p>
-                  ))}
-                </>
-              ) : null}
-              <p className={allergyAlert ? "mt-2" : undefined}>
-                {appointment.petName}:{" "}
-                {allergyStatusLabel(appointment.allergySnapshot?.petStatus)}
-                {appointment.allergySnapshot?.petStatus === "yes" &&
-                appointment.allergySnapshot.petDetails
-                  ? ` — ${appointment.allergySnapshot.petDetails}`
-                  : ""}
-              </p>
-              <p>
-                Household:{" "}
-                {allergyStatusLabel(appointment.allergySnapshot?.householdStatus)}
-                {appointment.allergySnapshot?.householdStatus === "yes" &&
-                appointment.allergySnapshot.householdDetails
-                  ? ` — ${appointment.allergySnapshot.householdDetails}`
-                  : ""}
-              </p>
+              <Link href={customerHref} className="underline underline-offset-2">
+                {customerLabel(appointment)}
+              </Link>
             </dd>
           </div>
-          <DetailRow
-            label="Requested date"
-            value={formatFullDate(appointment.appointmentDate)}
-          />
-          <DetailRow label="Arrival window" value={appointment.appointmentTime} />
-          <DetailRow
-            label="Address"
-            value={formatServiceAddress({
-              street: appointment.addressStreet,
-              city: appointment.addressCity,
-              state: appointment.addressState,
-              zip: appointment.addressZip,
-            })}
-          />
-          <DetailRow
-            label="Vaccination status"
-            value={
-              appointment.vaccinationStatusAtBooking
-                ? vaccinationStatusLabel(appointment.vaccinationStatusAtBooking)
-                : "—"
-            }
-          />
+          {visit.map((item, index) => (
+            <DetailRow
+              key={item.id}
+              label={`Pet ${index + 1}`}
+              value={`${item.petName} — ${item.serviceName}`}
+            />
+          ))}
+          {allergyLines.length ? (
+            <div className="font-semibold text-red-700">
+              <dt>Allergies &amp; sensitivities</dt>
+              <dd className="[overflow-wrap:anywhere]">
+                <ul>
+                  {allergyLines.map((line) => <li key={line}>{line}</li>)}
+                </ul>
+              </dd>
+            </div>
+          ) : null}
           {!appointment.visitId ? <DetailRow label="Travel fee" value={formatPrice(appointment.travelFee)} /> : null}
-          <DetailRow
-            label="Appointment status"
-            value={appointmentStatusLabel(
-              appointment.status,
-              appointment.awaitingCustomerConfirm,
-            )}
-          />
         </dl>
         {appointment.visitId ? <VisitTravelFeeEditor appointmentId={appointment.id} preview={preview} onSaved={() => onChanged?.()} /> : null}
         <button
