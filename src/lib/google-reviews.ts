@@ -12,7 +12,6 @@ type GoogleReview = {
   text?: { text?: string };
   originalText?: { text?: string };
   authorAttribution?: AuthorAttribution;
-  relativePublishTimeDescription?: string;
   publishTime?: string;
   googleMapsUri?: string;
 };
@@ -29,7 +28,6 @@ type SearchResponse = { places?: GooglePlace[] };
 export type GoogleReviewItem = ReviewItem & {
   authorUri?: string;
   authorPhotoUri?: string;
-  relativePublishTimeDescription?: string;
   publishTime?: string;
   googleMapsUri?: string;
 };
@@ -113,7 +111,6 @@ export async function getGoogleReviews(): Promise<GoogleReviewItem[]> {
             rating: review.rating,
             authorUri: review.authorAttribution?.uri,
             authorPhotoUri: review.authorAttribution?.photoUri,
-            relativePublishTimeDescription: review.relativePublishTimeDescription,
             publishTime: review.publishTime,
             googleMapsUri: review.googleMapsUri || place.googleMapsUri,
           },

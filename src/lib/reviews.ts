@@ -12,6 +12,7 @@ export type ReviewsContent = {
   eyebrow: string;
   title: string;
   intro: string;
+  recentItems: ReviewItem[];
   items: ReviewItem[];
 };
 

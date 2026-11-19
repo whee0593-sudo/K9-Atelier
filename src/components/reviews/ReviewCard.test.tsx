@@ -32,12 +32,16 @@ describe("review cards", () => {
           quote: "Penny is definitely the best!!",
           name: "Giancarlo Amyach",
           rating: 5,
+          publishTime: "2026-11-11T16:00:00Z",
+          googleMapsUri: "https://www.google.com/maps",
         }}
       />,
     );
 
     assert.match(html, /line-clamp-3/);
     assert.equal(html.includes("Show full review"), false);
+    assert.match(html, /View on Google/);
+    assert.doesNotMatch(html, /2026-11-11|a week ago/);
   });
 
   it("shows one review per row on small screens and four on large screens", async () => {
@@ -48,6 +52,8 @@ describe("review cards", () => {
     assert.equal(html.includes("grid-cols-2"), false);
     assert.equal(html.includes("md:grid-cols-3"), false);
     assert.match(html, /Mark Keinard/);
+    assert.match(html, /Shannon Parker/);
+    assert.match(html, /Yarianna Herrera Pupo/);
     assert.match(html, /Victoria Frutos/);
     assert.match(html, /What an amazing experience/);
     assert.match(html, /Giancarlo Amyach/);

@@ -100,21 +100,16 @@ export function ReviewCard({ item }: { item: GoogleReviewItem }) {
         </button>
       ) : null}
 
-      <div className="mt-6 flex items-center justify-between gap-4">
-        <p className="font-body text-sm text-ink">
-          {item.relativePublishTimeDescription || ""}
-        </p>
-        {item.googleMapsUri ? (
-          <a
-            href={item.googleMapsUri}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-body shrink-0 text-sm font-medium uppercase tracking-[0.14em] text-ink hover:text-ink"
-          >
-            View on Google
-          </a>
-        ) : null}
-      </div>
+      {item.googleMapsUri ? (
+        <a
+          href={item.googleMapsUri}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-body mt-6 self-end text-sm font-medium uppercase tracking-[0.14em] text-ink hover:text-ink"
+        >
+          View on Google
+        </a>
+      ) : null}
     </li>
   );
 }

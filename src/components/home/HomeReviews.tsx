@@ -13,14 +13,20 @@ export async function ReviewsShowcase() {
   const profileUrl = getGoogleProfileUrl();
   const writeReviewUrl = getGoogleWriteReviewUrl();
   const googleReviews = await getGoogleReviews();
-  const items: GoogleReviewItem[] = googleReviews.length > 0 ? googleReviews : reviews.items;
+  const reviewKey = (item: GoogleReviewItem) =>
+    `${item.name.trim().toLowerCase()}:${item.quote.replace(/\s+/g, " ").trim()}`;
+  const liveItems = googleReviews.length > 0 ? googleReviews : reviews.items;
+  const items = new Map<string, GoogleReviewItem>(
+    reviews.recentItems.map((item) => [reviewKey(item), { ...item, googleMapsUri: profileUrl ?? undefined }]),
+  );
+  for (const item of liveItems) items.set(reviewKey(item), item);
 
   return (
     <>
-      {items.length > 0 ? (
+      {items.size > 0 ? (
         <ul className="grid grid-cols-1 gap-5 lg:grid-cols-4 lg:gap-6">
-          {items.map((item) => (
-            <ReviewCard key={`${item.name}-${item.quote.slice(0, 24)}`} item={item} />
+          {Array.from(items, ([key, item]) => (
+            <ReviewCard key={key} item={item} />
           ))}
         </ul>
       ) : (
