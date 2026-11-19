@@ -5,8 +5,6 @@ import { EditorialPhoto } from "@/components/luxury/EditorialPhoto";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { business } from "@/lib/business";
 import { photoFor } from "@/lib/gallery";
-import { LONG_COAT_CARE_PATH } from "@/lib/long-coat-care-page";
-import { SPECIALTY_CARE_PATH } from "@/lib/service-page";
 
 const heroCtaClass =
   "inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-deep-lavender px-8 text-base font-semibold tracking-[0.01em] text-ivory transition duration-500 hover:bg-ink sm:w-auto md:text-sm";
@@ -14,45 +12,6 @@ const heroCtaClass =
 // Match the full-width mobile image and the desktop half-container panel.
 const HERO_SIZES = "(max-width: 767px) calc(100vw - 2rem), (max-width: 1279px) calc((100vw - 8rem) / 2), 508px";
 const HERO_IMAGE_CLASS = "!h-[300px] !w-full !object-contain md:!h-[520px]";
-
-const HERO_LEAD_LINKS = [
-  { phrase: "show-level coat care", href: LONG_COAT_CARE_PATH },
-  { phrase: "gentlest senior care", href: SPECIALTY_CARE_PATH },
-] as const;
-
-const quietInlineLinkClass =
-  "underline decoration-champagne/80 underline-offset-[0.2em] transition-colors duration-500 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-champagne motion-reduce:transition-none";
-
-function HeroLead({ lead }: { lead: string }) {
-  const nodes: React.ReactNode[] = [];
-  let rest = lead;
-
-  while (rest) {
-    const next = HERO_LEAD_LINKS.reduce<
-      (typeof HERO_LEAD_LINKS)[number] & { index: number } | null
-    >((found, link) => {
-      const index = rest.indexOf(link.phrase);
-      if (index < 0) return found;
-      if (!found || index < found.index) return { ...link, index };
-      return found;
-    }, null);
-
-    if (!next) {
-      nodes.push(rest);
-      break;
-    }
-
-    if (next.index > 0) nodes.push(rest.slice(0, next.index));
-    nodes.push(
-      <Link key={next.href} href={next.href} className={quietInlineLinkClass}>
-        {next.phrase}
-      </Link>,
-    );
-    rest = rest.slice(next.index + next.phrase.length);
-  }
-
-  return <>{nodes}</>;
-}
 
 function HeroServiceMeta({ className = "" }: { className?: string }) {
   return (
@@ -83,9 +42,14 @@ export function HomeHero() {
           <h1 className="font-display text-[2.75rem] leading-[1.02] font-semibold text-ink md:text-[3.5rem] lg:text-[4.5rem]">
             {business.brand.tagline}
           </h1>
-          <p className="font-body mt-5 max-w-xl text-base leading-relaxed text-ink md:mt-6 md:text-[17px]">
-            <HeroLead lead={business.brand.lead} />
-          </p>
+          <ul
+            role="list"
+            className="font-body mt-5 max-w-xl list-disc space-y-1.5 pl-5 text-base leading-relaxed text-ink marker:text-deep-lavender md:mt-6 md:text-[17px]"
+          >
+            {business.brand.highlights.map((highlight) => (
+              <li key={highlight}>{highlight}</li>
+            ))}
+          </ul>
           <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:items-center sm:gap-4">
             <BookServiceLink className={heroCtaClass}>
               Book Online

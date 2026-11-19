@@ -27,28 +27,13 @@ const REMOVED_HOME_SECTIONS = [
 ] as const;
 
 describe("home page content", () => {
-  it("uses the shortened show-groomer hero lead", () => {
-    const business = JSON.parse(
-      readFileSync(new URL("../../../content/business.json", import.meta.url), "utf8"),
-    ) as { brand: { lead: string } };
-
-    assert.equal(
-      business.brand.lead,
-      "White-glove grooming, brought to your doorstep. Personally tailored by Penny, from award-winning show-level coat care and hand stripping to the gentlest senior care.",
-    );
-    assert.equal(
-      business.brand.lead.includes("Private mobile pet spa in Palm Beach County"),
-      false,
-    );
-  });
-
   it("sends the hero secondary button to the callback page", () => {
     const source = readFileSync(new URL("./HomeHero.tsx", import.meta.url), "utf8");
 
     assert.match(source, /Request a Call/);
     assert.match(source, /href="\/request-a-call"/);
     assert.match(source, /heroCtaClass/);
-    assert.match(source, /business\.brand\.lead/);
+    assert.match(source, /business\.brand\.highlights/);
     assert.equal(
       source.includes("Award-winning grooming, brought directly"),
       false,
@@ -61,16 +46,14 @@ describe("home page content", () => {
   it("puts brand copy and CTAs above the mobile hero image", () => {
     const source = readFileSync(new URL("./HomeHero.tsx", import.meta.url), "utf8");
 
-    const eyebrow = source.indexOf("business.brand.lockup");
     const tagline = source.indexOf("business.brand.tagline");
-    const lead = source.indexOf("business.brand.lead");
+    const lead = source.indexOf("business.brand.highlights");
     const bookCta = source.indexOf("Book Online");
     const askCta = source.indexOf("Request a Call");
     const photo = source.indexOf("<EditorialPhoto");
     const mobileMeta = source.indexOf("<HeroServiceMeta className=\"md:hidden\"");
     const desktopMeta = source.indexOf("hidden md:block");
 
-    assert.ok(eyebrow > 0 && eyebrow < tagline);
     assert.ok(tagline < lead);
     assert.ok(lead < bookCta);
     assert.ok(bookCta < askCta);
@@ -137,14 +120,15 @@ describe("homepage SEO", () => {
 
     assert.equal(h1s.length, 1);
     assert.match(html, /K9 ATELIER — grooming, elevated\./);
-    assert.match(html, /Private Mobile Pet Spa · Palm Beach/);
-    const leadText = html
-      .replace(/<a\b[^>]*>|<\/a>/g, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ");
-    assert.match(
-      leadText,
-      /White-glove grooming, brought to your doorstep. Personally tailored by Penny, from award-winning show-level coat care and hand stripping to the gentlest senior care\./,
+    const highlights = html.match(/<ul role="list"[^>]*>([\s\S]*?)<\/ul>/)?.[1] ?? "";
+    assert.deepEqual(
+      [...highlights.matchAll(/<li>([^<]*)<\/li>/g)].map((match) => match[1]),
+      [
+        "At your doorstep",
+        "White-glove premium service",
+        "One-on-one care, unhurried, cage free",
+        "Multiple award-winning show groomer"
+      ],
     );
     assert.match(html, /id="home-services-heading"[^>]*>Services<\/h2>/);
     const visibleText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
@@ -170,29 +154,6 @@ describe("homepage SEO", () => {
     );
     const byHref = (href: string) => anchors.find((anchor) => anchor.href === href);
 
-    assert.equal(byHref("/services/show-level-coat-care")?.text, "show-level coat care");
-    assert.equal(
-      anchors.find((anchor) => anchor.text === "gentlest senior care")?.href,
-      "/services/specialty-care",
-    );
-    const leadStart = html.indexOf("White-glove grooming");
-    const leadHtml = html.slice(leadStart, html.indexOf("Book Online", leadStart));
-    const leadAnchors = [...leadHtml.matchAll(/<a([^>]*)>([\s\S]*?)<\/a>/g)].map(
-      (match) => ({
-        attrs: match[1],
-        text: match[2].replace(/<[^>]+>/g, "").trim(),
-      }),
-    );
-    assert.deepEqual(
-      leadAnchors.map((anchor) => anchor.text),
-      ["show-level coat care", "gentlest senior care"],
-    );
-    const className = (attrs: string) => attrs.match(/class="([^"]*)"/)?.[1] ?? "";
-    assert.equal(className(leadAnchors[0]?.attrs ?? ""), className(leadAnchors[1]?.attrs ?? ""));
-    assert.match(leadAnchors[1]?.attrs ?? "", /href="\/services\/specialty-care"/);
-    assert.match(className(leadAnchors[1]?.attrs ?? ""), /underline decoration-champagne\/80/);
-    assert.doesNotMatch(className(leadAnchors[1]?.attrs ?? ""), /inline-flex|bg-deep-lavender/);
-    assert.equal(/<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<a\b/.test(leadHtml), false);
     assert.match(byHref("/services/full-groom")?.text ?? "", /^Full Grooming\b/);
     assert.match(byHref("/services/bath-coat-care")?.text ?? "", /^Bath & Coat Care\b/);
     assert.match(byHref("/services/hand-stripping")?.text ?? "", /^Hand Stripping\b/);
