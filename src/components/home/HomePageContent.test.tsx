@@ -146,7 +146,7 @@ describe("homepage SEO", () => {
       leadText,
       /White-glove grooming, brought to your doorstep. Personally tailored by Penny, from award-winning show-level coat care and hand stripping to the gentlest senior care\./,
     );
-    assert.match(html, /Grooming, tailored to the individual\./);
+    assert.match(html, /id="home-services-heading"[^>]*>Services<\/h2>/);
     const visibleText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
     assert.match(
       visibleText,
@@ -233,7 +233,7 @@ describe("homepage SEO", () => {
     const html = renderToStaticMarkup(<HomePageContent />);
     const start = html.indexOf('id="home-selected-work-heading"');
     const end = html.indexOf('id="first-visit"');
-    assert.ok(start > html.indexOf("Grooming, tailored to the individual."));
+    assert.ok(start > html.indexOf('id="home-services-heading"'));
     assert.ok(end > start);
 
     const section = html.slice(start, end);

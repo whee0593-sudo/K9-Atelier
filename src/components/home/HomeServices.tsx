@@ -9,7 +9,7 @@ import {
   type ServiceCategory,
 } from "@/lib/service-page";
 
-export const homeServicesHeading = "Grooming, tailored to the individual.";
+export const homeServicesHeading = "Services";
 
 const HOME_SERVICE_SLUGS = [
   "full-groom",
