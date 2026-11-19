@@ -65,17 +65,13 @@ export function ReviewCard({ item }: { item: GoogleReviewItem }) {
           ) : (
             <p className="font-body text-sm font-medium text-ink">{item.name}</p>
           )}
-          <p className="font-body mt-0.5 text-sm uppercase tracking-[0.16em] text-ink">
-            {item.source || "Google Maps"}
-          </p>
+          {typeof item.rating === "number" ? (
+            <div className="mt-0.5">
+              <StarRating rating={item.rating} />
+            </div>
+          ) : null}
         </div>
       </div>
-
-      {typeof item.rating === "number" ? (
-        <div className="mt-5">
-          <StarRating rating={item.rating} />
-        </div>
-      ) : null}
 
       <blockquote
         ref={quoteRef}
