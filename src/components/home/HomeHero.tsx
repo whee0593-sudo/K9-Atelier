@@ -39,18 +39,18 @@ export function HomeHero() {
     <section className="relative overflow-hidden border-b border-gray-line/60">
       <Container className="grid items-center gap-8 py-9 md:grid-cols-2 md:gap-12 md:py-16 lg:py-20">
         <div className="md:order-1">
-          <h1 className="font-display text-[clamp(2rem,9vw,2.75rem)] leading-tight font-semibold text-ink md:text-[clamp(2rem,4vw,3.75rem)]">
+          <h1 className="font-display text-[2.75rem] leading-[1.02] font-semibold text-ink md:text-[3.5rem] lg:text-[4.5rem]">
             {business.brand.wordmark}
           </h1>
           <ul
             role="list"
-            className="font-body mt-7 max-w-xl list-disc space-y-1.5 pl-5 text-base font-bold leading-relaxed text-ink marker:text-deep-lavender md:mt-8 md:text-[17px]"
+            className="font-body mt-6 max-w-xl list-disc space-y-1.5 pl-5 text-base font-bold leading-relaxed text-ink marker:text-deep-lavender md:mt-7 md:text-[17px]"
           >
             {business.brand.highlights.map((highlight) => (
               <li key={highlight}>{highlight}</li>
             ))}
           </ul>
-          <div className="mt-9 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:items-center sm:gap-4">
+          <div className="mt-8 flex flex-col gap-3 sm:mt-9 sm:flex-row sm:items-center sm:gap-4">
             <BookServiceLink className={heroCtaClass}>
               Book Online
             </BookServiceLink>
@@ -58,7 +58,7 @@ export function HomeHero() {
               Request a Call
             </Link>
           </div>
-          <HeroServiceMeta className="mt-10 hidden md:block" />
+          <HeroServiceMeta className="mt-9 hidden md:block" />
         </div>
 
         <div className="md:order-2">
