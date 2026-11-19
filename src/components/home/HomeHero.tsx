@@ -44,7 +44,7 @@ export function HomeHero() {
           </h1>
           <ul
             role="list"
-            className="font-body mt-5 max-w-xl list-disc space-y-1.5 pl-5 text-base leading-relaxed text-ink marker:text-deep-lavender md:mt-6 md:text-[17px]"
+            className="font-body mt-5 max-w-xl list-disc space-y-1.5 pl-5 text-base font-bold leading-relaxed text-ink marker:text-deep-lavender md:mt-6 md:text-[17px]"
           >
             {business.brand.highlights.map((highlight) => (
               <li key={highlight}>{highlight}</li>
