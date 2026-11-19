@@ -2,7 +2,6 @@ import { ReviewsShowcase } from "@/components/home/HomeReviews";
 import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { LuxuryButton } from "@/components/luxury/LuxuryButton";
 import { PageShell } from "@/components/luxury/PageShell";
-import { reviews } from "@/lib/reviews";
 
 export const metadata = {
   title: "Reviews · K9 Atelier",
@@ -12,10 +11,7 @@ export const metadata = {
 
 export default function ReviewsPage() {
   return (
-    <PageShell
-      eyebrow={reviews.eyebrow}
-      title="Client Reviews"
-    >
+    <PageShell title="Reviews from Google">
       <ReviewsShowcase />
       <div className="mt-16 flex flex-col items-center justify-center gap-4 sm:flex-row">
         <LuxuryButton href="/services" variant="secondary">
