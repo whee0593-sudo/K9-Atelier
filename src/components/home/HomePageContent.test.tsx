@@ -46,7 +46,7 @@ describe("home page content", () => {
   it("puts brand copy and CTAs above the mobile hero image", () => {
     const source = readFileSync(new URL("./HomeHero.tsx", import.meta.url), "utf8");
 
-    const tagline = source.indexOf("business.brand.tagline");
+    const wordmark = source.indexOf("business.brand.wordmark");
     const lead = source.indexOf("business.brand.highlights");
     const bookCta = source.indexOf("Book Online");
     const askCta = source.indexOf("Request a Call");
@@ -54,7 +54,7 @@ describe("home page content", () => {
     const mobileMeta = source.indexOf("<HeroServiceMeta className=\"md:hidden\"");
     const desktopMeta = source.indexOf("hidden md:block");
 
-    assert.ok(tagline < lead);
+    assert.ok(wordmark < lead);
     assert.ok(lead < bookCta);
     assert.ok(bookCta < askCta);
     assert.ok(askCta < photo);
@@ -119,7 +119,8 @@ describe("homepage SEO", () => {
     const h1s = html.match(/<h1\b/g) ?? [];
 
     assert.equal(h1s.length, 1);
-    assert.match(html, /K9 ATELIER — grooming, elevated\./);
+    assert.match(html, /<h1\b[^>]*>K9 ATELIER<\/h1>/);
+    assert.doesNotMatch(html, /grooming, elevated\./i);
     const highlights = html.match(/<ul role="list"[^>]*>([\s\S]*?)<\/ul>/)?.[1] ?? "";
     assert.deepEqual(
       [...highlights.matchAll(/<li>([^<]*)<\/li>/g)].map((match) => match[1]),
