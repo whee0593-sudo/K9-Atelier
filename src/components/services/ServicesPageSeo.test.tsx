@@ -24,7 +24,6 @@ const SERVICE_LINKS = [
   ["/services/spa", "Luxury Spa Day", "A fully customized spa experience"],
   ["/services/color", "Creative Color", "Pet-safe color artistry"],
   ["/services/specialty-care", "Specialty Care", "Senior · Extra-gentle comfort care"],
-  ["/services/add-ons", "Add-On Care", "Finishing · Coat support"],
 ] as const;
 
 function hasNestedAnchor(html: string) {
@@ -96,7 +95,7 @@ describe("services page content", () => {
     assert.match(renderToStaticMarkup(<ServiceNotes />), /Dogs up to 45 lbs · By appointment only/);
   });
 
-  it("keeps seven crawlable service cards and the groomer link", () => {
+  it("keeps six public service cards and the groomer link", () => {
     const html = renderToStaticMarkup(
       <>
         <ServiceDirectory />
@@ -104,6 +103,7 @@ describe("services page content", () => {
       </>,
     );
     const links = anchors(html);
+    assert.ok(!links.some((link) => link.href === "/services/add-ons"));
 
     for (const [href, name, description] of SERVICE_LINKS) {
       const link = links.find((item) => item.href === href);
@@ -138,6 +138,12 @@ describe("services page content", () => {
     assert.match(groomer.text, /Meet Your Groomer/);
     assert.ok(html.indexOf("Book Online") < html.indexOf("Meet Your Groomer"));
     assert.match(html, /Grooming with Penny/);
+  });
+
+  it("shows Add-On Care in the staff directory", () => {
+    const html = renderToStaticMarkup(<ServiceDirectory showPrices />);
+    assert.match(html, /href="\/services\/add-ons"/);
+    assert.match(html, /Add-On Care/);
   });
 });
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ServiceCategoryView } from "@/components/services/ServiceCategoryView";
 import { viewerCanViewServicePrices } from "@/lib/pricing-access";
-import { absoluteSiteUrl, getServiceCategory } from "@/lib/service-page";
+import { ADD_ONS_PATH, absoluteSiteUrl, getServiceCategory } from "@/lib/service-page";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -15,6 +15,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const category = getServiceCategory(slug);
   if (!category) return {};
+  if (category.path === ADD_ONS_PATH) {
+    return { robots: { index: false, follow: false } };
+  }
 
   const canonical = absoluteSiteUrl(category.path);
   return {
@@ -45,6 +48,7 @@ export default async function ServiceCategoryPage({ params }: Props) {
   const category = getServiceCategory(slug);
   if (!category) notFound();
   const showPrices = await viewerCanViewServicePrices();
+  if (category.path === ADD_ONS_PATH && !showPrices) notFound();
 
   return <ServiceCategoryView category={category} showPrices={showPrices} />;
 }

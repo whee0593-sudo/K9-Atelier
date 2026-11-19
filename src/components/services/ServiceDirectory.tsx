@@ -5,6 +5,7 @@ import { galleryPhotos } from "@/lib/gallery";
 import { Container } from "@/components/luxury/Container";
 import { LONG_COAT_CARE_PATH } from "@/lib/long-coat-care-page";
 import {
+  ADD_ONS_PATH,
   SERVICE_CATEGORIES,
   SERVICES_DIRECTORY_DESCRIPTIONS,
   directoryPriceLabel,
@@ -150,10 +151,16 @@ export function ServiceDirectory({ showPrices = false }: { showPrices?: boolean 
     <section aria-label="Service directory" className="bg-dusty-lavender py-12 md:py-16">
       <Container>
         <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-5 lg:grid-cols-3">
-          {SERVICE_CATEGORIES.map((category) => (
+          {SERVICE_CATEGORIES.filter(
+            (category) => showPrices || category.path !== ADD_ONS_PATH,
+          ).map((category) => (
             <li
               key={category.slug}
-              className="min-h-0 w-full md:last:col-span-2 md:last:w-[calc((100%-1.25rem)/2)] md:last:justify-self-center lg:last:col-span-1 lg:last:col-start-2 lg:last:w-auto lg:last:justify-self-stretch"
+              className={
+                category.path === ADD_ONS_PATH
+                  ? "min-h-0 w-full md:col-span-2 md:w-[calc((100%-1.25rem)/2)] md:justify-self-center lg:col-span-1 lg:col-start-2 lg:w-auto lg:justify-self-stretch"
+                  : "min-h-0 w-full"
+              }
             >
               <DirectoryCard category={category} showPrices={showPrices} />
             </li>

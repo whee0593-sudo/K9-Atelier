@@ -24,7 +24,6 @@ const INTENDED_URLS = [
   "https://k9atelier.com/services/spa",
   "https://k9atelier.com/services/color",
   "https://k9atelier.com/services/specialty-care",
-  "https://k9atelier.com/services/add-ons",
   "https://k9atelier.com/services/show-level-coat-care",
   "https://k9atelier.com/gallery",
   "https://k9atelier.com/reviews",
@@ -58,7 +57,7 @@ describe("sitemap", () => {
     assert.ok(urls.includes(absoluteSiteUrl(SPA_PATH)));
     assert.ok(urls.includes(absoluteSiteUrl(COLOR_PATH)));
     assert.ok(urls.includes(absoluteSiteUrl(SPECIALTY_CARE_PATH)));
-    assert.ok(urls.includes(absoluteSiteUrl(ADD_ONS_PATH)));
+    assert.ok(!urls.includes(absoluteSiteUrl(ADD_ONS_PATH)));
     assert.equal(
       SERVICE_CATEGORY_PATHS.every((path) =>
         urls.includes(absoluteSiteUrl(path)),

@@ -378,9 +378,9 @@ export const SERVICE_CATEGORIES: readonly ServiceCategory[] = [
   },
 ];
 
-export const SERVICE_CATEGORY_PATHS = SERVICE_CATEGORIES.map(
-  (category) => category.path,
-);
+export const SERVICE_CATEGORY_PATHS = SERVICE_CATEGORIES.filter(
+  (category) => category.path !== ADD_ONS_PATH,
+).map((category) => category.path);
 
 const SERVICE_PAGE_SERVICE_IDS = SERVICE_CATEGORIES.flatMap((category) => [
   ...category.serviceIds,

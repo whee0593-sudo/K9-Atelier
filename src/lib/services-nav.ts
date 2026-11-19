@@ -18,7 +18,6 @@ export const SERVICES_NAV = [
   { href: SPA_PATH, sectionId: "spa", label: "Luxury Spa Day" },
   { href: COLOR_PATH, sectionId: "color", label: "Creative Color" },
   { href: SPECIALTY_CARE_PATH, sectionId: "specialty-care", label: "Specialty Care" },
-  { href: ADD_ONS_PATH, sectionId: "add-ons", label: "Add-On Care" },
 ] as const;
 
 /** Old in-page hashes that now have dedicated category or FAQ routes. */
@@ -34,6 +33,5 @@ export const SERVICES_HASH_ROUTES: Record<string, string> = {
   "color-dye": COLOR_PATH,
   "specialty-care": SPECIALTY_CARE_PATH,
   "gentle-care": SPECIALTY_CARE_PATH,
-  "add-ons": ADD_ONS_PATH,
   "fees-policies": FEES_POLICIES_PATH,
 };
