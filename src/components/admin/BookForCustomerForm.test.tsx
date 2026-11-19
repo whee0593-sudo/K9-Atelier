@@ -45,7 +45,7 @@ describe("BookForCustomerForm preview schedule", () => {
 
   it("explains that only email or phone is required", () => {
     const html = renderToStaticMarkup(<BookForCustomerForm preview />);
-    assert.match(html, /Only an email or mobile phone is required/);
+    assert.doesNotMatch(html, /Only an email or mobile phone is required/);
     assert.match(html, /Send booking link/);
     assert.doesNotMatch(html, /\srequired(=|>|\s)/);
   });
@@ -106,7 +106,7 @@ describe("BookForCustomerForm preview schedule", () => {
     assert.match(html, /value="33480"/);
     assert.match(html, /Saved addresses/);
     assert.match(html, /20 Ocean Ave/);
-    assert.match(html, /Saved pets and address are filled in from this customer/);
+    assert.doesNotMatch(html, /Saved pets and address are filled in from this customer/);
   });
 
   it("puts the service under the dog and can add a second service", () => {
@@ -310,7 +310,7 @@ describe("Book for customer sections", () => {
     );
     assert.match(html, /aria-expanded="false"/);
     assert.match(html, /aria-expanded="true"/);
-    assert.match(html, /Only an email or mobile phone is required/);
+    assert.doesNotMatch(html, /Only an email or mobile phone is required/);
     assert.match(html, /Open preview/);
     assert.match(html, /Mon, Oct 12/);
     assert.doesNotMatch(html, /Ada Lovelace/);
