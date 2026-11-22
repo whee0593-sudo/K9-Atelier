@@ -5,7 +5,7 @@ import { formatMinutesLabel } from "@/lib/appointments/closures";
 import { formatEstimatedDuration } from "@/lib/staff/schedule-conflict";
 import { canStaffRescheduleAppointment } from "@/lib/appointments/staff-actions";
 import type { AdminAppointmentRecord } from "@/lib/appointments/types";
-import { listHourlyStartMinutes } from "@/lib/booking-schedule";
+import { listBookingStartMinutes } from "@/lib/booking-schedule";
 import { getUpcomingStaffDates } from "@/lib/staff/booking-dates";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
 import { staffRescheduleServices } from "@/lib/appointments/staff-reschedule-input";
@@ -52,7 +52,7 @@ function previewDays(unavailableDates?: readonly string[]): AvailabilityDay[] {
     return {
       date: day.value,
       available: !unavailable,
-      slots: unavailable ? [] : listHourlyStartMinutes(),
+      slots: unavailable ? [] : listBookingStartMinutes(),
     };
   });
 }
@@ -64,10 +64,10 @@ export function staffRescheduleSlotChoices(
   limitToOpenSlots: boolean,
 ) {
   if (limitToOpenSlots && hasDate) {
-    return [...new Set([...(daySlots ?? []), ...listHourlyStartMinutes()])].sort((a, b) => a - b);
+    return [...new Set([...(daySlots ?? []), ...listBookingStartMinutes()])].sort((a, b) => a - b);
   }
   if (daySlots && daySlots.length > 0) return daySlots;
-  if (hasDate) return listHourlyStartMinutes();
+  if (hasDate) return listBookingStartMinutes();
   return [];
 }
 
@@ -156,7 +156,7 @@ export function AdminRescheduleAppointmentButton({
         appointment.appointmentDate &&
         !listed.some((day) => day.date === appointment.appointmentDate)
       ) {
-        const slots = listHourlyStartMinutes();
+        const slots = listBookingStartMinutes();
         if (
           appointment.scheduledStart != null &&
           !slots.includes(appointment.scheduledStart)

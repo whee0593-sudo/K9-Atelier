@@ -3,7 +3,7 @@ import {
   chainSameAddressVisits,
   getDayBounds,
   listAvailableHourStarts,
-  listHourlyStartMinutes,
+  listBookingStartMinutes,
   zoneLabel,
   type DayPlanRecord,
   type GeoPoint,
@@ -132,7 +132,7 @@ export function listStaffOverrideHourStarts(input: {
     input.incoming,
     30,
   );
-  const slots = [...new Set([...listHourlyStartMinutes(), ...reopen])].sort(
+  const slots = [...new Set([...listBookingStartMinutes(), ...reopen])].sort(
     (a, b) => a - b,
   );
   return {

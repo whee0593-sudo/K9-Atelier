@@ -14,6 +14,7 @@ import {
   bookingPrimaryBtnClass,
   bookingSecondaryBtnClass,
 } from "@/components/booking/booking-ui";
+import { formatMinutesLabel } from "@/lib/appointments/closures";
 import type { AppointmentRecord } from "@/lib/appointments/types";
 import {
   changeFeeAmount,
@@ -603,9 +604,7 @@ export function AppointmentChangeForm({
             <p className="text-sm text-text">
               New time: {formatShortDate(nextDate)}
               {nextSlotStartMinutes != null
-                ? ` · ${Math.floor(nextSlotStartMinutes / 60) % 12 || 12}:00 ${
-                    nextSlotStartMinutes >= 12 * 60 ? "PM" : "AM"
-                  }`
+                ? ` · ${formatMinutesLabel(nextSlotStartMinutes)}`
                 : ""}
             </p>
           ) : null}

@@ -127,11 +127,11 @@ export function formatArrivalWindow(startMinutes: number, durationMinutes: numbe
   return `${start.text} ${start.ampm} – ${end.text} ${end.ampm}`;
 }
 
-/** On-the-hour starts from opening until the last full hour before close. */
-export function listHourlyStartMinutes() {
+/** Booking starts every 30 minutes from opening until close. */
+export function listBookingStartMinutes() {
   const { hoursStart, hoursEnd } = getDayBounds();
   const starts: number[] = [];
-  for (let m = hoursStart; m < hoursEnd; m += 60) {
+  for (let m = hoursStart; m < hoursEnd; m += 30) {
     starts.push(m);
   }
   return starts;
@@ -299,7 +299,7 @@ function startFitsWindow(start: number, window: OpenWindow, durationMinutes: num
   );
 }
 
-/** On-the-hour starts, plus the exact minute a route reopens and each quarter hour after it. */
+/** Half-hour starts, plus the exact minute a route reopens and each quarter hour after it. */
 function isOfferedStart(
   start: number,
   windows: OpenWindow[],
@@ -308,7 +308,7 @@ function isOfferedStart(
   if (!windows.some((window) => startFitsWindow(start, window, durationMinutes))) {
     return false;
   }
-  if (listHourlyStartMinutes().includes(start)) return true;
+  if (listBookingStartMinutes().includes(start)) return true;
   return windows.some((window) => {
     if (window.earliest % 60 === 0) return false;
     if (!startFitsWindow(start, window, durationMinutes)) return false;
@@ -448,8 +448,8 @@ export function listAvailableHourStarts(
 
   const windows = openWindows(base, stops, incoming, durationMinutes);
   const starts = new Set<number>();
-  for (const hour of listHourlyStartMinutes()) {
-    if (isOfferedStart(hour, windows, durationMinutes)) starts.add(hour);
+  for (const start of listBookingStartMinutes()) {
+    if (isOfferedStart(start, windows, durationMinutes)) starts.add(start);
   }
   for (const window of windows) {
     if (window.earliest % 60 === 0) continue;

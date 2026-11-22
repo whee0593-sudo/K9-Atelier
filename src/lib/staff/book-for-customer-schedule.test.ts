@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import { isDateBookable, parseDateValue } from "@/lib/booking-slots";
 import { getUpcomingStaffDates, isStaffBookingDate } from "./booking-dates";
-import { listHourlyStartMinutes } from "@/lib/booking-schedule";
+import { listBookingStartMinutes } from "@/lib/booking-schedule";
 import {
   fallbackStaffScheduleDays,
   formatStaffDateOption,
@@ -85,7 +85,7 @@ describe("slotsForStaffDate", () => {
   it("falls back to studio hours when the chosen date is missing from availability", () => {
     assert.deepEqual(
       slotsForStaffDate(days, "2026-09-24"),
-      listHourlyStartMinutes(),
+      listBookingStartMinutes(),
     );
   });
 });

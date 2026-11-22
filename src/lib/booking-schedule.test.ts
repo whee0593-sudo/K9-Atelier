@@ -71,15 +71,15 @@ describe("booking schedule", () => {
     assert.equal(allowed, false);
   });
 
-  it("lists on-the-hour starts and places an exact hour booking", () => {
+  it("lists half-hour starts and places a booking at 9:30 AM", () => {
     const slots = listAvailableHourStarts(base, [], jupiter, 65);
-    assert.ok(slots.includes(9 * 60));
+    assert.deepEqual(slots.slice(0, 4), [540, 570, 600, 630]);
     assert.ok(slots.includes(15 * 60));
     assert.equal(slots.includes(16 * 60), false);
 
-    const first = findRouteInsertionAtHour(base, [], jupiter, 65, 9 * 60);
+    const first = findRouteInsertionAtHour(base, [], jupiter, 65, 9 * 60 + 30);
     assert.ok(first);
-    assert.equal(first.scheduledStart, 9 * 60);
+    assert.equal(first.scheduledStart, 9 * 60 + 30);
 
     const afterFirst = listAvailableHourStarts(
       base,
