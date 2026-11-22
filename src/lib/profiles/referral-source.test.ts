@@ -37,9 +37,11 @@ describe("referral source options", () => {
     assert.equal(isReferralSourceValue(""), false);
   });
 
-  it("keeps referral_name only for referral source", () => {
+  it("keeps details for referrals and Other", () => {
     assert.equal(normalizeReferralName("referral", "  Sam  "), "Sam");
     assert.equal(normalizeReferralName("referral", "   "), null);
+    assert.equal(normalizeReferralName("other", "  Community event  "), "Community event");
+    assert.equal(normalizeReferralName("other", "   "), null);
     assert.equal(normalizeReferralName("google", "Sam"), null);
   });
 });

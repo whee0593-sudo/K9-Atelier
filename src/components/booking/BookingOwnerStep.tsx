@@ -84,6 +84,7 @@ export function BookingOwnerStep({
   const [signInPassword, setSignInPassword] = useState("");
   const [referralSource, setReferralSource] = useState("");
   const [referralName, setReferralName] = useState("");
+  const [otherReferralSource, setOtherReferralSource] = useState("");
   const [smsConsent, setSmsConsent] = useState(initial.smsConsent);
   const [photoMarketingConsent, setPhotoMarketingConsent] = useState(
     initial.photoMarketingConsent,
@@ -251,7 +252,9 @@ export function BookingOwnerStep({
             phone: phone.trim(),
             referralSource,
             referralName:
-              referralSource === "referral" ? referralName.trim() : null,
+              referralSource === "other"
+                ? otherReferralSource.trim()
+                : referralSource === "referral" ? referralName.trim() : null,
             householdAllergyStatus,
             householdAllergyDetails,
           }),
@@ -522,6 +525,19 @@ export function BookingOwnerStep({
               <p className="font-body text-[13px] leading-relaxed text-taupe">
                 We&apos;d love to know how you found us.
               </p>
+              {referralSource === "other" ? (
+                <label className="block min-w-0" htmlFor="booking-other-referral-source">
+                  <span className={bookingLabelClass}>Please specify (optional)</span>
+                  <input
+                    id="booking-other-referral-source"
+                    type="text"
+                    maxLength={80}
+                    value={otherReferralSource}
+                    onChange={(event) => setOtherReferralSource(event.target.value)}
+                    className={bookingFieldClass}
+                  />
+                </label>
+              ) : null}
               {referralSource === "referral" ? (
                 <div className="space-y-2">
                   <label className="block min-w-0" htmlFor="booking-referral-name">

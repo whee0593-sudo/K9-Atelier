@@ -26,7 +26,7 @@ export function normalizeReferralName(
   source: ReferralSourceValue,
   rawName: unknown,
 ): string | null {
-  if (source !== "referral") return null;
+  if (source !== "referral" && source !== "other") return null;
   if (typeof rawName !== "string") return null;
   const trimmed = rawName.trim();
   if (!trimmed) return null;

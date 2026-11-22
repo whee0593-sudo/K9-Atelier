@@ -92,7 +92,15 @@ export function StaffCustomerReferrals({ customerId, preview = false }: {
           <fieldset disabled={saving || preview} className="grid gap-3 sm:grid-cols-2">
             <label>
               Referral source
-              <select className={fieldClass} value={source} onChange={(event) => setSource(event.target.value)}>
+              <select
+                className={fieldClass}
+                value={source}
+                onChange={(event) => {
+                  const nextSource = event.target.value;
+                  setSource(nextSource);
+                  setName(nextSource === details.source ? details.name ?? "" : "");
+                }}
+              >
                 <option value="">Not provided</option>
                 {REFERRAL_SOURCE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
@@ -103,9 +111,9 @@ export function StaffCustomerReferrals({ customerId, preview = false }: {
               Available referral credit (USD)
               <input className={fieldClass} inputMode="decimal" value={balance} onChange={(event) => setBalance(event.target.value)} />
             </label>
-            {source === "referral" ? (
+            {source === "referral" || source === "other" ? (
               <label>
-                Referrer name
+                {source === "other" ? "Other source details" : "Referrer name"}
                 <input className={fieldClass} maxLength={80} value={name} onChange={(event) => setName(event.target.value)} />
               </label>
             ) : null}

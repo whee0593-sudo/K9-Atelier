@@ -25,7 +25,7 @@ describe("validateBookingRegisterInput", () => {
     assert.equal(input.referralName, null);
   });
 
-  it("keeps optional referral name only for referral source", () => {
+  it("keeps an optional referrer name", () => {
     const input = validateBookingRegisterInput(
       validBody({
         referralSource: "referral",
@@ -34,6 +34,14 @@ describe("validateBookingRegisterInput", () => {
     );
     assert.equal(input.referralSource, "referral");
     assert.equal(input.referralName, "Alex");
+  });
+
+  it("keeps optional details when the customer selects Other", () => {
+    const input = validateBookingRegisterInput(
+      validBody({ referralSource: "other", referralName: "  A flyer at the park  " }),
+    );
+    assert.equal(input.referralSource, "other");
+    assert.equal(input.referralName, "A flyer at the park");
   });
 
   it("allows a missing referral source", () => {
