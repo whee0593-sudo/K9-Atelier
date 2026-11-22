@@ -42,7 +42,7 @@ describe("measured driving distance", () => {
     assert.equal(measured.ok, true);
     if (!measured.ok) return;
     assert.equal(measured.distanceMiles, 12);
-    assert.equal(measured.travel.fee, 13);
+    assert.equal(measured.travel.fee, 14);
     assert.deepEqual(measured.point, customer);
 
     const priced = evaluateSubmittedBookingPrice(
@@ -58,8 +58,8 @@ describe("measured driving distance", () => {
     assert.equal(priced.ok, false);
     if (priced.ok) return;
     assert.equal(priced.code, "price_changed");
-    assert.equal(priced.quote?.travelFee, 13);
-    assert.equal(priced.quote?.estimatedTotal, 103);
+    assert.equal(priced.quote?.travelFee, 14);
+    assert.equal(priced.quote?.estimatedTotal, 104);
   });
 
   it("rejects an address beyond 25 miles", async () => {
@@ -86,12 +86,12 @@ describe("measured driving distance", () => {
   it("keeps 10, 20, and 25 mile fees on the unrounded distance", async () => {
     const cases = [
       { miles: 10, fee: 0, bookable: true },
-      { miles: 10.04, fee: 6.5, bookable: true },
-      { miles: 10.06, fee: 6.5, bookable: true },
-      { miles: 10.08, fee: 6.5, bookable: true },
-      { miles: 20, fee: 65, bookable: true },
-      { miles: 20.04, fee: 75, bookable: true },
-      { miles: 25, fee: 115, bookable: true },
+      { miles: 10.04, fee: 7, bookable: true },
+      { miles: 10.06, fee: 7, bookable: true },
+      { miles: 10.08, fee: 7, bookable: true },
+      { miles: 20, fee: 70, bookable: true },
+      { miles: 20.04, fee: 77, bookable: true },
+      { miles: 25, fee: 105, bookable: true },
       { miles: 25.01, fee: 0, bookable: false },
     ];
     for (const item of cases) {
@@ -104,7 +104,7 @@ describe("measured driving distance", () => {
       assert.equal(measured.distanceMiles, item.miles);
       assert.equal(measured.travel.fee, item.fee);
     }
-    assert.equal(calculateTravelFee(10.1).fee, 6.5);
+    assert.equal(calculateTravelFee(10.1).fee, 7);
   });
 
   it("accepts a resubmitted total that matches the measured quote", () => {
@@ -114,7 +114,7 @@ describe("measured driving distance", () => {
         addOnIds: [],
         addOnOptions: {},
         distanceMiles: 12,
-        estimatedTotal: 103,
+        estimatedTotal: 104,
       },
       12,
     );

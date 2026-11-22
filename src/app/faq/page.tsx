@@ -9,6 +9,7 @@ import { BookServiceLink } from "@/components/booking/BookServiceLink";
 import { LuxuryButton } from "@/components/luxury/LuxuryButton";
 import { PageShell } from "@/components/luxury/PageShell";
 import { FeesPoliciesSection } from "@/components/services/FeesPoliciesSection";
+import { business } from "@/lib/business";
 import { viewerCanViewServicePrices } from "@/lib/pricing-access";
 import Link from "next/link";
 
@@ -121,7 +122,7 @@ const faqGroups: Array<{ title: string; items: FaqItem[] }> = [
       {
         q: "What areas do you serve, and is there a travel fee?",
         paragraphs: [
-          "We proudly serve Jupiter Island, Jupiter, Tequesta, Palm Beach Gardens, Palm Beach, and West Palm Beach. Travel is complimentary within 10 driving miles of our service base. Additional travel fees may apply beyond that distance and will be displayed before you submit your booking request.",
+          `We proudly serve Jupiter Island, Jupiter, Tequesta, Palm Beach Gardens, Palm Beach, and West Palm Beach. Travel within ${business.serviceArea.freeRadiusMiles} driving miles is complimentary. Through ${business.serviceArea.standardServiceMiles} miles, we charge a flat rate per one-way mile beyond the complimentary radius. Partial billable miles round up. Your fee is shown before you confirm. For addresses farther than ${business.serviceArea.standardServiceMiles} miles, please contact the studio.`,
         ],
       },
       {

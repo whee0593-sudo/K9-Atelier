@@ -104,9 +104,9 @@ describe("guest booking price", () => {
       distanceMiles: 12,
     });
     assert.equal(near.ok && near.quote.travelFee, 0);
-    assert.equal(farther.ok && farther.quote.travelFee, 13);
-    assert.equal(farther.ok && farther.quote.travelFeeLabel, "$13");
-    assert.equal(farther.ok && farther.quote.estimatedTotal, 103);
+    assert.equal(farther.ok && farther.quote.travelFee, 14);
+    assert.equal(farther.ok && farther.quote.travelFeeLabel, "$14");
+    assert.equal(farther.ok && farther.quote.estimatedTotal, 104);
   });
 
   it("adds a legal add-on and prices creative color from the selected option", () => {
@@ -200,8 +200,8 @@ describe("submitted booking price", () => {
     assert.equal(result.ok, false);
     if (result.ok) return;
     assert.equal(result.code, "price_changed");
-    assert.equal(result.quote?.estimatedTotal, 103);
-    assert.equal(result.quote?.travelFee, 13);
+    assert.equal(result.quote?.estimatedTotal, 104);
+    assert.equal(result.quote?.travelFee, 14);
     assert.equal(result.quote?.servicePrice, 90);
   });
 

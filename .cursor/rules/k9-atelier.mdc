@@ -25,7 +25,7 @@ Mobile pet grooming business. Website at k9atelier.com.
 - Vaccination details and file uploads are optional. Upload, storage, or file errors must not block the profile or the booking.
 - Notification, marketing, and unrelated database failures must not block the booking. See `content/BOOKING-RULES.md`.
 - Hours: Mon–Fri 9:00–17:00 (America/New_York)
-- Service area: 10 mi free, then $6.50/mile one-way beyond, max 20 mi
+- Service area: First 10 one-way driving miles free, then $7 per additional mile through 25 mi, with partial billable miles rounded up. Contact the studio beyond 25 mi.
 - Over 45 lbs: hand stripping (no bath) + end-of-life care only
 
 ## User context

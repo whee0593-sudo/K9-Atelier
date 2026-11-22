@@ -15,12 +15,9 @@ export function FeesPoliciesSection({
   const senior = getServiceById("senior-comfort-care");
   const {
     freeRadiusMiles,
-    maxDistanceMiles,
     travelFeePerMile,
-    extendedTravelFeePerMile,
     standardServiceMiles,
   } = business.serviceArea;
-  const standardTravelPortion = (maxDistanceMiles - freeRadiusMiles) * travelFeePerMile;
   const fleaItems =
     flea && "lineItems" in flea
       ? (flea.lineItems as Array<{ name: string; rate: number; note?: string }>)
@@ -81,17 +78,11 @@ export function FeesPoliciesSection({
             <ul className="font-body space-y-2 text-base text-ink">
               <li>Complimentary within {freeRadiusMiles} miles</li>
               <li>
-                Above {freeRadiusMiles} through {maxDistanceMiles} miles:{" "}
+                Above {freeRadiusMiles} through {standardServiceMiles} miles:{" "}
                 {formatPrice(travelFeePerMile)} per one-way mile beyond{" "}
                 {freeRadiusMiles}
               </li>
-              <li>
-                Above {maxDistanceMiles} through {standardServiceMiles} miles:{" "}
-                {formatPrice(standardTravelPortion)} plus{" "}
-                {formatPrice(extendedTravelFeePerMile)} per mile beyond{" "}
-                {maxDistanceMiles}
-              </li>
-              <li>One-way GPS driving distance. The travel fee is rounded to the nearest dollar</li>
+              <li>Based on one-way GPS driving distance. Partial billable miles round up.</li>
               <li>
                 Beyond {standardServiceMiles} miles, please contact us. Online
                 booking is not available.

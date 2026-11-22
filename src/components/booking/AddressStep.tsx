@@ -31,9 +31,7 @@ export function AddressStep({
 
   const {
     freeRadiusMiles,
-    maxDistanceMiles,
     travelFeePerMile,
-    extendedTravelFeePerMile,
     standardServiceMiles,
   } = business.serviceArea;
 
@@ -90,11 +88,9 @@ export function AddressStep({
       </h2>
       <p className="mt-2 text-sm text-text-muted">
         Enter the address where we should come. Travel is complimentary within{" "}
-        {freeRadiusMiles} miles. Above that through {maxDistanceMiles} miles,{" "}
-        {formatPrice(travelFeePerMile)} per one-way mile beyond {freeRadiusMiles}.
-        Above {maxDistanceMiles} through {standardServiceMiles} miles,{" "}
-        {formatPrice(extendedTravelFeePerMile)} per mile beyond {maxDistanceMiles},
-        added to the fee through {maxDistanceMiles} miles. Beyond{" "}
+        {freeRadiusMiles} miles. Through {standardServiceMiles} miles, the fee is{" "}
+        {formatPrice(travelFeePerMile)} per one-way driving mile beyond the first{" "}
+        {freeRadiusMiles} miles. Partial billable miles round up. Beyond{" "}
         {standardServiceMiles} miles, please contact us.
       </p>
 

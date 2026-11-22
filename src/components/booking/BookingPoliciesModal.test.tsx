@@ -43,13 +43,12 @@ describe("concise booking policy modal", () => {
     assert.match(html, /Travel fees still apply/);
     assert.match(html, /no charge or rescheduling penalty/);
   });
-  it("keeps travel tiers and price visibility", () => {
+  it("shows the flat travel rate only when pricing is visible", () => {
     const html = render("travel", true);
-    assert.match(html, /\$6\.50\/mile beyond 10/);
-    assert.match(html, /\$65 \+ \$10\/mile beyond 20/);
+    assert.match(html, /\$7\/mile beyond 10/);
     assert.match(html, /one-way driving distance/);
-    assert.match(html, /nearest dollar/);
-    assert.equal(render("travel").includes("$6.50"), false);
+    assert.match(html, /Partial billable miles round up/);
+    assert.equal(render("travel").includes("$7"), false);
   });
   it("keeps treatment, sanitation and extra-care fee visibility", () => {
     assert.match(render("flea", true), /Medicated Treatment/);

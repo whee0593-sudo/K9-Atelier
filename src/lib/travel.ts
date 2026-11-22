@@ -38,49 +38,16 @@ export function formatTravelMiles(miles: number) {
   return display.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
 
-/**
- * One-way travel fee from the service base.
- * Bands use the original GPS miles. Round each chargeable portion up to a full mile:
- * 0–10 miles: $0
- * above 10 through 20: ceil(distance − 10) × $6.50
- * above 20 through 25: $65 + ceil(distance − 20) × $10
- * Beyond 25: no automatic fee
- * Only the final dollar amount is rounded.
- */
-function travelFeeAmount(miles: number) {
-  const {
-    freeRadiusMiles,
-    travelFeePerMile,
-    maxDistanceMiles,
-    extendedTravelFeePerMile,
-    standardServiceMiles,
-  } = business.serviceArea;
-
-  if (miles <= freeRadiusMiles || miles > standardServiceMiles) {
-    return 0;
-  }
-
-  if (miles <= maxDistanceMiles) {
-    return Math.ceil(miles - freeRadiusMiles) * travelFeePerMile;
-  }
-
-  const throughStandardMiles =
-    (maxDistanceMiles - freeRadiusMiles) * travelFeePerMile;
-  const extendedMiles = miles - maxDistanceMiles;
-  return throughStandardMiles + Math.ceil(extendedMiles) * extendedTravelFeePerMile;
-}
-
 export function calculateTravelFee(distanceMiles: number): TravelQuote {
   const {
     freeRadiusMiles,
-    maxDistanceMiles: standardRateThroughMiles,
+    maxDistanceMiles,
+    travelFeePerMile,
     standardServiceMiles,
   } = business.serviceArea;
 
   const miles = distanceMiles;
   const withinFreeRadius = Number.isFinite(miles) && miles <= freeRadiusMiles;
-  const withinStandardRate =
-    Number.isFinite(miles) && miles <= standardRateThroughMiles;
   const withinServiceArea =
     Number.isFinite(miles) && miles <= standardServiceMiles;
 
@@ -91,9 +58,9 @@ export function calculateTravelFee(distanceMiles: number): TravelQuote {
   if (withinFreeRadius) {
     zone = "complimentary";
   } else if (withinServiceArea) {
-    zone = withinStandardRate ? "standard" : "extended";
+    zone = miles <= maxDistanceMiles ? "standard" : "extended";
     billableMiles = Math.ceil(miles - freeRadiusMiles);
-    fee = travelFeeAmount(miles);
+    fee = billableMiles * travelFeePerMile;
   }
 
   const shown = formatTravelMiles(miles);
@@ -102,10 +69,8 @@ export function calculateTravelFee(distanceMiles: number): TravelQuote {
     summary = `This address is outside our standard ${standardServiceMiles}-mile service area. Please contact us to inquire about availability.`;
   } else if (zone === "complimentary") {
     summary = `${shown} mi from base — Complimentary travel`;
-  } else if (zone === "standard") {
-    summary = `${shown} mi from base — travel fee ${formatPrice(fee)}.`;
   } else {
-    summary = `Extended Service Area. An extended travel fee applies to this location. Travel fee ${formatPrice(fee)}.`;
+    summary = `${shown} mi from base — travel fee ${formatPrice(fee)}.`;
   }
 
   return {

@@ -121,10 +121,10 @@ export function bookingTravelAreaCopy(zone: string, showPrices: boolean) {
     };
   }
   return {
-    heading: "Extended Service Area",
+    heading: "Travel Fee",
     body: showPrices
-      ? "An extended travel fee applies to this location."
-      : "An extended travel fee applies. The fee will appear on Review & Confirm.",
+      ? "A travel fee applies to this location."
+      : "A travel fee applies. The fee will appear on Review & Confirm.",
     showFee: showPrices,
   };
 }

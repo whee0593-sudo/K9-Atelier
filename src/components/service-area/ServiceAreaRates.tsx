@@ -1,10 +1,8 @@
 import { business, formatPrice } from "@/lib/business";
+import { calculateTravelFee } from "@/lib/travel";
 
 export function ServiceAreaRates({ showPrices = false }: { showPrices?: boolean }) {
   const { serviceArea } = business;
-  const standardTravelPortion =
-    (serviceArea.maxDistanceMiles - serviceArea.freeRadiusMiles) *
-    serviceArea.travelFeePerMile;
 
   return (
     <>
@@ -19,42 +17,37 @@ export function ServiceAreaRates({ showPrices = false }: { showPrices?: boolean 
           <p className="text-3xl font-semibold text-gold-dark">
             {showPrices
               ? formatPrice(serviceArea.travelFeePerMile)
-              : `${serviceArea.freeRadiusMiles}–${serviceArea.maxDistanceMiles}`}
+              : `${serviceArea.freeRadiusMiles}–${serviceArea.standardServiceMiles}`}
           </p>
           <p className="mt-2 text-sm text-text-muted">
             {showPrices
-              ? `Per mile from ${serviceArea.freeRadiusMiles} to ${serviceArea.maxDistanceMiles} miles`
+              ? `Per one-way driving mile beyond the first ${serviceArea.freeRadiusMiles}, through ${serviceArea.standardServiceMiles} miles`
               : `Miles where a travel fee may apply. The amount is shown when you confirm.`}
           </p>
         </div>
         <div className="rounded-2xl border border-lavender/30 bg-lavender-light/40 p-6">
           <p className="text-3xl font-semibold text-gold-dark">
-            {showPrices
-              ? formatPrice(serviceArea.extendedTravelFeePerMile)
-              : `${serviceArea.maxDistanceMiles}–${serviceArea.standardServiceMiles}`}
+            Over {serviceArea.standardServiceMiles} mi
           </p>
-          <p className="mt-2 text-sm text-text-muted">
-            {showPrices
-              ? `Per mile from ${serviceArea.maxDistanceMiles} to ${serviceArea.standardServiceMiles} miles`
-              : "Miles where an extended travel fee may apply."}
-          </p>
+          <p className="mt-2 text-sm text-text-muted">Contact the studio</p>
         </div>
       </div>
 
       {showPrices ? (
         <div className="mt-10 rounded-2xl border border-lavender/30 bg-cream p-6">
           <h2 className="text-lg font-medium text-text">Examples</h2>
+          {[14, 22].map((miles) => {
+            const quote = calculateTravelFee(miles);
+            return (
+              <p key={miles} className="mt-3 text-sm text-text-muted">
+                {miles} miles: {quote.billableMiles} billable miles ×{" "}
+                {formatPrice(serviceArea.travelFeePerMile)} ={" "}
+                <strong>{formatPrice(quote.fee)}</strong>.
+              </p>
+            );
+          })}
           <p className="mt-3 text-sm text-text-muted">
-            14 miles: 4 miles beyond the free zone ×{" "}
-            {formatPrice(serviceArea.travelFeePerMile)} = <strong>$26</strong>.
-          </p>
-          <p className="mt-3 text-sm text-text-muted">
-            22 miles: {formatPrice(standardTravelPortion)} through{" "}
-            {serviceArea.maxDistanceMiles} miles, plus 2 ×{" "}
-            {formatPrice(serviceArea.extendedTravelFeePerMile)} = <strong>$85</strong>.
-          </p>
-          <p className="mt-3 text-sm text-text-muted">
-            Fees are rounded to the nearest dollar. Beyond{" "}
+            Partial billable miles round up. Beyond{" "}
             {serviceArea.standardServiceMiles} miles, please contact us. Online
             booking is not available.
           </p>

@@ -27,7 +27,7 @@
 | 项目 | 规则 |
 |------|------|
 | 免费半径 | **10 英里**内不加路费 |
-| 超出部分 | **10–20 英里：$6.50 / 单程英里；20–25 英里：$65 + $10 / 英里；超过 25 英里不自动报价** |
+| 超出部分 | **超过 10 至 25 英里：超出 10 英里的部分 $7 / 单程英里，不足一英里按一整英里计；超过 25 英里不自动报价** |
 | 最远自助预约 | **25 英里**；超过 25 英里请联系工作室 |
 
 ### 预约政策
@@ -53,7 +53,7 @@
 | 基础洗护与精剪 | Signature Bath & Care、Custom Full Haircut & Styling |
 | 专项特色护理 | Hand Stripping、Senior Comfort Care、Creative Accent Coloring |
 | 水疗 SPA | Dead Sea Mud Bath、Aromatherapy Oil Bath、Sensitive Skin Treatment |
-| 附加费 | Travel Fee ($6.50/英里)、Behavior Fee ($25–50+) |
+| 附加费 | Travel Fee ($7/英里)、Behavior Fee ($25–50+) |
 
 定价按 **15 / 30 / 45 lbs** 三档体重阶梯；手剥毛按 **$120/小时**；高龄护理为 **+$30–50** 附加。
 

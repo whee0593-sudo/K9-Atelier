@@ -1,3 +1,4 @@
+import { formatPrice } from "@/lib/format-price";
 import { cancellationPolicySummary } from "@/lib/appointments/policy-copy";
 import businessData from "../../content/business.json";
 
@@ -82,7 +83,7 @@ export function getBrandPublicLinks() {
   };
 }
 
-export { formatPrice } from "@/lib/format-price";
+export { formatPrice };
 
 export function formatDuration(min: number, max?: number) {
   if (max && max !== min) return `${min}–${max} min`;
@@ -121,16 +122,13 @@ function getCommunitiesServedProse() {
 export function getServiceAreaFaqParagraphs() {
   const {
     freeRadiusMiles,
-    maxDistanceMiles,
     travelFeePerMile,
-    extendedTravelFeePerMile,
     standardServiceMiles,
   } = business.serviceArea;
-  const standardPortion = (maxDistanceMiles - freeRadiusMiles) * travelFeePerMile;
 
   return [
     `K9 Atelier serves ${getCommunitiesServedProse()}.`,
-    `Travel is complimentary within ${freeRadiusMiles} driving miles. Above ${freeRadiusMiles} through ${maxDistanceMiles} miles, the fee is $${travelFeePerMile} per one-way mile beyond ${freeRadiusMiles}. Above ${maxDistanceMiles} through ${standardServiceMiles} miles, the fee is $${standardPortion} plus $${extendedTravelFeePerMile} per mile beyond ${maxDistanceMiles}. The amount is rounded to the nearest dollar and shown before you confirm. Beyond ${standardServiceMiles} miles, please contact us.`,
+    `Travel is complimentary within ${freeRadiusMiles} driving miles. Through ${standardServiceMiles} miles, the fee is ${formatPrice(travelFeePerMile)} per one-way driving mile beyond the first ${freeRadiusMiles} miles. Partial billable miles round up, and the fee is shown before you confirm. Beyond ${standardServiceMiles} miles, please contact us.`,
   ] as const;
 }
 

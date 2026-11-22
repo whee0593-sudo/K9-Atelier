@@ -374,7 +374,7 @@ export function BookingLocationTimeStep({
                     Distance · {formatTravelMiles(quote.distanceMiles)} miles
                   </p>
                   <p className="font-body mt-2 text-sm text-ink">
-                    Extended Travel · +{formatPrice(quote.fee)}
+                    Travelling Fee · +{formatPrice(quote.fee)}
                   </p>
                 </>
               ) : null}

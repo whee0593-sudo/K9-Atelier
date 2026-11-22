@@ -314,14 +314,10 @@ export function BookingPoliciesModal({
               {showPrices ? (
                 <div>
                   <PolicyRow
-                    label={`Over ${business.serviceArea.freeRadiusMiles}–${business.serviceArea.maxDistanceMiles} miles`}
+                    label={`Above ${business.serviceArea.freeRadiusMiles} through ${business.serviceArea.standardServiceMiles} miles`}
                     value={`${formatPrice(business.serviceArea.travelFeePerMile)}/mile beyond ${business.serviceArea.freeRadiusMiles}`}
                   />
-                  <PolicyRow
-                    label={`Over ${business.serviceArea.maxDistanceMiles}–${business.serviceArea.standardServiceMiles} miles`}
-                    value={`${formatPrice((business.serviceArea.maxDistanceMiles - business.serviceArea.freeRadiusMiles) * business.serviceArea.travelFeePerMile)} + ${formatPrice(business.serviceArea.extendedTravelFeePerMile)}/mile beyond ${business.serviceArea.maxDistanceMiles}`}
-                  />
-                  <p className="mt-2">Based on one-way driving distance, rounded to the nearest dollar.</p>
+                  <p className="mt-2">Based on one-way driving distance. Partial billable miles round up.</p>
                 </div>
               ) : (
                 <p>Your travel fee, if any, is shown on Review & Confirm.</p>

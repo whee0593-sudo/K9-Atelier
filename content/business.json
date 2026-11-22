@@ -71,10 +71,9 @@
   ],
   "serviceArea": {
     "freeRadiusMiles": 10,
-    "travelFeePerMile": 6.5,
-    "travelFeeNote": "One-way miles: 0–10 complimentary; the portion above 10 through 20 at $6.50/mile; the portion above 20 through 25 at $10/mile. Beyond 25 miles, contact the studio. Any partial billable mile counts as a full mile.",
+    "travelFeePerMile": 7,
+    "travelFeeNote": "The first 10 one-way driving miles are complimentary. Through 25 miles, each mile beyond 10 is $7. Partial billable miles round up. Beyond 25 miles, contact the studio.",
     "maxDistanceMiles": 20,
-    "extendedTravelFeePerMile": 10,
     "standardServiceMiles": 25,
     "communitiesServed": "Jupiter · Palm Beach Gardens · West Palm Beach",
     "publicBaseLabel": "Palm Beach Gardens, FL area",
@@ -301,9 +300,9 @@
       "id": "travel-fee",
       "name": "Out-of-Service-Area Travel Fee",
       "type": "travel",
-      "rate": 6.5,
+      "rate": 7,
       "unit": "per_one_way_mile_beyond_free_radius",
-      "description": "One-way GPS driving distance from our service base. Complimentary within 10 miles. Above 10 through 20 miles: $6.50 per mile beyond 10. Above 20 through 25 miles: $65 plus $10 per mile beyond 20. Beyond 25 miles, please contact the studio. Any partial billable mile counts as a full mile. The fee covers the grooming van's fuel, wear, and round-trip travel time."
+      "description": "One-way GPS driving distance from our service base. Complimentary within 10 miles. Above 10 through 25 miles, the fee is $7 per mile beyond 10. Beyond 25 miles, please contact the studio. Any partial billable mile counts as a full mile. The fee covers the grooming van's fuel, wear, and round-trip travel time."
     }
   ],
   "serviceCategories": [
