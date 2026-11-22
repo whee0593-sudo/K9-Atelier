@@ -35,7 +35,9 @@ type LoadState =
 
 function sortCustomers(items: StaffCustomerRecord[]) {
   return [...items].sort((left, right) =>
-    left.profile.email.localeCompare(right.profile.email),
+    customerLabel(left.profile).localeCompare(customerLabel(right.profile), "en", {
+      sensitivity: "base",
+    }),
   );
 }
 
@@ -873,7 +875,13 @@ export function CustomerRecordCard({
     ? "Owner"
     : customer.kind === "admin"
       ? "Administrator"
-      : "Customer";
+      : customer.pets.map((pet) => pet.name.trim()).filter(Boolean).join(", ");
+  const accountDetails = [
+    roleLabel,
+    customer.frozen ? "Frozen" : "",
+    visibleAccountEmail(profile.email),
+    profile.phone,
+  ].filter(Boolean).join(" · ");
 
   async function handleDelete() {
     const label = customerLabel(customer.profile);
@@ -976,14 +984,9 @@ export function CustomerRecordCard({
           className="min-w-0 flex-1 text-left"
         >
           <p className="font-medium text-text">{customerLabel(profile)}</p>
-          <p className="mt-1 text-sm text-text-muted">
-            {roleLabel}
-            {customer.frozen ? " · Frozen" : ""}
-            {visibleAccountEmail(profile.email)
-              ? ` · ${visibleAccountEmail(profile.email)}`
-              : ""}
-            {profile.phone ? ` · ${profile.phone}` : ""}
-          </p>
+          {accountDetails ? (
+            <p className="mt-1 text-sm text-text-muted">{accountDetails}</p>
+          ) : null}
         </button>
         <div className="flex shrink-0 items-center gap-2">
           {customer.kind === "customer" && !customer.frozen ? (
@@ -1341,10 +1344,12 @@ export function CustomerRecordsPanel({
     );
   }
 
+  const sortedCustomers = sortCustomers(loadState.customers);
+
   if (customersOnly) {
     return (
       <div className="space-y-3">
-        {renderCards(loadState.customers, "No customer accounts yet.")}
+        {renderCards(sortedCustomers, "No customer accounts yet.")}
       </div>
     );
   }
@@ -1396,7 +1401,7 @@ export function CustomerRecordsPanel({
                   );
                   return {
                     ...current,
-                    customers: sortCustomers([...without, customer]),
+                    customers: [...without, customer],
                   };
                 });
               }}
@@ -1404,7 +1409,7 @@ export function CustomerRecordsPanel({
           </div>
         ))}
       </section>
-      {renderList("Customers", loadState.customers, "No customer accounts yet.")}
+      {renderList("Customers", sortedCustomers, "No customer accounts yet.")}
     </div>
   );
 }

@@ -68,6 +68,7 @@ describe("CustomerRecordCard actions", () => {
     assert.match(html, />Freeze</);
     assert.match(html, /Book for customer/);
     assert.match(html, /Ada Lovelace/);
+    assert.match(html, />ada@example\.com · \+15615550123</);
     assert.match(
       html,
       /\/admin\/book-for-customer\?customerId=11111111-1111-4111-8111-111111111111/,
@@ -333,7 +334,7 @@ describe("CustomerRecordCard actions", () => {
       />,
     );
 
-    assert.match(html, /Gigi/);
+    assert.match(html, />Gigi · ada@example\.com/);
     assert.match(html, /12 years/);
     assert.match(html, /Last service Jun 1, 2020 · 10–11 AM/);
     assert.match(html, /Open Gigi profile/);
@@ -510,11 +511,19 @@ describe("Customer list for booking on file", () => {
               emergencyContactRelationship: "",
             },
           }),
+          sampleCustomer({
+            profile: {
+              id: "33333333-3333-4333-8333-333333333333",
+              firstName: "Zoe",
+              lastName: "Brown",
+              email: "aaa@example.com",
+            },
+          }),
           sampleCustomer(),
         ]}
       />,
     );
-    assert.match(html, /Ada Lovelace/);
+    assert.match(html, /Ada Lovelace[\s\S]*Zoe Brown/);
     assert.match(html, /Book for customer/);
     assert.doesNotMatch(html, /penny@k9atelier.com/);
     assert.doesNotMatch(html, />Administrators</);
