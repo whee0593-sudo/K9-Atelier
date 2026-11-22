@@ -68,9 +68,9 @@ export function buildStaffInboundForwardSms(input: {
     ownerName: input.ownerName,
     petNames: input.petNames,
   });
-  const text = inboundReplyTextForStaff({
-    body: input.body,
-    mediaCount: input.mediaCount ?? 0,
-  });
+  const body = input.body.trim();
+  const text = (input.mediaCount ?? 0) > 0
+    ? [body, "*Photo*"].filter(Boolean).join("\n\n")
+    : body;
   return `K9 ATELIER reply from ${label} ${input.phone}:\n\n${text}`;
 }

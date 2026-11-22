@@ -41,7 +41,20 @@ describe("staff SMS inbox copy", () => {
         phone: "+15615550131",
         mediaCount: 1,
       }),
-      "K9 ATELIER reply from Bella Jane Doe +15615550131:\n\nPhoto",
+      "K9 ATELIER reply from Bella Jane Doe +15615550131:\n\n*Photo*",
+    );
+  });
+
+  it("keeps the caption when forwarding a reply with photos", () => {
+    assert.equal(
+      buildStaffInboundForwardSms({
+        ownerName: "Jane Doe",
+        petNames: ["Bella"],
+        body: "Here are Bella's photos.\nSee you tomorrow!",
+        phone: "+15615550131",
+        mediaCount: 2,
+      }),
+      "K9 ATELIER reply from Bella Jane Doe +15615550131:\n\nHere are Bella's photos.\nSee you tomorrow!\n\n*Photo*",
     );
   });
 

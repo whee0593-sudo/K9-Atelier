@@ -84,7 +84,6 @@ export async function forwardInboundSmsToStaff(input: {
       phone: customerPhone,
       mediaCount: mediaUrls.length,
     }),
-    mediaUrls,
   }));
   if (sent) {
     await rememberStaffReplyTarget({
