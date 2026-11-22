@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminStaffSignInLink } from "@/components/admin/AdminStaffSignInLink";
+import { CustomerSignOutButton } from "@/components/auth/CustomerSignOutButton";
 import { SiteAccessNavigation } from "@/components/auth/SiteAccessNavigation";
 import { business } from "@/lib/business";
 import { isPrivacyGateActive } from "@/lib/site-access";
@@ -18,7 +19,10 @@ export async function AdminStaffBanner() {
           Signed in as{" "}
           <span className="font-medium">{session.user.email}</span>
         </p>
-        <SiteAccessNavigation privacyMode={privacyMode} />
+        <div className="flex flex-wrap items-center gap-x-4">
+          <SiteAccessNavigation privacyMode={privacyMode} />
+          <CustomerSignOutButton redirectTo="/login?next=/admin" />
+        </div>
       </div>
     );
   }
@@ -39,8 +43,9 @@ export async function AdminStaffBanner() {
             ? `Signed in as ${user.email}. Penny still needs to confirm this admin account before you can use these tools.`
             : `Signed in as ${user.email}, but this account is not set up for admin tools. Sign in with your team email instead.`}
         </p>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <AdminStaffSignInLink />
+          <CustomerSignOutButton redirectTo="/login?next=/admin" />
         </div>
       </div>
     );
