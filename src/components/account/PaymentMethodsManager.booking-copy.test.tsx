@@ -62,18 +62,16 @@ describe("BookingPaymentStep copy", () => {
       <BookingPaymentStep onBack={() => {}} onComplete={() => {}} />,
     );
     const title = html.indexOf("Secure Your Appointment");
-    const subtitle = html.indexOf(
-      "A card on file is required to reserve your appointment. No charge today.",
+    const notice = html.match(
+      /<p class="[^"]*font-bold[^"]*text-red-700[^"]*">A card on file is required to reserve your appointment\.<br\/>You&#x27;ll NOT be charged today\.<br\/>We take cash or Zelle payment AFTER the service is completed\.<br\/>Thank you!<\/p>/,
     );
-    const preference = html.indexOf("We prefer cash or Zelle payment. Thank you!");
     const agreement = html.indexOf("I have read and agreed to");
     const continueButton = html.indexOf("Continue");
 
     assert.ok(title >= 0);
     assert.equal(html.includes(">Payment</p>"), false);
-    assert.ok(subtitle > title);
-    assert.ok(preference > subtitle);
-    assert.ok(agreement > preference);
+    assert.ok(notice?.index !== undefined && notice.index > title);
+    assert.ok(agreement > notice.index);
     assert.ok(continueButton > agreement);
     assert.match(html, /href="\/faq#fees-policies"/);
     assert.match(html, /type="checkbox" required=""/);

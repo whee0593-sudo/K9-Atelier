@@ -150,11 +150,11 @@ export function BookingPaymentStep({
       <h2 className="font-display mt-8 text-3xl text-ink md:text-4xl">
         Secure Your Appointment
       </h2>
-      <p className="font-body mt-3 max-w-xl text-sm leading-relaxed text-taupe">
-        A card on file is required to reserve your appointment. No charge today.
-      </p>
-      <p className="font-body mt-2 max-w-xl text-sm leading-relaxed text-taupe">
-        We prefer cash or Zelle payment. Thank you!
+      <p className="font-body mt-3 max-w-xl text-sm font-bold leading-relaxed text-red-700">
+        A card on file is required to reserve your appointment.<br />
+        You&apos;ll NOT be charged today.<br />
+        We take cash or Zelle payment AFTER the service is completed.<br />
+        Thank you!
       </p>
 
       {loading ? (
