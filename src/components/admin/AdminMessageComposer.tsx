@@ -274,6 +274,13 @@ export function AdminMessageComposer({
   const [importingPhotos, setImportingPhotos] = useState(false);
   const [importNote, setImportNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const replyDialog = useRef<HTMLDialogElement>(null);
+  const replyInput = useRef<HTMLTextAreaElement>(null);
+  const [replyTarget, setReplyTarget] = useState<StaffSmsInboxItem | null>(null);
+  const [reply, setReply] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
+  const [replyError, setReplyError] = useState<string | null>(null);
+  const [replyStatus, setReplyStatus] = useState("");
 
   const load = useCallback(async () => {
     if (preview) {
@@ -473,6 +480,72 @@ export function AdminMessageComposer({
     }
   }
 
+  function openReply(item: StaffSmsInboxItem) {
+    setReplyTarget(item);
+    setReply("");
+    setReplyError(null);
+    setReplyStatus("");
+    replyDialog.current?.showModal();
+    replyInput.current?.focus();
+  }
+
+  async function sendReply(event: React.FormEvent) {
+    event.preventDefault();
+    const message = reply.trim();
+    if (
+      sendingReply ||
+      !replyTarget ||
+      !isValidSmsPhone(replyTarget.phone) ||
+      !message ||
+      message.length > STAFF_SMS_MAX_CHARS
+    ) return;
+
+    setSendingReply(true);
+    setReplyError(null);
+    try {
+      if (preview) {
+        const sent: StaffSmsInboxItem = {
+          customerName: replyTarget.customerName,
+          petNames: replyTarget.petNames,
+          phone: replyTarget.phone,
+          mediaUrls: [],
+          id: `preview-reply-${Date.now()}`,
+          direction: "outbound",
+          body: buildStaffCustomerSms(message),
+          createdAt: new Date().toISOString(),
+        };
+        setInbox((current) => [sent, ...current]);
+      } else {
+        const response = await fetch("/api/admin/messages", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: replyTarget.phone, message }),
+        });
+        if (!response.ok) {
+          const body = (await response.json()) as { error?: string };
+          setReplyError(body.error ?? "Could not send the reply.");
+          return;
+        }
+      }
+      replyDialog.current?.close();
+      setReplyStatus(preview ? "Preview reply added." : "Reply sent.");
+    } catch {
+      setReplyError("Could not send the reply.");
+      return;
+    } finally {
+      setSendingReply(false);
+    }
+
+    if (!preview) {
+      try {
+        await load();
+      } catch {
+        setReplyStatus("Reply sent. Could not refresh texts.");
+      }
+    }
+  }
+
   async function sendIntro(phone: string) {
     const trimmed = phone.trim();
     if (!trimmed || sendingIntro) return;
@@ -521,6 +594,50 @@ export function AdminMessageComposer({
 
   return (
     <div className="space-y-8">
+      <dialog
+        ref={replyDialog}
+        aria-labelledby="sms-reply-title"
+        onCancel={(event) => {
+          if (sendingReply) event.preventDefault();
+        }}
+        className="m-auto w-[calc(100%_-_2rem)] max-w-md rounded-2xl border border-lavender/40 bg-cream p-6 text-text backdrop:bg-black/40"
+      >
+        <form onSubmit={sendReply} className="space-y-4">
+          <h3 id="sms-reply-title" className="font-medium text-gold-dark">
+            Reply to {replyTarget?.phone}
+          </h3>
+          <textarea
+            ref={replyInput}
+            aria-label="Reply message"
+            rows={4}
+            maxLength={STAFF_SMS_MAX_CHARS}
+            value={reply}
+            disabled={sendingReply}
+            onChange={(event) => setReply(event.target.value)}
+            className="w-full rounded-xl border border-lavender/40 bg-cream px-4 py-2.5 text-sm"
+          />
+          {replyError ? (
+            <p role="alert" className="text-sm text-red-700">{replyError}</p>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              disabled={sendingReply}
+              onClick={() => replyDialog.current?.close()}
+              className="rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={sendingReply || !reply.trim()}
+              className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white hover:bg-gold-dark disabled:opacity-50"
+            >
+              {sendingReply ? "Sending…" : "Send"}
+            </button>
+          </div>
+        </form>
+      </dialog>
       <section className="rounded-2xl border border-lavender/30 bg-cream p-6">
         <h3 className="font-medium text-gold-dark">Recent callers</h3>
         <form
@@ -794,6 +911,9 @@ export function AdminMessageComposer({
         {importNote ? (
           <p className="mt-3 text-sm text-text-muted">{importNote}</p>
         ) : null}
+        <p role="status" className="empty:hidden mt-2 text-sm text-text-muted">
+          {replyStatus}
+        </p>
         {inbox.length === 0 ? (
           <p className="mt-3 text-sm text-text-muted">
             Customer replies and photos appear here. They are also forwarded to
@@ -805,40 +925,58 @@ export function AdminMessageComposer({
             {inbox.map((item) => (
               <li
                 key={item.id}
-                className="rounded-xl border border-lavender/30 bg-cream px-4 py-3 text-sm"
+                className="flex flex-col gap-3 rounded-xl border border-lavender/30 bg-cream px-4 py-3 text-sm sm:flex-row sm:items-start sm:justify-between"
               >
-                <p className="font-medium text-text">
-                  {item.direction === "outbound" ? "Sent" : "Reply"}
-                  {item.petNames
-                    ? ` · ${item.petNames} · ${item.customerName}`
-                    : ` · ${item.customerName}`}
-                  {` · ${item.phone}`}
-                </p>
-                {item.body ? (
-                  <p className="mt-1 whitespace-pre-wrap text-text-muted">{item.body}</p>
-                ) : null}
-                {item.mediaUrls?.length ? (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {item.mediaUrls.map((url) => (
-                      <a
-                        key={url}
-                        href={inboxMediaSrc(url, preview)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block overflow-hidden rounded-xl border border-lavender/40"
-                      >
-                        <img
-                          src={inboxMediaSrc(url, preview)}
-                          alt="Customer photo"
-                          className="h-36 w-36 object-cover"
-                        />
-                      </a>
-                    ))}
-                  </div>
-                ) : null}
-                <p className="mt-2 text-xs text-text-muted">
-                  {new Date(item.createdAt).toLocaleString()}
-                </p>
+                <div className="min-w-0">
+                  <p className="font-medium text-text">
+                    {item.direction === "outbound" ? "Sent" : "Reply"}
+                    {item.petNames
+                      ? ` · ${item.petNames} · ${item.customerName}`
+                      : ` · ${item.customerName}`}
+                    {` · ${item.phone}`}
+                  </p>
+                  {item.body ? (
+                    <p className="mt-1 whitespace-pre-wrap break-words text-text-muted">{item.body}</p>
+                  ) : null}
+                  {item.mediaUrls?.length ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {item.mediaUrls.map((url) => (
+                        <a
+                          key={url}
+                          href={inboxMediaSrc(url, preview)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block overflow-hidden rounded-xl border border-lavender/40"
+                        >
+                          <img
+                            src={inboxMediaSrc(url, preview)}
+                            alt="Customer photo"
+                            className="h-36 w-36 object-cover"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  ) : null}
+                  <p className="mt-2 text-xs text-text-muted">
+                    {new Date(item.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-start justify-end gap-2 sm:shrink-0">
+                  <button
+                    type="button"
+                    disabled={!isValidSmsPhone(item.phone)}
+                    onClick={() => openReply(item)}
+                    className="rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text hover:border-gold/40 disabled:opacity-50"
+                  >
+                    Reply
+                  </button>
+                  <CallCustomerButton
+                    phone={item.phone}
+                    label="Call back"
+                    disabled={!isValidSmsPhone(item.phone)}
+                    preview={preview}
+                  />
+                </div>
               </li>
             ))}
           </ul>
