@@ -1,4 +1,4 @@
-import { preferenceFromStart, type TimePreference } from "@/lib/booking-schedule";
+import type { TimePreference } from "@/lib/booking-schedule";
 
 /** Shown when scheduling has not produced a window. Never a reason to reject a booking. */
 export const ARRIVAL_WINDOW_PENDING_LABEL = "Arrival window to be confirmed";
@@ -27,7 +27,7 @@ export type ResolvedBookingSchedule = {
  */
 export function resolveArrivalForBooking(
   assignment: ArrivalWindowResult,
-  slotStartMinutes: number,
+  _slotStartMinutes: number,
 ): ResolvedBookingSchedule | { error: "slot_unavailable" } {
   if (!("error" in assignment)) {
     return {
@@ -37,19 +37,7 @@ export function resolveArrivalForBooking(
     };
   }
 
-  if (assignment.error === "slot_unavailable") {
-    return { error: "slot_unavailable" };
-  }
-
-  console.error(
-    "Arrival window was not generated; booking continues without it.",
-    assignment.error,
-  );
-  return {
-    appointmentTime: null,
-    scheduledStart: slotStartMinutes,
-    timePreference: preferenceFromStart(slotStartMinutes),
-  };
+  return { error: "slot_unavailable" };
 }
 
 export function displayAppointmentTime(time: string | null | undefined) {

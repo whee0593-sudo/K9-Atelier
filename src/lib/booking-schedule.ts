@@ -1,3 +1,4 @@
+import type { RouteLookup } from "./geo";
 import { business } from "@/lib/business";
 import {
   getUpcomingBookableDates,
@@ -82,31 +83,6 @@ export function inferZoneIdFromZip(zip: string) {
   return null;
 }
 
-export function haversineMiles(from: GeoPoint, to: GeoPoint) {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const dLat = toRad(to.lat - from.lat);
-  const dLon = toRad(to.lon - from.lon);
-  const lat1 = toRad(from.lat);
-  const lat2 = toRad(to.lat);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-  return 3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-export function travelMinutesBetween(
-  from: GeoPoint,
-  to: GeoPoint,
-  bufferMinutes = getRoutingConfig().travelBufferMinutes,
-) {
-  const miles = haversineMiles(from, to);
-  return Math.max(bufferMinutes, Math.ceil(miles * 2.5));
-}
-
-function snapUp(minutes: number, step = 15) {
-  return Math.ceil(minutes / step) * step;
-}
-
 function formatClockLabel(totalMinutes: number) {
   const hour24 = Math.floor(totalMinutes / 60);
   const minute = totalMinutes % 60;
@@ -146,23 +122,17 @@ export function isMorningStart(startMinutes: number, morningEndsAt: number) {
   return startMinutes < morningEndsAt;
 }
 
-function stopPoint(stop: RouteStop, fallback: GeoPoint): GeoPoint {
-  if (stop.lat != null && stop.lon != null) {
-    return { lat: stop.lat, lon: stop.lon };
-  }
-  return fallback;
-}
-
 export function addressAllowedForPlan(
   plan: DayPlanRecord | null,
   zip: string,
   point: GeoPoint,
+  route?: RouteLookup,
 ) {
   if (!plan) return true;
   if (plan.zoneId === NEARBY_ZONE_ID) {
     if (!plan.anchor) return false;
     return (
-      haversineMiles(plan.anchor, point) <=
+      (route?.(plan.anchor, point)?.miles ?? Infinity) <=
       getRoutingConfig().clusterRadiusMiles
     );
   }
@@ -203,64 +173,43 @@ export function planFromFirstStop(dateValue: string, zip: string, point: GeoPoin
   };
 }
 
-export function existingStopsConflictWithZone(
-  stops: Array<{ zip?: string | null; lat: number | null; lon: number | null }>,
-  zoneId: string,
-  samplePoint?: GeoPoint,
-) {
-  if (zoneId === "auto" || zoneId === NEARBY_ZONE_ID) return false;
+export function existingStopsConflictWithZone(stops: RouteStop[], zoneId: string) {
   const zone = zoneById(zoneId);
-  if (!zone) return false;
-  return stops.some((stop) => {
-    if (stop.zip) return !zone.zips.includes(normalizeZip(stop.zip));
-    if (stop.lat != null && stop.lon != null && samplePoint) {
-      return (
-        haversineMiles({ lat: stop.lat, lon: stop.lon }, samplePoint) >
-        getRoutingConfig().clusterRadiusMiles
-      );
-    }
-    return false;
-  });
+  return zone != null && stops.some((stop) => !zone.zips.includes(normalizeZip(stop.zip ?? "")));
 }
 
 type InsertionCandidate = {
   scheduledStart: number;
-  extraMiles: number;
   usedPreference: TimePreference;
 };
-
-function extraMilesForInsert(
-  base: GeoPoint,
-  stops: RouteStop[],
-  index: number,
-  incoming: GeoPoint,
-) {
-  const prevPoint = index === 0 ? base : stopPoint(stops[index - 1]!, base);
-  const next = stops[index];
-  const nextPoint = next ? stopPoint(next, base) : null;
-  const added =
-    haversineMiles(prevPoint, incoming) +
-    (nextPoint ? haversineMiles(incoming, nextPoint) : 0);
-  const removed = nextPoint ? haversineMiles(prevPoint, nextPoint) : 0;
-  return Math.max(0, added - removed);
-}
 
 type OpenWindow = {
   earliest: number;
   latestStart: number;
-  extraMiles: number;
 };
 
-/**
- * Gaps where another stop can start. The drive window is the fixed buffer
- * (15 minutes). Distance and weather are explained to the guest; they do not
- * push the next bookable start later.
- */
+function adjacentRouteAllowed(stop: RouteStop, incoming: GeoPoint, route: RouteLookup, prior: boolean) {
+  if (stop.lat == null || stop.lon == null) return false;
+  const neighbor = { lat: stop.lat, lon: stop.lon };
+  const drive = prior ? route(neighbor, incoming) : route(incoming, neighbor);
+  return drive != null && drive.minutes <= getRoutingConfig().maxAdjacentDriveMinutes;
+}
+
+export function adjacentDriveFits(stops: RouteStop[], incoming: GeoPoint, start: number, route: RouteLookup) {
+  const sorted = [...stops].sort((a, b) => a.scheduledStart - b.scheduledStart);
+  const nextIndex = sorted.findIndex((stop) => stop.scheduledStart >= start);
+  const next = nextIndex < 0 ? undefined : sorted[nextIndex];
+  const previous = sorted[(nextIndex < 0 ? sorted.length : nextIndex) - 1];
+  return (!previous || adjacentRouteAllowed(previous, incoming, route, true)) &&
+    (!next || adjacentRouteAllowed(next, incoming, route, false));
+}
+
+/** Gaps that leave the configured buffer and satisfy the adjacent drive limit. */
 function openWindows(
-  base: GeoPoint,
   stops: RouteStop[],
   incoming: GeoPoint,
   durationMinutes: number,
+  route?: RouteLookup,
 ): OpenWindow[] {
   const bounds = getDayBounds();
   const driveGap = bounds.travelBufferMinutes;
@@ -270,6 +219,8 @@ function openWindows(
   for (let index = 0; index <= sorted.length; index += 1) {
     const prev = sorted[index - 1];
     const next = sorted[index];
+    if (route && ((prev && !adjacentRouteAllowed(prev, incoming, route, true)) ||
+      (next && !adjacentRouteAllowed(next, incoming, route, false)))) continue;
     const earliest =
       index === 0
         ? bounds.hoursStart
@@ -283,7 +234,6 @@ function openWindows(
     windows.push({
       earliest,
       latestStart,
-      extraMiles: extraMilesForInsert(base, sorted, index, incoming),
     });
   }
 
@@ -323,22 +273,6 @@ export function isWithinServiceDay(startMinutes: number) {
     startMinutes >= hoursStart &&
     startMinutes < hoursEnd
   );
-}
-
-function collectExactStartCandidates(
-  base: GeoPoint,
-  stops: RouteStop[],
-  incoming: GeoPoint,
-  durationMinutes: number,
-  requestedStart: number,
-): InsertionCandidate[] {
-  return openWindows(base, stops, incoming, durationMinutes)
-    .filter((window) => startFitsWindow(requestedStart, window, durationMinutes))
-    .map((window) => ({
-      scheduledStart: requestedStart,
-      extraMiles: window.extraMiles,
-      usedPreference: preferenceFromStart(requestedStart),
-    }));
 }
 
 /**
@@ -398,11 +332,12 @@ export function buildStaffOverrideCompanionInsertion(
 }
 
 export function findRouteInsertionAtHour(
-  base: GeoPoint,
+  _base: GeoPoint,
   stops: RouteStop[],
   incoming: GeoPoint,
   durationMinutes: number,
   requestedStart: number,
+  route?: RouteLookup,
 ): InsertResult | null {
   const bounds = getDayBounds();
   if (stops.length >= bounds.maxAppointmentsPerDay) return null;
@@ -410,43 +345,33 @@ export function findRouteInsertionAtHour(
   if (
     !isOfferedStart(
       requestedStart,
-      openWindows(base, stops, incoming, durationMinutes),
+      openWindows(stops, incoming, durationMinutes, route),
       durationMinutes,
     )
   ) {
     return null;
   }
 
-  const pool = collectExactStartCandidates(
-    base,
-    stops,
-    incoming,
-    durationMinutes,
-    requestedStart,
-  );
-  if (pool.length === 0) return null;
-
-  pool.sort((a, b) => a.extraMiles - b.extraMiles || a.scheduledStart - b.scheduledStart);
-  const best = pool[0]!;
   return {
-    scheduledStart: best.scheduledStart,
+    scheduledStart: requestedStart,
     durationMinutes,
-    appointmentTime: formatArrivalWindow(best.scheduledStart, durationMinutes),
-    usedPreference: best.usedPreference,
+    appointmentTime: formatArrivalWindow(requestedStart, durationMinutes),
+    usedPreference: preferenceFromStart(requestedStart),
   };
 }
 
 export function listAvailableHourStarts(
-  base: GeoPoint,
+  _base: GeoPoint,
   stops: RouteStop[],
   incoming: GeoPoint,
   durationMinutes: number,
+  route?: RouteLookup,
 ) {
   const bounds = getDayBounds();
   if (stops.length >= bounds.maxAppointmentsPerDay) return [];
   if (durationMinutes > bounds.hoursEnd - bounds.hoursStart) return [];
 
-  const windows = openWindows(base, stops, incoming, durationMinutes);
+  const windows = openWindows(stops, incoming, durationMinutes, route);
   const starts = new Set<number>();
   for (const start of listBookingStartMinutes()) {
     if (isOfferedStart(start, windows, durationMinutes)) starts.add(start);
@@ -465,94 +390,50 @@ export function listAvailableHourStarts(
 }
 
 function collectInsertions(
-  base: GeoPoint,
   stops: RouteStop[],
   incoming: GeoPoint,
   durationMinutes: number,
   preference: TimePreference,
+  route?: RouteLookup,
 ): InsertionCandidate[] {
   const bounds = getDayBounds();
-  const sorted = [...stops].sort((a, b) => a.scheduledStart - b.scheduledStart);
-  const candidates: InsertionCandidate[] = [];
-
-  for (let index = 0; index <= sorted.length; index += 1) {
-    const prev = sorted[index - 1];
-    const next = sorted[index];
-    const prevPoint = prev ? stopPoint(prev, base) : base;
-    const nextPoint = next ? stopPoint(next, base) : null;
-
-    const earliestRaw =
-      index === 0
-        ? bounds.hoursStart
-        : (prev?.scheduledStart ?? bounds.hoursStart) +
-          (prev?.durationMinutes ?? 0) +
-          travelMinutesBetween(prevPoint, incoming, bounds.travelBufferMinutes);
-    const earliest = snapUp(earliestRaw);
-
-    const latestFinish = next
-      ? next.scheduledStart -
-        travelMinutesBetween(incoming, nextPoint ?? incoming, bounds.travelBufferMinutes)
-      : bounds.hoursEnd;
-    const latestStart = latestFinish - durationMinutes;
-    if (earliest > latestStart) continue;
-
-    const preferredStart =
-      preference === "afternoon"
-        ? Math.max(earliest, bounds.morningEndsAt)
-        : earliest;
-    if (preferredStart > latestStart) continue;
-    if (
-      preference === "morning" &&
-      !isMorningStart(preferredStart, bounds.morningEndsAt)
-    ) {
-      continue;
-    }
-    if (
-      preference === "afternoon" &&
-      isMorningStart(preferredStart, bounds.morningEndsAt)
-    ) {
-      continue;
-    }
-    if (preferredStart + durationMinutes > bounds.hoursEnd) continue;
-
-    candidates.push({
-      scheduledStart: preferredStart,
-      extraMiles: extraMilesForInsert(base, sorted, index, incoming),
-      usedPreference: preference,
-    });
-  }
-
-  return candidates;
+  return openWindows(stops, incoming, durationMinutes, route).flatMap((window) => {
+    const rounded = Math.ceil(window.earliest / 15) * 15;
+    const start = preference === "afternoon" ? Math.max(rounded, bounds.morningEndsAt) : rounded;
+    if (!startFitsWindow(start, window, durationMinutes) || preferenceFromStart(start) !== preference) return [];
+    return [{ scheduledStart: start, usedPreference: preference }];
+  });
 }
 
 export function findRouteInsertion(
-  base: GeoPoint,
+  _base: GeoPoint,
   stops: RouteStop[],
   incoming: GeoPoint,
   durationMinutes: number,
   preference: TimePreference,
+  route?: RouteLookup,
 ): InsertResult | null {
   const bounds = getDayBounds();
   if (stops.length >= bounds.maxAppointmentsPerDay) return null;
   if (durationMinutes > bounds.hoursEnd - bounds.hoursStart) return null;
 
   const preferred = collectInsertions(
-    base,
     stops,
     incoming,
     durationMinutes,
     preference,
+    route,
   );
   const fallbackPref: TimePreference =
     preference === "morning" ? "afternoon" : "morning";
   const fallback =
     preferred.length > 0
       ? []
-      : collectInsertions(base, stops, incoming, durationMinutes, fallbackPref);
+      : collectInsertions(stops, incoming, durationMinutes, fallbackPref, route);
   const pool = preferred.length > 0 ? preferred : fallback;
   if (pool.length === 0) return null;
 
-  pool.sort((a, b) => a.extraMiles - b.extraMiles || a.scheduledStart - b.scheduledStart);
+  pool.sort((a, b) => a.scheduledStart - b.scheduledStart);
   const best = pool[0]!;
   return {
     scheduledStart: best.scheduledStart,

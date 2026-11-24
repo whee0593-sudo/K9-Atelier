@@ -145,6 +145,7 @@
       "maxAppointmentsPerDay": 4,
       "clusterRadiusMiles": 8,
       "travelBufferMinutes": 15,
+      "maxAdjacentDriveMinutes": 15,
       "morningEndsAt": "12:00",
       "zones": [
         {

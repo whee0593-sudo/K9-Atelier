@@ -2,9 +2,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseAdminConfig, hasSupabaseConfig } from "@/lib/supabase/env";
 import { resolveOccupiedStop } from "@/lib/appointments/occupied-stop";
 import { getBaseAddressFormatted } from "@/lib/server/base-address";
-import { geocodeBaseAddress } from "@/lib/geo";
+import { geocodeBaseAddress, getDrivingRoute, routeKey, type DrivingRoute } from "@/lib/geo";
 import {
   addressAllowedForPlan,
+  adjacentDriveFits,
   existingStopsConflictWithZone,
   findRouteInsertionAtHour,
   formatArrivalWindow,
@@ -364,6 +365,39 @@ export async function deleteDayPlan(
   return { ok: true as const };
 }
 
+function createRouteLoader() {
+  const requests = new Map<string, Promise<DrivingRoute | null>>();
+  return (from: GeoPoint, to: GeoPoint) => {
+    const key = routeKey(from, to);
+    const request = requests.get(key) ?? getDrivingRoute(from, to);
+    requests.set(key, request);
+    return request;
+  };
+}
+
+async function loadRoutes(
+  plan: DayPlanRecord | null,
+  point: GeoPoint,
+  stops: RouteStop[],
+  load = createRouteLoader(),
+) {
+  const routes = new Map<string, DrivingRoute | null>();
+  async function add(from: GeoPoint, to: GeoPoint) {
+    routes.set(routeKey(from, to), await load(from, to));
+  }
+
+  const anchor = plan?.zoneId === "nearby" ? plan.anchor : null;
+  await Promise.all([
+    ...(anchor ? [add(anchor, point)] : []),
+    ...stops.flatMap((stop) => {
+      if (stop.lat == null || stop.lon == null) return [];
+      const neighbor = { lat: stop.lat, lon: stop.lon };
+      return [add(point, neighbor), add(neighbor, point)];
+    }),
+  ]);
+  return (from: GeoPoint, to: GeoPoint) => routes.get(routeKey(from, to)) ?? null;
+}
+
 export async function getAvailabilityForAddress(input: {
   point: GeoPoint;
   zip: string;
@@ -404,15 +438,9 @@ export async function getAvailabilityForAddress(input: {
       loadDayClosures(fromDate, toDate),
       loadAvailabilityBlocks(fromDate, toDate),
     ]);
-  if ("error" in plansResult) {
-    console.error("getAvailabilityForAddress plans:", plansResult.error);
-  }
-  if ("error" in occupiedResult) {
-    console.error("getAvailabilityForAddress occupied:", occupiedResult.error);
-  }
-  if ("error" in closuresResult) {
-    console.error("getAvailabilityForAddress closures:", closuresResult.error);
-  }
+  if ("error" in plansResult) return plansResult;
+  if ("error" in occupiedResult) return occupiedResult;
+  if ("error" in closuresResult) return closuresResult;
   if ("error" in blocksResult) {
     console.error("getAvailabilityForAddress blocks:", blocksResult.error);
     return {
@@ -420,29 +448,26 @@ export async function getAvailabilityForAddress(input: {
     };
   }
 
-  const plans = "error" in plansResult ? new Map() : plansResult.plans;
-  const occupiedByDate =
-    "error" in occupiedResult ? new Map() : occupiedResult.byDate;
-  const closures =
-    "error" in closuresResult ? new Map() : closuresResult.closures;
+  const { plans } = plansResult;
+  const { byDate: occupiedByDate } = occupiedResult;
+  const { closures } = closuresResult;
   const blocksByDate = groupBlocksByDate(blocksResult.blocks);
 
   const days = [];
-  for (const date of dates) {
+  const load = createRouteLoader();
+  async function getDay(date: string) {
     if (!extraDates.includes(date) && !(input.staffBooking ? isStaffBookingDate(date) : isDateBookable(parseDateValue(date)))) {
-      days.push({
+      return {
         date,
         available: false,
         slots: [] as number[],
-      });
-      continue;
+      };
     }
 
     const closure = closures.get(date) ?? null;
     const dayBlocks = blocksByDate.get(date) ?? [];
     if (closure?.closedAllDay || dayBlocks.some((block) => block.allDay)) {
-      days.push({ date, available: false, slots: [] as number[] });
-      continue;
+      return { date, available: false, slots: [] as number[] };
     }
 
     const occupied = occupiedByDate.get(date) ?? {
@@ -450,17 +475,18 @@ export async function getAvailabilityForAddress(input: {
       bookedCount: 0,
     };
 
-    const plan = resolveOccupiedDayPlan(date, plans.get(date) ?? null, occupied);
-    const inZone = addressAllowedForPlan(plan, input.zip, input.point);
-    if (!inZone && !input.staffBooking) {
-      days.push({ date, available: false, slots: [] as number[] });
-      continue;
+    if (occupied.bookedCount >= getRoutingConfig().maxAppointmentsPerDay) {
+      return { date, available: false, slots: [] as number[] };
     }
 
-    const max = getRoutingConfig().maxAppointmentsPerDay;
-    if (occupied.bookedCount >= max) {
-      days.push({ date, available: false, slots: [] as number[] });
-      continue;
+    const plan = resolveOccupiedDayPlan(date, plans.get(date) ?? null, occupied);
+    if (!input.staffBooking && plan?.zoneId !== "nearby" &&
+        !addressAllowedForPlan(plan, input.zip, input.point)) {
+      return { date, available: false, slots: [] as number[] };
+    }
+    const route = await loadRoutes(plan, input.point, occupied.stops, load);
+    if (!input.staffBooking && !addressAllowedForPlan(plan, input.zip, input.point, route)) {
+      return { date, available: false, slots: [] as number[] };
     }
 
     const staffDurations = input.visitDurations?.filter((minutes) => minutes > 0);
@@ -470,18 +496,19 @@ export async function getAvailabilityForAddress(input: {
         incoming: input.point,
         stops: occupied.stops,
         durations: staffDurations,
-        zoneConflict: describeStaffZoneConflict(plan, input.zip, input.point),
+        zoneConflict: describeStaffZoneConflict(plan, input.zip, input.point, route),
+        route,
       });
-      const gated = applyClosureToSlots(override.slots.filter((start) => isBookingStartInFuture(date, start)), closure);
+      const gated = applyClosureToSlots(override.slots.filter((start) =>
+        isBookingStartInFuture(date, start) && adjacentDriveFits(occupied.stops, input.point, start, route)), closure);
       const withBlocks = applyBlocksToSlots(gated.slots, dayBlocks, 1);
       const conflicts = retainConflicts(withBlocks.slots, override.conflicts);
-      days.push({
+      return {
         date,
         available: withBlocks.slots.length > 0,
         slots: withBlocks.slots,
         conflicts,
-      });
-      continue;
+      };
     }
 
     const openSlots = listAvailableHourStarts(
@@ -489,6 +516,7 @@ export async function getAvailabilityForAddress(input: {
       occupied.stops,
       input.point,
       input.durationMinutes,
+      route,
     );
     const gated = applyClosureToSlots(openSlots.filter((start) => isBookingStartInFuture(date, start)), closure);
     const withBlocks = applyBlocksToSlots(
@@ -496,11 +524,15 @@ export async function getAvailabilityForAddress(input: {
       dayBlocks,
       input.durationMinutes,
     );
-    days.push({
+    return {
       date,
       available: withBlocks.available,
       slots: withBlocks.slots,
-    });
+    };
+  }
+
+  for (let index = 0; index < dates.length; index += 4) {
+    days.push(...await Promise.all(dates.slice(index, index + 4).map(getDay)));
   }
 
   return { days };
@@ -568,7 +600,8 @@ export async function assignArrivalWindow(input: {
 
   const stored = plansResult.plans.get(input.date) ?? null;
   const plan = resolveOccupiedDayPlan(input.date, stored, occupied);
-  const zoneConflict = describeStaffZoneConflict(plan, input.zip, input.point);
+  const route = await loadRoutes(plan, input.point, occupied.stops);
+  const zoneConflict = describeStaffZoneConflict(plan, input.zip, input.point, route);
   if (zoneConflict) {
     if (!input.staffBooking) return { error: "slot_unavailable" };
     if (!input.acknowledgeScheduleConflict) {
@@ -580,12 +613,17 @@ export async function assignArrivalWindow(input: {
     return { error: "slot_unavailable" as const };
   }
 
+  if (!adjacentDriveFits(occupied.stops, input.point, input.slotStartMinutes, route)) {
+    return { error: "slot_unavailable" as const };
+  }
+
   const insertion = findRouteInsertionAtHour(
     input.base,
     occupied.stops,
     input.point,
     input.durationMinutes,
     input.slotStartMinutes,
+    route,
   );
   if (!insertion) {
     if (!input.allowUnfittedStart && !zoneConflict) return { error: "slot_unavailable" as const };
@@ -659,6 +697,13 @@ export async function assertVisitScheduleAllowed(input: {
     return { error: "slot_unavailable", message: "The visit overlaps another appointment or leaves insufficient travel time." };
   }
 
+  if (input.point) {
+    const route = await loadRoutes(null, input.point, occupied.stops);
+    if (!adjacentDriveFits(occupied.stops, input.point, input.visitStartMinutes, route)) {
+      return { error: "slot_unavailable", message: "The adjacent drive is over 15 minutes or could not be verified." };
+    }
+  }
+
   if (input.enforceZoneAndCapacity) {
     if (!input.point || !input.zip) return { error: "slot_unavailable", message: "The address cannot be checked against the route." };
     const plansResult = await loadDayPlans(input.date, input.date);
@@ -668,7 +713,8 @@ export async function assertVisitScheduleAllowed(input: {
       plansResult.plans.get(input.date) ?? null,
       occupied,
     );
-    if (!addressAllowedForPlan(plan, input.zip, input.point)) {
+    const route = await loadRoutes(plan, input.point, []);
+    if (!addressAllowedForPlan(plan, input.zip, input.point, route)) {
       return { error: "slot_unavailable", message: "The address is outside the route area for that date." };
     }
     if (occupied.bookedCount >= getRoutingConfig().maxAppointmentsPerDay) {
@@ -755,7 +801,8 @@ export async function claimDayPlan(
     if ("error" in again) return again;
     plan = again.plans.get(date) ?? inferred;
   }
-  const zoneConflict = describeStaffZoneConflict(plan, zip, point);
+  const route = await loadRoutes(plan, point, []);
+  const zoneConflict = describeStaffZoneConflict(plan, zip, point, route);
   if (zoneConflict && !options?.allowOutsideZone) {
     return { error: "slot_unavailable", message: zoneConflict };
   }

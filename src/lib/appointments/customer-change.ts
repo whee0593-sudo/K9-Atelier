@@ -988,6 +988,7 @@ async function addDogToVisit(
     date: visit.appointment_date,
     visitStartMinutes: visitStart,
     durations,
+    point: { lat: visit.address_lat, lon: visit.address_lon },
     excludeAppointmentIds: ordered.map((row) => row.id),
   });
   if ("error" in allowed) {

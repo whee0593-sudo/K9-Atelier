@@ -6,7 +6,6 @@ import {
   findRouteInsertion,
   findRouteInsertionAtHour,
   formatArrivalWindow,
-  haversineMiles,
   inferZoneIdFromZip,
   listAvailableHourStarts,
   preferenceAvailability,
@@ -105,9 +104,16 @@ describe("booking schedule", () => {
     assert.equal(flags.afternoon, true);
   });
 
-  it("measures Palm Beach Gardens to Jupiter as under the cluster radius", () => {
-    assert.ok(haversineMiles(base, jupiter) < 8);
-    assert.ok(haversineMiles(jupiter, westPalm) > 8);
+  it("uses Google driving distance for nearby zones and rejects drives over 15 minutes", () => {
+    const plan = { serviceDate: "2026-09-21", zoneId: "nearby", source: "auto" as const, anchor: base };
+    assert.equal(addressAllowedForPlan(plan, "33401", westPalm, () => ({ miles: 8.1, minutes: 14 })), false);
+    const stops = [{ ...westPalm, scheduledStart: 660, durationMinutes: 60 }];
+    const routes = (from: typeof jupiter) =>
+      ({ miles: 20, minutes: from.lat === jupiter.lat ? 15.01 : 15 });
+    assert.equal(findRouteInsertionAtHour(base, stops, jupiter, 75, 570, routes), null);
+    assert.ok(findRouteInsertionAtHour(base, stops, jupiter, 60, 750, routes));
+    assert.ok(findRouteInsertionAtHour(base, stops, jupiter, 75, 570, () => ({ miles: 3, minutes: 15 })));
+    assert.equal(findRouteInsertionAtHour(base, stops, jupiter, 75, 570, () => null), null);
   });
 
   it("formats mixed AM/PM windows", () => {

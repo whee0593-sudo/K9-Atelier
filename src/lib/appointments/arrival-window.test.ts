@@ -32,16 +32,12 @@ describe("resolveArrivalForBooking", () => {
     assert.deepEqual(resolved, { error: "slot_unavailable" });
   });
 
-  it("continues with a null window when scheduling has not generated one", () => {
+  it("blocks a booking when scheduling cannot verify it", () => {
     const resolved = resolveArrivalForBooking(
       { error: "misconfigured" },
       540,
     );
-    assert.equal("error" in resolved, false);
-    if ("error" in resolved) return;
-    assert.equal(resolved.appointmentTime, null);
-    assert.equal(resolved.scheduledStart, 540);
-    assert.equal(resolved.timePreference, "morning");
+    assert.deepEqual(resolved, { error: "slot_unavailable" });
   });
 });
 

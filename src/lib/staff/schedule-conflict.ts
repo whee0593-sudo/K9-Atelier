@@ -1,3 +1,4 @@
+import type { RouteLookup } from "@/lib/geo";
 import {
   addressAllowedForPlan,
   chainSameAddressVisits,
@@ -15,8 +16,9 @@ export function describeStaffZoneConflict(
   plan: DayPlanRecord | null,
   zip: string,
   point: GeoPoint,
+  route?: RouteLookup,
 ): string | null {
-  if (!plan || addressAllowedForPlan(plan, zip, point)) return null;
+  if (!plan || addressAllowedForPlan(plan, zip, point, route)) return null;
   return `This address is outside the scheduled service area for this day (${zoneLabel(plan.zoneId)}).`;
 }
 
@@ -125,12 +127,14 @@ export function listStaffOverrideHourStarts(input: {
   stops: RouteStop[];
   durations: number[];
   zoneConflict?: string | null;
+  route?: RouteLookup;
 }) {
   const reopen = listAvailableHourStarts(
     input.base,
     input.stops,
     input.incoming,
     30,
+    input.route,
   );
   const slots = [...new Set([...listBookingStartMinutes(), ...reopen])].sort(
     (a, b) => a - b,

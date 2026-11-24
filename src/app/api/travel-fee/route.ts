@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { calculateTravelFee } from "@/lib/travel";
-import { drivingDistanceMiles, geocodeAddress } from "@/lib/geo";
+import { drivingDistanceMiles, geocodeAddress, geocodeBaseAddress } from "@/lib/geo";
 import { enforceIpRateLimit } from "@/lib/rate-limit";
 import { getBaseAddressFormatted } from "@/lib/server/base-address";
 
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
     const customerQuery = `${street}, ${city}, ${state} ${zip}`;
     const [from, to] = await Promise.all([
-      geocodeAddress(base),
+      geocodeBaseAddress(base),
       geocodeAddress(customerQuery),
     ]);
 
