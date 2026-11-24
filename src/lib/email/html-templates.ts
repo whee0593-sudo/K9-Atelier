@@ -712,7 +712,7 @@ export function buildCustomerAddDogEmail({
 export function buildVaccinationRejectedEmail(context: VaccinationMailContext) {
   const subject = `Update on ${context.petName}'s vaccination record`;
   const greetingName = context.customerName ?? "Client";
-  const reviewParagraph = `Upon review, ${context.petName}'s vaccination record needs an updated upload for their profile. You can still book without it, and we can update the record later.`;
+  const reviewParagraph = `Upon review, ${context.petName}'s vaccination record needs to be updated. You can still book, and we can help update their profile.`;
   const followUpParagraph =
     "Please reply to this email should you have any questions.";
 

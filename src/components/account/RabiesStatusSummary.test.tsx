@@ -20,7 +20,7 @@ function pet(overrides: Partial<PetProfile> = {}): PetProfile {
 }
 
 describe("rabies profile UI", () => {
-  it("asks customers to confirm rabies status with optional upload", () => {
+  it("asks customers to confirm rabies status without a file upload", () => {
     const html = renderToStaticMarkup(
       <PetProfileFieldsForm pet={pet()} onPetChange={() => undefined} />,
     );
@@ -33,10 +33,8 @@ describe("rabies profile UI", () => {
     assert.equal(html.includes("Florida law"), false);
     assert.match(html, /Current rabies vaccination/);
     assert.match(html, /Veterinarian-issued medical exemption/);
-    assert.match(html, /Rabies Record/);
+    assert.doesNotMatch(html, /Rabies Record|type="file"/);
     assert.match(html, /Record Expiration Date/);
-    assert.match(html, /PDF, JPG, PNG, WEBP, or HEIC/);
-    assert.match(html, /Not uploaded/);
     assert.equal(html.includes("Add later"), false);
     assert.equal(html.includes("Needed before booking"), false);
     assert.equal(
@@ -77,6 +75,7 @@ describe("rabies profile UI", () => {
       false,
     );
     assert.equal(html.includes("age-appropriate"), false);
+    assert.doesNotMatch(html, /Rabies Record|type="file"/);
     assert.equal(html.includes("Helps us prepare for a calm, safe visit"), false);
     assert.match(html, /Nervous with dryers; prefers gentle handling/);
   });

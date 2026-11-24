@@ -25,22 +25,16 @@ function PetCard({
   pet,
   expanded,
   saving,
-  uploading,
-  petPersisted,
   onToggle,
   onPetChange,
   onArchive,
-  onVaccinationUpload,
 }: {
   pet: PetProfile;
   expanded: boolean;
   saving: boolean;
-  uploading: boolean;
-  petPersisted: boolean;
   onToggle: () => void;
   onPetChange: (updates: Partial<PetProfile>) => void;
   onArchive: () => void;
-  onVaccinationUpload: (file: File) => Promise<void>;
 }) {
   return (
     <article className="rounded-2xl border border-lavender/40 bg-cream">
@@ -61,9 +55,6 @@ function PetCard({
           {saving && (
             <span className="text-xs text-text-muted">Saving…</span>
           )}
-          {uploading && (
-            <span className="text-xs text-text-muted">Uploading…</span>
-          )}
           <span className="text-sm text-gold-dark">{expanded ? "−" : "+"}</span>
         </div>
       </button>
@@ -75,14 +66,11 @@ function PetCard({
           <PetProfileFieldsForm
             pet={pet}
             onPetChange={onPetChange}
-            petPersisted={petPersisted}
-            vaccinationUploading={uploading}
-            onVaccinationUpload={onVaccinationUpload}
           />
           <button
             type="button"
             onClick={onArchive}
-            disabled={saving || uploading}
+            disabled={saving}
             className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl border border-red-300 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:opacity-60"
           >
             Remove {pet.name}&apos;s profile
@@ -106,12 +94,9 @@ export function PetProfilesManager({
     loading,
     error,
     savingIds,
-    uploadingIds,
     updatePetLocal,
     createPet,
     archivePet,
-    uploadVaccination,
-    isPersistedPetId,
   } = useCustomerPets();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [openedSetupPet, setOpenedSetupPet] = useState(false);
@@ -176,16 +161,11 @@ export function PetProfilesManager({
           pet={pet}
           expanded={expandedId === pet.id}
           saving={savingIds.has(pet.id)}
-          uploading={uploadingIds.has(pet.id)}
-          petPersisted={isPersistedPetId(pet.id)}
           onToggle={() =>
             setExpandedId((id) => (id === pet.id ? null : pet.id))
           }
           onPetChange={(updates) => updatePetLocal(pet.id, updates)}
           onArchive={() => void handleArchive(pet.id)}
-          onVaccinationUpload={async (file) => {
-            await uploadVaccination(pet.id, file, pet.vaccineExpiration);
-          }}
         />
       ))}
 
@@ -198,7 +178,6 @@ export function PetProfilesManager({
               onPetChange={(updates) =>
                 setDraftPet((current) => ({ ...current, ...updates }))
               }
-              petPersisted={false}
             />
           </div>
           {draftError ? (

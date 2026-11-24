@@ -169,7 +169,7 @@ const faqGroups: Array<{ title: string; items: FaqItem[] }> = [
       {
         q: "What vaccinations are required?",
         paragraphs: [
-          "Dogs four months or older must have a current rabies vaccination as required by Florida law, unless a veterinarian-issued medical exemption applies. Vaccination details and document uploads are optional during booking and can be provided later.",
+          "Dogs four months or older must have a current rabies vaccination as required by Florida law, unless a veterinarian-issued medical exemption applies. You can provide vaccination details during booking or update them later in your pet profile.",
         ],
       },
       {

@@ -63,7 +63,11 @@ export function PetProfileFieldsForm({
         }
       />
       <PetScalarFields
-        fields={fieldsAfterBirthday}
+        fields={
+          vaccinationAudience === "admin"
+            ? fieldsAfterBirthday
+            : fieldsAfterBirthday.filter((field) => field.type !== "file")
+        }
         pet={pet}
         onPetChange={onPetChange}
         variant={variant}
