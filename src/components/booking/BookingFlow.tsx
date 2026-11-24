@@ -476,7 +476,7 @@ export function BookingFlow({
             className={bathDialogClass}
           >
             <p id="hand-stripping-bath-message" className="font-body text-sm leading-relaxed">
-              Bath is not included in Hand-stripping service, would {selectedPet.name} like to have a bath as well?
+              Bath is not included in Hand-stripping service. For the best grooming results, we recommend adding a bath.
             </p>
             {!canAddSignatureBath && (
               <p className="font-body mt-3 text-sm text-taupe">
