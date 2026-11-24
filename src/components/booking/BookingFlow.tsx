@@ -7,6 +7,7 @@ import type { AppointmentRecord } from "@/lib/appointments/types";
 import {
   getAddOnService,
   isCustomCreativeDesignSelection,
+  isServiceAvailableForPet,
   type BookableService,
 } from "@/lib/services";
 import { guestBookingSelectionError } from "@/lib/booking-price";
@@ -33,10 +34,14 @@ import { BookingConfirmStep } from "@/components/booking/BookingConfirmStep";
 import { BookingGroupConfirmStep } from "@/components/booking/BookingGroupConfirmStep";
 import { bookingDogsIntent, validateBookingDogs, type BookingDogService } from "@/lib/booking/dogs";
 import { BookingConfirmationView } from "@/components/booking/BookingReviewStep";
-import { bookingBackLinkClass } from "@/components/booking/booking-ui";
+import {
+  bookingBackLinkClass,
+  bookingPrimaryBtnClass,
+  bookingSecondaryBtnClass,
+} from "@/components/booking/booking-ui";
 import { trackGoogleAdsBookingConversion } from "@/lib/google-ads";
 import { createDraftBookingPet, isPersistedPetId } from "@/lib/booking-flow";
-import { isLuxurySpaDay } from "@/lib/service-catalog";
+import { isLuxurySpaDay, SIGNATURE_BATH_ID } from "@/lib/service-catalog";
 import type { SpaGoalId } from "@/lib/spa-goals";
 import { createCustomerPet, updateCustomerPet } from "@/lib/pets/client";
 import { mapPetProfileToWriteInput } from "@/lib/pets/map";
@@ -45,6 +50,8 @@ import type { PaymentMethodRecord } from "@/lib/payments/types";
 import { toggleBookingServiceSelection } from "@/lib/booking/service-selection";
 
 const BOOKING_SUCCESS_SESSION_KEY = "k9-booking-success";
+const bathDialogClass =
+  "fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-md border border-gray-line bg-ivory p-6 text-ink backdrop:bg-ink/50 sm:p-8";
 
 type BookingSuccessSnapshot = {
   appointment: AppointmentRecord;
@@ -143,6 +150,11 @@ export function BookingFlow({
   >();
   const policiesTriggerRef = useRef<HTMLButtonElement>(null);
   const flowRef = useRef<HTMLDivElement>(null);
+  const bathDialogRef = useRef<HTMLDialogElement>(null);
+  const bathReminderDialogRef = useRef<HTMLDialogElement>(null);
+  const weightLbs = selectedPet?.weightLbs;
+  const canAddSignatureBath =
+    weightLbs != null && isServiceAvailableForPet(SIGNATURE_BATH_ID, weightLbs);
 
   function openPolicies(section?: BookingPolicySectionId) {
     setPoliciesSection(section);
@@ -248,9 +260,25 @@ export function BookingFlow({
 
   function handleServiceSelect(service: BookableService, optionName?: string) {
     if (isCustomCreativeDesignSelection(service.id, optionName)) return;
-    const next = toggleBookingServiceSelection({serviceId:selectedService?.id ?? "",addOnIds:selectedAddOnIds,addOnOptions},service,optionName);
+    if (service.id === "hand-stripping" && selectedService?.id !== service.id) {
+      bathDialogRef.current?.showModal();
+      return;
+    }
+    applyServiceSelection(service, optionName);
+  }
+
+  function applyServiceSelection(service: BookableService, optionName?: string, addBath = false) {
+    const removingHandStripping =
+      service.id === "hand-stripping" && selectedService?.id === service.id;
+    const next = toggleBookingServiceSelection({
+      serviceId: selectedService?.id ?? "",
+      addOnIds: removingHandStripping
+        ? selectedAddOnIds.filter((id) => id !== SIGNATURE_BATH_ID)
+        : selectedAddOnIds,
+      addOnOptions,
+    }, service, optionName);
     setSelectedService(getAddOnService(next.serviceId) ?? null);
-    setSelectedAddOnIds(next.addOnIds);
+    setSelectedAddOnIds(addBath ? [...next.addOnIds, SIGNATURE_BATH_ID] : next.addOnIds);
     setAddOnOptions(next.addOnOptions);
     setSelectionError(null);
     setServiceConfirmed(false);
@@ -258,6 +286,14 @@ export function BookingFlow({
     if (!isLuxurySpaDay(next.serviceId)) setSpaGoals([]);
     setOwner(null);
     setPaymentMethod(null);
+  }
+
+  function confirmHandStripping(addBath: boolean) {
+    const service = getAddOnService("hand-stripping");
+    if (!service || (addBath && !canAddSignatureBath)) return;
+    applyServiceSelection(service, undefined, addBath);
+    bathReminderDialogRef.current?.close();
+    bathDialogRef.current?.close();
   }
 
   function handleExperienceContinue() {
@@ -411,28 +447,77 @@ export function BookingFlow({
       )}
 
       {currentStep === 2 && selectedPet && !serviceConfirmed && (
-        <BookingExperienceStep
-          key={selectedPet.id}
-          pet={selectedPet}
-          selectedServiceId={selectedService?.id ?? null}
-          selectedIds={[...(selectedService ? [selectedService.id] : []), ...selectedAddOnIds]}
-          selectedOptions={addOnOptions}
-          selectionError={selectionError}
-          selectedOptionName={
-            selectedService && isCreativeServiceSelection(selectedService)
-              ? addOnOptions[selectedService.id] ?? null
-              : null
-          }
-          showPrices={showPrices}
-          onSelect={handleServiceSelect}
-          onContinue={handleExperienceContinue}
-          onBack={() => {
-            setSelectedPet(null);
-            setDraftPet(selectedPet);
-            setBookedDogs((current) => current.filter((dog) => dog.pet.id !== selectedPet.id));
-            resetFromDog();
-          }}
-        />
+        <>
+          <BookingExperienceStep
+            key={selectedPet.id}
+            pet={selectedPet}
+            selectedServiceId={selectedService?.id ?? null}
+            selectedIds={[...(selectedService ? [selectedService.id] : []), ...selectedAddOnIds]}
+            selectedOptions={addOnOptions}
+            selectionError={selectionError}
+            selectedOptionName={
+              selectedService && isCreativeServiceSelection(selectedService)
+                ? addOnOptions[selectedService.id] ?? null
+                : null
+            }
+            showPrices={showPrices}
+            onSelect={handleServiceSelect}
+            onContinue={handleExperienceContinue}
+            onBack={() => {
+              setSelectedPet(null);
+              setDraftPet(selectedPet);
+              setBookedDogs((current) => current.filter((dog) => dog.pet.id !== selectedPet.id));
+              resetFromDog();
+            }}
+          />
+          <dialog
+            ref={bathDialogRef}
+            aria-labelledby="hand-stripping-bath-message"
+            className={bathDialogClass}
+          >
+            <p id="hand-stripping-bath-message" className="font-body text-sm leading-relaxed">
+              Bath is not included in Hand-stripping service, would {selectedPet.name} like to have a bath as well?
+            </p>
+            {!canAddSignatureBath && (
+              <p className="font-body mt-3 text-sm text-taupe">
+                The Signature Bath is unavailable for {selectedPet.name} under our weight policy.
+              </p>
+            )}
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                type="button"
+                className={bookingPrimaryBtnClass}
+                disabled={!canAddSignatureBath}
+                onClick={() => confirmHandStripping(true)}
+              >
+                Yes, add Bath
+              </button>
+              <button
+                type="button"
+                className={bookingSecondaryBtnClass}
+                onClick={() => bathReminderDialogRef.current?.showModal()}
+              >
+                No bath needed
+              </button>
+            </div>
+          </dialog>
+          <dialog
+            ref={bathReminderDialogRef}
+            aria-labelledby="hand-stripping-bath-reminder"
+            className={bathDialogClass}
+          >
+            <p id="hand-stripping-bath-reminder" className="font-body text-sm leading-relaxed">
+              If you are bathing {selectedPet.name} yourself, please do it <strong>AFTER</strong> the hand-stripping service.
+            </p>
+            <button
+              type="button"
+              className={`${bookingPrimaryBtnClass} mt-6`}
+              onClick={() => confirmHandStripping(false)}
+            >
+              OK
+            </button>
+          </dialog>
+        </>
       )}
 
       {currentStep === 2 &&

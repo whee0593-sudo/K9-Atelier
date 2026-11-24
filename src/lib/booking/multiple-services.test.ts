@@ -27,10 +27,28 @@ it("keeps only one primary across both categories while preserving all extras", 
  for (const previous of primaries) for (const next of primaries) {
    if (previous === next) continue;
    assert.deepEqual(toggleBookingServiceIds([previous,...extras],next),[...extras,next]);
-   assert.ok(guestBookingSelectionError({serviceId:previous,addOnIds:[next],addOnOptions:{}}));
+   const error = guestBookingSelectionError({serviceId:previous,addOnIds:[next],addOnOptions:{}});
+   if (previous === "hand-stripping" && next === "signature-bath-care") assert.equal(error, null);
+   else assert.ok(error);
  }
  assert.deepEqual(toggleBookingServiceIds([primaries[0],...extras],primaries[0]),extras);
  assert.deepEqual(toggleBookingServiceIds([primaries[0],...extras],extras[0]),[primaries[0],...extras.slice(1)]);
+});
+it("prices and schedules Signature Bath with Hand Stripping for eligible dogs", () => {
+  const serviceId = "hand-stripping";
+  const bathId = "signature-bath-care";
+  const input = { serviceId, addOnIds: [bathId], addOnOptions: {}, distanceMiles: 0 };
+  const result = quoteGuestBooking({ ...input, weightLbs: 12 });
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.ok(result.quote.addOns.some((item) => item.id === bathId && item.price > 0));
+  assert.equal(
+    estimateServiceDurationMinutes(serviceId, 12, [bathId]),
+    estimateServiceDurationMinutes(serviceId, 12) + estimateServiceDurationMinutes(bathId, 12),
+  );
+  const overweight = quoteGuestBooking({ ...input, weightLbs: 50 });
+  assert.equal(overweight.ok, false);
+  if (!overweight.ok) assert.equal(overweight.code, "weight_limit");
 });
 it("keeps all priced selections in staff billing line items", () => {
   const items = buildDefaultLineItems({ ...selection, serviceName: "Luxury Spa Day", travelFee:0, estimatedTotal:0 } as AppointmentRecord,12);

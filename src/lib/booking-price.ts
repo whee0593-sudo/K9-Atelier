@@ -16,7 +16,7 @@ import {
   allBookableServices,
 } from "@/lib/services";
 import { getServiceDisplayName } from "@/lib/service-display";
-import { canonicalServiceId } from "@/lib/service-catalog";
+import { canonicalServiceId, SIGNATURE_BATH_ID } from "@/lib/service-catalog";
 
 export const BOOKING_PRICE_DISCLAIMER =
   "Your estimated total is based on your dog's weight and selected services. Final pricing may vary depending on coat condition, matting, additional handling needs, and any adjustments discussed with your groomer.";
@@ -174,7 +174,8 @@ export function guestBookingSelectionError(
 
   for (const id of input.addOnIds) {
     const addOn = getAddOnService(id);
-    if (addOn?.categoryId === "bath-show-spa" || addOn?.categoryId === "full-grooming") {
+    const isHandStrippingBath = service.id === "hand-stripping" && addOn?.id === SIGNATURE_BATH_ID;
+    if (!isHandStrippingBath && (addOn?.categoryId === "bath-show-spa" || addOn?.categoryId === "full-grooming")) {
       return { code: "invalid_service", message: "Choose only one bath or grooming service." };
     }
     const availability = bookingSelectionAvailability(service.id, input.addOnIds, id);
