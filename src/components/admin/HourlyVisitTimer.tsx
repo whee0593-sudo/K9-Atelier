@@ -99,13 +99,13 @@ export function HourlyVisitTimer({
       {startedAt ? (
         <p className="mt-1 text-xs text-taupe">
           {endedAt ? "Timed" : "In progress"} ·{" "}
-          {formatVisitDuration(startedAt, endedAt, now)} ·{" "}
-          {formatChargeMoney(rate)}/hr
-          {startedAt ? ` · ${formatChargeMoney(amount)}` : ""}
+          {formatVisitDuration(startedAt, endedAt, now, true)} billable ·{" "}
+          {formatChargeMoney(rate, true)}/hr
+          {startedAt ? ` · ${formatChargeMoney(amount, true)}` : ""}
         </p>
       ) : (
         <p className="mt-1 text-xs text-taupe">
-          Start the timer when this dog’s service begins. {formatChargeMoney(rate)}/hr
+          Start the timer when this dog’s service begins. {formatChargeMoney(rate, true)}/hr
         </p>
       )}
       <div className="mt-3 flex flex-col items-start gap-3">

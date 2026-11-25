@@ -1,5 +1,5 @@
 import { hourlyRateForCatalogId } from "@/lib/charges/hourly";
-import { formatChargeMoney } from "@/lib/charges/money";
+import { formatChargeLineMoney, formatChargeMoney } from "@/lib/charges/money";
 import type { CatalogChargeItem, ChargeLineItem } from "@/lib/charges/types";
 
 function roundedCents(amount: number) {
@@ -47,11 +47,11 @@ export function listedAmountIfChanged(
 }
 
 export function formatLineItemMoney(
-  item: Pick<ChargeLineItem, "amount" | "listAmount">,
+  item: Pick<ChargeLineItem, "amount" | "listAmount" | "catalogId">,
 ) {
   const listed = listedAmountIfChanged(item);
-  if (listed == null) return formatChargeMoney(item.amount);
-  return `${formatChargeMoney(listed)} → ${formatChargeMoney(item.amount)}`;
+  if (listed == null) return formatChargeLineMoney(item);
+  return `${formatChargeMoney(listed)} → ${formatChargeLineMoney(item)}`;
 }
 
 export function withCatalogListAmount(

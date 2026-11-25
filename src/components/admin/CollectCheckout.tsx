@@ -13,7 +13,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChargeMoneyWithList } from "@/components/admin/ChargeMoneyWithList";
 import { catalogLinePatch, listedAmountIfChanged } from "@/lib/charges/list-amount";
-import { formatChargeMoney, sumLineItems } from "@/lib/charges/money";
+import { formatChargeLineMoney, formatChargeMoney, sumLineItems } from "@/lib/charges/money";
 import { getCatalogItemDisplayLabel } from "@/lib/service-display";
 import {
   centsToDollars,
@@ -850,7 +850,7 @@ export function CollectCheckout({
                   className="flex justify-between gap-4 rounded-2xl border border-lavender/40 bg-cream px-4 py-3 font-body text-sm text-ink"
                 >
                   <span>{item.label}</span>
-                  <span>{formatChargeMoney(item.amount)}</span>
+                  <span>{formatChargeLineMoney(item)}</span>
                 </li>
               ))}
             </ul>
@@ -912,14 +912,15 @@ export function CollectCheckout({
                       type="number"
                       min="0"
                       max="5000"
-                      step="0.01"
+                      step={hourlyRateForCatalogId(item.catalogId) ? "1" : "0.01"}
                       value={item.amount}
                       readOnly={Boolean(context.visit && item.catalogId === "travel-fee")}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        const amount = Math.min(5000, Math.max(0, Number(event.target.value) || 0));
                         updateItem(item.id, {
-                          amount: Math.min(5000, Math.max(0, Number(event.target.value) || 0)),
-                        })
-                      }
+                          amount: hourlyRateForCatalogId(item.catalogId) ? Math.ceil(amount) : amount,
+                        });
+                      }}
                     className="mt-1 w-full rounded-xl border border-lavender/40 bg-white px-3 py-2 text-sm text-ink"
                   />
                   </label>

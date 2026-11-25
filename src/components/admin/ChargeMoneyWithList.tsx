@@ -1,5 +1,5 @@
 import { listedAmountIfChanged } from "@/lib/charges/list-amount";
-import { formatChargeMoney } from "@/lib/charges/money";
+import { formatChargeLineMoney, formatChargeMoney } from "@/lib/charges/money";
 import type { ChargeLineItem } from "@/lib/charges/types";
 
 export function ChargeMoneyWithList({
@@ -9,7 +9,7 @@ export function ChargeMoneyWithList({
   className = "",
   showListAmount = true,
 }: {
-  item?: Pick<ChargeLineItem, "amount" | "listAmount">;
+  item?: Pick<ChargeLineItem, "amount" | "listAmount" | "catalogId">;
   amount?: number;
   listAmount?: number;
   className?: string;
@@ -30,7 +30,7 @@ export function ChargeMoneyWithList({
           {formatChargeMoney(listed)}
         </span>
       ) : null}
-      <span>{formatChargeMoney(current)}</span>
+      <span>{formatChargeLineMoney({ amount: current, catalogId: item?.catalogId })}</span>
     </span>
   );
 }

@@ -42,15 +42,15 @@ it("prefills Hand Stripping checkout from the finished pet timer", () => {
     serviceId: "hand-stripping",
     servicePrice: 160,
     serviceStartedAt: "2026-11-23T19:00:00.000Z",
-    serviceEndedAt: "2026-11-23T20:20:00.000Z",
+    serviceEndedAt: "2026-11-23T20:19:01.000Z",
     addOnIds: [],
     addOnOptions: null,
     petName: "Milo",
     weightLbs: 20,
   });
   const bill = buildVisitBill({ ...visit, travelFee: 0, pets: [handStrip] });
-  assert.equal(bill.draftLineItems[0]?.amount, 213.33);
-  assert.equal(bill.subtotal, 213.33);
+  assert.equal(bill.draftLineItems[0]?.amount, 214);
+  assert.equal(bill.subtotal, 214);
 });
 
 describe("visit checkout bill", () => {

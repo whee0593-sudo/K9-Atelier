@@ -12,18 +12,26 @@ export function hourlyRateForCatalogId(catalogId?: string) {
   return null;
 }
 
-export function hourlyAmountFromTimes(
+function billableVisitMinutes(
   startedAt: string,
   endedAt: string | null,
-  rate: number,
-  now = Date.now(),
+  now: number,
 ) {
   const start = new Date(startedAt).getTime();
   const end = endedAt ? new Date(endedAt).getTime() : now;
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
     return 0;
   }
-  return Math.round(((end - start) / 3_600_000) * rate * 100) / 100;
+  return Math.ceil((end - start) / 60_000);
+}
+
+export function hourlyAmountFromTimes(
+  startedAt: string,
+  endedAt: string | null,
+  rate: number,
+  now = Date.now(),
+) {
+  return Math.ceil((billableVisitMinutes(startedAt, endedAt, now) * rate) / 60);
 }
 
 export function completedHourlyAmount(
@@ -49,10 +57,13 @@ export function formatVisitDuration(
   startedAt: string,
   endedAt: string | null,
   now = Date.now(),
+  billable = false,
 ) {
   const start = new Date(startedAt).getTime();
   const end = endedAt ? new Date(endedAt).getTime() : now;
-  const minutes = Math.max(0, Math.floor((end - start) / 60_000));
+  const minutes = billable
+    ? billableVisitMinutes(startedAt, endedAt, now)
+    : Math.max(0, Math.floor((end - start) / 60_000));
   const hours = Math.floor(minutes / 60);
   const remain = minutes % 60;
   if (hours === 0) return `${remain} min`;

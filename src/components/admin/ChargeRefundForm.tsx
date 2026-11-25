@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { formatChargeMoney } from "@/lib/charges/money";
+import { formatChargeLineMoney, formatChargeMoney } from "@/lib/charges/money";
 import type { AppointmentChargeRecord } from "@/lib/charges/types";
 
 type RefundMode = "full" | "items" | "amount";
@@ -103,7 +103,7 @@ export function ChargeRefundForm({
                   />
                   {item.label}
                 </span>
-                <span>{formatChargeMoney(item.amount)}</span>
+                <span>{formatChargeLineMoney(item)}</span>
               </label>
             </li>
           ))}

@@ -7,7 +7,7 @@ import {
   getGoogleProfileUrl,
 } from "@/lib/business";
 import { business } from "@/lib/business";
-import { formatChargeMoney } from "@/lib/charges/money";
+import { formatChargeLineMoney, formatChargeMoney } from "@/lib/charges/money";
 import {
   formatReceiptDate,
   formatReceiptPaymentDate,
@@ -84,7 +84,7 @@ export function buildChargeReceiptCardHtml(
   const itemRows = groupChargeItems(receiptItems(charge, appointment.petName), snapshot?.pets.map(pet => ({ id: pet.appointmentId, petName: pet.petName })))
     .flatMap(group => group.items.map((item, index) => {
       if (!group.petName) return moneyRow(item.label, item.amount);
-      return `<tr><td style="padding:4px 10px 4px 0;vertical-align:top;color:${INK};font-size:16px;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(index === 0 ? group.petName : "")}</td><td style="padding:4px 10px 4px 0;color:${INK};font-size:16px;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(item.label)}</td>${moneyCell(escapeHtml(formatChargeMoney(item.amount)), "16px")}</tr>`;
+      return `<tr><td style="padding:4px 10px 4px 0;vertical-align:top;color:${INK};font-size:16px;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(index === 0 ? group.petName : "")}</td><td style="padding:4px 10px 4px 0;color:${INK};font-size:16px;font-family:${EMAIL_FONT_FAMILY};">${escapeHtml(item.label)}</td>${moneyCell(escapeHtml(formatChargeLineMoney(item)), "16px")}</tr>`;
     })).join("");
   const tipRow =
     charge.tipAmount > 0 ? moneyRow("Gratuity", charge.tipAmount) : "";
@@ -200,7 +200,7 @@ export function buildChargeReceiptCardText(
     formatReceiptServiceTime(appointment, charge.paidAt, snapshot?.arrivalLabel),
     "", "PET", petName, "", "SERVICE SUMMARY",
     ...items.flatMap(group => group.items.map((item, index) =>
-      [index === 0 ? group.petName : "", item.label, formatChargeMoney(item.amount)].filter(Boolean).join("  "))),
+      [index === 0 ? group.petName : "", item.label, formatChargeLineMoney(item)].filter(Boolean).join("  "))),
     charge.tipAmount > 0 ? "Gratuity  " + formatChargeMoney(charge.tipAmount) : null,
     "TOTAL PAID  " + formatChargeMoney(charge.total),
     "Payment status: " + receiptPaymentStatus(charge),
