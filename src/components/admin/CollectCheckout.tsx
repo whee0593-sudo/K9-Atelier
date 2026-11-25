@@ -1305,21 +1305,26 @@ export function PayStep({
     () => stripePromiseFor(context.stripePublishableKey),
     [context.stripePublishableKey],
   );
+  const pets = context.visit?.pets;
+  const fallbackPetName = kind === "service" && !context.visit
+    ? context.appointment.petName
+    : undefined;
+  const headingPetName = pets?.length === 1 ? pets[0].petName : fallbackPetName;
 
   return (
     <section className="customer-checkout font-sans text-[#211D26]">
       <p className="font-sans text-xs font-semibold uppercase tracking-[0.12em] text-[#514659]">
         K9 Atelier · Checkout
       </p>
-      <h2 className="font-sans mt-3 text-2xl text-ink">
-        {context.visit?.customerName || context.appointment.customerName || context.appointment.customerEmail || "Guest"}
+      <h2 className="font-sans mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[clamp(1.125rem,0.875rem+1vw,1.5rem)] text-ink">
+        <span className="min-w-0 [overflow-wrap:anywhere]">
+          {context.visit?.customerName || context.appointment.customerName || context.appointment.customerEmail || "Guest"}
+        </span>
+        {headingPetName ? <span className="min-w-0 text-base font-semibold text-[#514659] [overflow-wrap:anywhere]">{headingPetName}</span> : null}
       </h2>
-      <p className="font-sans mt-2 text-sm text-[#514659]">
-        {formatVisitBillDate(context.visit?.serviceDate ?? context.appointment.appointmentDate)} · {context.visit?.arrivalLabel ?? context.appointment.appointmentTime}
-      </p>
       {context.visit?.blockedMessage ? <p className="font-sans mt-3 text-sm text-red-800">{context.visit.blockedMessage}</p> : null}
-      <CustomerBillItems lineItems={lineItems} pets={context.visit?.pets}
-        fallbackPetName={kind === "service" && !context.visit ? context.appointment.petName : undefined} />
+      <CustomerBillItems lineItems={lineItems} pets={pets}
+        fallbackPetName={fallbackPetName} hidePetName={Boolean(headingPetName)} />
       {kind === "no_show" ? <p className="font-sans mt-4 flex justify-between text-sm text-[#514659]">
         <span>Subtotal</span><span>{formatChargeMoney(subtotal)}</span>
       </p> : null}
@@ -1333,11 +1338,11 @@ export function PayStep({
         </>
       ) : (
       <>
-      <p className="font-sans mt-5 text-xs font-semibold uppercase tracking-[0.12em] text-[#514659]">
-        Gratuity
-        <span className="float-right normal-case tracking-normal text-[#211D26]">{formatChargeMoney(tipAmount)}</span>
+      <p className="font-sans mt-5 flex flex-wrap items-baseline justify-between gap-x-3 text-sm text-[#211D26] sm:text-base">
+        <span>Would you like to leave a gratitude?</span>
+        <span className="tabular-nums">{formatChargeMoney(tipAmount)}</span>
       </p>
-      <div className="mt-3 grid grid-cols-4 gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-2 min-[360px]:grid-cols-4">
         {TIP_PERCENTS.map((percent) => (
           <button
             key={percent}
@@ -1357,7 +1362,7 @@ export function PayStep({
           type="button"
           aria-pressed={tipMode === "custom"}
           onClick={() => onTipMode("custom")}
-          className={`rounded-sm py-3 text-sm ${
+          className={`min-h-[44px] rounded-lg py-2 text-sm ${
             tipMode === "custom"
               ? "bg-[#4C3758] text-white"
               : "border border-[#8C7D95] bg-white text-[#211D26]"
@@ -1380,8 +1385,10 @@ export function PayStep({
       ) : null}
 
 
-      <details className="mt-4 rounded-xl border border-[#D3CAD9] bg-white px-4 py-3">
-        <summary className="cursor-pointer text-sm font-semibold">Discounts &amp; referral credit{referralQuote.creditCents > 0 ? ` · ${formatChargeMoney(centsToDollars(referralQuote.creditCents))} applied` : ""}</summary>
+      <details className="mt-4">
+        <summary className="flex min-h-[44px] w-fit cursor-pointer list-none items-center text-xs text-[#625B67] underline underline-offset-2 [&::-webkit-details-marker]:hidden">
+          Discounts and referral
+        </summary>
       {referralQuote.discountCents > 0 ? <p className="mt-2 flex justify-between text-sm"><span>First-visit discount</span><span>-{formatChargeMoney(centsToDollars(referralQuote.discountCents))}</span></p> : null}
       {referralQuote.creditCents > 0 ? <p className="mt-2 flex justify-between text-sm"><span>Referral credit</span><span>-{formatChargeMoney(centsToDollars(referralQuote.creditCents))}</span></p> : null}
 
@@ -1482,14 +1489,6 @@ export function PayStep({
         </p>
       )}
 
-      <p className="font-sans mt-3 text-xs text-[#514659]">
-        Referral Credit applies to eligible service charges only. Travel fees,
-        special handling fees and gratuities are excluded. Referral Credit cannot
-        be combined with other promotional offers.{" "}
-        <a href="/referrals" className="underline">
-          View Referral Terms
-        </a>
-      </p>
       </details>
       </>
       )}
@@ -1561,8 +1560,8 @@ export function PayStep({
         </section>
       ) : null}
 
-      <div className="sticky bottom-0 z-10 -mx-5 mt-5 border-t border-[#D3CAD9] bg-white px-5 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_16px_rgba(33,29,38,0.06)]">
-        <div className="mb-3 flex items-center justify-between"><span className="text-sm font-medium">Total to pay</span><strong className="text-2xl tabular-nums">{formatChargeMoney(total)}</strong></div>
+      <div className="relative z-10 -mx-5 mt-5 border-t border-[#D3CAD9] bg-white px-5 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_16px_rgba(33,29,38,0.06)] sm:sticky sm:bottom-0">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"><span className="text-sm font-medium">Total to pay</span><strong className="text-[clamp(1.125rem,0.875rem+1vw,1.5rem)] tabular-nums">{formatChargeMoney(total)}</strong></div>
       {useNewCard ? (
         <div className="mt-4">
           {clientSecret && chargeId ? (

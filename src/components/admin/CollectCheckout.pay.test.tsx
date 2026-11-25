@@ -43,8 +43,8 @@ function props(kind: "service" | "no_show"): ComponentProps<typeof PayStep> {
 
 it("preserves the current service checkout, referral controls and payment selector", () => {
   const html = renderToStaticMarkup(<PayStep {...props("service")} />);
-  assert.match(html, /Gratuity/);
-  assert.match(html, /Discounts &amp; referral credit/);
+  assert.match(html, /Would you like to leave a gratitude\?/);
+  assert.match(html, /Discounts and referral/);
   assert.match(html, /aria-label="Payment method"/);
   assert.doesNotMatch(html, /Choose a saved card|Use the card on file|Change payment method/);
   const options = html.match(/<div role="group" aria-label="Payment method"[\s\S]*?<\/div>/)?.[0] ?? "";
@@ -60,7 +60,7 @@ it("keeps no-show fees fixed and the unknown payment blocked after the merge", (
   const html = renderToStaticMarkup(<PayStep {...props("no_show")}
     paymentNotice="This payment needs a manual check." paymentBlocked onCheckPayment={() => {}} />);
   assert.match(html, /confirmed no-show fee/);
-  assert.doesNotMatch(html, /Gratuity|Discounts &amp; referral credit|Use a different card/);
+  assert.doesNotMatch(html, /Would you like to leave a gratitude\?|Discounts and referral|Use a different card/);
   assert.match(html, /Check payment status/);
   assert.match(html, /manual check/);
   assert.match(html, /<button[^>]*disabled=""[^>]*>Pay \$140/);
@@ -94,11 +94,12 @@ it("presents the two-dog bill in the requested order with the final total", () =
   const context = {...input.context, visit: {id:"visit", customerName:"Taylor Owner", serviceDate:"2026-10-28", arrivalLabel:"10:00 AM", servicedDogCount:2, blockedMessage:null, paymentStatus:"unpaid" as const}};
   const html = renderToStaticMarkup(<PayStep {...input} context={context} lineItems={lineItems} subtotal={465} total={465} />);
   const text = html.replace(/<[^>]*>/g, " ");
-  assert.match(text, /Taylor Owner/); assert.match(text, /Oct 28 · 10:00 AM/);
+  assert.match(text, /Taylor Owner/);
+  assert.doesNotMatch(text, /Oct 28 · 10:00 AM/);
   assert.match(text, /Stella.*The Atelier Full Groom.*\$200\.00.*Gentle DeMatting.*\$25\.00.*Valentino.*The Atelier Full Groom.*\$200\.00.*Gentle care.*\$40\.00/);
   assert.doesNotMatch(html, /\$180\.00|line-through|Subtotal|2 dogs/);
-  assert.match(text, /Gratuity.*\$0\.00/);
-  assert.match(text, /15%.*18%.*20%.*Custom.*Discounts &amp; referral credit.*Payment.*Cash.*Zelle.*Total to pay.*\$465\.00.*Pay \$465\.00.*Back to review/);
+  assert.match(text, /Would you like to leave a gratitude\?.*\$0\.00/);
+  assert.match(text, /15%.*18%.*20%.*Custom.*Discounts and referral.*Payment.*Cash.*Zelle.*Total to pay.*\$465\.00.*Pay \$465\.00.*Back to review/);
 });
 
 it("keeps same-name dogs separate and visit charges unassigned", () => {
