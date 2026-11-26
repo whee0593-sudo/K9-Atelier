@@ -31,6 +31,7 @@ const INTENDED_URLS = [
   "https://k9atelier.com/faq",
   "https://k9atelier.com/contact",
   "https://k9atelier.com/service-area",
+  "https://k9atelier.com/blog",
   "https://k9atelier.com/shop",
   "https://k9atelier.com/referrals",
   "https://k9atelier.com/privacy",

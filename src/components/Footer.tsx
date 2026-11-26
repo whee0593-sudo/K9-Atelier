@@ -14,6 +14,8 @@ const footerLinks = [
   { href: "/about", label: "About" },
   { href: "/faq", label: "FAQ" },
   { href: "/referrals", label: "Referral Rewards" },
+  { href: "/service-area", label: "Service Area" },
+  { href: "/blog", label: "Coat Care & Insights" },
   { href: "/contact", label: "Contact" },
 ] as const;
 
