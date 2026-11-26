@@ -24,6 +24,9 @@ export const metadata: Metadata = {
   title: siteTitle,
   description: siteDescription,
   manifest: "/site.webmanifest",
+  verification: {
+    other: { "msvalidate.01": "D43EB45ECEB5C06868944AB15FB80ACC" },
+  },
   icons: {
     icon: [
       {
