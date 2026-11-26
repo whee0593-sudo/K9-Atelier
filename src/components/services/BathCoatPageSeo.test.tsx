@@ -339,8 +339,11 @@ describe("bath and coat care structured data", () => {
       getCommunitiesServed(),
     );
     assert.deepEqual(areas.map((area) => area.name), [
+      "Jupiter Island",
       "Jupiter",
+      "Tequesta",
       "Palm Beach Gardens",
+      "Palm Beach",
       "West Palm Beach",
     ]);
     for (const area of areas) {

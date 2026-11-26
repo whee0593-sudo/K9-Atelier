@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSeoArticle, seoArticles } from "@/lib/seo-articles";
+import { absoluteSiteUrl } from "@/lib/service-page";
 
 type Props = { params: Promise<{ slug: string }> };
 export function generateStaticParams() {
@@ -13,7 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${article.title} | K9 Atelier`,
     description: article.description,
-    alternates: { canonical: `https://www.k9atelier.com/blog/${article.slug}` },
+    alternates: { canonical: absoluteSiteUrl(`/blog/${article.slug}`) },
     openGraph: { title: article.title, description: article.description, type: "article" },
   };
 }

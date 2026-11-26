@@ -17,6 +17,7 @@ const PUBLIC_PATHS = [
   "/faq",
   "/contact",
   "/service-area",
+  "/blog",
   "/shop",
   "/referrals",
   "/privacy",
