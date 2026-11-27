@@ -43,6 +43,7 @@ export const photoMarketingConsentCopy =
   business.booking.photoMarketingConsent;
 
 const SMS_OPT_OUT = "Reply STOP to opt out.";
+export const DOG_REMOVAL_CONFIRMATION_SMS = "staff_remove_dog_confirmation";
 
 function smsGreetingName(details: BookingConfirmationDetails) {
   return details.customerName?.trim() || "there";
@@ -97,6 +98,16 @@ export function buildAppointmentStaffCancelledSms(
   details: BookingConfirmationDetails,
 ): string {
   return `K9 Atelier: We’re sorry, but we’re unable to accommodate your appointment on ${details.dateLabel} between ${details.timeLabel}. You may book another available date, or contact us for assistance. ${SMS_OPT_OUT}`;
+}
+
+export function buildAppointmentDogRemovedSms(input: {
+  removedName: string;
+  remainingNames: string;
+  dateLabel: string;
+  needsConfirmation: boolean;
+}) {
+  const confirmation = input.needsConfirmation ? " Reply C to confirm." : "";
+  return `K9 Atelier: ${input.removedName} is removed from your appointment on ${input.dateLabel}. See ${input.remainingNames} soon!${confirmation} ${SMS_OPT_OUT}`;
 }
 
 export function buildAppointmentReminderSms(

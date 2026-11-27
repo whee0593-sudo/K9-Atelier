@@ -22,6 +22,7 @@ import {
 import { handleStaffPhoneReply } from "@/lib/sms/staff-reply";
 import { formatVisitPetNames } from "@/lib/visits/pet-names";
 import { buildCommunicationContext } from "@/lib/communications/context";
+import { DOG_REMOVAL_CONFIRMATION_SMS } from "@/lib/notifications";
 
 const INBOUND_SELECT = `
   id,
@@ -190,7 +191,7 @@ export async function handleInboundCustomerSms(input: {
   const { data: latestRequest, error: requestError } = await admin.from("communication_logs")
     .select("visit_id, appointment_ids").eq("channel", "sms").eq("audience", "customer")
     .eq("recipient", input.from)
-    .in("notification_type", ["staff_created_booking", "confirm_reminder_3_day"])
+    .in("notification_type", ["staff_created_booking", "confirm_reminder_3_day", DOG_REMOVAL_CONFIRMATION_SMS])
     .in("status", ["accepted", "delivered"])
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (requestError) {

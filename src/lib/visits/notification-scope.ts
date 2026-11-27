@@ -49,6 +49,7 @@ export type VisitNoticePet = {
   status: string;
   serviceEndedAt: string | null;
   sex: string | null;
+  appointmentDate?: string;
 };
 
 export function groupByVisit<T extends { id: string; visitId?: string | null }>(

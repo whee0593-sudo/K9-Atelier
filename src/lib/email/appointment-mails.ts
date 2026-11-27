@@ -18,6 +18,7 @@ import { resolveStaffStatusNoticeKind, staffConfirmationEventKey } from "@/lib/a
 import {
   sendAppointmentConfirmedSms,
   sendAppointmentDeclinedSms,
+  sendAppointmentDogRemovedSms,
   sendAppointmentStaffCancelledSms,
   sendAppointmentSubmittedSms,
 } from "@/lib/sms/appointment-sms";
@@ -315,6 +316,26 @@ export async function sendAppointmentStatusEmails(
   }
 
   const petName = plan.scope === "pet" ? plan.pets[0]?.petName : undefined;
+  const [firstRemaining, ...otherRemaining] = loaded?.filter(
+    (pet) => pet.id !== appointment.id && pet.status !== "cancelled",
+  ) ?? [];
+  if (status === "cancelled" && firstRemaining) {
+    const email = plan.event === "staff_cancelled"
+      ? buildCustomerAppointmentStaffCancelledEmail(appointment, customer)
+      : buildCustomerAppointmentDeclinedEmail(appointment, customer);
+    await deliverEmailAndSms(
+      plan.eventKey,
+      plan.event,
+      appointment,
+      email,
+      customer,
+      () => sendAppointmentDogRemovedSms(
+        appointment, customer, [firstRemaining, ...otherRemaining], plan.eventKey,
+      ),
+      plan.eventKey,
+    );
+    return;
+  }
   if (plan.event === "staff_cancelled") {
     await notifyCustomerAppointmentStaffCancelled(
       appointment,

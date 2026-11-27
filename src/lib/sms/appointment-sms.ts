@@ -6,11 +6,13 @@ import { bookingDetailsFromAppointment } from "@/lib/email/html-templates";
 import {
   buildAppointmentConfirmRequestSms,
   buildAppointmentDeclinedSms,
+  buildAppointmentDogRemovedSms,
   buildAppointmentEnRouteSms,
   buildAppointmentReminderSms,
   buildAppointmentStaffCancelledSms,
   buildAppointmentSubmittedSms,
   buildBookingConfirmationSms,
+  DOG_REMOVAL_CONFIRMATION_SMS,
   type BookingConfirmationDetails,
 } from "@/lib/notifications";
 import { normalizePhoneToE164 } from "@/lib/sms/phone";
@@ -18,6 +20,7 @@ import { streetNameForSms } from "@/lib/sms/street-name";
 import { sendSms } from "@/lib/sms/twilio";
 import { formatVisitPetNames } from "@/lib/visits/pet-names";
 import type { ProviderDelivery } from "@/lib/visits/provider-delivery";
+import type { VisitNoticePet } from "@/lib/visits/notification-scope";
 
 function smsCustomerName(customer: CustomerContact) {
   const first = customer.firstName?.trim();
@@ -160,6 +163,32 @@ export async function sendAppointmentStaffCancelledSms(
     appointment,
     customer.phone,
     buildAppointmentStaffCancelledSms(details),
+  );
+}
+
+export async function sendAppointmentDogRemovedSms(
+  appointment: AppointmentRecord,
+  customer: CustomerContact,
+  remaining: [VisitNoticePet, ...VisitNoticePet[]],
+  fingerprint: string,
+) {
+  const [first] = remaining;
+  const { dateLabel } = detailsForSms({
+    ...appointment,
+    appointmentDate: first.appointmentDate || appointment.appointmentDate,
+  }, customer);
+  const needsConfirmation = remaining.some((pet) => pet.status === "pending_confirmation");
+  return sendCustomerSms(
+    needsConfirmation ? DOG_REMOVAL_CONFIRMATION_SMS : "staff_remove_dog",
+    appointment,
+    customer.phone,
+    buildAppointmentDogRemovedSms({
+      removedName: appointment.petName,
+      remainingNames: formatVisitPetNames(remaining.map((pet) => pet.petName)),
+      dateLabel,
+      needsConfirmation,
+    }),
+    { fingerprint },
   );
 }
 

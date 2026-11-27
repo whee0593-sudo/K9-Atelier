@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   buildAppointmentConfirmRequestSms,
+  buildAppointmentDogRemovedSms,
   buildAppointmentEnRouteSms,
   buildAppointmentReminderSms,
   buildAppointmentSubmittedSms,
@@ -21,6 +22,19 @@ const details = {
 };
 
 describe("appointment SMS copy", () => {
+  it("names the removed dog and the dogs still booked, and requests confirmation only when needed", () => {
+    const removal = {
+      removedName: "Yaffa",
+      remainingNames: "Magnolia and Bella",
+      dateLabel: "Wednesday, December 16, 2026",
+    };
+    const message = "K9 Atelier: Yaffa is removed from your appointment on Wednesday, December 16, 2026. See Magnolia and Bella soon!";
+    assert.equal(buildAppointmentDogRemovedSms({ ...removal, needsConfirmation: false }),
+      `${message} Reply STOP to opt out.`);
+    assert.equal(buildAppointmentDogRemovedSms({ ...removal, needsConfirmation: true }),
+      `${message} Reply C to confirm. Reply STOP to opt out.`);
+  });
+
   it("reminds self-booked customers without asking them to confirm again", () => {
     const body = buildAppointmentConfirmRequestSms(details, false);
     assert.match(body, /Reminder: Bella's K9 Atelier appointment on Tuesday, August 18, 2026/);
