@@ -784,6 +784,10 @@ export function AdminCalendar({
                 unavailableDates={allDayDates}
                 onClose={() => setAppointmentMenu(null)}
                 onChanged={handleAppointmentChanged}
+                onDogServiceChanged={(dog) => {
+                  if (preview) setPreviewMoves((current) => [...current.filter((row) => row.id !== dog.id), dog]);
+                  refreshSelectedDay();
+                }}
                 onCancelled={handleAppointmentCancelled}
               />
             );

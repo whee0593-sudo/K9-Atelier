@@ -78,6 +78,7 @@ export function AdminRescheduleAppointmentButton({
   appointment,
   preview = false,
   onChanged,
+  onDogServiceChanged,
   label = "Change date & time",
   dialogTitle = "Change date & time",
   triggerClassName = "rounded-xl border border-lavender/40 px-4 py-2 text-sm font-medium text-text transition hover:border-gold/40",
@@ -88,6 +89,7 @@ export function AdminRescheduleAppointmentButton({
   appointment: AdminAppointmentRecord;
   preview?: boolean;
   onChanged?: (next?: { date: string; slotStartMinutes: number; serviceId?: string; serviceName?: string }) => void;
+  onDogServiceChanged?: (appointment: AdminAppointmentRecord) => void;
   label?: string;
   dialogTitle?: string;
   triggerClassName?: string;
@@ -106,6 +108,10 @@ export function AdminRescheduleAppointmentButton({
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const [days, setDays] = useState<AvailabilityDay[]>([]);
   const initializedArrival = useRef(false);
+  const refreshOnClose = useRef(false);
+  const [availabilityRevision, setAvailabilityRevision] = useState(0);
+  const [dogEdit, setDogEdit] = useState<{ id: string; serviceId: string } | null>(null);
+  const [dogError, setDogError] = useState<string | null>(null);
   const [visit, setVisit] = useState<VisitRescheduleSummary | null>(() =>
     summaryFromAppointments(visitAppointments),
   );
@@ -116,16 +122,12 @@ export function AdminRescheduleAppointmentButton({
     appointment,
   ) ?? appointment;
   const currentSlot = arrival.scheduledStart == null ? "" : String(arrival.scheduledStart);
-  const [serviceId, setServiceId] = useState(appointment.serviceId);
-  const serviceChanged = serviceId !== appointment.serviceId;
-  const services = staffRescheduleServices(appointment.petWeightLbs);
   const bookedDogs = (visitRows?.length ? visitRows : [appointment])
     .filter((row) => row.status !== "cancelled");
-  const canChangeDogs = !preview && Boolean(appointment.visitId) && bookedDogs.every((row) =>
+  const visitNotStarted = bookedDogs.every((row) =>
     !row.serviceStartedAt && !row.serviceEndedAt && !row.visitStartedAt && !row.visitEndedAt,
   );
-  const canEditService = !appointment.serviceStartedAt && !appointment.serviceEndedAt &&
-    !appointment.visitStartedAt && !appointment.visitEndedAt;
+  const canChangeDogs = !preview && Boolean(appointment.visitId) && visitNotStarted;
   const [nextSlot, setNextSlot] = useState(
     appointment.scheduledStart != null ? String(appointment.scheduledStart) : "",
   );
@@ -152,12 +154,15 @@ export function AdminRescheduleAppointmentButton({
     if (!open) return;
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !busy && !addingDog) setOpen(false);
+      if (event.key === "Escape" && !busy && !addingDog) {
+        setOpen(false);
+        if (refreshOnClose.current) onChanged?.();
+      }
     }
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, busy, addingDog]);
+  }, [open, busy, addingDog, onChanged]);
 
   useEffect(() => {
     if (!open) return;
@@ -189,8 +194,7 @@ export function AdminRescheduleAppointmentButton({
     let cancelled = false;
     setLoadingDays(true);
     setAvailabilityError(null);
-    const query = serviceChanged ? `?serviceId=${encodeURIComponent(serviceId)}` : "";
-    void fetch(`/api/admin/appointments/${appointment.id}/availability${query}`, {
+    void fetch(`/api/admin/appointments/${appointment.id}/availability`, {
       cache: "no-store",
       credentials: "include",
     })
@@ -226,10 +230,9 @@ export function AdminRescheduleAppointmentButton({
     appointment.appointmentDate,
     appointment.id,
     appointment.scheduledStart,
+    availabilityRevision,
     open,
     preview,
-    serviceChanged,
-    serviceId,
     unavailableDates,
   ]);
 
@@ -246,19 +249,75 @@ export function AdminRescheduleAppointmentButton({
     appointment.customerName?.trim() ||
     appointment.customerEmail?.trim() ||
     "Customer";
-  const canSave = timeChanged
-    ? Boolean(nextDate && nextSlot && !loadingDays && (!limitToOpenSlots || slotChoices.includes(Number(nextSlot))))
-    : serviceChanged;
+  const canSave = timeChanged && Boolean(
+    nextDate && nextSlot && !loadingDays && (!limitToOpenSlots || slotChoices.includes(Number(nextSlot))),
+  );
+
+  function closeDialog() {
+    if (busy || addingDog) return;
+    setOpen(false);
+    if (refreshOnClose.current) onChanged?.();
+  }
+
+  async function saveChange(
+    id: string,
+    change: { serviceId: string } | { date: string; slotStartMinutes: number },
+  ) {
+    const submit = (acknowledgedConflict?: string) => fetch(
+      `/api/admin/appointments/${id}/reschedule`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...change, acknowledgedConflict }),
+      },
+    );
+    let response = await submit();
+    let body = (await response.json()) as { error?: string; code?: string; appointment?: AdminAppointmentRecord };
+    while (response.status === 409 && body.code === "schedule_conflict" && body.error) {
+      if (!window.confirm(`${body.error}\n\nSave this change anyway?`)) return null;
+      response = await submit(body.error);
+      body = await response.json();
+    }
+    if (!response.ok) throw new Error(body.error ?? "Could not change this appointment.");
+    return body;
+  }
+
+  async function saveDogService(dog: AdminAppointmentRecord) {
+    if (!dogEdit || dogEdit.id !== dog.id || busy || addingDog) return;
+    const { serviceId } = dogEdit;
+    if (serviceId === dog.serviceId) {
+      setDogEdit(null);
+      return;
+    }
+    setBusy(true);
+    setDogError(null);
+    try {
+      const body = preview ? null : await saveChange(dog.id, { serviceId });
+      if (!preview && !body) return;
+      const service = staffRescheduleServices(dog.petWeightLbs).find((item) => item.id === serviceId);
+      const updated = body?.appointment ?? { ...dog, serviceId, serviceName: service?.name ?? dog.serviceName };
+      const appointments = bookedDogs.map((row) => row.id === dog.id ? updated : row);
+      setVisit({ ...summaryFromAppointments(appointments)!, appointments });
+      setDogEdit(null);
+      if (onDogServiceChanged) onDogServiceChanged(updated);
+      else if (!preview) refreshOnClose.current = true;
+      if (!preview) setAvailabilityRevision((revision) => revision + 1);
+    } catch (failure) {
+      setDogError(failure instanceof Error ? failure.message : "Could not update this dog's service.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function confirmReschedule() {
-    if (!canSave || busy) return;
+    if (!canSave || busy || dogEdit) return;
 
     if (preview) {
       setOpen(false);
       onChanged?.({
         date: nextDate,
         slotStartMinutes: Number(nextSlot),
-        ...(serviceChanged ? { serviceId, serviceName: services.find((service) => service.id === serviceId)?.name } : {}),
       });
       return;
     }
@@ -267,36 +326,13 @@ export function AdminRescheduleAppointmentButton({
     setError(null);
 
     try {
-      const submit = (acknowledgedConflict?: string) => fetch(
-        `/api/admin/appointments/${appointment.id}/reschedule`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...(timeChanged ? { date: nextDate, slotStartMinutes: Number(nextSlot) } : {}),
-            ...(serviceChanged ? { serviceId } : {}),
-            acknowledgedConflict,
-          }),
-        },
-      );
-      let response = await submit();
-      let body = (await response.json()) as { error?: string; code?: string };
-      while (response.status === 409 && body.code === "schedule_conflict" && body.error) {
-        if (!window.confirm(`${body.error}\n\nSave this change anyway?`)) return;
-        response = await submit(body.error);
-        body = await response.json();
-      }
-
-      if (!response.ok) {
-        setError(body.error ?? "Could not change this appointment.");
-        return;
-      }
+      const body = await saveChange(appointment.id, { date: nextDate, slotStartMinutes: Number(nextSlot) });
+      if (!body) return;
 
       setOpen(false);
       onChanged?.();
-    } catch {
-      setError("Could not change this appointment.");
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Could not change this appointment.");
     } finally {
       setBusy(false);
     }
@@ -310,7 +346,9 @@ export function AdminRescheduleAppointmentButton({
           initializedArrival.current = Boolean(visitAppointments?.length);
           setError(null);
           setAvailabilityError(null);
-          setServiceId(appointment.serviceId);
+          setDogEdit(null);
+          setDogError(null);
+          refreshOnClose.current = false;
           setVisit(summaryFromAppointments(visitAppointments));
           setDays([]);
           setNextDate(arrival.appointmentDate);
@@ -331,9 +369,7 @@ export function AdminRescheduleAppointmentButton({
               : "fixed inset-0 z-[120] flex items-center justify-center bg-ink/40 p-4"
           }
           role="presentation"
-          onClick={() => {
-            if (!busy && !addingDog) setOpen(false);
-          }}
+          onClick={closeDialog}
         >
           <div
             role="dialog"
@@ -342,7 +378,7 @@ export function AdminRescheduleAppointmentButton({
             className={
               limitToOpenSlots
                 ? "max-h-[90dvh] min-h-0 w-full max-w-md overflow-y-auto overscroll-contain rounded-t-2xl border border-lavender/30 bg-cream p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-sm sm:rounded-2xl"
-                : "w-full max-w-md rounded-2xl border border-lavender/30 bg-cream p-6 shadow-sm"
+                : "max-h-[90dvh] w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl border border-lavender/30 bg-cream p-6 shadow-sm"
             }
             onClick={(event) => event.stopPropagation()}
           >
@@ -352,9 +388,9 @@ export function AdminRescheduleAppointmentButton({
               </h3>
               <button
                 type="button"
-                aria-label="Close without saving"
+                aria-label="Close reschedule dialog"
                 disabled={busy || addingDog}
-                onClick={() => setOpen(false)}
+                onClick={closeDialog}
                 className="-mr-2 -mt-2 rounded-lg px-3 py-1 text-2xl leading-none text-text-muted hover:bg-lavender/20 disabled:opacity-50"
               >
                 ×
@@ -369,58 +405,81 @@ export function AdminRescheduleAppointmentButton({
                 <dt className="text-text-muted">{bookedDogs.length === 1 ? "Dog" : "Dogs on this visit"}</dt>
                 <dd>
                   <ul className="divide-y divide-lavender/40">
-                    {bookedDogs.map((dog) => (
-                      <li key={dog.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                        <span>{dog.petName} · {dog.serviceName}</span>
-                        {canChangeDogs && bookedDogs.length > 1 && !addingDog && !busy && !timeChanged && !serviceChanged ? (
-                          <AdminCancelAppointmentButton
-                            appointment={dog}
-                            label={`Remove ${dog.petName}`}
-                            confirmTitle={`Remove ${dog.petName} from this visit?`}
-                            showService
-                            sheetOnMobile
-                            removeDogOnly
-                            onCancelled={() => {
-                              setOpen(false);
-                              onChanged?.();
-                            }}
-                          />
-                        ) : null}
-                      </li>
-                    ))}
+                    {bookedDogs.map((dog) => {
+                      const editing = dogEdit?.id === dog.id ? dogEdit : null;
+                      const services = staffRescheduleServices(dog.petWeightLbs);
+                      const canEdit = visitNotStarted && canStaffRescheduleAppointment(dog);
+                      return (
+                        <li key={dog.id} className="py-2">
+                          <div className="flex items-center gap-2">
+                            {editing && canChangeDogs && bookedDogs.length > 1 ? (
+                              <AdminCancelAppointmentButton
+                                appointment={dog}
+                                label="×"
+                                triggerAriaLabel={`Remove ${dog.petName}`}
+                                triggerDisabled={busy || addingDog}
+                                triggerClassName="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-xl leading-none text-red-700 hover:bg-red-50 disabled:opacity-50"
+                                confirmTitle={`Remove ${dog.petName} from this visit?`}
+                                showService
+                                sheetOnMobile
+                                removeDogOnly
+                                onCancelled={() => {
+                                  setOpen(false);
+                                  onChanged?.();
+                                }}
+                              />
+                            ) : null}
+                            <span className="max-w-[35%] shrink-0 break-words font-medium">{dog.petName}</span>
+                            {editing ? (
+                              <select
+                                aria-label={`Service for ${dog.petName}`}
+                                value={editing.serviceId}
+                                disabled={busy || addingDog || services.length === 0}
+                                onChange={(event) => {
+                                  setDogEdit({ id: dog.id, serviceId: event.target.value });
+                                  setDogError(null);
+                                }}
+                                className="min-w-0 flex-1 rounded-lg border border-lavender/40 bg-white px-2 py-2 text-sm"
+                              >
+                                <option value={dog.serviceId}>{dog.serviceName}</option>
+                                {services.filter((service) => service.id !== dog.serviceId).map((service) => (
+                                  <option key={service.id} value={service.id}>{service.name}</option>
+                                ))}
+                              </select>
+                            ) : <span className="min-w-0 flex-1 break-words">{dog.serviceName}</span>}
+                            {canEdit ? (
+                              <button
+                                type="button"
+                                aria-label={`${editing ? "Save" : "Edit"} ${dog.petName}'s service`}
+                                disabled={busy || addingDog || (!editing && Boolean(dogEdit))}
+                                className="shrink-0 rounded-lg border border-lavender/40 px-2.5 py-1.5 font-medium text-gold-dark hover:bg-lavender/20 disabled:opacity-50"
+                                onClick={() => {
+                                  if (editing) {
+                                    void saveDogService(dog);
+                                  } else {
+                                    setDogError(null);
+                                    setDogEdit({ id: dog.id, serviceId: dog.serviceId });
+                                  }
+                                }}
+                              >
+                                {editing ? (busy ? "Saving…" : "Save") : "Edit"}
+                              </button>
+                            ) : null}
+                          </div>
+                          {editing && services.length === 0 ? (
+                            <p className="mt-2 text-text-muted">Add this dog's weight to their profile to see available services.</p>
+                          ) : null}
+                          {editing && dogError ? <p className="mt-2 text-red-700" role="alert">{dogError}</p> : null}
+                        </li>
+                      );
+                    })}
                   </ul>
-                  {canChangeDogs && !busy && !timeChanged && !serviceChanged ? (
+                  {canChangeDogs && (!busy || addingDog) && !timeChanged && !dogEdit ? (
                     <AdminAddVisitDog appointment={appointment} booked={bookedDogs} onSaving={setAddingDog} onSaved={() => {
                       setOpen(false);
                       onChanged?.();
                     }} />
                   ) : null}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-text-muted">
-                  <label htmlFor={`${titleId}-service`}>
-                    {bookedDogs.length > 1 ? `Service for ${appointment.petName}` : "Service"}
-                  </label>
-                </dt>
-                <dd>
-                  <select
-                    id={`${titleId}-service`}
-                    value={serviceId}
-                    disabled={busy || addingDog || !canEditService || services.length === 0}
-                    onChange={(event) => {
-                      setServiceId(event.target.value);
-                      setDays([]);
-                      setLoadingDays(!preview);
-                      setError(null);
-                    }}
-                    className="mt-1 w-full rounded-xl border border-lavender/40 bg-white px-4 py-2.5 text-sm text-text"
-                  >
-                    <option value={appointment.serviceId}>{appointment.serviceName}</option>
-                    {services.filter((service) => service.id !== appointment.serviceId).map((service) => (
-                      <option key={service.id} value={service.id}>{service.name}</option>
-                    ))}
-                  </select>
                 </dd>
               </div>
               {visit && visit.estimatedDurationMinutes > 0 ? (
@@ -450,7 +509,7 @@ export function AdminRescheduleAppointmentButton({
                   id={`reschedule-date-${appointment.id}`}
                   type="date"
                   min={minDate}
-                  disabled={busy || addingDog || loadingDays}
+                  disabled={busy || addingDog || loadingDays || Boolean(dogEdit)}
                   className="mt-1 w-full rounded-xl border border-lavender/40 bg-white px-4 py-2.5 text-sm text-text"
                   value={nextDate}
                   onChange={(event) => {
@@ -468,7 +527,7 @@ export function AdminRescheduleAppointmentButton({
                 </label>
                 <select
                   id={`reschedule-slot-${appointment.id}`}
-                  disabled={busy || addingDog || loadingDays || !nextDate}
+                  disabled={busy || addingDog || loadingDays || !nextDate || Boolean(dogEdit)}
                   className="mt-1 w-full rounded-xl border border-lavender/40 bg-white px-4 py-2.5 text-sm text-text"
                   value={nextSlot}
                   onChange={(event) => setNextSlot(event.target.value)}
@@ -508,7 +567,7 @@ export function AdminRescheduleAppointmentButton({
             <div className="mt-6 flex flex-wrap gap-3">
               <button
                 type="button"
-                disabled={busy || addingDog || !canSave}
+                disabled={busy || addingDog || !canSave || Boolean(dogEdit)}
                 onClick={() => void confirmReschedule()}
                 className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-cream transition hover:bg-gold-dark disabled:opacity-50"
               >

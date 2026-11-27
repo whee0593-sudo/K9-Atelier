@@ -28,6 +28,8 @@ export function AdminCancelAppointmentButton({
   preview = false,
   onCancelled,
   label = "Cancel Appointment",
+  triggerAriaLabel,
+  triggerDisabled = false,
   confirmTitle = "Cancel this appointment?",
   triggerClassName = "rounded-xl border border-red-200 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 disabled:opacity-50",
   showService = false,
@@ -40,6 +42,8 @@ export function AdminCancelAppointmentButton({
   preview?: boolean;
   onCancelled?: () => void;
   label?: string;
+  triggerAriaLabel?: string;
+  triggerDisabled?: boolean;
   confirmTitle?: string;
   triggerClassName?: string;
   showService?: boolean;
@@ -159,6 +163,9 @@ export function AdminCancelAppointmentButton({
           setOpen(true);
         }}
         data-appointment-action="cancel"
+        aria-label={triggerAriaLabel}
+        title={triggerAriaLabel}
+        disabled={triggerDisabled}
         className={triggerClassName}
       >
         {label}

@@ -69,6 +69,7 @@ export function AppointmentActionsMenu({
   panel = "actions",
   onClose,
   onChanged,
+  onDogServiceChanged,
   onCancelled,
   unavailableDates,
   visitAppointments,
@@ -82,6 +83,7 @@ export function AppointmentActionsMenu({
   panel?: "actions" | "details" | "contact";
   onClose: () => void;
   onChanged?: (next?: { date: string; slotStartMinutes: number; serviceId?: string; serviceName?: string }) => void;
+  onDogServiceChanged?: (appointment: AdminAppointmentRecord) => void;
   onCancelled?: () => void;
   unavailableDates?: string[];
   visitAppointments?: AdminAppointmentRecord[];
@@ -255,6 +257,7 @@ export function AppointmentActionsMenu({
             appointment={appointment}
             preview={preview}
             onChanged={onChanged}
+            onDogServiceChanged={onDogServiceChanged}
             label="Reschedule visit"
             dialogTitle="Reschedule visit"
             visitAppointments={visitAppointments}
