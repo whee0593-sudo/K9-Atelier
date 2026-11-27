@@ -8,10 +8,13 @@ type RouteContext = {
   params: Promise<{ appointmentId: string }>;
 };
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   try {
     const { appointmentId } = await context.params;
-    const result = await quoteStaffCancellation(validateAppointmentId(appointmentId));
+    const result = await quoteStaffCancellation(
+      validateAppointmentId(appointmentId),
+      new URL(request.url).searchParams.get("action") === "remove_dog",
+    );
     if (result.error) return mapStaffServiceError(result.error);
     return NextResponse.json(result.quote);
   } catch (error) {
@@ -44,9 +47,9 @@ export async function PATCH(request: Request, context: RouteContext) {
       return staffJsonError('Status must be "confirmed" or "cancelled".', 400);
     }
 
-    const fee = body as { expectedPolicyFee?: unknown; amount?: unknown };
+    const fee = body as { expectedPolicyFee?: unknown; amount?: unknown; action?: unknown };
     const result = status === "cancelled"
-      ? await cancelStaffAppointment(appointmentId, fee.expectedPolicyFee, fee.amount)
+      ? await cancelStaffAppointment(appointmentId, fee.expectedPolicyFee, fee.amount, fee.action === "remove_dog")
       : await setAppointmentStatus(appointmentId, status);
 
     if ("error" in result) {

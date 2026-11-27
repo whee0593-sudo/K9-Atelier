@@ -34,6 +34,7 @@ export function AdminCancelAppointmentButton({
   showReason = false,
   defaultOpen = false,
   sheetOnMobile = false,
+  removeDogOnly = false,
 }: {
   appointment: AdminAppointmentRecord;
   preview?: boolean;
@@ -45,6 +46,7 @@ export function AdminCancelAppointmentButton({
   showReason?: boolean;
   defaultOpen?: boolean;
   sheetOnMobile?: boolean;
+  removeDogOnly?: boolean;
 }) {
   const titleId = useId();
   const reasonId = useId();
@@ -73,7 +75,7 @@ export function AdminCancelAppointmentButton({
     setError(null);
     async function loadQuote() {
       try {
-        const response = await fetch(`/api/admin/appointments/${appointment.id}`, {
+        const response = await fetch(`/api/admin/appointments/${appointment.id}${removeDogOnly ? "?action=remove_dog" : ""}`, {
           cache: "no-store",
           signal: controller.signal,
         });
@@ -91,7 +93,7 @@ export function AdminCancelAppointmentButton({
     }
     void loadQuote();
     return () => controller.abort();
-  }, [appointment.id, open, preview]);
+  }, [appointment.id, open, preview, removeDogOnly]);
 
   if (!canStaffCancelAppointment(appointment)) return null;
 
@@ -125,6 +127,7 @@ export function AdminCancelAppointmentButton({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             status: "cancelled",
+            ...(removeDogOnly ? { action: "remove_dog" } : {}),
             expectedPolicyFee: quote?.fee,
             amount: enteredFee,
           }),
@@ -279,7 +282,9 @@ export function AdminCancelAppointmentButton({
               </div>
             ) : null}
             <p className="mt-4 text-sm leading-relaxed text-text-muted">
-              {appointment.status === "confirmed"
+              {removeDogOnly
+                ? "The customer will be notified that this dog was removed from the visit."
+                : appointment.status === "confirmed"
                 ? "The customer will receive an email and text that this confirmed appointment has been cancelled."
                 : "The customer will be notified that this booking request was cancelled."}
             </p>
@@ -295,7 +300,7 @@ export function AdminCancelAppointmentButton({
                 onClick={() => void confirmCancel()}
                 className={`rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100 disabled:opacity-50 ${sheetOnMobile ? "min-h-11" : ""}`}
               >
-                {busy ? "Cancelling…" : "Cancel Appointment"}
+                {removeDogOnly ? (busy ? "Removing…" : "Remove dog") : (busy ? "Cancelling…" : "Cancel Appointment")}
               </button>
               <button
                 type="button"

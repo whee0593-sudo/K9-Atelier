@@ -771,7 +771,8 @@ export function AdminCalendar({
               <AppointmentActionsMenu
                 appointment={appointment}
                 visitAppointments={
-                  groupAppointmentsByVisit(appointments).find((group) =>
+                  groupAppointmentsByVisit(appointments.some((item) => item.id === appointment.id)
+                    ? appointments : (blockDayAppointments ?? [])).find((group) =>
                     group.some((item) => item.id === appointment.id),
                   ) ?? [appointment]
                 }

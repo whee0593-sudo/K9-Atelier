@@ -321,6 +321,17 @@ describe("Sarah's three-dog visit at 3:30 PM", () => {
     );
   });
 
+  it("preserves the current arrival when an earlier cancelled row belongs to an old schedule", () => {
+    const dogs = cancelPetOnVisit(sarahAtThreeThirty(), "milo").map((dog) =>
+      dog.id === "milo" ? { ...dog, scheduledStart: 9 * 60 } : dog,
+    );
+    const next = scheduleActivePetsFromVisitArrival(dogs, arrival);
+    assert.deepEqual(next?.slots.map((slot) => [slot.id, slot.scheduledStart]), [
+      ["daisy", arrival],
+      ["coco", arrival + 75],
+    ]);
+  });
+
   it("adds Coco after Daisy and Milo without moving the 3:30 PM arrival", () => {
     const existing = sarahAtThreeThirty().slice(0, 2);
     const last = existing[1]!;

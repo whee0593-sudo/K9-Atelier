@@ -259,6 +259,7 @@ export async function listStaffAppointmentAvailability(
       visit: {
         dogCount: number;
         estimatedDurationMinutes: number;
+        appointments: AdminAppointmentRecord[];
         dogs: Array<{
           petName: string;
           serviceName: string;
@@ -372,6 +373,7 @@ export async function listStaffAppointmentAvailability(
     visit: {
       dogCount: visitRows.length,
       estimatedDurationMinutes: totalDuration,
+      appointments: visitRows.map((row) => mapAppointmentRowToAdminRecord(row as AppointmentRow)),
       dogs: visitRows.map((row, index) => ({
         petName: firstRelation(row.pets)?.name ?? "Dog",
         serviceName: row.id === appointmentId && serviceEdit.service

@@ -17,7 +17,7 @@ import { getStaffSession } from "@/lib/staff/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { compactVisitChildStarts } from "@/lib/visits/compact";
 
-async function loadStaffCancellation(appointmentId: string) {
+async function loadStaffCancellation(appointmentId: string, removeDogOnly = false) {
   const session = await getStaffSession();
   if ("error" in session) return { error: session.error };
 
@@ -29,7 +29,7 @@ async function loadStaffCancellation(appointmentId: string) {
 
   const { data, error } = await createAdminClient()
     .from("appointments")
-    .select("id, status, appointment_date, appointment_time, scheduled_start, time_preference, visit_sequence, payment_method_id, service_price, travel_fee, estimated_total, add_on_ids, add_on_options")
+    .select("id, status, appointment_date, appointment_time, scheduled_start, time_preference, visit_sequence, payment_method_id, service_price, travel_fee, estimated_total, add_on_ids, add_on_options, service_started_at, service_ended_at, visits ( service_started_at, service_ended_at )")
     .eq("visit_id", appointment.visitId)
     .eq("customer_id", appointment.customerId)
     .neq("status", "cancelled");
@@ -39,6 +39,11 @@ async function loadStaffCancellation(appointmentId: string) {
 
   // The calendar action targets this appointment. Other pets keep their slots.
   const action = data.length > 1 ? "remove_dog" as const : "cancel" as const;
+  if (removeDogOnly && (action !== "remove_dog" || data.some((entry) => {
+    const visit = Array.isArray(entry.visits) ? entry.visits[0] : entry.visits;
+    return entry.service_started_at || entry.service_ended_at ||
+      visit?.service_started_at || visit?.service_ended_at;
+  }))) return { error: "conflict" as const };
   const visitId = appointment.visitId;
   const rows = [row];
   const existing = await loadOpenPolicyChangeClaim(policyChangeOperationKey({ action, visitId, rows }));
@@ -57,6 +62,7 @@ async function loadStaffCancellation(appointmentId: string) {
     rows,
     actorId: session.user.id,
     contact,
+    arrivalStart: Math.min(...data.flatMap((entry) => entry.scheduled_start == null ? [] : [entry.scheduled_start])),
     quote: {
       ...pricing,
       locked: Boolean(existing),
@@ -66,8 +72,8 @@ async function loadStaffCancellation(appointmentId: string) {
   };
 }
 
-export async function quoteStaffCancellation(appointmentId: string) {
-  const loaded = await loadStaffCancellation(appointmentId);
+export async function quoteStaffCancellation(appointmentId: string, removeDogOnly = false) {
+  const loaded = await loadStaffCancellation(appointmentId, removeDogOnly);
   if (loaded.error) return { error: loaded.error };
   return { quote: loaded.quote };
 }
@@ -76,10 +82,11 @@ export async function cancelStaffAppointment(
   appointmentId: string,
   expectedPolicyFee: unknown,
   amount: unknown,
+  removeDogOnly = false,
 ) {
-  const loaded = await loadStaffCancellation(appointmentId);
+  const loaded = await loadStaffCancellation(appointmentId, removeDogOnly);
   if (loaded.error) return { error: loaded.error };
-  const { appointment, action, visitId, rows, actorId, contact, quote } = loaded;
+  const { appointment, action, visitId, rows, actorId, contact, quote, arrivalStart } = loaded;
 
   if (quote.needsPriceReview) return { error: "price_review_required" as const };
   if (expectedPolicyFee !== quote.fee) return { error: "fee_changed" as const };
@@ -122,7 +129,9 @@ export async function cancelStaffAppointment(
     },
     planReschedule: async () => ({ error: "server" }),
     afterWrite: async () => {
-      if (action === "remove_dog") await compactVisitChildStarts(visitId);
+      if (action === "remove_dog") {
+        await compactVisitChildStarts(visitId, Number.isFinite(arrivalStart) ? arrivalStart : undefined);
+      }
       if (contact) {
         await sendAppointmentStatusEmails(
           { ...appointment, status: "cancelled" },

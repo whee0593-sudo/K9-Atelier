@@ -316,12 +316,10 @@ export function scheduleActivePetsFromVisitArrival<
     scheduledStart: number | null;
     visitSequence: number | null;
   },
->(appointments: T[]) {
-  const starts = appointments
-    .map((row) => row.scheduledStart)
-    .filter((value): value is number => typeof value === "number");
-  if (starts.length === 0) return null;
-  const visitStartMinutes = Math.min(...starts);
+>(appointments: T[], visitStartMinutes = Math.min(
+  ...appointments.map((row) => row.scheduledStart ?? Infinity),
+)) {
+  if (!Number.isFinite(visitStartMinutes)) return null;
   const active = appointments.filter((row) => row.status !== "cancelled");
   if (active.some((row) => !hasVisitSequence(row.visitSequence))) return null;
   active.sort(

@@ -2,6 +2,7 @@ import { allergySnapshotForBooking } from "@/lib/allergies";
 import { randomUUID } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuthenticatedUser } from "@/lib/pets/auth";
+import { getStaffSession } from "@/lib/staff/auth";
 import { mapAppointmentRowToRecord } from "@/lib/appointments/map";
 import type { AppointmentRecord, AppointmentRow } from "@/lib/appointments/types";
 import {
@@ -19,7 +20,7 @@ import {
   fetchCustomerContact,
   type CustomerContact,
 } from "@/lib/email/appointment-context";
-import { notifyCustomerAppointmentChange } from "@/lib/email/appointment-mails";
+import { notifyCustomerAppointmentChange, notifyCustomerAppointmentConfirmed } from "@/lib/email/appointment-mails";
 import { formatAppointmentDateLabel } from "@/lib/email/html-templates";
 import {
   notifyMerchantRescheduleCompletedFromAppointments,
@@ -94,13 +95,18 @@ const CHANGE_SELECT = `
   status,
   confirmed_at,
   customer_confirmed_at,
+  staff_created,
+  customer_confirm_token_hash,
+  customer_confirm_expires_at,
   created_at,
   payment_method_id,
   visit_id,
   visit_sequence,
   service_price,
   estimated_duration_minutes,
+  service_started_at,
   service_ended_at,
+  visits ( service_started_at, service_ended_at ),
   pets ( name, breed, weight_lbs )
 `;
 
@@ -874,10 +880,28 @@ async function resolvePaymentMethod(
   return null;
 }
 
+export async function addStaffDogToVisit(appointmentId: string, petId: string, serviceId: string) {
+  const session = await getStaffSession();
+  if ("error" in session) return { error: session.error };
+  const { data, error } = await createAdminClient()
+    .from("appointments")
+    .select(CHANGE_SELECT)
+    .eq("id", appointmentId)
+    .maybeSingle();
+  if (error) return { error: "server" as const };
+  if (!data) return { error: "not_found" as const };
+  const row = data as unknown as ChangeRow;
+  if (!row.visit_id || !["confirmed", "pending_confirmation"].includes(row.status)) {
+    return { error: "conflict" as const };
+  }
+  return addDogToVisit(row.customer_id, row, { appointmentId, action: "add_dog", petId, serviceId }, true);
+}
+
 async function addDogToVisit(
   userId: string,
   visit: ChangeRow,
   input: ApplyAppointmentChangeInput,
+  staff = false,
 ): Promise<
   | { appointment: AppointmentRecord }
   | {
@@ -944,19 +968,26 @@ async function addDogToVisit(
     userId,
     visit.payment_method_id,
   );
-  if (!paymentMethod) return { error: "payment_required" as const };
+  if (!paymentMethod && !staff) return { error: "payment_required" as const };
   if (!visit.visit_id) return { error: "server" as const };
   const sequences = await visitSequences(visit.visit_id);
   if ("error" in sequences) return sequences;
 
   const family = await loadVisitSiblings(userId, visit);
   if ("error" in family) return family;
+  if (staff && family.rows.some((row) => {
+    const parent = Array.isArray(row.visits) ? row.visits[0] : row.visits;
+    return row.service_started_at || row.service_ended_at ||
+      parent?.service_started_at || parent?.service_ended_at ||
+      row.appointment_date !== visit.appointment_date;
+  })) return { error: "conflict" };
   const existing = family.rows.find(row => row.pet_id === input.petId);
   if (existing) {
     const record = mapAppointmentRowToRecord(existing);
     const sameExtras = JSON.stringify([...(existing.add_on_ids ?? [])].sort()) === JSON.stringify([...selection.addOnIds].sort());
     const sameOptions = selection.addOnIds.every(id => (record.addOnOptions[id] ?? "") === (selection.addOnOptions[id] ?? ""));
-    if (existing.service_id === service.id && sameExtras && sameOptions && existing.add_on_options?.__customerAddDogRequest === "true") {
+    if (existing.service_id === service.id && sameExtras && sameOptions &&
+        (staff || existing.add_on_options?.__customerAddDogRequest === "true")) {
       return { appointment: record };
     }
     return { error: "conflict" };
@@ -967,7 +998,9 @@ async function addDogToVisit(
   if (ordered.some((row) => !hasVisitSequence(row.visit_sequence))) {
     return { error: "conflict" as const };
   }
-  const starts = sequences.starts;
+  const starts = staff
+    ? ordered.flatMap((row) => row.scheduled_start == null ? [] : [row.scheduled_start])
+    : sequences.starts;
   if (starts.length === 0) return { error: "slot_unavailable" as const };
   const visitStart = Math.min(...starts);
 
@@ -1004,7 +1037,11 @@ async function addDogToVisit(
   if (!schedule) return { error: "slot_unavailable" as const };
 
   const vaccinationStatus = vaccinationStatusSnapshotForBooking(pet);
-  const status = "pending_confirmation";
+  const status = staff && ordered.every((row) => row.status === "confirmed")
+    ? "confirmed" : "pending_confirmation";
+  const customerConfirmation = staff && status === "pending_confirmation"
+    ? ordered.find((row) => row.status === "pending_confirmation" && row.customer_confirm_token_hash)
+    : undefined;
   const servicePrice = guestBookingStoredServicePrice(priced.quote);
   const visitSequence = nextVisitSequence(sequences.sequences);
 
@@ -1017,7 +1054,10 @@ async function addDogToVisit(
       service_id: service.id,
       service_name: getServiceDisplayName(service.id, service.name),
       add_on_ids: selection.addOnIds,
-      add_on_options: { ...guestBookingStoredAddOnOptions(priced.quote, selection.addOnOptions), __customerAddDogRequest: "true" },
+      add_on_options: {
+        ...guestBookingStoredAddOnOptions(priced.quote, selection.addOnOptions),
+        ...(staff ? {} : { __customerAddDogRequest: "true" }),
+      },
       spa_goals: spaGoals.goals,
       allergy_snapshot: allergySnapshot,
       address_street: visit.address_street,
@@ -1038,10 +1078,15 @@ async function addDogToVisit(
       timezone: business.booking.timezone,
       estimated_total: priced.quote.estimatedServicePrice,
       new_client_deposit: 0,
-      payment_method_id: paymentMethod.id,
+      payment_method_id: paymentMethod?.id ?? null,
       vaccination_status_at_booking: vaccinationStatus,
       status,
-      confirmed_at: null,
+      confirmed_at: status === "confirmed" ? new Date().toISOString() : null,
+      ...(customerConfirmation ? {
+        staff_created: true,
+        customer_confirm_token_hash: customerConfirmation.customer_confirm_token_hash,
+        customer_confirm_expires_at: customerConfirmation.customer_confirm_expires_at,
+      } : {}),
     })
     .select(CHANGE_SELECT)
     .single();
@@ -1057,7 +1102,11 @@ async function addDogToVisit(
   try {
     contact = await fetchCustomerContact(userId);
     if (contact) {
-      await notifyCustomerAppointmentChange("add_dog", appointment, contact);
+      if (staff && status === "confirmed") {
+        await notifyCustomerAppointmentConfirmed(appointment, contact, undefined, `staff_confirmed:add-dog:${appointment.id}`);
+      } else if (!staff) {
+        await notifyCustomerAppointmentChange("add_dog", appointment, contact);
+      }
     }
   } catch (emailError) {
     console.error("addDogToVisit email failed:", emailError);
@@ -1069,7 +1118,7 @@ async function addDogToVisit(
   );
 
   if (visit.visit_id) {
-    await compactVisitChildStarts(visit.visit_id);
+    await compactVisitChildStarts(visit.visit_id, staff ? visitStart : undefined);
   }
 
   return { appointment };

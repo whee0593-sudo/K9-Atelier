@@ -38,6 +38,7 @@ function firstPet(value: CompactRow["pets"]) {
  */
 export async function compactVisitChildStarts(
   visitId: string,
+  visitStartMinutes?: number,
 ): Promise<{ ok: true } | { error: "server" }> {
   if (!hasSupabaseAdminConfig()) return { ok: true };
   const admin = createAdminClient();
@@ -89,7 +90,7 @@ export async function compactVisitChildStarts(
     return { ok: true };
   }
 
-  const plan = scheduleActivePetsFromVisitArrival(pets);
+  const plan = scheduleActivePetsFromVisitArrival(pets, visitStartMinutes);
   if (!plan || plan.slots.length === 0) return { ok: true };
 
   const arrival = visitArrivalFields(plan.visitStartMinutes);

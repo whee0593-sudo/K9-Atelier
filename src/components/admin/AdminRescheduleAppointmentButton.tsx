@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useId, useMemo, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { formatMinutesLabel } from "@/lib/appointments/closures";
 import { formatEstimatedDuration } from "@/lib/staff/schedule-conflict";
 import { canStaffRescheduleAppointment } from "@/lib/appointments/staff-actions";
@@ -9,6 +9,8 @@ import { listBookingStartMinutes } from "@/lib/booking-schedule";
 import { getUpcomingStaffDates } from "@/lib/staff/booking-dates";
 import { todayInBusinessTimezone } from "@/lib/sms/schedule";
 import { staffRescheduleServices } from "@/lib/appointments/staff-reschedule-input";
+import { AdminAddVisitDog } from "@/components/admin/AdminAddVisitDog";
+import { AdminCancelAppointmentButton } from "@/components/admin/AdminCancelAppointmentButton";
 
 type AvailabilityDay = {
   date: string;
@@ -19,6 +21,7 @@ type AvailabilityDay = {
 type VisitRescheduleSummary = {
   dogCount: number;
   estimatedDurationMinutes: number;
+  appointments?: AdminAppointmentRecord[];
 };
 
 function formatConfirmDate(iso: string): string {
@@ -97,15 +100,18 @@ export function AdminRescheduleAppointmentButton({
   const titleId = useId();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [addingDog, setAddingDog] = useState(false);
   const [loadingDays, setLoadingDays] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const [days, setDays] = useState<AvailabilityDay[]>([]);
+  const initializedArrival = useRef(false);
   const [visit, setVisit] = useState<VisitRescheduleSummary | null>(() =>
     summaryFromAppointments(visitAppointments),
   );
   const [nextDate, setNextDate] = useState(appointment.appointmentDate);
-  const arrival = visitAppointments?.reduce((first, row) =>
+  const visitRows = visit?.appointments ?? visitAppointments;
+  const arrival = visitRows?.reduce((first, row) =>
     (row.scheduledStart ?? Infinity) < (first.scheduledStart ?? Infinity) ? row : first,
     appointment,
   ) ?? appointment;
@@ -113,6 +119,11 @@ export function AdminRescheduleAppointmentButton({
   const [serviceId, setServiceId] = useState(appointment.serviceId);
   const serviceChanged = serviceId !== appointment.serviceId;
   const services = staffRescheduleServices(appointment.petWeightLbs);
+  const bookedDogs = (visitRows?.length ? visitRows : [appointment])
+    .filter((row) => row.status !== "cancelled");
+  const canChangeDogs = !preview && Boolean(appointment.visitId) && bookedDogs.every((row) =>
+    !row.serviceStartedAt && !row.serviceEndedAt && !row.visitStartedAt && !row.visitEndedAt,
+  );
   const canEditService = !appointment.serviceStartedAt && !appointment.serviceEndedAt &&
     !appointment.visitStartedAt && !appointment.visitEndedAt;
   const [nextSlot, setNextSlot] = useState(
@@ -141,12 +152,12 @@ export function AdminRescheduleAppointmentButton({
     if (!open) return;
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !busy) setOpen(false);
+      if (event.key === "Escape" && !busy && !addingDog) setOpen(false);
     }
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, busy]);
+  }, [open, busy, addingDog]);
 
   useEffect(() => {
     if (!open) return;
@@ -222,6 +233,13 @@ export function AdminRescheduleAppointmentButton({
     unavailableDates,
   ]);
 
+  useEffect(() => {
+    if (!open || initializedArrival.current || !visit?.appointments?.length) return;
+    initializedArrival.current = true;
+    setNextDate(arrival.appointmentDate);
+    setNextSlot(currentSlot);
+  }, [arrival.appointmentDate, currentSlot, open, visit?.appointments]);
+
   if (!canStaffRescheduleAppointment(appointment)) return null;
 
   const customerLabel =
@@ -289,6 +307,7 @@ export function AdminRescheduleAppointmentButton({
       <button
         type="button"
         onClick={() => {
+          initializedArrival.current = Boolean(visitAppointments?.length);
           setError(null);
           setAvailabilityError(null);
           setServiceId(appointment.serviceId);
@@ -313,7 +332,7 @@ export function AdminRescheduleAppointmentButton({
           }
           role="presentation"
           onClick={() => {
-            if (!busy) setOpen(false);
+            if (!busy && !addingDog) setOpen(false);
           }}
         >
           <div
@@ -334,7 +353,7 @@ export function AdminRescheduleAppointmentButton({
               <button
                 type="button"
                 aria-label="Close without saving"
-                disabled={busy}
+                disabled={busy || addingDog}
                 onClick={() => setOpen(false)}
                 className="-mr-2 -mt-2 rounded-lg px-3 py-1 text-2xl leading-none text-text-muted hover:bg-lavender/20 disabled:opacity-50"
               >
@@ -347,18 +366,48 @@ export function AdminRescheduleAppointmentButton({
                 <dd>{customerLabel}</dd>
               </div>
               <div>
-                <dt className="text-text-muted">Pet</dt>
-                <dd>{appointment.petName}</dd>
+                <dt className="text-text-muted">{bookedDogs.length === 1 ? "Dog" : "Dogs on this visit"}</dt>
+                <dd>
+                  <ul className="divide-y divide-lavender/40">
+                    {bookedDogs.map((dog) => (
+                      <li key={dog.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                        <span>{dog.petName} · {dog.serviceName}</span>
+                        {canChangeDogs && bookedDogs.length > 1 && !addingDog && !busy && !timeChanged && !serviceChanged ? (
+                          <AdminCancelAppointmentButton
+                            appointment={dog}
+                            label={`Remove ${dog.petName}`}
+                            confirmTitle={`Remove ${dog.petName} from this visit?`}
+                            showService
+                            sheetOnMobile
+                            removeDogOnly
+                            onCancelled={() => {
+                              setOpen(false);
+                              onChanged?.();
+                            }}
+                          />
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                  {canChangeDogs && !busy && !timeChanged && !serviceChanged ? (
+                    <AdminAddVisitDog appointment={appointment} booked={bookedDogs} onSaving={setAddingDog} onSaved={() => {
+                      setOpen(false);
+                      onChanged?.();
+                    }} />
+                  ) : null}
+                </dd>
               </div>
               <div>
                 <dt className="text-text-muted">
-                  <label htmlFor={`${titleId}-service`}>Service</label>
+                  <label htmlFor={`${titleId}-service`}>
+                    {bookedDogs.length > 1 ? `Service for ${appointment.petName}` : "Service"}
+                  </label>
                 </dt>
                 <dd>
                   <select
                     id={`${titleId}-service`}
                     value={serviceId}
-                    disabled={busy || !canEditService || services.length === 0}
+                    disabled={busy || addingDog || !canEditService || services.length === 0}
                     onChange={(event) => {
                       setServiceId(event.target.value);
                       setDays([]);
@@ -401,7 +450,7 @@ export function AdminRescheduleAppointmentButton({
                   id={`reschedule-date-${appointment.id}`}
                   type="date"
                   min={minDate}
-                  disabled={busy || loadingDays}
+                  disabled={busy || addingDog || loadingDays}
                   className="mt-1 w-full rounded-xl border border-lavender/40 bg-white px-4 py-2.5 text-sm text-text"
                   value={nextDate}
                   onChange={(event) => {
@@ -419,7 +468,7 @@ export function AdminRescheduleAppointmentButton({
                 </label>
                 <select
                   id={`reschedule-slot-${appointment.id}`}
-                  disabled={busy || loadingDays || !nextDate}
+                  disabled={busy || addingDog || loadingDays || !nextDate}
                   className="mt-1 w-full rounded-xl border border-lavender/40 bg-white px-4 py-2.5 text-sm text-text"
                   value={nextSlot}
                   onChange={(event) => setNextSlot(event.target.value)}
@@ -448,7 +497,7 @@ export function AdminRescheduleAppointmentButton({
               {appointment.serviceStartedAt || appointment.serviceEndedAt
                 ? "This only corrects the calendar date and arrival. Check-in, check-out, and payment stay on the record. The customer will not be emailed."
                 : visit && visit.dogCount > 1
-                  ? "Changing the arrival moves every dog on this visit and sends the customer one email. The service selection applies to the pet shown above."
+                  ? "Changing the arrival moves every dog on this visit and sends the customer one email."
                   : "If the date or arrival changes, the customer receives an email. No policy fee is charged for a staff change."}
             </p>
             {error || availabilityError ? (
@@ -459,7 +508,7 @@ export function AdminRescheduleAppointmentButton({
             <div className="mt-6 flex flex-wrap gap-3">
               <button
                 type="button"
-                disabled={busy || !canSave}
+                disabled={busy || addingDog || !canSave}
                 onClick={() => void confirmReschedule()}
                 className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-cream transition hover:bg-gold-dark disabled:opacity-50"
               >
